@@ -9,11 +9,12 @@
   ],
   "scripts": {
     "dev": "next dev -p 8000",
-    "build": "next build",
-    "start": "next start -p 8000",
+    "build": "npm run wait && next build",
+    "start": "next start",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
-    "test-e2e": "playwright test e2e"
+    "test-e2e": "playwright test e2e",
+    "wait": "node script/awaitBackendReady.js"
   },
   "resolutions": {
     "webpack": "^5",

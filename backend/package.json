@@ -15,6 +15,7 @@
   "scripts": {
     "build": "medusa build",
     "seed": "medusa exec ./src/scripts/seed.ts",
+    "seed:once": "node script/seedOnce.js",
     "start": "medusa start",
     "dev": "medusa develop"
   },
