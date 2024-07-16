@@ -27,9 +27,11 @@ const checkIfSeeded = async () => {
 };
 
 const seedDatabase = () => {
-  exec('npm run seed', (error, stdout, stderr) => {
+  exec('npx medusa migrations run', (error, stdout, stderr) => {
     if (error) {
-      console.error(`Error seeding database: ${error}`);
+      console.error(`Error seeding database: ${error.message}`);
+      console.error(`Exit code: ${error.code}`);
+      console.error(`Command: ${error.cmd}`);
       return;
     }
     console.log(`stdout: ${stdout}`);
