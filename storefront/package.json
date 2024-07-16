@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "next dev -p 8000",
     "build": "npm run wait && next build",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3000}",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
     "test-e2e": "playwright test e2e",
