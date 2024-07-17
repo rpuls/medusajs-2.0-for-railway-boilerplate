@@ -11,14 +11,11 @@ const checkIfSeeded = async () => {
   try {
     await client.connect();
     await client.query('SELECT 1 FROM "user" LIMIT 1;');
-    // If the query succeeds, the table exists, and we assume the DB is seeded.
     return true;
   } catch (error) {
-    // Specifically check for the "relation does not exist" error.
     if (error.message.includes('relation "user" does not exist')) {
       return false;
     }
-    // For any other error, log it and exit.
     console.error('Unexpected error checking if database is seeded:', error);
     process.exit(1);
   } finally {
@@ -26,26 +23,43 @@ const checkIfSeeded = async () => {
   }
 };
 
-const seedDatabase = () => {
-  exec('npx medusa migrations run', (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error seeding database: ${error.message}`);
-      console.error(`Exit code: ${error.code}`);
-      console.error(`Command: ${error.cmd}`);
-      return;
-    }
-    console.log(`stdout: ${stdout}`);
-    if (stderr) {
-      console.error(`stderr: ${stderr}`);
-    }
+const runCommand = (command) => {
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing command: ${error.message}`);
+        reject(error);
+        return;
+      }
+      console.log(`stdout: ${stdout}`);
+      if (stderr) {
+        console.error(`stderr: ${stderr}`);
+      }
+      resolve();
+    });
   });
+};
+
+const seedDatabase = async () => {
+  try {
+    console.log('Running migrations...');
+    await runCommand('npx medusa migrations run');
+    
+    console.log('Running seed script...');
+    await runCommand('npm run seed');
+    
+    console.log('Database seeded successfully.');
+  } catch (error) {
+    console.error('Failed to seed database:', error);
+    process.exit(1);
+  }
 };
 
 const seedOnce = async () => {
   const isSeeded = await checkIfSeeded();
   if (!isSeeded) {
     console.log('Database is not seeded. Seeding now...');
-    seedDatabase();
+    await seedDatabase();
   } else {
     console.log('Database is already seeded. Skipping seeding.');
   }
