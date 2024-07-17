@@ -18,7 +18,6 @@ async function getRegionMap() {
     regionMapUpdated < Date.now() - 3600 * 1000
   ) {
     // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-    console.log(`trying to fetch: ${BACKEND_URL}/store/regions`);
     const { regions } = await fetch(`${BACKEND_URL}/store/regions`, {
       next: {
         revalidate: 3600,
@@ -85,30 +84,19 @@ async function getCountryCode(
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
-  console.log("Entering middleware function");
-  console.log("Request URL:", request.nextUrl.href);
-  console.log("BACKEND_URL:", BACKEND_URL);
   const searchParams = request.nextUrl.searchParams
-  console.log({searchParams});
   const isOnboarding = searchParams.get("onboarding") === "true"
-  console.log({isOnboarding});
   const cartId = searchParams.get("cart_id")
-  console.log({cartId});
   const checkoutStep = searchParams.get("step")
-  console.log({checkoutStep});
   const onboardingCookie = request.cookies.get("_medusa_onboarding")
-  console.log({onboardingCookie});
   const cartIdCookie = request.cookies.get("_medusa_cart_id")
-console.log({cartIdCookie});
+
   const regionMap = await getRegionMap()
-console.log({regionMap});
+
   const countryCode = regionMap && (await getCountryCode(request, regionMap))
-console.log({countryCode});
+
   const urlHasCountryCode =
     countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
-
-  console.log("Country code:", countryCode);
-  console.log("URL has country code:", urlHasCountryCode);
 
   // check if one of the country codes is in the url
   if (
@@ -145,7 +133,7 @@ console.log({countryCode});
   if (isOnboarding) {
     response.cookies.set("_medusa_onboarding", "true", { maxAge: 60 * 60 * 24 })
   }
-  console.log("Redirect URL:", redirectUrl);
+
   return response
 }
 
