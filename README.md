@@ -63,7 +63,7 @@ Please change the value of environtment variables: `COOCKIE_SECRET` and `JWT_SEC
 - **redis** (will be automatically generated if using railway template)
 
 ### commands
-`cd medusajs-backend/`
+`cd backend/`
 `yarn build` will compile app.
 `yarn dev` will start local admin dashboard app to manage products and orders etc.
 `yarn start` will start the backend server, needed for the storefront
@@ -78,7 +78,7 @@ Rename `.env.local.template` ->  `.env.local`
 - running backend `npm run start` - needed to fetch products data and more, to build nextjs pages.
 
 ### commands
-`cd medusajs-storefront/`
+`cd storefront/`
 `yarn wait` will keep calling backend endpoint until a backend responds.
 `yarn build` will build the nextjs app - remember to start backend app prior to running this command.
 `yarn start` will serve the frontend web shop.
