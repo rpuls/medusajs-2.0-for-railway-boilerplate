@@ -84,8 +84,6 @@ async function getCountryCode(
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
-  console.log("Entering middleware function");
-  console.log("Request URL:", request.nextUrl.href);
   const searchParams = request.nextUrl.searchParams
   const isOnboarding = searchParams.get("onboarding") === "true"
   const cartId = searchParams.get("cart_id")
@@ -99,9 +97,6 @@ export async function middleware(request: NextRequest) {
 
   const urlHasCountryCode =
     countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
-
-  console.log("Country code:", countryCode);
-  console.log("URL has country code:", urlHasCountryCode);
 
   // check if one of the country codes is in the url
   if (
@@ -138,7 +133,7 @@ export async function middleware(request: NextRequest) {
   if (isOnboarding) {
     response.cookies.set("_medusa_onboarding", "true", { maxAge: 60 * 60 * 24 })
   }
-  console.log("Redirect URL:", redirectUrl);
+
   return response
 }
 
