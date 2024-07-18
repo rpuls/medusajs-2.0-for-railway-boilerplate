@@ -1,6 +1,16 @@
-import { loadEnv, defineConfig } from '@medusajs/utils'
+import { loadEnv, defineConfig } from '@medusajs/utils';
 
-loadEnv(process.env.NODE_ENV, process.cwd())
+loadEnv(process.env.NODE_ENV, process.cwd());
+
+const plugins = [
+  {
+    resolve: "@medusajs/admin",
+    /** @type {import('@medusajs/admin').PluginOptions} */
+    options: {
+      path: "/",
+    },
+  }
+];
 
 module.exports = defineConfig({
   projectConfig: {
@@ -13,4 +23,4 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     }
   }
-})
+});
