@@ -3,14 +3,7 @@ import { loadEnv, defineConfig } from '@medusajs/utils'
 loadEnv(process.env.NODE_ENV, process.cwd())
 
 const plugins = [
-  'medusa-fulfillment-manual',
-  {
-    resolve: '@medusajs/admin',
-    /** @type {import('@medusajs/admin').PluginOptions} */
-    options: {
-      path: '/dashboard',
-    },
-  }
+  'medusa-fulfillment-manual'
 ]
 
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
@@ -28,13 +21,11 @@ const projectConfig = {
 };
 
 export default defineConfig({
-  admin: {
-    backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
-  },
   projectConfig,
   plugins,
   modules: {},
-  featureFlags: {
-    medusa_v2: true
-  },
-})
+  admin: {
+    path: '/dashboard',
+    backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
+  }
+});
