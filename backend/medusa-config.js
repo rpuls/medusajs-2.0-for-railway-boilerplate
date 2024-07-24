@@ -25,11 +25,8 @@ const completeConfig = {
   plugins,
   modules: {},
   admin: {
-    backendUrl: 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
+    backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
   }
 };
-
-console.log('=================== debug config ===================');
-console.log(JSON.stringify(completeConfig, null, 2));
 
 export default defineConfig(completeConfig);
