@@ -29,6 +29,7 @@ const completeConfig = {
   }
 };
 
-console.log({ completeConfig});
+console.log('=================== debug config ===================');
+console.log(JSON.stringify(completeConfig, null, 2));
 
 export default defineConfig(completeConfig);
