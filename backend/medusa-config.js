@@ -20,12 +20,15 @@ const projectConfig = {
   database_type: 'postgres',
 };
 
-export default defineConfig({
+const completeConfig = {
   projectConfig,
   plugins,
   modules: {},
   admin: {
-    path: '/dashboard',
     backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
   }
-});
+};
+
+console.log({ completeConfig});
+
+export default defineConfig(completeConfig);
