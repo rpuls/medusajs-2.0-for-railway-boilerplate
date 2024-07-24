@@ -25,7 +25,7 @@ const completeConfig = {
   plugins,
   modules: {},
   admin: {
-    backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
+    backendUrl: 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
   }
 };
 
