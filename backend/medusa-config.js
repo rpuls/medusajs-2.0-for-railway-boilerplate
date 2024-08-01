@@ -8,6 +8,11 @@ const plugins = [
   'medusa-fulfillment-manual'
 ]
 
+console.log(process.env.ADMIN_CORS); 
+
+console.log(process.env.ADMIN_CORS?.trim());
+
+
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
 const projectConfig = {
   http: {
