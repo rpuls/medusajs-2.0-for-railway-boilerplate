@@ -1,5 +1,7 @@
 import { loadEnv, defineConfig } from '@medusajs/utils'
 
+const isDev = process.env.NODE_ENV === 'development';
+
 loadEnv(process.env.NODE_ENV, process.cwd())
 
 const plugins = [
@@ -25,8 +27,10 @@ const completeConfig = {
   plugins,
   modules: {},
   admin: {
-    backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE,
+    ...!isDev && { backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE },
   }
 };
+
+console.log(completeConfig);
 
 export default defineConfig(completeConfig);

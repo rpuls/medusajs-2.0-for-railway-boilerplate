@@ -3,6 +3,8 @@ const nodefetch = require('node-fetch');
 let startTime = Date.now();
 
 const checkBackend = () => {
+  console.log('Checking if the backend is ready...');
+
   const url = (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000') + '/store/product-categories';
   let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
 
