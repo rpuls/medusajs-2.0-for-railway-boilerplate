@@ -3,9 +3,9 @@ const nodefetch = require('node-fetch');
 let startTime = Date.now();
 
 const checkBackend = () => {
-  console.log('Checking if the backend is ready...');
-
   const url = (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000') + '/store/product-categories';
+  console.log('Checking if the backend is ready on:', url);
+
   let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
 
   if (elapsedTime > 1200) { // 20 minutes in seconds
