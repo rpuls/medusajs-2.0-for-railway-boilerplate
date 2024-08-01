@@ -43,11 +43,12 @@ console.log('authCors:', projectConfig.http.authCors);
 console.log('storeCors:', projectConfig.http.storeCors);
 console.log('backendUrl:', completeConfig.admin.backendUrl);
 
+const backendurlvar = process.env.RAILWAY_PUBLIC_DOMAIN_VALUE;
 const minimalConfig = {
   adminCors: process.env.ADMIN_CORS,
   authCors: process.env.AUTH_CORS,
   storeCors: process.env.STORE_CORS,
-  backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE
+  backendUrl: backendurlvar
 };
 
 console.log(minimalConfig);
