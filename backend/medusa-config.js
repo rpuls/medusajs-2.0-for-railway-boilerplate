@@ -38,4 +38,20 @@ const completeConfig = {
 
 console.log(completeConfig);
 
+console.log('adminCors:', projectConfig.http.adminCors);
+console.log('authCors:', projectConfig.http.authCors);
+console.log('storeCors:', projectConfig.http.storeCors);
+console.log('backendUrl:', completeConfig.admin.backendUrl);
+
+const minimalConfig = {
+  adminCors: process.env.ADMIN_CORS,
+  authCors: process.env.AUTH_CORS,
+  storeCors: process.env.STORE_CORS,
+  backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE
+};
+
+console.log(minimalConfig);
+console.log(JSON.stringify(minimalConfig, null, 2));
+
+
 export default defineConfig(completeConfig);
