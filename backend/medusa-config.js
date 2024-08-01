@@ -6,12 +6,7 @@ loadEnv(process.env.NODE_ENV, process.cwd())
 
 const plugins = [
   'medusa-fulfillment-manual'
-]
-
-console.log(process.env.ADMIN_CORS); 
-
-console.log(process.env.ADMIN_CORS?.trim());
-
+];
 
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
 const projectConfig = {
@@ -35,24 +30,5 @@ const completeConfig = {
     ...!isDev && { backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE },
   }
 };
-
-console.log(completeConfig);
-
-console.log('adminCors:', projectConfig.http.adminCors);
-console.log('authCors:', projectConfig.http.authCors);
-console.log('storeCors:', projectConfig.http.storeCors);
-console.log('backendUrl:', completeConfig.admin.backendUrl);
-
-const backendurlvar = process.env.RAILWAY_PUBLIC_DOMAIN_VALUE;
-const minimalConfig = {
-  adminCors: process.env.ADMIN_CORS,
-  authCors: process.env.AUTH_CORS,
-  storeCors: process.env.STORE_CORS,
-  backendUrl: backendurlvar
-};
-
-console.log(minimalConfig);
-console.log(JSON.stringify(minimalConfig, null, 2));
-
 
 export default defineConfig(completeConfig);
