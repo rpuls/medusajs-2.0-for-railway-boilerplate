@@ -5,7 +5,7 @@ const isDev = process.env.NODE_ENV === 'development';
 loadEnv(process.env.NODE_ENV, process.cwd())
 
 const plugins = [
-  'medusa-fulfillment-manual'
+  // 'medusa-fulfillment-manual'
 ];
 
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */

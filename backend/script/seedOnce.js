@@ -45,6 +45,9 @@ const seedDatabase = async () => {
     console.log('Running migrations...');
     await runCommand('npx medusa migrations run');
     
+    console.log('Running link sync...');
+    await runCommand('npx medusa links sync');
+    
     console.log('Running seed script...');
     await runCommand('npm run seed');
     
@@ -55,9 +58,9 @@ const seedDatabase = async () => {
       await runCommand(`npx medusa user -e "${adminEmail}" -p "${adminPassword}"`);
     }
     
+    console.log('Database seeded and admin user created successfully.');
     return;
     
-    console.log('Database seeded and admin user created successfully.');
   } catch (error) {
     console.error('Failed to seed database or create admin user:', error);
     process.exit(1);
