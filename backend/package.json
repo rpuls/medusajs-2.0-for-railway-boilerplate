@@ -37,6 +37,7 @@
     "@medusajs/notification-local": "preview",
     "@medusajs/order": "preview",
     "@medusajs/payment": "preview",
+    "@medusajs/payment-stripe": "^0.0.3-preview-20240804150539",
     "@medusajs/pricing": "preview",
     "@medusajs/product": "preview",
     "@medusajs/promotion": "preview",
