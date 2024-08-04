@@ -55,5 +55,4 @@ const completeConfig = {
     ...!isDev && { backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE },
   }
 };
-
-export default defineConfig(completeConfig);
+module.exports = defineConfig(completeConfig);
