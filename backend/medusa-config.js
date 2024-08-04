@@ -1,4 +1,4 @@
-import { loadEnv, Modules, defineConfig } from '@medusajs/utils'
+import { loadEnv, defineConfig } from '@medusajs/utils';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -30,21 +30,21 @@ const stripeApiKey = process.env.STRIPE_API_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const stripeConfigured = stripeApiKey && stripeWebhookSecret;
 if (stripeConfigured) {
-  modules[Modules.PAYMENT] = {
-    resolve: '@medusajs/payment',
-    options: {
-      providers: [
-        {
-          resolve: '@medusajs/payment-stripe',
-          id: 'stripe',
-          options: {
-            apiKey: stripeApiKey,
-            webhookSecret: stripeWebhookSecret
-          }
-        }
-      ]
-    }
-  };
+  // modules[Modules.PAYMENT] = {
+  //   resolve: '@medusajs/payment',
+  //   options: {
+  //     providers: [
+  //       {
+  //         resolve: '@medusajs/payment-stripe',
+  //         id: 'stripe',
+  //         options: {
+  //           apiKey: stripeApiKey,
+  //           webhookSecret: stripeWebhookSecret
+  //         }
+  //       }
+  //     ]
+  //   }
+  // };
 }
 
 const completeConfig = {
@@ -55,4 +55,5 @@ const completeConfig = {
     ...!isDev && { backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE },
   }
 };
-module.exports = defineConfig(completeConfig);
+
+export default defineConfig(completeConfig);

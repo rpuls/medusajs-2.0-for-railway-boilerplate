@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "description": "A Prebaked Medusa 2.0 backend",
   "author": "Rasmus Puls",
-  "type": "module",
   "license": "MIT",
   "keywords": [
     "sqlite",
