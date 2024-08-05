@@ -1,0 +1,9 @@
+providers = ["node"]
+
+[phases.install]
+cmds = [
+  "npm install -g corepack",
+  "corepack enable",
+  "corepack prepare npm@10.8.2 --activate",
+  "npm install"
+]
