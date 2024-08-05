@@ -1,4 +1,4 @@
-import { loadEnv, defineConfig } from '@medusajs/utils'
+import { loadEnv, Modules, defineConfig } from '@medusajs/utils'
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -7,6 +7,30 @@ loadEnv(process.env.NODE_ENV, process.cwd())
 const plugins = [
   // 'medusa-fulfillment-manual'
 ];
+
+const modules = {};
+
+// Stripe payment provider
+const stripeApiKey = process.env.STRIPE_API_KEY;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const stripeConfigured = stripeApiKey && stripeWebhookSecret;
+if (stripeConfigured) {
+  modules[Modules.PAYMENT] = {
+    resolve: '@medusajs/payment',
+    options: {
+      providers: [
+        {
+          resolve: '@medusajs/payment-stripe',
+          id: 'stripe',
+          options: {
+            apiKey: stripeApiKey,
+            webhookSecret: stripeWebhookSecret
+          }
+        }
+      ]
+    }
+  };
+}
 
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
 const projectConfig = {
@@ -25,7 +49,7 @@ const projectConfig = {
 const completeConfig = {
   projectConfig,
   plugins,
-  modules: {},
+  modules,
   admin: {
     ...!isDev && { backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE },
   }
