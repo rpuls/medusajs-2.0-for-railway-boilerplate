@@ -4,17 +4,35 @@ const isDev = process.env.NODE_ENV === 'development';
 
 loadEnv(process.env.NODE_ENV, process.cwd())
 
+const backendUrl = process.env.RAILWAY_PUBLIC_DOMAIN_VALUE || 'http://localhost:9000';
+
 const plugins = [
   // 'medusa-fulfillment-manual'
 ];
 
-const modules = {};
+const modules = {
+  [Modules.FILE]: {
+    resolve: "@medusajs/file",
+    options: {
+      providers: [
+        {
+          resolve: "@medusajs/file-local-next",
+          id: "local",
+          options: {
+            backend_url: backendUrl
+          }
+        }
+      ]
+    }
+  }
+};
 
 // Stripe payment provider
 const stripeApiKey = process.env.STRIPE_API_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const stripeConfigured = stripeApiKey && stripeWebhookSecret;
 if (stripeConfigured) {
+  console.log('Stripe api key and webhook secret found, enabling stripe payment provider');
   modules[Modules.PAYMENT] = {
     resolve: '@medusajs/payment',
     options: {
@@ -51,7 +69,7 @@ const completeConfig = {
   plugins,
   modules,
   admin: {
-    ...!isDev && { backendUrl: process.env.RAILWAY_PUBLIC_DOMAIN_VALUE },
+    ...!isDev && { backendUrl },
   }
 };
 
