@@ -1,8 +1,8 @@
-import { loadEnv, Modules, defineConfig } from '@medusajs/utils'
+import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-loadEnv(process.env.NODE_ENV, process.cwd())
+loadEnv(process.env.NODE_ENV, process.cwd());
 
 const backendUrl = process.env.RAILWAY_PUBLIC_DOMAIN_VALUE || 'http://localhost:9000';
 
@@ -12,12 +12,12 @@ const plugins = [
 
 const modules = {
   [Modules.FILE]: {
-    resolve: "@medusajs/file",
+    resolve: '@medusajs/file',
     options: {
       providers: [
         {
-          resolve: "@medusajs/file-local-next",
-          id: "local",
+          resolve: '@medusajs/file-local-next',
+          id: 'local',
           options: {
             backend_url: `${backendUrl}/static`
           }
@@ -50,6 +50,30 @@ if (stripeConfigured) {
   };
 }
 
+// SendGrid notification provider
+const sendgridApiKey = process.env.SENDGRID_API_KEY;
+const sendgridFrom = process.env.SENDGRID_FROM;
+const sendgridConfigured = sendgridApiKey && sendgridFrom;
+if (sendgridConfigured) {
+  console.log('SendGrid api key and from address found, enabling SendGrid notification provider');
+  modules[Modules.NOTIFICATION] = {
+    resolve: '@medusajs/notification',
+    options: {
+      providers: [
+        {
+          resolve: '@medusajs/notification-sendgrid',
+          id: 'sendgrid',
+          options: {
+            channels: ['email'],
+            api_key: sendgridApiKey,
+            from: sendgridFrom
+          }
+        }
+      ]
+    }
+  };
+}
+
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
 const projectConfig = {
   http: {
@@ -57,11 +81,11 @@ const projectConfig = {
     authCors: process.env.AUTH_CORS,
     storeCors: process.env.STORE_CORS,
     jwtSecret: process.env.JWT_SECRET,
-    cookieSecret: process.env.COOKIE_SECRET,
+    cookieSecret: process.env.COOKIE_SECRET
   },
   redis_url: process.env.REDIS_URL,
   database_url: process.env.DATABASE_URL,
-  database_type: 'postgres',
+  database_type: 'postgres'
 };
 
 const completeConfig = {
@@ -69,7 +93,7 @@ const completeConfig = {
   plugins,
   modules,
   admin: {
-    ...!isDev && { backendUrl },
+    ...!isDev && { backendUrl }
   }
 };
 
