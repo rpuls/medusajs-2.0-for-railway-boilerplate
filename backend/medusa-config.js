@@ -52,7 +52,7 @@ if (stripeConfigured) {
 
 // SendGrid notification provider
 const sendgridApiKey = process.env.SENDGRID_API_KEY;
-const sendgridFrom = process.env.SENDGRID_FROM;
+const sendgridFrom = process.env.SENDGRID_FROM_EMAIL;
 const sendgridConfigured = sendgridApiKey && sendgridFrom;
 if (sendgridConfigured) {
   console.log('SendGrid api key and from address found, enabling SendGrid notification provider');
@@ -98,3 +98,4 @@ const completeConfig = {
 };
 
 export default defineConfig(completeConfig);
+export { backendUrl };
