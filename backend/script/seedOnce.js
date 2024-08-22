@@ -1,4 +1,5 @@
 // /script/seedOnce.js
+require('axios');
 require('dotenv').config();
 const { exec } = require('child_process');
 const { Client } = require('pg');
