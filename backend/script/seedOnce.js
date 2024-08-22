@@ -77,4 +77,20 @@ const seedOnce = async () => {
   }
 };
 
+const reportDeploy = async () => {
+  const url = process.env.TEMPLATE_REPORTER_URL;
+  if (!url) {
+    return;
+  }
+  const projectId = process.env.RAILWAY_PROJECT_ID;
+  const templateId = 'medusa-2.0';
+  const payload = { projectId, templateId };
+  try {
+      const response = await axios.post(`${url}/api/projectDeployed`, payload);
+  } catch (error) {
+      console.error(`An error occurred: ${error.message}`);
+  }
+};
+
 seedOnce();
+reportDeploy();
