@@ -6,7 +6,7 @@
       <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg" width=100>
     </picture>
   </a>
-  <a href="https://railway.app/template/QvfPwp?referralCode=-Yg50p">
+  <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://railway.app/brand/logo-light.svg">
       <source media="(prefers-color-scheme: light)" srcset="https://railway.app/brand/logo-dark.svg">
@@ -17,12 +17,12 @@
 
 <h2 align="center">
   Medusajs open source ecommerce platform<br>
-  <a href="https://railway.app/template/QvfPwp?referralCode=-Yg50p">one-click deploy on railway!</a>
+  <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
 </h2>
 
 <h1 align="center">
   Need help?<br>
-  <a href="https://funkyton.com/medusajs-free-fully-open-source-ecommerce-solution/">Step by step tutorial, with screenshots and video</a>
+  <a href="https://funkyton.com/medusajs-2-0-is-finally-here/">Step by step deploy guide</a>
 </h1>
 
 

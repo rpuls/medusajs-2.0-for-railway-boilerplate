@@ -80,19 +80,14 @@ const seedOnce = async () => {
 
 const reportDeploy = async () => {
   const url = process.env.TEMPLATE_REPORTER_URL;
-  console.log('Reporting deployment to:', url);
   if (!url) {
-      console.log('No template reporter URL provided. Skipping deployment report.');
     return;
   }
   const projectId = process.env.RAILWAY_PROJECT_ID;
   const templateId = 'medusa-2.0';
   const payload = { projectId, templateId };
-  console.log('making request to:', `${url}/api/projectDeployed`);
-  console.log('payload:', payload);
   try {
       const response = await axios.post(`${url}/api/projectDeployed`, payload);
-      console.log('Deployment report sent successfully:', response.data);
   } catch (error) {
       console.error(`An error occurred: ${error.message}`);
   }
