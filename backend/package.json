@@ -37,6 +37,7 @@
     "@medusajs/medusa": "preview",
     "@medusajs/notification": "preview",
     "@medusajs/notification-local": "preview",
+    "@medusajs/event-bus-redis": "preview",
     "@medusajs/notification-sendgrid": "preview",
     "@medusajs/order": "preview",
     "@medusajs/payment": "preview",

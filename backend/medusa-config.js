@@ -24,6 +24,12 @@ const modules = {
         }
       ]
     }
+  },
+  [Modules.EVENT_BUS]: {
+    resolve: "@medusajs/event-bus-redis",
+    options: { 
+      redisUrl: process.env.REDIS_URL
+    }
   }
 };
 
@@ -83,7 +89,7 @@ const projectConfig = {
     jwtSecret: process.env.JWT_SECRET,
     cookieSecret: process.env.COOKIE_SECRET
   },
-  redis_url: process.env.REDIS_URL,
+  redisUrl: process.env.REDIS_URL,
   database_url: process.env.DATABASE_URL,
   database_type: 'postgres'
 };

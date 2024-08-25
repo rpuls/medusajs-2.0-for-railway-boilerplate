@@ -9,6 +9,8 @@ export default async function userInviteHandler({
   container,
 }: SubscriberArgs<any>) {
 
+
+  console.log('User invite created', data);
   //  Note: invite does not contain email and token yet 
   // const { email, token } = invite;
   
