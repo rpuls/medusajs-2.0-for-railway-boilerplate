@@ -47,14 +47,18 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 ## About this boilerplate
 This boilerplate is a monorepo consisting of snapshot of newly released medusajs 2.0 (preview) backend and storefront app created with `npx create-medusa-app@preview` July 2024. Modified to be plug n' play deployable on [railway.app](https://railway.app?referralCode=-Yg50p)!
 
+Updated: to `version 2.0.5`
 
-# medusajs-backend
+
+# /backend
 
 ### railway setup
 Please change the value of environtment variables: `COOCKIE_SECRET` and `JWT_SECRET`.
 
 ### local setup
-- Install dependencies `yarn`
+Video instructions: https://youtu.be/PPxenu7IjGM
+
+- Install dependencies `npm i` or `yarn`
 - Rename `.env.template` ->  `.env`
 - To connect to your online database, from local; copy the `DATABASE_URL` value that have been auto generated on railway, and add to your `.env`
 
@@ -64,14 +68,16 @@ Please change the value of environtment variables: `COOCKIE_SECRET` and `JWT_SEC
 
 ### commands
 `cd backend/`
-`yarn build` will compile app.
-`yarn dev` will start local admin dashboard app to manage products and orders etc.
-`yarn start` will start the backend server, needed for the storefront
+`npm run build` or `yarn build` will compile app.
+`npm run start` or `yarn start` will start the backend server, needed for the storefront
+`npm run dev` or `yarn dev` will start backend (and admin dasboard frontend) - in development mode
 
-# medusa-storefront
+# /storefront
 
 ### local setup
-intall dependencies `yarn`
+Video instructions: https://youtu.be/PPxenu7IjGM
+
+intall dependencies `npm i` or `yarn`
 Rename `.env.local.template` ->  `.env.local`
 
 ### requirements
@@ -79,6 +85,9 @@ Rename `.env.local.template` ->  `.env.local`
 
 ### commands
 `cd storefront/`
-`yarn wait` will keep calling backend endpoint until a backend responds.
-`yarn build` will build the nextjs app - remember to start backend app prior to running this command.
-`yarn start` will serve the frontend web shop.
+`npm run build` or `yarn build` will build the nextjs app - remember to start backend app prior to running this command.
+`npm run start` or `yarn start` will serve the frontend web shop.
+`npm run dev` or `yarn dev` will run on uncompiled code, and hot-reload as files saved with changes
+
+## Useful resources
+- https://funkyton.com/medusajs-2-0-is-finally-here/#succuessfully-deployed-whats-next
