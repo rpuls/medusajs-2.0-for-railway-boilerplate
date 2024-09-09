@@ -16,13 +16,13 @@
 </p>
 
 <h2 align="center">
-  Medusajs open source ecommerce platform<br>
+  Prebaked medusajs 2.0 monorepo (backend + postgres + redis + +storefront)<br>
   <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
 </h2>
 
 <h1 align="center">
   Need help?<br>
-  <a href="https://funkyton.com/medusajs-2-0-is-finally-here/">Step by step deploy guide</a>
+  <a href="https://funkyton.com/medusajs-2-0-is-finally-here/">Step by step deploy guide, and video instructions</a>
 </h1>
 
 
@@ -48,7 +48,6 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 This boilerplate is a monorepo consisting of snapshot of newly released medusajs 2.0 (preview) backend and storefront app created with `npx create-medusa-app@preview` July 2024. Modified to be plug n' play deployable on [railway.app](https://railway.app?referralCode=-Yg50p)!
 
 Updated: to `version 2.0.5`
-
 
 # /backend
 
@@ -90,4 +89,5 @@ Rename `.env.local.template` ->  `.env.local`
 `npm run dev` or `yarn dev` will run on uncompiled code, and hot-reload as files saved with changes
 
 ## Useful resources
+- How to setup credit card payment with Stripe payment module: https://youtu.be/dcSOpIzc1Og
 - https://funkyton.com/medusajs-2-0-is-finally-here/#succuessfully-deployed-whats-next
