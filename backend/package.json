@@ -52,6 +52,7 @@
     "@medusajs/tax": "preview",
     "@medusajs/user": "preview",
     "@medusajs/workflow-engine-inmemory": "preview",
+    "medusa-payment-stripe": "6.0.11",
     "express": "^4.17.2"
   },
   "devDependencies": {
