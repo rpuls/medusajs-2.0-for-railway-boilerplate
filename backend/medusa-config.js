@@ -8,6 +8,14 @@ const backendUrl = process.env.RAILWAY_PUBLIC_DOMAIN_VALUE || 'http://localhost:
 
 const plugins = [
   // 'medusa-fulfillment-manual'
+  {
+    resolve: `medusa-payment-stripe`,
+    options: {
+      api_key: process.env.STRIPE_API_KEY,
+      webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    },
+
+  }
 ];
 
 const modules = {
