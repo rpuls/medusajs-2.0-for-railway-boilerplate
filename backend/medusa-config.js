@@ -8,7 +8,6 @@ const backendUrl =
   process.env.RAILWAY_PUBLIC_DOMAIN_VALUE || "http://localhost:9000";
 
 const plugins = [
-  // 'medusa-fulfillment-manual'
   {
     resolve: `medusa-file-cloudinary`,
     options: {
