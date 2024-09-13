@@ -21,6 +21,7 @@
     "dev": "medusa develop"
   },
   "dependencies": {
+    "medusa-file-s3": "^1.4.2",
     "@medusajs/api-key": "preview",
     "@medusajs/auth": "preview",
     "@medusajs/auth-emailpass": "preview",
