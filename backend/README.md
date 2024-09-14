@@ -7,7 +7,7 @@
     </picture>
   </a>
 </p>
-<h1 align="center">
+<h1 align="cente r">
   Medusa
 </h1>
 
@@ -34,7 +34,7 @@
 
 ## Compatibility
 
-This starter is compatible with versions >= 1.8.0 of `@medusajs/medusa`. 
+This starter is compatible with versions >= 1.8.0 of `@medusajs/medusa`.
 
 ## Getting Started
 
