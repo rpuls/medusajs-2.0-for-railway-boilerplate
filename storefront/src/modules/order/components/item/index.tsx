@@ -26,7 +26,9 @@ const Item = ({ item }: ItemProps) => {
         >
           {item.title}
         </Text>
-        <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {item.variant && (
+          <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        )}
       </Table.Cell>
 
       <Table.Cell className="!pr-0">

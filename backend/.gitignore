@@ -9,6 +9,8 @@ yarn-error.log
 static
 coverage
 
+.medusa
+
 !src/**
 
 ./tsconfig.tsbuildinfo

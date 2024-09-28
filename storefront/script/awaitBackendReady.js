@@ -3,7 +3,7 @@ const nodefetch = require('node-fetch');
 let startTime = Date.now();
 
 const checkBackend = () => {
-  const url = (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000') + '/store/product-categories';
+  const url = (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000') + '/key-exchange';
   console.log('Checking if the backend is ready on:', url);
 
   let elapsedTime = Math.floor((Date.now() - startTime) / 1000);

@@ -37,12 +37,13 @@ export async function signup(_currentState: unknown, formData: FormData) {
   }
 
   try {
-    const { token } = await sdk.auth.create("customer", "emailpass", {
+    const token = await sdk.auth.register("customer", "emailpass", {
       email: customerForm.email,
       password: password,
     })
 
     const customHeaders = { authorization: `Bearer ${token}` }
+    
     const { customer: createdCustomer } = await sdk.store.customer.create(
       customerForm,
       {},
@@ -54,7 +55,7 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     })
 
-    setAuthToken(loginToken)
+    setAuthToken(typeof loginToken === 'string' ? loginToken : loginToken.location)
 
     revalidateTag("customer")
     return createdCustomer
@@ -71,7 +72,7 @@ export async function login(_currentState: unknown, formData: FormData) {
     await sdk.auth
       .login("customer", "emailpass", { email, password })
       .then((token) => {
-        setAuthToken(token)
+        setAuthToken(typeof token === 'string' ? token : token.location)
         revalidateTag("customer")
       })
   } catch (error: any) {

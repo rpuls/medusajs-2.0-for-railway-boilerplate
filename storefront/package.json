@@ -8,9 +8,11 @@
     "medusa-storefront"
   ],
   "scripts": {
+    "runWithKey": "node script/runWithKey.js",
     "dev": "next dev -p 8000",
-    "build": "npm run wait && next build",
-    "start": "next start -p ${PORT:-3000}",
+    "build": "npm run wait && npm run runWithKey build",
+    "build:next": "next build",
+    "start": "npm run runWithKey start",
     "start:dev": "next start",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
@@ -58,6 +60,7 @@
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.18",
     "@types/react-instantsearch-dom": "^6.12.3",
+    "ansi-colors": "^4.1.3",
     "autoprefixer": "^10.4.2",
     "babel-loader": "^8.2.3",
     "eslint": "8.10.0",

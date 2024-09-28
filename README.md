@@ -47,7 +47,7 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 ## About this boilerplate
 This boilerplate is a monorepo consisting of snapshot of newly released medusajs 2.0 (preview) backend and storefront app created with `npx create-medusa-app@preview` July 2024. Modified to be plug n' play deployable on [railway.app](https://railway.app?referralCode=-Yg50p)!
 
-Updated: to `version 2.0.5`
+Updated: to `version 2.0.10`
 
 # /backend
 
