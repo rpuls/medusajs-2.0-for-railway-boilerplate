@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const { spawn } = require('child_process');
+const { setTimeout } = require('timers/promises');
 
 const runCommand = (command, env) => {
   const [cmd, ...args] = command.split(' ');
@@ -20,29 +21,39 @@ const runCommand = (command, env) => {
   });
 };
 
-const fetchApiKey = async () => {
+const delay = (ms) => setTimeout(ms);
+
+const fetchApiKey = async (retries = 5) => {
   const url = (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000') + '/key-exchange';
   console.log(`Attempting to fetch API key from: ${url}`);
 
-  try {
-    const response = await fetch(url);
-    console.log(`Response status: ${response.status}`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch API key: ${response.statusText}`);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url);
+      console.log(`Attempt ${attempt} - Response status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch API key: ${response.statusText}`);
+      }
+      
+      const apiKey = await response.json();
+      console.log('API key response:', apiKey);
+      
+      if (!apiKey || !apiKey.publishableApiKey) {
+        throw new Error('Invalid API key format received');
+      }
+      
+      return apiKey.publishableApiKey;
+    } catch (error) {
+      console.error(`Error fetching API key (Attempt ${attempt}/${retries}): ${error.message}`);
+      if (attempt < retries) {
+        console.log(`Retrying in 3 seconds...`);
+        await delay(3000);
+      } else {
+        console.error('All retry attempts exhausted. Unable to fetch API key.');
+        return null;
+      }
     }
-    
-    const apiKey = await response.json();
-    console.log('API key response:', apiKey);
-    
-    if (!apiKey || !apiKey.publishableApiKey) {
-      throw new Error('Invalid API key format received');
-    }
-    
-    return apiKey.publishableApiKey;
-  } catch (error) {
-    console.error(`Error fetching API key: ${error.message}`);
-    return null;
   }
 };
 
@@ -61,7 +72,7 @@ const init = async () => {
     console.log('NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not defined. Attempting to fetch...');
     publishableKey = await fetchApiKey();
     if (!publishableKey) {
-      console.error('Failed to fetch API key. Please ensure the backend is running and the key exchange endpoint is accessible.');
+      console.error('Failed to fetch API key after multiple attempts. Please ensure the backend is running and the key exchange endpoint is accessible.');
       process.exit(1);
     }
     console.log('API key fetched successfully.');
