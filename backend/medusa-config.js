@@ -32,7 +32,7 @@ const modules = {
           id: 'local',
           options: {
             upload_dir: 'static-assets',
-            backend_url: `${backendUrl}/static-assets`
+            backend_url: backendUrl
           }
         }
       ]
