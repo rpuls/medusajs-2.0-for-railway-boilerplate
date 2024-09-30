@@ -31,7 +31,8 @@ const modules = {
           resolve: '@medusajs/file-local-next',
           id: 'local',
           options: {
-            backend_url: `${backendUrl}/static`
+            upload_dir: 'static-assets',
+            backend_url: `${backendUrl}/static-assets`
           }
         }
       ]
