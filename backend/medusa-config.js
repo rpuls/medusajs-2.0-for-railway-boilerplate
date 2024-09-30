@@ -12,12 +12,12 @@ const plugins = [
 
 const modules = {
   [Modules.AUTH]: {
-    resolve: "@medusajs/auth",
+    resolve: '@medusajs/auth',
     options: {
       providers: [
         {
-          resolve: "@medusajs/auth-emailpass",
-          id: "emailpass",
+          resolve: '@medusajs/auth-emailpass',
+          id: 'emailpass',
           options: {}
         }
       ]
@@ -43,7 +43,7 @@ const modules = {
 if (process.env.REDIS_URL) {
   console.log('Redis url found, enabling event bus with redis');
   modules[Modules.EVENT_BUS] = {
-    resolve: "@medusajs/event-bus-redis",
+    resolve: '@medusajs/event-bus-redis',
     options: { 
       redisUrl: process.env.REDIS_URL
     }
@@ -97,7 +97,7 @@ if (sendgridConfigured) {
   };
 }
 
-/** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
+/** @type {import('@medusajs/medusa').ConfigModule['projectConfig']} */
 const projectConfig = {
   http: {
     adminCors: process.env.ADMIN_CORS,
