@@ -29,7 +29,7 @@
   "dependencies": {
     "@headlessui/react": "^1.6.1",
     "@hookform/error-message": "^2.0.0",
-    "@medusajs/js-sdk": "preview",
+    "@medusajs/js-sdk": "0.0.2-preview-20241010150540",
     "@medusajs/types": "preview",
     "@medusajs/ui": "preview",
     "@meilisearch/instant-meilisearch": "^0.7.1",
