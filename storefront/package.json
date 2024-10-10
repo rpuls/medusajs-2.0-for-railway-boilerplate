@@ -11,7 +11,7 @@
     "wait": "await-backend",
     "launcher": "launch-storefront",
     "dev": "next dev -p 8000",
-    "build": "npm run wait && npm run runWithKey build",
+    "build": "npm run wait && npm run launcher build",
     "build:next": "next build",
     "start": "npm run launcher start",
     "start:dev": "next start",
