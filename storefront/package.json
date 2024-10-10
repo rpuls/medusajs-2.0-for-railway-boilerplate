@@ -19,9 +19,6 @@
     "analyze": "ANALYZE=true next build",
     "test-e2e": "playwright test e2e"
   },
-  "engines": {
-    "node": ">=20"
-  },
   "resolutions": {
     "webpack": "^5",
     "@types/react": "17.0.40"
@@ -29,7 +26,7 @@
   "dependencies": {
     "@headlessui/react": "^1.6.1",
     "@hookform/error-message": "^2.0.0",
-    "@medusajs/js-sdk": "0.0.2-preview-20241010150540",
+    "@medusajs/js-sdk": "preview",
     "@medusajs/types": "preview",
     "@medusajs/ui": "preview",
     "@meilisearch/instant-meilisearch": "^0.7.1",
@@ -40,7 +37,7 @@
     "algoliasearch": "^4.20.0",
     "axios": "^1.6.7",
     "lodash": "^4.17.21",
-    "medusajs-launch-utils": "^0.0.2",
+    "medusajs-launch-utils": "^0.0.3",
     "next": "^14.0.0",
     "pg": "^8.11.3",
     "qs": "^6.12.1",
