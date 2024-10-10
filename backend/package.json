@@ -15,7 +15,7 @@
   "scripts": {
     "build": "medusa build",
     "seed": "medusa exec ./src/scripts/seed.ts",
-    "seed:once": "node script/seedOnce.js",
+    "seed:once": "init-backend",
     "start": "medusa start",
     "dev": "medusa develop"
   },
@@ -28,6 +28,7 @@
     "@medusajs/currency": "preview",
     "@medusajs/customer": "preview",
     "@medusajs/event-bus-local": "preview",
+    "@medusajs/event-bus-redis": "preview",
     "@medusajs/file": "preview",
     "@medusajs/file-local-next": "preview",
     "@medusajs/fulfillment": "preview",
@@ -36,7 +37,6 @@
     "@medusajs/medusa": "preview",
     "@medusajs/notification": "preview",
     "@medusajs/notification-local": "preview",
-    "@medusajs/event-bus-redis": "preview",
     "@medusajs/notification-sendgrid": "preview",
     "@medusajs/order": "preview",
     "@medusajs/payment": "preview",
@@ -51,7 +51,8 @@
     "@medusajs/tax": "preview",
     "@medusajs/user": "preview",
     "@medusajs/workflow-engine-inmemory": "preview",
-    "express": "^4.17.2"
+    "express": "^4.17.2",
+    "medusajs-launch-utils": "^0.0.2"
   },
   "devDependencies": {
     "@medusajs/medusa-cli": "preview",
