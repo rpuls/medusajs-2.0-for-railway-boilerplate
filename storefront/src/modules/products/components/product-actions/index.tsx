@@ -21,8 +21,10 @@ type ProductActionsProps = {
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string>, varopt: any) => {
-    acc[varopt.option.title] = varopt.value
+  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
+    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
+      acc[varopt.option.title] = varopt.value
+    }
     return acc
   }, {})
 }
