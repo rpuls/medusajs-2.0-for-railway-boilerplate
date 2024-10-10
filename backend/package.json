@@ -52,7 +52,7 @@
     "@medusajs/user": "preview",
     "@medusajs/workflow-engine-inmemory": "preview",
     "express": "^4.17.2",
-    "medusajs-launch-utils": "^0.0.2"
+    "medusajs-launch-utils": "^0.0.3"
   },
   "devDependencies": {
     "@medusajs/medusa-cli": "preview",
