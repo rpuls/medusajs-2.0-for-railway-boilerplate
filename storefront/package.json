@@ -19,6 +19,9 @@
     "analyze": "ANALYZE=true next build",
     "test-e2e": "playwright test e2e"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "resolutions": {
     "webpack": "^5",
     "@types/react": "17.0.40"
