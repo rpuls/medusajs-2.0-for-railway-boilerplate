@@ -98,6 +98,29 @@ if (sendgridConfigured) {
   };
 }
 
+// Resend notification provider
+const resendApiKey = process.env.RESEND_API_KEY;
+const resendFrom = process.env.RESEND_FROM;
+const resendConfigured = resendApiKey && resendFrom;
+if (resendConfigured) {
+  console.log('Resend api key and from address found, enabling Resend notification provider');
+  modules[Modules.NOTIFICATION] = {
+    resolve: '@medusajs/notification',
+    options: {
+      providers: [{
+        resolve: '@typed-dev/medusa-notification-resend',
+        id: 'resend',
+        options: {
+          channels: ['email'],
+          api_key: resendApiKey,
+          from: resendFrom
+        }
+      }]
+    }
+  };
+}
+
+
 /** @type {import('@medusajs/medusa').ConfigModule['projectConfig']} */
 const projectConfig = {
   http: {
