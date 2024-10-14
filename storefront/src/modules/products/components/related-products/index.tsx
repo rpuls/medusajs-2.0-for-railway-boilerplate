@@ -8,14 +8,6 @@ type RelatedProductsProps = {
   countryCode: string
 }
 
-type StoreProductParamsWithTags = HttpTypes.StoreProductParams & {
-  tags?: string[]
-}
-
-type StoreProductWithTags = HttpTypes.StoreProduct & {
-  tags?: { value: string }[]
-}
-
 export default async function RelatedProducts({
   product,
   countryCode,
@@ -23,25 +15,22 @@ export default async function RelatedProducts({
   const region = await getRegion(countryCode)
 
   if (!region) {
-  const queryParams: StoreProductParamsWithTags = {}
+    return null
   }
 
-  // edit this function to define your related products logic
-  const queryParams: StoreProductParamsWithTags = {}
-  if (region?.id) {
-    queryParams.region_id = region.id
+  // Verifică dacă produsul are o colecție
+  if (!product.collection_id) {
+    return null
   }
-  if (product.collection_id) {
-    queryParams.collection_id = [product.collection_id]
-  }
-  const productWithTags = product as StoreProductWithTags
-  if (productWithTags.tags) {
-    queryParams.tags = productWithTags.tags
-      .map((t) => t.value)
-      .filter(Boolean) as string[]
-  }
-  queryParams.is_giftcard = false
 
+  // Pregătește parametrii pentru obținerea produselor din aceeași colecție
+  const queryParams: HttpTypes.StoreProductParams = {
+    region_id: region.id,
+    collection_id: [product.collection_id],
+    is_giftcard: false,
+  }
+
+  // Obține lista produselor din aceeași colecție
   const products = await getProductsList({
     queryParams,
     countryCode,
@@ -51,6 +40,7 @@ export default async function RelatedProducts({
     )
   })
 
+  // Dacă nu există produse în colecție (altele decât produsul curent), returnează null
   if (!products.length) {
     return null
   }
@@ -58,18 +48,18 @@ export default async function RelatedProducts({
   return (
     <div className="product-page-constraint">
       <div className="flex flex-col items-center text-center mb-16">
-        <span className="text-base-regular text-gray-600 mb-6">
-          Related products
+        <span className="text-md lg:text-xl font-bold">
+          Produse Similare
         </span>
-        <p className="text-2xl-regular text-ui-fg-base max-w-lg">
-          You might also want to check out these products.
+        <p className="text-lg-regular text-gray-600 text-ui-fg-base max-w-lg">
+          Descoperă mai multe produse care te-ar interesa
         </p>
       </div>
 
       <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-        {products.map((product) => (
-          <li key={product.id}>
-            {region && <Product region={region} product={product} />}
+        {products.map((relatedProduct) => (
+          <li key={relatedProduct.id}>
+            <Product region={region} product={relatedProduct} />
           </li>
         ))}
       </ul>

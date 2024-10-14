@@ -1,58 +1,71 @@
-"use client"
+"use client";
 
-import { InstantSearch } from "react-instantsearch-hooks-web"
-import { useRouter } from "next/navigation"
-import { MagnifyingGlassMini } from "@medusajs/icons"
+import { InstantSearch, useSearchBox } from "react-instantsearch-hooks-web";
+import { useRouter } from "next/navigation";
+import { MagnifyingGlassMini } from "@medusajs/icons";
 
-import { SEARCH_INDEX_NAME, searchClient } from "@lib/search-client"
-import Hit from "@modules/search/components/hit"
-import Hits from "@modules/search/components/hits"
-import SearchBox from "@modules/search/components/search-box"
-import { useEffect, useRef } from "react"
+import { SEARCH_INDEX_NAME, searchClient } from "@lib/search-client";
+import Hit from "@modules/search/components/hit";
+import Hits from "@modules/search/components/hits";
+import { useEffect, useRef } from "react";
+
+// Custom Search Input component
+function CustomSearchInput() {
+  const { query, refine } = useSearchBox(); // useSearchBox hook for controlling the search
+  return (
+    <input
+      type="text"
+      className="w-full p-2 bg-gray-100 rounded"
+      value={query} // controlled input
+      onChange={(e) => refine(e.currentTarget.value)} // update search query
+      placeholder="Search for products..."
+    />
+  );
+}
 
 export default function SearchModal() {
-  const router = useRouter()
-  const searchRef = useRef(null)
+  const router = useRouter();
+  const searchRef = useRef(null);
 
   // close modal on outside click
   const handleOutsideClick = (event: MouseEvent) => {
     if (event.target === searchRef.current) {
-      router.back()
+      router.back();
     }
-  }
+  };
 
   useEffect(() => {
-    window.addEventListener("click", handleOutsideClick)
+    window.addEventListener("click", handleOutsideClick);
     // cleanup
     return () => {
-      window.removeEventListener("click", handleOutsideClick)
-    }
+      window.removeEventListener("click", handleOutsideClick);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   // disable scroll on body when modal is open
   useEffect(() => {
-    document.body.style.overflow = "hidden"
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "unset"
-    }
-  }, [])
+      document.body.style.overflow = "unset";
+    };
+  }, []);
 
   // on escape key press, close modal
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        router.back()
+        router.back();
       }
-    }
-    window.addEventListener("keydown", handleEsc)
+    };
+    window.addEventListener("keydown", handleEsc);
 
     // cleanup
     return () => {
-      window.removeEventListener("keydown", handleEsc)
-    }
+      window.removeEventListener("keydown", handleEsc);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   return (
     <div className="relative z-[75]">
@@ -69,7 +82,7 @@ export default function SearchModal() {
             >
               <div className="w-full flex items-center gap-x-2 p-4 bg-[rgba(3,7,18,0.5)] text-ui-fg-on-color backdrop-blur-2xl rounded-rounded">
                 <MagnifyingGlassMini />
-                <SearchBox />
+                <CustomSearchInput /> {/* Custom search input */}
               </div>
               <div className="flex-1 mt-6">
                 <Hits hitComponent={Hit} />
@@ -79,5 +92,5 @@ export default function SearchModal() {
         </div>
       </div>
     </div>
-  )
+  );
 }

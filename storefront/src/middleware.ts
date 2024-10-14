@@ -3,9 +3,10 @@ import { notFound } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
-const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us"
+const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 
+  console.log("PUBLISHABLE_KEY: ",PUBLISHABLE_KEY);
 const regionMapCache = {
   regionMap: new Map<string, HttpTypes.StoreRegion>(),
   regionMapUpdated: Date.now(),
@@ -20,14 +21,17 @@ async function getRegionMap() {
   ) {
     // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
     const { regions } = await fetch(`${BACKEND_URL}/store/regions`, {
+      method: 'GET',
       headers: {
-        "x-publishable-api-key": PUBLISHABLE_API_KEY!,
+        'x-publishable-api-key': PUBLISHABLE_KEY, 
+        'Content-Type': 'application/json'
       },
       next: {
         revalidate: 3600,
         tags: ["regions"],
       },
-    }).then((res) => res.json())
+    }).then((res) => res.json());
+    
 
     if (!regions?.length) {
       notFound()

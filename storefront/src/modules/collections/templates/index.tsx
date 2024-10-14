@@ -25,7 +25,7 @@ export default function CollectionTemplate({
       <RefinementList sortBy={sort} />
       <div className="w-full">
         <div className="mb-8 text-2xl-semi">
-          <h1>{collection.title}</h1>
+          <h1>{collection.title.toUpperCase()}</h1>
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts

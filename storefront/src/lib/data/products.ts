@@ -54,8 +54,8 @@ export const getProductsList = cache(async function ({
   queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
 }> {
   const limit = queryParams?.limit || 12
-  const validPageParam = Math.max(pageParam, 1);
-  const offset = (validPageParam - 1) * limit
+  const offset = Math.max(0, (pageParam - 1) * limit);
+
   const region = await getRegion(countryCode)
 
   if (!region) {
@@ -92,7 +92,59 @@ export const getProductsList = cache(async function ({
 /**
  * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
  * It will then return the paginated products based on the page and limit parameters.
+ * 
  */
+
+export const getTopSellingProducts = cache(async function ({
+  page = 0,
+  queryParams,
+  countryCode,
+}: {
+  page?: number
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  countryCode: string
+}): Promise<{
+  response: { products: HttpTypes.StoreProduct[]; count: number }
+  nextPage: number | null
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+}> {
+  const limit = queryParams?.limit || 12
+
+  // Obține toate produsele (100 pentru sortare)
+  const {
+    response: { products, count },
+  } = await getProductsList({
+    pageParam: 0,
+    queryParams: {
+      ...queryParams,
+      limit: 100, // Fetch 100 products for sorting purposes
+    },
+    countryCode,
+  })
+
+  // Sortează produsele pe baza unui criteriu de vânzări, cum ar fi `sold_quantity`
+  const sortedProducts = products.sort((a, b) => {
+    // Presupunem că produsele au un câmp `sold_quantity`
+    return (b.sold_quantity || 0) - (a.sold_quantity || 0)
+  })
+
+  const pageParam = (page - 1) * limit
+
+  const nextPage = count > pageParam + limit ? pageParam + limit : null
+
+  // Returnează produsele sortate, paginându-le
+  const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit)
+
+  return {
+    response: {
+      products: paginatedProducts,
+      count,
+    },
+    nextPage,
+    queryParams,
+  }
+})
+
 export const getProductsListWithSort = cache(async function ({
   page = 0,
   queryParams,

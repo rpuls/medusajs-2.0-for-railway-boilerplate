@@ -13,15 +13,15 @@ type SortProductsProps = {
 const sortOptions = [
   {
     value: "created_at",
-    label: "Latest Arrivals",
+    label: "Produse Noi",
   },
   {
     value: "price_asc",
-    label: "Price: Low -> High",
+    label: "Pret: Mic -> Mare",
   },
   {
     value: "price_desc",
-    label: "Price: High -> Low",
+    label: "Pret: Mare -> Mic",
   },
 ]
 
@@ -36,7 +36,7 @@ const SortProducts = ({
 
   return (
     <FilterRadioGroup
-      title="Sort by"
+      title="Sorteaza"
       items={sortOptions}
       value={sortBy}
       handleChange={handleChange}

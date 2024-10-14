@@ -29,6 +29,8 @@ export default async function ProductPreview({
     product: pricedProduct,
   })
 
+  console.log("produs",product);
+
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
       <div data-testid="product-wrapper">
@@ -38,13 +40,14 @@ export default async function ProductPreview({
           size="full"
           isFeatured={isFeatured}
         />
-        <div className="flex txt-compact-medium mt-4 justify-between">
-          <Text className="text-ui-fg-subtle" data-testid="product-title">
-            {product.title}
+        <div className="flex flex-col txt-compact-medium mt-4 justify-between">
+        <span className=" text-yellow-500">{product.collection?.title.toUpperCase()}</span>
+          <Text className="text-ui-fg-subtle font-bold text-[18px]" data-testid="product-title">
+            {product.title} 
           </Text>
-          <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
-          </div>
+         
+            {cheapestPrice && <div className="flex items-center gap-2"><PreviewPrice price={cheapestPrice} /> <span className="text-[11px]">TVA inclus</span></div>}
+         
         </div>
       </div>
     </LocalizedClientLink>

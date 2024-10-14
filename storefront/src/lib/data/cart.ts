@@ -81,11 +81,13 @@ export async function addToCart({
     throw new Error("Missing variant ID when adding to cart")
   }
 
+  // Obține coșul curent sau creează unul nou
   const cart = await getOrSetCart(countryCode)
   if (!cart) {
     throw new Error("Error retrieving or creating cart")
   }
 
+  // Adaugă produsul în coș
   await sdk.store.cart
     .createLineItem(
       cart.id,
@@ -100,7 +102,29 @@ export async function addToCart({
       revalidateTag("cart")
     })
     .catch(medusaError)
+
+  // Reobține coșul actualizat după adăugarea produsului
+  const updatedCart = await retrieveCart()
+
+  if (!updatedCart) {
+    throw new Error("Error retrieving updated cart after adding product")
+  }
+
+  // Calculează valoarea totală a coșului actualizat
+  const totalCartValue = updatedCart.items.reduce(
+    (total, item) => total + item.unit_price * item.quantity,
+    0
+  )
+
+  console.log("totalCartValue", totalCartValue)
+
+  // Dacă valoarea totală depășește 1000 RON, aplică reducerea automat
+  if (totalCartValue > 100) { // 1000 RON în subunități
+    const discountCode = "Lorena12" // Codul discountului
+    await applyPromotions([discountCode]) // Aplică automat discountul
+  }
 }
+
 
 export async function updateLineItem({
   lineId,
@@ -230,11 +254,13 @@ export async function initiatePaymentSession(
 
 export async function applyPromotions(codes: string[]) {
   const cartId = getCartId()
+  console.log("in promotie")
   if (!cartId) {
     throw new Error("No existing cart found")
   }
 
-  await updateCart({ promo_codes: codes })
+  await sdk.store.cart
+    .update(cartId, { promo_codes: codes }, {}, getAuthHeaders()) // Se aplică codul promoțional la coș
     .then(() => {
       revalidateTag("cart")
     })

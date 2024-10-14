@@ -55,7 +55,7 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     })
 
-    setAuthToken(typeof loginToken === 'string' ? loginToken : loginToken.location)
+    setAuthToken(loginToken)
 
     revalidateTag("customer")
     return createdCustomer
@@ -72,7 +72,7 @@ export async function login(_currentState: unknown, formData: FormData) {
     await sdk.auth
       .login("customer", "emailpass", { email, password })
       .then((token) => {
-        setAuthToken(typeof token === 'string' ? token : token.location)
+        setAuthToken(token)
         revalidateTag("customer")
       })
   } catch (error: any) {

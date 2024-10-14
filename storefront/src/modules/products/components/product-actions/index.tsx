@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@medusajs/ui"
+import { Button, Heading } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -21,10 +21,8 @@ type ProductActionsProps = {
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
-    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
-      acc[varopt.option.title] = varopt.value
-    }
+  return variantOptions?.reduce((acc: Record<string, string>, varopt: any) => {
+    acc[varopt?.option?.title] = varopt.value
     return acc
   }, {})
 }
@@ -36,6 +34,7 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [quantity, setQuantity] = useState(1) // Stare pentru cantitate
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
@@ -67,17 +66,14 @@ export default function ProductActions({
 
   // check if the selected variant is in stock
   const inStock = useMemo(() => {
-    // If we don't manage inventory, we can always add to cart
     if (selectedVariant && !selectedVariant.manage_inventory) {
       return true
     }
 
-    // If we allow back orders on the variant, we can add to cart
     if (selectedVariant?.allow_backorder) {
       return true
     }
 
-    // If there is inventory available, we can add to cart
     if (
       selectedVariant?.manage_inventory &&
       (selectedVariant?.inventory_quantity || 0) > 0
@@ -85,7 +81,6 @@ export default function ProductActions({
       return true
     }
 
-    // Otherwise, we can't add to cart
     return false
   }, [selectedVariant])
 
@@ -93,7 +88,7 @@ export default function ProductActions({
 
   const inView = useIntersection(actionsRef, "0px")
 
-  // add the selected variant to the cart
+  // add the selected variant to the cart with the selected quantity
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
 
@@ -101,12 +96,16 @@ export default function ProductActions({
 
     await addToCart({
       variantId: selectedVariant.id,
-      quantity: 1,
+      quantity: quantity, // Adaugă cantitatea selectată
       countryCode,
     })
 
     setIsAdding(false)
   }
+
+  // Funcții pentru ajustarea cantității
+  const increaseQuantity = () => setQuantity((prev) => prev + 1)
+  const decreaseQuantity = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))
 
   return (
     <>
@@ -132,23 +131,49 @@ export default function ProductActions({
             </div>
           )}
         </div>
-
+        <Heading
+          level="h2"
+          className="text-3xl leading-10 text-ui-fg-base"
+          data-testid="product-title"
+        >
+          {product.title.toUpperCase()}
+        </Heading>
         <ProductPrice product={product} variant={selectedVariant} />
+          <div className="flex items-center gap-[16px]">
+        {/* Butoanele pentru cantitate */}
+        <div className="flex items-center justify-between p-2 gap-x-2 border-[1px] border-gray-300 w-[100px]">
+          <button
+            onClick={decreaseQuantity}
+            className=" font-bold text-[24px] text-gray-500" 
+            disabled={quantity <= 1 || isAdding}
+          >
+            -
+          </button>
+          <span className="text-lg">{quantity}</span>
+          <button
+            onClick={increaseQuantity}
+            className=" font-bold text-[24px] text-gray-500"
+            disabled={isAdding}
+          >
+            +
+          </button>
+        </div>
 
         <Button
           onClick={handleAddToCart}
           disabled={!inStock || !selectedVariant || !!disabled || isAdding}
           variant="primary"
-          className="w-full h-10"
+          className="w-full lg:w-[200px] h-10"
           isLoading={isAdding}
           data-testid="add-product-button"
         >
           {!selectedVariant
             ? "Select variant"
             : !inStock
-            ? "Out of stock"
-            : "Add to cart"}
+            ? "Produsul nu mai este in stoc"
+            : "Adauga in Cos"}
         </Button>
+        </div>
         <MobileActions
           product={product}
           variant={selectedVariant}

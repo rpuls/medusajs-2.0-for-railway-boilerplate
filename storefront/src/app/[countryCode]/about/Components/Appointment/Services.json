@@ -1,0 +1,304 @@
+{
+    "profesionisti": [
+        {
+            "name": "Gabriela",
+            "services": [
+                {
+                    "name": "Aplicare 1D&2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Intretinere 2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Aplicare 2D&3D",
+                    "duration": "2:00",
+                    "price": "220"
+                },
+                {
+                    "name": "Intretinere 3D",
+                    "duration": "2:00",
+                    "price": "210"
+                },
+                {
+                    "name": "Efecte Speciale Eyeliner/Feline/Wet",
+                    "duration": "2:30",
+                    "price": "270"
+                },
+                {
+                    "name": "Aplicare 2D",
+                    "duration": "2:00",
+                    "price": "200"
+                },
+                {
+                    "name": "Intretinere 2D&3D",
+                    "duration": "2:00",
+                    "price": "190"
+                },
+                {
+                    "name": "Aplicare 3D",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Intretinere Wet/Raze",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Demontare",
+                    "duration": "0:30",
+                    "price": "30"
+                },
+                {
+                    "name": "Intretinere 1D&2D",
+                    "duration": "1:30",
+                    "price": "140"
+                },
+                {
+                    "name": "Laminare Gene",
+                    "duration": "2:00",
+                    "price": "200"
+                },
+                {
+                    "name": "Stilizare Sprancene",
+                    "duration": "0:30",
+                    "price": "60"
+                },
+                {
+                    "name": "Stilizare Sprancene Si Vopsit",
+                    "duration": "1:30",
+                    "price": "100"
+                },
+                {
+                    "name": "Stilizare Sprance Si Laminare",
+                    "duration": "1:30",
+                    "price": "150"
+                },
+                {
+                    "name": "Complete Brows(Stilizare+Lami+Vopsit)",
+                    "duration": "1:30",
+                    "price": "200"
+                },
+                {
+                    "name": "Laminare Sprancene",
+                    "duration": "0:30",
+                    "price": "120"
+                }
+            ]
+        },
+        {
+            "name": "Stefania",
+            "services": [
+                {
+                    "name": "Aplicare 1D&2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Intretinere 2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Aplicare 2D&3D",
+                    "duration": "2:00",
+                    "price": "220"
+                },
+                {
+                    "name": "Intretinere 3D",
+                    "duration": "2:00",
+                    "price": "210"
+                },
+                {
+                    "name": "Efecte Speciale Eyeliner/Feline/Wet",
+                    "duration": "2:30",
+                    "price": "270"
+                },
+                {
+                    "name": "Aplicare 2D",
+                    "duration": "2:00",
+                    "price": "200"
+                },
+                {
+                    "name": "Intretinere 2D&3D",
+                    "duration": "2:00",
+                    "price": "190"
+                },
+                {
+                    "name": "Aplicare 3D",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Intretinere Wet/Raze",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Demontare",
+                    "duration": "0:30",
+                    "price": "30"
+                },
+                {
+                    "name": "Intretinere 1D&2D",
+                    "duration": "1:30",
+                    "price": "140"
+                }
+            ]
+        },
+        {
+            "name": "Diana",
+            "services": [
+                {
+                    "name": "Aplicare 1D&2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Intretinere 2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Aplicare 2D&3D",
+                    "duration": "2:00",
+                    "price": "220"
+                },
+                {
+                    "name": "Intretinere 3D",
+                    "duration": "2:00",
+                    "price": "210"
+                },
+                {
+                    "name": "Efecte Speciale Eyeliner/Feline/Wet",
+                    "duration": "2:30",
+                    "price": "270"
+                },
+                {
+                    "name": "Aplicare 2D",
+                    "duration": "2:00",
+                    "price": "200"
+                },
+                {
+                    "name": "Intretinere 2D&3D",
+                    "duration": "2:00",
+                    "price": "190"
+                },
+                {
+                    "name": "Aplicare 3D",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Intretinere Wet/Raze",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Demontare",
+                    "duration": "0:30",
+                    "price": "0:30"
+                },
+                {
+                    "name": "Intretinere 1D&2D",
+                    "duration": "1:30",
+                    "price": "140"
+                }
+            ]
+        },
+        {
+            "name": "Denisa",
+            "services": [
+                {
+                    "name": "Aplicare 1D&2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Intretinere 2D",
+                    "duration": "1:30",
+                    "price": "170"
+                },
+                {
+                    "name": "Aplicare 2D&3D",
+                    "duration": "2:00",
+                    "price": "220"
+                },
+                {
+                    "name": "Intretinere 3D",
+                    "duration": "2:00",
+                    "price": "210"
+                },
+                {
+                    "name": "Efecte Speciale Eyeliner/Feline/Wet",
+                    "duration": "2:30",
+                    "price": "270"
+                },
+                {
+                    "name": "Aplicare 2D",
+                    "duration": "2:00",
+                    "price": "200"
+                },
+                {
+                    "name": "Intretinere 2D&3D",
+                    "duration": "2:00",
+                    "price": "190"
+                },
+                {
+                    "name": "Aplicare 3D",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Intretinere Wet/Raze",
+                    "duration": "2:30",
+                    "price": "240"
+                },
+                {
+                    "name": "Demontare",
+                    "duration": "0:30",
+                    "price": "30"
+                },
+                {
+                    "name": "Intretinere 1D&2D",
+                    "duration": "1:30",
+                    "price": "140"
+                }
+            ]
+        },
+        {
+            "name": "Catalina",
+            "services": [
+                {
+                    "name": "Stilizare Sprancene",
+                    "duration": "0:30",
+                    "price": "60"
+                },
+                {
+                    "name": "Stilizare Sprancene Si Vopsit",
+                    "duration": "1:30",
+                    "price": "100"
+                },
+                {
+                    "name": "Stilizare Sprance Si Laminare",
+                    "duration": "1:30",
+                    "price": "150"
+                },
+                {
+                    "name": "Complete Brows(Stilizare+Lami+Vopsit)",
+                    "duration": "1:30",
+                    "price": "200"
+                },
+                {
+                    "name": "Laminare Sprancene",
+                    "duration": "0:30",
+                    "price": "120"
+                }
+            ]
+        }
+    ]
+}

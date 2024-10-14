@@ -36,6 +36,8 @@ const Shipping: React.FC<ShippingProps> = ({
     (method) => method.id === cart.shipping_methods?.at(-1)?.shipping_option_id
   )
 
+  console.log("cart", cart)
+
   const handleEdit = () => {
     router.push(pathname + "?step=delivery", { scroll: false })
   }
@@ -72,7 +74,7 @@ const Shipping: React.FC<ShippingProps> = ({
             }
           )}
         >
-          Delivery
+          Livrare
           {!isOpen && (cart.shipping_methods?.length ?? 0) > 0 && (
             <CheckCircleSolid />
           )}
@@ -141,7 +143,7 @@ const Shipping: React.FC<ShippingProps> = ({
             disabled={!cart.shipping_methods?.[0]}
             data-testid="submit-delivery-option-button"
           >
-            Continue to payment
+            Continua spre Plata
           </Button>
         </div>
       ) : (
@@ -150,7 +152,7 @@ const Shipping: React.FC<ShippingProps> = ({
             {cart && (cart.shipping_methods?.length ?? 0) > 0 && (
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Method
+                  Metoda
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
                   {selectedShippingMethod?.name}{" "}

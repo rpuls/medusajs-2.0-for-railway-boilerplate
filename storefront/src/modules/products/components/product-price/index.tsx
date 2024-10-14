@@ -21,6 +21,7 @@ export default function ProductPrice({
     return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />
   }
 
+  console.log("selectedPrice",selectedPrice);
   return (
     <div className="flex flex-col text-ui-fg-base">
       <span
@@ -28,12 +29,12 @@ export default function ProductPrice({
           "text-ui-fg-interactive": selectedPrice.price_type === "sale",
         })}
       >
-        {!variant && "From "}
+      
         <span
           data-testid="product-price"
           data-value={selectedPrice.calculated_price_number}
         >
-          {selectedPrice.calculated_price}
+          {selectedPrice.calculated_price_number} Lei <span className="text-gray-600">TVA inclus</span>
         </span>
       </span>
       {selectedPrice.price_type === "sale" && (

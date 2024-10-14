@@ -72,6 +72,7 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                       })}
                     </ul>
                     <div className="flex flex-col gap-y-6">
+                      {/*
                       <div
                         className="flex justify-between"
                         onMouseEnter={toggleState.open}
@@ -90,9 +91,10 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                           )}
                         />
                       </div>
+                      */
+                      }
                       <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
-                        reserved.
+                        © {new Date().getFullYear()} Lorenalash. Toate drepturile rezervate.
                       </Text>
                     </div>
                   </div>
