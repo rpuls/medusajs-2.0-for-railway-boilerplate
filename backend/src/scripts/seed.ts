@@ -1,5 +1,6 @@
 import {
   createApiKeysWorkflow,
+  createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
   createRegionsWorkflow,
@@ -12,34 +13,24 @@ import {
   linkSalesChannelsToStockLocationWorkflow,
   updateStoresWorkflow,
 } from "@medusajs/core-flows";
-import { Logger } from "@medusajs/medusa";
-import { RemoteLink } from "@medusajs/modules-sdk";
 import {
   ExecArgs,
-  IFulfillmentModuleService,
-  ISalesChannelModuleService,
-  IStoreModuleService,
 } from "@medusajs/types";
 import {
   ContainerRegistrationKeys,
   Modules,
-  ProductStatus,
-  ModuleRegistrationName
+  ProductStatus
 } from "@medusajs/utils";
 
 export default async function seedDemoData({ container }: ExecArgs) {
-  const logger: Logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const remoteLink: RemoteLink = container.resolve(
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const remoteLink = container.resolve(
     ContainerRegistrationKeys.REMOTE_LINK
   );
-  const fulfillmentModuleService: IFulfillmentModuleService = container.resolve(
-    ModuleRegistrationName.FULFILLMENT
-  );
-  const salesChannelModuleService: ISalesChannelModuleService =
-    container.resolve(ModuleRegistrationName.SALES_CHANNEL);
-  const storeModuleService: IStoreModuleService = container.resolve(
-    ModuleRegistrationName.STORE
-  );
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
+  const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
+  const storeModuleService = container.resolve(Modules.STORE);
 
   const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
 
@@ -383,7 +374,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "S",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -402,7 +392,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "S",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -421,7 +410,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "M",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -440,7 +428,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "M",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -459,7 +446,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "L",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -478,7 +464,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "L",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -497,7 +482,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "XL",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -516,7 +500,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "XL",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -535,12 +518,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
             },
           ],
         },
-      ],
-    },
-  });
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
         {
           title: "Medusa Sweatshirt",
           category_ids: [
@@ -572,7 +549,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -590,7 +566,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -608,7 +583,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -626,7 +600,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -645,12 +618,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
             },
           ],
         },
-      ],
-    },
-  });
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
         {
           title: "Medusa Sweatpants",
           category_ids: [categoryResult.find((cat) => cat.name === "Pants").id],
@@ -680,7 +647,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -698,7 +664,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -716,7 +681,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -734,7 +698,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -753,12 +716,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
             },
           ],
         },
-      ],
-    },
-  });
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
         {
           title: "Medusa Shorts",
           category_ids: [categoryResult.find((cat) => cat.name === "Merch").id],
@@ -788,7 +745,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -806,7 +762,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -824,7 +779,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -842,7 +796,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -865,4 +818,29 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
   logger.info("Finished seeding product data.");
+
+  logger.info("Seeding inventory levels.");
+
+  const { data: inventoryItems } = await query.graph({
+    entity: 'inventory_item',
+    fields: ['id']
+  })
+
+  const inventoryLevels = []
+  for (const inventoryItem of inventoryItems) {
+    const inventoryLevel = {
+      location_id: stockLocation.id,
+      stocked_quantity: 1000000,
+      inventory_item_id: inventoryItem.id,
+    }
+    inventoryLevels.push(inventoryLevel)
+  }
+
+  await createInventoryLevelsWorkflow(container).run({
+    input: {
+      inventory_levels: inventoryLevels
+    },
+  })
+
+  logger.info("Finished seeding inventory levels data.");
 }

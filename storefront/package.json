@@ -10,7 +10,7 @@
   "scripts": {
     "wait": "await-backend",
     "launcher": "launch-storefront",
-    "dev": "npm run launcher dev",
+    "dev": "npm run wait && npm run launcher dev",
     "build": "npm run wait && npm run launcher build",
     "build:next": "next build",
     "start": "npm run launcher start",

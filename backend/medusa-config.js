@@ -28,7 +28,7 @@ const modules = {
     options: {
       providers: [
         {
-          resolve: '@medusajs/file-local-next',
+          resolve: '@medusajs/file-local',
           id: 'local',
           options: {
             upload_dir: 'static',
