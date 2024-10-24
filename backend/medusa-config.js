@@ -23,21 +23,21 @@ const modules = {
       ]
     }
   },
-  [Modules.FILE]: {
-    resolve: '@medusajs/file',
-    options: {
-      providers: [
-        {
-          resolve: '@medusajs/file-local',
-          id: 'local',
-          options: {
-            upload_dir: 'static',
-            backend_url: `${backendUrl}/static`
-          }
-        }
-      ]
-    }
-  },
+  // [Modules.FILE]: {
+  //   resolve: '@medusajs/file',
+  //   options: {
+  //     providers: [
+  //       {
+  //         resolve: '@medusajs/file-local',
+  //         id: 'local',
+  //         options: {
+  //           upload_dir: 'static',
+  //           backend_url: `${backendUrl}/static`
+  //         }
+  //       }
+  //     ]
+  //   }
+  // },
 };
 
 // Redis configuration
