@@ -51,74 +51,74 @@ if (process.env.REDIS_URL) {
   };
 }
 
-// Stripe payment provider
-const stripeApiKey = process.env.STRIPE_API_KEY;
-const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-const stripeConfigured = stripeApiKey && stripeWebhookSecret;
-if (stripeConfigured) {
-  console.log('Stripe api key and webhook secret found, enabling stripe payment provider');
-  modules[Modules.PAYMENT] = {
-    resolve: '@medusajs/payment',
-    options: {
-      providers: [
-        {
-          resolve: '@medusajs/payment-stripe',
-          id: 'stripe',
-          options: {
-            apiKey: stripeApiKey,
-            webhookSecret: stripeWebhookSecret
-          }
-        }
-      ]
-    }
-  };
-}
+// // Stripe payment provider
+// const stripeApiKey = process.env.STRIPE_API_KEY;
+// const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// const stripeConfigured = stripeApiKey && stripeWebhookSecret;
+// if (stripeConfigured) {
+//   console.log('Stripe api key and webhook secret found, enabling stripe payment provider');
+//   modules[Modules.PAYMENT] = {
+//     resolve: '@medusajs/payment',
+//     options: {
+//       providers: [
+//         {
+//           resolve: '@medusajs/payment-stripe',
+//           id: 'stripe',
+//           options: {
+//             apiKey: stripeApiKey,
+//             webhookSecret: stripeWebhookSecret
+//           }
+//         }
+//       ]
+//     }
+//   };
+// }
 
-// SendGrid notification provider
-const sendgridApiKey = process.env.SENDGRID_API_KEY;
-const sendgridFrom = process.env.SENDGRID_FROM_EMAIL;
-const sendgridConfigured = sendgridApiKey && sendgridFrom;
-if (sendgridConfigured) {
-  console.log('SendGrid api key and from address found, enabling SendGrid notification provider');
-  modules[Modules.NOTIFICATION] = {
-    resolve: '@medusajs/notification',
-    options: {
-      providers: [
-        {
-          resolve: '@medusajs/notification-sendgrid',
-          id: 'sendgrid',
-          options: {
-            channels: ['email'],
-            api_key: sendgridApiKey,
-            from: sendgridFrom
-          }
-        }
-      ]
-    }
-  };
-}
+// // SendGrid notification provider
+// const sendgridApiKey = process.env.SENDGRID_API_KEY;
+// const sendgridFrom = process.env.SENDGRID_FROM_EMAIL;
+// const sendgridConfigured = sendgridApiKey && sendgridFrom;
+// if (sendgridConfigured) {
+//   console.log('SendGrid api key and from address found, enabling SendGrid notification provider');
+//   modules[Modules.NOTIFICATION] = {
+//     resolve: '@medusajs/notification',
+//     options: {
+//       providers: [
+//         {
+//           resolve: '@medusajs/notification-sendgrid',
+//           id: 'sendgrid',
+//           options: {
+//             channels: ['email'],
+//             api_key: sendgridApiKey,
+//             from: sendgridFrom
+//           }
+//         }
+//       ]
+//     }
+//   };
+// }
 
-// Resend notification provider
-const resendApiKey = process.env.RESEND_API_KEY;
-const resendFrom = process.env.RESEND_FROM;
-const resendConfigured = resendApiKey && resendFrom;
-if (resendConfigured) {
-  console.log('Resend api key and from address found, enabling Resend notification provider');
-  modules[Modules.NOTIFICATION] = {
-    resolve: '@medusajs/notification',
-    options: {
-      providers: [{
-        resolve: '@typed-dev/medusa-notification-resend',
-        id: 'resend',
-        options: {
-          channels: ['email'],
-          api_key: resendApiKey,
-          from: resendFrom
-        }
-      }]
-    }
-  };
-}
+// // Resend notification provider
+// const resendApiKey = process.env.RESEND_API_KEY;
+// const resendFrom = process.env.RESEND_FROM;
+// const resendConfigured = resendApiKey && resendFrom;
+// if (resendConfigured) {
+//   console.log('Resend api key and from address found, enabling Resend notification provider');
+//   modules[Modules.NOTIFICATION] = {
+//     resolve: '@medusajs/notification',
+//     options: {
+//       providers: [{
+//         resolve: '@typed-dev/medusa-notification-resend',
+//         id: 'resend',
+//         options: {
+//           channels: ['email'],
+//           api_key: resendApiKey,
+//           from: resendFrom
+//         }
+//       }]
+//     }
+//   };
+// }
 
 
 /** @type {import('@medusajs/medusa').ConfigModule['projectConfig']} */
