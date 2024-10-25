@@ -1,5 +1,4 @@
 import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
-import { J } from 'dist/public/admin/assets/chunk-3IW4HYUP-DeE0SUYT';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -144,8 +143,6 @@ const completeConfig = {
     ...!isDev && { backendUrl }
   }
 };
-console.log('*****************************');
-console.log(JSON.stringify(completeConfig, null, 2));
-console.log('*****************************');
+
 export default defineConfig(completeConfig);
 export { backendUrl };
