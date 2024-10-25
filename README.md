@@ -16,7 +16,7 @@
 </p>
 
 <h2 align="center">
-  Prebaked medusajs 2.0 monorepo (backend + postgres + redis + +storefront)<br>
+  Prebaked medusajs 2.0 monorepo (backend + postgres + redis + storefront)<br>
   <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
 </h2>
 
@@ -43,9 +43,9 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 </p>
 
 ## About this boilerplate
-This boilerplate is a monorepo consisting of snapshot of newly released medusajs 2.0 (release candidate) backend and storefront app created with `npx create-medusa-app@rc` October 2024. Modified to be plug n' play deployable on [railway.app](https://railway.app?referralCode=-Yg50p)!
+This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application.  It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
-Updated: to `version 2.0.0-rc`
+Updated: to `version 2.0.0` 🥳
 
 # /backend
 
@@ -54,7 +54,7 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 
 - Install dependencies `npm i`
 - Rename `.env.template` ->  `.env`
-- To connect to your online database, from local; copy the `DATABASE_URL` value that have been auto generated on railway, and add to your `.env`
+- To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
 
 ### requirements
 - **postgres database** (will be automatically generated if using railway template)
@@ -62,22 +62,22 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 
 ### commands
 `cd backend/`
-`npm run dev` will start backend (and admin dasboard frontend on `localhost:9000/app`) - in development mode
+`npm run dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
 
 # /storefront
 
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-intall dependencies `npm i`
+Install dependencies `npm i`
 Rename `.env.local.template` ->  `.env.local`
 
 ### requirements
-- running backend on port 9000 - needed to fetch products data and more, to build nextjs pages.
+- A running backend on port 9000 is required to fetch product data and other information needed to build Next.js pages.
 
 ### commands
 `cd storefront/`
-`npm run dev` will run on uncompiled code, and hot-reload as files saved with changes
+`npm run dev` will run the storefront on uncompiled code, with hot-reloading as files are saved with changes.
 
 ## Useful resources
 - How to setup credit card payment with Stripe payment module: https://youtu.be/dcSOpIzc1Og
