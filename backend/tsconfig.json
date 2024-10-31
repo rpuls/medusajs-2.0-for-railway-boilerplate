@@ -11,7 +11,7 @@
     "skipDefaultLibCheck": true,
     "declaration": true,
     "sourceMap": false,
-    "outDir": "./dist",
+    "outDir": "./.medusa/server",
     "rootDir": "./",
     "baseUrl": ".",
     "paths": {
