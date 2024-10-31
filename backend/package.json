@@ -13,9 +13,9 @@
     "medusa"
   ],
   "scripts": {
-    "build": "medusa build && init-backend",
+    "build": "medusa build && node src/scripts/postBuild.js",
     "seed": "medusa exec ./src/scripts/seed.ts",
-    "start": "medusa db:migrate && medusa start --verbose",
+    "start": "init-backend && cd .medusa/server && medusa start --verbose",
     "dev": "medusa develop"
   },
   "dependencies": {
