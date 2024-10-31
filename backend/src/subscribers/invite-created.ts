@@ -1,7 +1,7 @@
 import { INotificationModuleService, IUserModuleService } from '@medusajs/types';
-import { ModuleRegistrationName, Modules } from '@medusajs/utils';
+import { Modules } from '@medusajs/utils';
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa';
-import { backendUrl } from '../../medusa-config';
+import { BACKEND_URL } from '@/lib/constants';
 
 export default async function userInviteHandler({
   event: { data },
@@ -19,7 +19,7 @@ export default async function userInviteHandler({
   // await notificationModuleService.createNotifications({
   //   to: email,
   //   channel: 'email',
-  //   template: process.env.SENDGRID_TEMPLATE_ID_USER_IVITE_CREATED, 
+  //   template: process.env.SENDGRID_TEMPLATE_ID_USER_INVITE_CREATED,
   //   data: { invite_link: `${backendUrl}/app/invite?token=${token}` }
   // });
 
@@ -28,7 +28,7 @@ export default async function userInviteHandler({
     await notificationModuleService.createNotifications({
       to: invite.email,
       channel: 'email',
-      template: `<strong>Your invite link:</strong> <a href="${backendUrl}/app/invite?token=${invite.token}">Click here</a>`, 
+      template: `<strong>Your invite link:</strong> <a href="${BACKEND_URL}/app/invite?token=${invite.token}">Click here</a>`,
       data: { 
         subject: 'You have been invited!'
       }
@@ -39,5 +39,5 @@ export default async function userInviteHandler({
 }
 
 export const config: SubscriberConfig = {
-  event: 'invite.created'
+  event: ['invite.created', 'invite.resent']
 };

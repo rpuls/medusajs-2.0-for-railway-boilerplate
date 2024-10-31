@@ -1,0 +1,18 @@
+Update tsconfig to be consistent with docs
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Date:      Thu Oct 31 00:43:14 2024 -0600
+#
+# interactive rebase in progress; onto 65aeb04
+# Last command done (1 command done):
+#    reword 874d1ef Update tsconfig to be consistent with docs
+# Next commands to do (3 remaining commands):
+#    squash 2df0751 Delete package.lock
+#    squash e429754 Clean up the rest of the medusa config
+# You are currently editing a commit while rebasing branch 'master' on '65aeb04'.
+#
+# Changes to be committed:
+#	modified:   backend/tsconfig.json
+#
