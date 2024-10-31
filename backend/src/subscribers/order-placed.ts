@@ -1,7 +1,7 @@
 import { Modules } from '@medusajs/utils';
 import { INotificationModuleService, IOrderModuleService } from '@medusajs/types';
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa';
-import { backendUrl } from 'medusa-config';
+import { BACKEND_URL } from '@/lib/constants';
 import { OrderDTO, OrderAddressDTO } from '@medusajs/types/dist/order/common';
 
 export default async function userInviteHandler({
@@ -50,7 +50,7 @@ export default async function userInviteHandler({
     </tbody>
   </table>
 
-  <p>You can view your order details <a href="${backendUrl}/admin/orders/${order.id}">here</a>.</p>
+  <p>You can view your order details <a href="${BACKEND_URL}/admin/orders/${order.id}">here</a>.</p>
 
   <p>Sincerely,<br>The Medusa Team</p>
 `;

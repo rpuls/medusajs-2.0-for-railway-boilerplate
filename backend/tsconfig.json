@@ -14,6 +14,9 @@
     "outDir": "./dist",
     "rootDir": "./",
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "jsx": "react-jsx",
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
