@@ -97,7 +97,7 @@ export default defineConfig({
       options: {
         providers: [
           {
-            resolve: '@typed-dev/medusa-notification-resend',
+            resolve: './src/modules/email-notifications',
             id: 'resend',
             options: {
               channels: ['email'],
