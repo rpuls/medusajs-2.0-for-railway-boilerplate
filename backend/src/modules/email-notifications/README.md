@@ -10,6 +10,15 @@ pnpm email:dev
 
 This will start a react-email server at `http://localhost:3002` where you can preview the email templates.
 
+## Base Template
+
+All email templates use a shared base template (`base.tsx`) that provides consistent styling across all emails. The base template includes:
+
+- Consistent font family and sizing
+- Email body container
+- Background color
+
+This ensures a unified look and feel across all email communications while allowing individual templates to focus on their specific content.
 
 ## Usage
 
@@ -39,11 +48,12 @@ To add a new email template:
 
 #### 1. Create the template component
 
-Add a new file in the templates directory, following the `react-email` component style. For example, `new-template.tsx`:
+Add a new file in the templates directory, following the `react-email` component style and using the base template. For example, `new-template.tsx`:
 
 ```tsx
-import { Html, Body, Container, Text, Preview } from '@react-email/components'
+import { Text } from '@react-email/components'
 import * as React from 'react'
+import { Base } from './base'
 
 export const NEW_TEMPLATE_KEY = 'new-template'
 
@@ -57,16 +67,18 @@ export const isNewTemplateData = (data: any): data is NewTemplateProps =>
   typeof data.greeting === 'string' && typeof data.actionUrl === 'string'
 
 export const NewTemplate = ({ greeting, actionUrl, preview = 'You have a new message' }: NewTemplateProps) => (
-  <Html>
-    <Preview>{preview}</Preview>
-    <Body>
-      <Container>
-        <Text>{greeting}</Text>
-        <Text>Click <a href={actionUrl}>here</a> to take action.</Text>
-      </Container>
-    </Body>
-  </Html>
+  <Base preview={preview}>
+    <Text>{greeting}</Text>
+    <Text>Click <a href={actionUrl}>here</a> to take action.</Text>
+  </Base>
 )
+
+// Add preview props for the email dev server
+NewTemplate.PreviewProps = {
+  greeting: 'Hello there!',
+  actionUrl: 'https://example.com/action',
+  preview: 'Preview of the new template'
+} as NewTemplateProps
 ```
 
 #### 2. Add the new template key to the `EmailTemplates` enum:
