@@ -9,18 +9,18 @@ import {
   REDIS_URL,
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
-  // SENDGRID_API_KEY,
-  // SENDGRID_FROM_EMAIL,
+  SENDGRID_API_KEY,
+  SENDGRID_FROM_EMAIL,
   SHOULD_DISABLE_ADMIN,
   STORE_CORS,
   STRIPE_API_KEY,
   STRIPE_WEBHOOK_SECRET,
   WORKER_MODE
-} from "@/lib/constants";
+} from '@/lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
-export default defineConfig({
+const medusaConfig = {
   projectConfig: {
     databaseUrl: DATABASE_URL,
     databaseLogging: true,
@@ -31,8 +31,8 @@ export default defineConfig({
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       jwtSecret: JWT_SECRET,
-      cookieSecret: COOKIE_SECRET,
-    },
+      cookieSecret: COOKIE_SECRET
+    }
   },
   admin: {
     backendUrl: BACKEND_URL,
@@ -49,18 +49,18 @@ export default defineConfig({
             id: 'local',
             options: {
               upload_dir: 'static',
-              backend_url: `${BACKEND_URL}/static`,
-            },
-          },
-        ],
-      },
+              backend_url: `${BACKEND_URL}/static`
+            }
+          }
+        ]
+      }
     },
-    {
+    ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
       options: {
-        redisUrl: REDIS_URL,
-      },
+        redisUrl: REDIS_URL
+      }
     },
     {
       key: Modules.WORKFLOW_ENGINE,
@@ -68,35 +68,24 @@ export default defineConfig({
       options: {
         redis: {
           url: REDIS_URL,
-        },
-      },
-    },
-    // NOTE: You can enable the sendgrid notification provider by uncommenting the following block
-    //       ...just make sure to remove the resend provider block below
-    //
-    // {
-    //   key: Modules.NOTIFICATION,
-    //   resolve: '@medusajs/notification',
-    //   options: {
-    //     providers: [
-    //       {
-    //         resolve: '@medusajs/notification-sendgrid',
-    //         id: 'sendgrid',
-    //         options: {
-    //           channels: ['email'],
-    //           api_key: SENDGRID_API_KEY,
-    //           from: SENDGRID_FROM_EMAIL,
-    //         }
-    //       }
-    //     ]
-    //   }
-    // },
-    {
+        }
+      }
+    }] : []),
+    ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL || RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
       key: Modules.NOTIFICATION,
       resolve: '@medusajs/notification',
       options: {
         providers: [
-          {
+          ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL ? [{
+            resolve: '@medusajs/notification-sendgrid',
+            id: 'sendgrid',
+            options: {
+              channels: ['email'],
+              api_key: SENDGRID_API_KEY,
+              from: SENDGRID_FROM_EMAIL,
+            }
+          }] : []),
+          ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
             resolve: './src/modules/email-notifications',
             id: 'resend',
             options: {
@@ -104,11 +93,11 @@ export default defineConfig({
               api_key: RESEND_API_KEY,
               from: RESEND_FROM_EMAIL,
             },
-          },
-        ],
-      },
-    },
-    {
+          }] : []),
+        ]
+      }
+    }] : []),
+    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
       options: {
@@ -123,9 +112,12 @@ export default defineConfig({
           },
         ],
       },
-    },
+    }] : [])
   ],
   plugins: [
     // 'medusa-fulfillment-manual'
   ]
-});
+};
+
+// console.log(JSON.stringify(medusaConfig, null, 2));
+export default defineConfig(medusaConfig);
