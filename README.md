@@ -45,14 +45,21 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 ## About this boilerplate
 This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application.  It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
-Updated: to `version 2.0.0` 🥳
+Updated: to `version 2.0.1` 🥳
+
+## Preconfigured 3rd party integrations
+
+- Resend email integration [setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and eact-email implementation! [README](backend/src/modules/email-notifications/README.md)
+- Stripe payment service: [setup video](https://youtu.be/dcSOpIzc1Og)
 
 # /backend
 
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-- Install dependencies `npm i`
+- Install dependencies using either:
+  - `npm i`
+  - `pnpm install` (now supported!)
 - Rename `.env.template` ->  `.env`
 - To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
 
@@ -62,7 +69,8 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 
 ### commands
 `cd backend/`
-`npm run dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
+`npm run dev` or `pnpm dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
+`pnpm build && pnpm start` will compile the project and run from compiled source. This can be useful for reproducing issues on your cloud instance.
 
 # /storefront
 
