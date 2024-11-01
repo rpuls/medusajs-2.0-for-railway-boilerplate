@@ -20,7 +20,7 @@ import {
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
-export default defineConfig({
+const medusaConfig = {
   projectConfig: {
     databaseUrl: DATABASE_URL,
     databaseLogging: true,
@@ -31,8 +31,8 @@ export default defineConfig({
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       jwtSecret: JWT_SECRET,
-      cookieSecret: COOKIE_SECRET,
-    },
+      cookieSecret: COOKIE_SECRET
+    }
   },
   admin: {
     backendUrl: BACKEND_URL,
@@ -49,11 +49,11 @@ export default defineConfig({
             id: 'local',
             options: {
               upload_dir: 'static',
-              backend_url: `${BACKEND_URL}/static`,
-            },
-          },
-        ],
-      },
+              backend_url: `${BACKEND_URL}/static`
+            }
+          }
+        ]
+      }
     },
     ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
@@ -67,7 +67,7 @@ export default defineConfig({
       resolve: '@medusajs/workflow-engine-redis',
       options: {
         redis: {
-          url: REDIS_URL
+          url: REDIS_URL,
         }
       }
     }] : []),
@@ -86,7 +86,7 @@ export default defineConfig({
             }
           }] : []),
           ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
-            resolve: '@typed-dev/medusa-notification-resend',
+            resolve: './src/modules/email-notifications',
             id: 'resend',
             options: {
               channels: ['email'],
@@ -112,9 +112,12 @@ export default defineConfig({
           },
         ],
       },
-    }] : []),
+    }] : [])
   ],
   plugins: [
     // 'medusa-fulfillment-manual'
   ]
-});
+};
+
+// console.log(JSON.stringify(medusaConfig, null, 2));
+export default defineConfig(medusaConfig);
