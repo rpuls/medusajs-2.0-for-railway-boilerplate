@@ -48,7 +48,7 @@ const medusaConfig = {
             resolve: '@medusajs/file-local',
             id: 'local',
             options: {
-              upload_dir: '/app/static',
+              upload_dir: 'app/static',
               backend_url: `${BACKEND_URL}/static`
             }
           }
