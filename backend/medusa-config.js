@@ -45,16 +45,36 @@ const medusaConfig = {
       options: {
         providers: [
           {
-            resolve: '@medusajs/file-local',
-            id: 'local',
+            resolve: './src/modules/minio-storage',
+            id: 'minio',
             options: {
-              upload_dir: 'static',
-              backend_url: `${BACKEND_URL}/static`
+              endpoint: 'bucket-production-eaeb.up.railway.app', // Remove https:// from endpoint
+              port: 443, // Changed to 443 for HTTPS
+              use_ssl: true,
+              access_key: '5gG1uevNnUkWbPF03RpBThKUhvWj3KCs', // process.env.MINIO_ROOT_USER,
+              secret_key: 'CNt0fAlpiJpvoi5JI2zTRnzk91nGkRN8vluUnBCyliC4eNPk', // process.env.MINIO_ROOT_PASSWORD,
+              bucket: 'test'
             }
           }
         ]
       }
     },
+    // {
+    //   key: Modules.FILE,
+    //   resolve: '@medusajs/file',
+    //   options: {
+    //     providers: [
+    //       {
+    //         resolve: '@medusajs/file-local',
+    //         id: 'local',
+    //         options: {
+    //           upload_dir: 'statics',
+    //           backend_url: `${BACKEND_URL}/statics`
+    //         }
+    //       }
+    //     ]
+    //   }
+    // },
     ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
@@ -114,10 +134,8 @@ const medusaConfig = {
       },
     }] : [])
   ],
-  plugins: [
-    // 'medusa-fulfillment-manual'
-  ]
+  plugins: []
 };
 
-// console.log(JSON.stringify(medusaConfig, null, 2));
+console.log(JSON.stringify(medusaConfig, null, 2));
 export default defineConfig(medusaConfig);
