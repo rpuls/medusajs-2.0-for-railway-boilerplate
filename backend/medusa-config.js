@@ -45,36 +45,41 @@ const medusaConfig = {
       options: {
         providers: [
           {
-            resolve: './src/modules/minio-storage',
+            resolve: '@medusajs/file-s3',
             id: 'minio',
             options: {
-              endpoint: 'bucket-production-eaeb.up.railway.app', // Remove https:// from endpoint
-              port: 443, // Changed to 443 for HTTPS
-              use_ssl: true,
-              access_key: '5gG1uevNnUkWbPF03RpBThKUhvWj3KCs', // process.env.MINIO_ROOT_USER,
-              secret_key: 'CNt0fAlpiJpvoi5JI2zTRnzk91nGkRN8vluUnBCyliC4eNPk', // process.env.MINIO_ROOT_PASSWORD,
-              bucket: 'test'
+              file_url: '', // process.env.S3_FILE_URL,
+              access_key_id: '', // process.env.S3_ACCESS_KEY_ID,
+              secret_access_key: '', // process.env.S3_SECRET_ACCESS_KEY,
+              region: 'us-east-2', //n process.env.S3_REGION,
+              bucket: '', // process.env.S3_BUCKET,
+              endpoint: 'https://s3.us-east-2.amazonaws.com' // process.env.S3_ENDPOINT
+
             }
           }
         ]
       }
     },
-    // {
-    //   key: Modules.FILE,
-    //   resolve: '@medusajs/file',
-    //   options: {
-    //     providers: [
-    //       {
-    //         resolve: '@medusajs/file-local',
-    //         id: 'local',
-    //         options: {
-    //           upload_dir: 'statics',
-    //           backend_url: `${BACKEND_URL}/statics`
-    //         }
-    //       }
-    //     ]
-    //   }
-    // },
+    {
+      key: Modules.FILE,
+      resolve: '@medusajs/file',
+      options: {
+        providers: [
+          {
+            resolve: '@medusajs/file-s3',
+            id: 'minio',
+            options: {
+              file_url: '', // process.env.S3_FILE_URL,
+              access_key_id: '', // process.env.S3_ACCESS_KEY_ID,
+              secret_access_key: '', // process.env.S3_SECRET_ACCESS_KEY,
+              region: 'us-east-2', //n process.env.S3_REGION,
+              bucket: '', // process.env.S3_BUCKET,
+              endpoint: 'https://s3.us-east-2.amazonaws.com' // process.env.S3_ENDPOINT
+            }
+          }
+        ]
+      }
+    },
     ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
