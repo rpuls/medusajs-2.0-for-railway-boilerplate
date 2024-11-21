@@ -65,6 +65,9 @@ Features include:
   - Server Actions
   - Streaming
   - Static Pre-Rendering
+- File Storage:
+  - MinIO integration (optional)
+  - Local file fallback
 
 
 # Quickstart
@@ -97,6 +100,19 @@ yarn dev
 ### Open the code and start customizing
 
 Your site is now running at http://localhost:8000!
+
+# File Storage Integration
+
+By default, this starter supports MinIO for file storage with a fallback to local storage. To enable MinIO:
+
+1. Add your MinIO endpoint to `.env.local`:
+```shell
+NEXT_PUBLIC_MINIO_ENDPOINT=your-minio-endpoint
+```
+
+2. The storefront will automatically use MinIO for serving images when the endpoint is configured.
+
+No additional configuration is needed - if MinIO is not configured, the storefront will use local file storage.
 
 # Payment integrations
 
@@ -255,11 +271,11 @@ Next.js Middleware, which is basically an Edge function that runs before (almost
 
 The region will be decided as follows:
 
-- When deployed on Vercel and you’re active in the user’s current country, it will use the country code from the `x-vercel-ip-country` header.
+- When deployed on Vercel and you're active in the user's current country, it will use the country code from the `x-vercel-ip-country` header.
 - Else, if you have defined a `NEXT_PUBLIC_DEFAULT_REGION` environment variable, it will redirect to that.
 - Else, it will redirect the user to the first region it finds on your Medusa server.
 
-If you want to use the `countryCode` param in your code, there’s two ways to do that:
+If you want to use the `countryCode` param in your code, there's two ways to do that:
 
 1. On the server in any `page.tsx` - the `countryCode` is in the `params` object:
     
