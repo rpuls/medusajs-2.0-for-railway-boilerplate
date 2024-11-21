@@ -1,6 +1,6 @@
 import { loadEnv } from '@medusajs/utils'
 
-import { assertValue } from '@/utils/assert-value'
+import { assertValue } from 'utils/assert-value'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -26,7 +26,6 @@ export const DATABASE_URL = assertValue(
  * (optional) Redis URL for Redis instance used by the backend
  */
 export const REDIS_URL = process.env.REDIS_URL;
-
 
 /**
  * Admin CORS origins
@@ -69,6 +68,14 @@ export const COOKIE_SECRET = assertValue(
 )
 
 /**
+ * (optional) Minio configuration for file storage
+ */
+export const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT;
+export const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY;
+export const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY;
+export const MINIO_BUCKET = process.env.MINIO_BUCKET; // Optional, if not set bucket will be called: medusa-media
+
+/**
  * (optional) Resend API Key and from Email - do not set if using SendGrid
  */
 export const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -85,7 +92,6 @@ export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
  */
 export const STRIPE_API_KEY = process.env.STRIPE_API_KEY;
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-
 
 /**
  * Worker mode

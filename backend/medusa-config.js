@@ -15,8 +15,12 @@ import {
   STORE_CORS,
   STRIPE_API_KEY,
   STRIPE_WEBHOOK_SECRET,
-  WORKER_MODE
-} from '@/lib/constants';
+  WORKER_MODE,
+  MINIO_ENDPOINT,
+  MINIO_ACCESS_KEY,
+  MINIO_SECRET_KEY,
+  MINIO_BUCKET
+} from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
@@ -44,19 +48,23 @@ const medusaConfig = {
       resolve: '@medusajs/file',
       options: {
         providers: [
-          {
-            resolve: '@medusajs/file-s3',
+          ...(MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
+            resolve: './src/modules/minio-file',
             id: 'minio',
             options: {
-              file_url: '', // process.env.S3_FILE_URL,
-              access_key_id: '', // process.env.S3_ACCESS_KEY_ID,
-              secret_access_key: '', // process.env.S3_SECRET_ACCESS_KEY,
-              region: 'us-east-2', //n process.env.S3_REGION,
-              bucket: '', // process.env.S3_BUCKET,
-              endpoint: 'https://s3.us-east-2.amazonaws.com' // process.env.S3_ENDPOINT
-
+              endPoint: MINIO_ENDPOINT,
+              accessKey: MINIO_ACCESS_KEY,
+              secretKey: MINIO_SECRET_KEY,
+              bucket: MINIO_BUCKET // Optional, default: medusa-media
             }
-          }
+          }] : [{
+            resolve: '@medusajs/file-local',
+            id: 'local',
+            options: {
+              upload_dir: 'static',
+              backend_url: `${BACKEND_URL}/static`
+            }
+          }])
         ]
       }
     },
