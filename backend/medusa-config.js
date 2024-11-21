@@ -60,26 +60,6 @@ const medusaConfig = {
         ]
       }
     },
-    {
-      key: Modules.FILE,
-      resolve: '@medusajs/file',
-      options: {
-        providers: [
-          {
-            resolve: '@medusajs/file-s3',
-            id: 'minio',
-            options: {
-              file_url: '', // process.env.S3_FILE_URL,
-              access_key_id: '', // process.env.S3_ACCESS_KEY_ID,
-              secret_access_key: '', // process.env.S3_SECRET_ACCESS_KEY,
-              region: 'us-east-2', //n process.env.S3_REGION,
-              bucket: '', // process.env.S3_BUCKET,
-              endpoint: 'https://s3.us-east-2.amazonaws.com' // process.env.S3_ENDPOINT
-            }
-          }
-        ]
-      }
-    },
     ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
