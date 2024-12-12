@@ -19,7 +19,9 @@ import {
   MINIO_ENDPOINT,
   MINIO_ACCESS_KEY,
   MINIO_SECRET_KEY,
-  MINIO_BUCKET
+  MINIO_BUCKET,
+  MEILISEARCH_HOST,
+  MEILISEARCH_API_KEY
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
@@ -127,7 +129,26 @@ const medusaConfig = {
       },
     }] : [])
   ],
-  plugins: []
+  plugins: [
+    ...(MEILISEARCH_HOST && MEILISEARCH_API_KEY ? [{
+      resolve: '@rokmohar/medusa-plugin-meilisearch',
+      options: {
+        config: {
+          host: MEILISEARCH_HOST,
+          apiKey: MEILISEARCH_API_KEY
+        },
+        settings: {
+          products: {
+            indexSettings: {
+              searchableAttributes: ['title', 'description', 'variant_sku'],
+              displayedAttributes: ['title', 'description', 'variant_sku', 'thumbnail', 'handle']
+            },
+            primaryKey: 'id'
+          }
+        }
+      }
+    }] : [])
+  ]
 };
 
 console.log(JSON.stringify(medusaConfig, null, 2));
