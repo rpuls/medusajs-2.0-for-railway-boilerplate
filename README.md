@@ -50,22 +50,25 @@ Updated: to `version 2.0.4` 🥳
 - MinIO file storage: Replaces local file storage with MinIO cloud storage, automatically creating a 'medusa-media' bucket for your media files. [README](backend/src/modules/minio-file/README.md)
 - Resend email integration [setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
 - Stripe payment service: [setup video](https://youtu.be/dcSOpIzc1Og)
+- Meilisearch integration: Adds powerful product search capabilities to your store
 
 # /backend
 
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-- Install dependencies using either:
-  - `npm i`
-  - `pnpm install` (now supported!)
+- `cd /backend`
+- `pnpm install` or `npm i`
 - Rename `.env.template` ->  `.env`
 - To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
+  - If connecting to a new database, for example a local one, run `pnpm ib` or `npm run ib` to seed the database.
+- `pnpm dev` or `npm run dev`
 
 ### requirements
 - **postgres database** (Automatic setup when using the Railway template)
 - **redis** (Automatic setup when using the Railway template) - fallback to simulated redis.
 - **MinIO storage** (Automatic setup when using the Railway template) - fallback to local storage.
+- **Meilisearch** (Optional) - provides advanced search capabilities.
 
 ### commands
 `cd backend/`
