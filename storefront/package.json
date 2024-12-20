@@ -48,6 +48,9 @@
     "tailwindcss-radix": "^2.8.0",
     "webpack": "^5"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.17.5",
     "@medusajs/client-types": "preview",
