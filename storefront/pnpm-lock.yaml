@@ -52,8 +52,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       medusajs-launch-utils:
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.10
+        version: 0.0.10
       next:
         specifier: ^14.0.0
         version: 14.2.21(@babel/core@7.26.0)(@playwright/test@1.49.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2674,8 +2674,8 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
-  medusajs-launch-utils@0.0.4:
-    resolution: {integrity: sha512-kvS2DdjmcRrz2EjOdzsACfzXRZiKxCXcyZkdl88RHGa2pFMWzlrQZKnQcot8FYitILB16zNVBvW5M+fzxKbA3g==}
+  medusajs-launch-utils@0.0.10:
+    resolution: {integrity: sha512-ArsW5xjBAuhTC9Ivhey2wQ3b4Cb0EFyJYKY2cSJs3TcyGr5/KPPiBi81L+637ZqOPd8IOzYCq3Snjp9iXb6sRg==}
     hasBin: true
 
   meilisearch@0.25.1:
@@ -6916,7 +6916,7 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  medusajs-launch-utils@0.0.4:
+  medusajs-launch-utils@0.0.10:
     dependencies:
       axios: 0.21.4
       dotenv: 10.0.0
