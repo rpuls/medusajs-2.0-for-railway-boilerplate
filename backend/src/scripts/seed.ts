@@ -12,13 +12,13 @@ import {
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
   updateStoresWorkflow,
-} from "@medusajs/medusa/core-flows";
-import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/framework/types";
+} from "@medusajs/core-flows";
+import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/types";
 import {
   ContainerRegistrationKeys,
   Modules,
   ProductStatus,
-} from "@medusajs/framework/utils";
+} from "@medusajs/utils";
 
 export default async function seedDemoData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
