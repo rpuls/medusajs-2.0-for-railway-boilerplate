@@ -44,11 +44,11 @@ async function runDiagnostics() {
     const tablesResult = await client.query(`
       SELECT 
         schemaname,
-        tablename,
-        pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename)) as size,
+        table_name,
+        pg_size_pretty(pg_total_relation_size(schemaname || '.' || table_name)) as size,
         n_live_tup as row_count
       FROM pg_stat_user_tables
-      ORDER BY pg_total_relation_size(schemaname || '.' || tablename) DESC
+      ORDER BY pg_total_relation_size(schemaname || '.' || table_name) DESC
     `)
     
     if (tablesResult.rows.length === 0) {
