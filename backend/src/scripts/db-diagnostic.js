@@ -1,11 +1,5 @@
-import pg from 'pg'
-import dotenv from 'dotenv'
-import path from 'path'
-
-// Load environment variables
-dotenv.config()
-
-const { Pool } = pg
+const { Pool } = require('pg')
+require('dotenv').config()
 
 async function runDiagnostics() {
   console.log('🔍 Starting Database Diagnostics')

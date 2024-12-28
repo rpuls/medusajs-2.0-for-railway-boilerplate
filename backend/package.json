@@ -29,6 +29,8 @@
     "@medusajs/medusa": "latest",
     "@medusajs/notification-sendgrid": "latest",
     "@medusajs/payment-stripe": "latest",
+    "@medusajs/types": "^2.1.3",
+    "@medusajs/utils": "^2.1.3",
     "@medusajs/workflow-engine-redis": "latest",
     "@mikro-orm/core": "5.9.7",
     "@mikro-orm/knex": "5.9.7",
