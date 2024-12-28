@@ -4,7 +4,7 @@
     "allowJs": true,
     "esModuleInterop": true,
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,
