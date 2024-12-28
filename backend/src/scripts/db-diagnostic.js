@@ -1,11 +1,14 @@
 const { Pool } = require('pg')
 require('dotenv').config()
+const { exec } = require('child_process')
+const util = require('util')
+const execPromise = util.promisify(exec)
 
 async function runDiagnostics() {
   console.log('🔍 Starting Database Diagnostics')
   console.log('\n📊 Environment Information:')
   console.log('NODE_ENV:', process.env.NODE_ENV)
-  console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Present: ' + process.env.DATABASE_URL : '❌ Missing')
+  console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Present' : '❌ Missing')
   
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is not set')
@@ -39,54 +42,31 @@ async function runDiagnostics() {
     `)
     console.log('Database Size:', dbSizeResult.rows[0].size)
 
-    // List all tables and their row counts
-    console.log('\n📊 Table Information:')
-    const tablesResult = await client.query(`
-      SELECT 
-        schemaname,
-        table_name,
-        pg_size_pretty(pg_total_relation_size(schemaname || '.' || table_name)) as size,
-        n_live_tup as row_count
-      FROM pg_stat_user_tables
-      ORDER BY pg_total_relation_size(schemaname || '.' || table_name) DESC
-    `)
-    
-    if (tablesResult.rows.length === 0) {
-      console.log('❗ No tables found in database')
-    } else {
-      tablesResult.rows.forEach(table => {
-        console.log(`${table.schemaname}.${table.tablename}:`)
-        console.log(`  - Size: ${table.size}`)
-        console.log(`  - Rows: ${table.row_count}`)
+    client.release()
+
+    // Test medusa migration
+    console.log('\n🔄 Testing Medusa Migration:')
+    try {
+      console.log('Running npx medusa db:migrate...')
+      const { stdout, stderr } = await execPromise('npx medusa db:migrate', {
+        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+        env: {
+          ...process.env,
+          NODE_ENV: process.env.NODE_ENV || 'development',
+          DEBUG: 'medusa*' // Enable Medusa debug logging
+        }
       })
+      
+      if (stdout) console.log('Migration Output:', stdout)
+      if (stderr) console.error('Migration Errors:', stderr)
+    } catch (migrationError) {
+      console.error('\n❌ Migration Failed:')
+      if (migrationError.stdout) console.log('Migration Output:', migrationError.stdout)
+      if (migrationError.stderr) console.error('Migration Error Output:', migrationError.stderr)
+      console.error('Exit Code:', migrationError.code)
+      process.exit(1)
     }
 
-    // Check database permissions
-    console.log('\n🔒 Permission Check:')
-    const currentUserResult = await client.query('SELECT current_user')
-    console.log('Current User:', currentUserResult.rows[0].current_user)
-    
-    const userPermsResult = await client.query(`
-      SELECT 
-        table_schema,
-        table_name, 
-        privilege_type
-      FROM information_schema.table_privileges 
-      WHERE grantee = current_user
-    `)
-    
-    console.log('User Permissions:')
-    userPermsResult.rows.forEach(perm => {
-      console.log(`  - ${perm.table_schema}.${perm.table_name}: ${perm.privilege_type}`)
-    })
-
-    // Check connection pool status
-    console.log('\n🏊 Connection Pool Status:')
-    console.log('Total:', pool.totalCount)
-    console.log('Idle:', pool.idleCount)
-    console.log('Waiting:', pool.waitingCount)
-
-    client.release()
   } catch (error) {
     console.error('\n❌ Database Error:')
     console.error('Error Type:', error.name)
@@ -104,10 +84,14 @@ async function runDiagnostics() {
       console.error('Database:', error.client.database)
       console.error('User:', error.client.user)
     }
+    process.exit(1)
   } finally {
     // Close pool
     await pool.end()
   }
 }
 
-runDiagnostics().catch(console.error)
+runDiagnostics().catch(error => {
+  console.error('Fatal error:', error)
+  process.exit(1)
+})
