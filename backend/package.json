@@ -39,6 +39,7 @@
     "@react-email/components": "^0.0.26",
     "@rokmohar/medusa-plugin-meilisearch": "^0.1.5",
     "awilix": "^8.0.1",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "medusajs-launch-utils": "^0.0.10",
     "minio": "^8.0.3",
