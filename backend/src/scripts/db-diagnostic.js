@@ -5,7 +5,7 @@ async function runDiagnostics() {
   console.log('🔍 Starting Database Diagnostics')
   console.log('\n📊 Environment Information:')
   console.log('NODE_ENV:', process.env.NODE_ENV)
-  console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Present' : '❌ Missing')
+  console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Present: ' + process.env.DATABASE_URL : '❌ Missing')
   
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is not set')
