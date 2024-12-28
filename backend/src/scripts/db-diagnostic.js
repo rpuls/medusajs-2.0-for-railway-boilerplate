@@ -1,8 +1,6 @@
 const { Pool } = require('pg')
+const { spawn } = require('child_process')
 require('dotenv').config()
-const { exec } = require('child_process')
-const util = require('util')
-const execPromise = util.promisify(exec)
 
 async function runDiagnostics() {
   console.log('🔍 Starting Database Diagnostics')
@@ -46,26 +44,50 @@ async function runDiagnostics() {
 
     // Test medusa migration
     console.log('\n🔄 Testing Medusa Migration:')
-    try {
-      console.log('Running npx medusa db:migrate...')
-      const { stdout, stderr } = await execPromise('npx medusa db:migrate', {
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+    console.log('Running npx medusa db:migrate...')
+
+    return new Promise((resolve, reject) => {
+      // Set a timeout of 2 minutes
+      const timeout = setTimeout(() => {
+        console.error('Migration timed out after 2 minutes')
+        process.exit(1)
+      }, 120000)
+
+      const migration = spawn('npx', ['medusa', 'db:migrate'], {
         env: {
           ...process.env,
           NODE_ENV: process.env.NODE_ENV || 'development',
-          DEBUG: 'medusa*' // Enable Medusa debug logging
+          DEBUG: 'medusa*,pg*', // Enable both Medusa and Postgres debug logging
+          MEDUSA_VERBOSE: 'true'
         }
       })
-      
-      if (stdout) console.log('Migration Output:', stdout)
-      if (stderr) console.error('Migration Errors:', stderr)
-    } catch (migrationError) {
-      console.error('\n❌ Migration Failed:')
-      if (migrationError.stdout) console.log('Migration Output:', migrationError.stdout)
-      if (migrationError.stderr) console.error('Migration Error Output:', migrationError.stderr)
-      console.error('Exit Code:', migrationError.code)
-      process.exit(1)
-    }
+
+      console.log('Migration process started with PID:', migration.pid)
+
+      migration.stdout.on('data', (data) => {
+        console.log('Migration output:', data.toString())
+      })
+
+      migration.stderr.on('data', (data) => {
+        console.error('Migration error:', data.toString())
+      })
+
+      migration.on('error', (error) => {
+        clearTimeout(timeout)
+        console.error('Failed to start migration:', error)
+        reject(error)
+      })
+
+      migration.on('close', (code) => {
+        clearTimeout(timeout)
+        console.log('Migration process exited with code:', code)
+        if (code !== 0) {
+          reject(new Error(`Migration failed with code ${code}`))
+        } else {
+          resolve()
+        }
+      })
+    })
 
   } catch (error) {
     console.error('\n❌ Database Error:')
