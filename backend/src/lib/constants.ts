@@ -1,4 +1,4 @@
-import { loadEnv } from '@medusajs/utils'
+import { loadEnv } from '@medusajs/framework/utils'
 
 import { assertValue } from 'utils/assert-value'
 

@@ -16,7 +16,13 @@
 </p>
 
 <h2 align="center">
-  Prebaked medusajs 2.0 monorepo (backend + postgres + redis + storefront)<br>
+  Prebaked medusajs 2.0 monorepo
+</h2>
+<h4 align="center">
+  Backend + Storefront + postgres + redis + MinIO + MeiliSearch
+</h4>
+
+<h2 align="center">
   <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
 </h2>
 
@@ -68,9 +74,10 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 - **postgres database** (Automatic setup when using the Railway template)
 - **redis** (Automatic setup when using the Railway template) - fallback to simulated redis.
 - **MinIO storage** (Automatic setup when using the Railway template) - fallback to local storage.
-- **Meilisearch** (Optional) - provides advanced search capabilities.
+- **Meilisearch** (Automatic setup when using the Railway template)
 
 ### commands
+
 `cd backend/`
 `npm run ib` or `pnpm ib` will initialize the backend by running migrations and seed the database with required system data.
 `npm run dev` or `pnpm dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
@@ -81,7 +88,7 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-Install dependencies `npm i`
+Install dependencies `npm i` of `pnpm i`
 Rename `.env.local.template` ->  `.env.local`
 
 ### requirements
@@ -89,7 +96,7 @@ Rename `.env.local.template` ->  `.env.local`
 
 ### commands
 `cd storefront/`
-`npm run dev` will run the storefront on uncompiled code, with hot-reloading as files are saved with changes.
+`npm run dev` or `pnpm dev` will run the storefront on uncompiled code, with hot-reloading as files are saved with changes.
 
 ## Useful resources
 - How to setup credit card payment with Stripe payment module: https://youtu.be/dcSOpIzc1Og
