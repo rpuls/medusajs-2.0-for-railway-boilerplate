@@ -1,5 +1,5 @@
 import type { SubscriberArgs, SubscriberConfig } from '@medusajs/framework'
-import { ProductEvents } from '@medusajs/utils'
+import { ProductEvents } from '@medusajs/framework/utils'
 import { MeiliSearchService } from '@rokmohar/medusa-plugin-meilisearch'
 
 export default async function productDeleteHandler({ event: { data }, container }: SubscriberArgs<{ id: string }>) {

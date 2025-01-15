@@ -1,7 +1,7 @@
 import { Text, Section, Hr } from '@react-email/components'
 import * as React from 'react'
 import { Base } from './base'
-import { OrderDTO, OrderAddressDTO } from '@medusajs/types/dist/order/common'
+import { OrderDTO, OrderAddressDTO } from '@medusajs/framework/types'
 
 export const ORDER_PLACED = 'order-placed'
 

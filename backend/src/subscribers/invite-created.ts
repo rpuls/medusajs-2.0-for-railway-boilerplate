@@ -1,5 +1,5 @@
-import { INotificationModuleService, IUserModuleService } from '@medusajs/types'
-import { Modules } from '@medusajs/utils'
+import { INotificationModuleService, IUserModuleService } from '@medusajs/framework/types'
+import { Modules } from '@medusajs/framework/utils'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/framework'
 import { BACKEND_URL } from '../lib/constants'
 import { EmailTemplates } from '../modules/email-notifications/templates'
