@@ -8,9 +8,8 @@ export default async function productDeleteHandler({ event: { data }, container 
     // Check if MeiliSearch service is available
     let meiliSearchService: MeiliSearchService
     try {
-        meiliSearchService = container.resolve('@rokmohar/medusa-plugin-meilisearch')
+        meiliSearchService = container.resolve('meilisearch')
     } catch (error) {
-        // MeiliSearch service not available, skip deletion
         return
     }
 
