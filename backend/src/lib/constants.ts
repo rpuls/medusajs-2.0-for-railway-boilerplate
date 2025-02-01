@@ -97,7 +97,8 @@ export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
  * (optional) Meilisearch configuration
  */
 export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
-export const MEILISEARCH_API_KEY = process.env.MEILISEARCH_API_KEY;
+export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
+export const MEILISEARCH_MASTER_KEY = process.env.MEILISEARCH_MASTER_KEY;
 
 /**
  * Worker mode
