@@ -16,7 +16,7 @@
 </p>
 
 <h2 align="center">
-  Prebaked medusajs 2.0 monorepo
+  Prebaked medusajs 2.0 monorepo.
 </h2>
 <h4 align="center">
   Backend + Storefront + postgres + redis + MinIO + MeiliSearch
