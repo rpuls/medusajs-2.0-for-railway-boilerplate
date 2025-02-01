@@ -34,7 +34,7 @@
     "@mikro-orm/migrations": "6.4.3",
     "@mikro-orm/postgresql": "6.4.3",
     "@react-email/components": "^0.0.26",
-    "@rokmohar/medusa-plugin-meilisearch": "^0.2.1",
+    "@rokmohar/medusa-plugin-meilisearch": "^1.0.3",
     "awilix": "^8.0.1",
     "medusajs-launch-utils": "latest",
     "minio": "^8.0.3",
