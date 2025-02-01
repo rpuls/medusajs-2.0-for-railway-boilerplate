@@ -57,7 +57,7 @@ importers:
         specifier: ^4.21.2
         version: 4.21.2
       medusajs-launch-utils:
-        specifier: ^0.0.11
+        specifier: latest
         version: 0.0.11
       minio:
         specifier: ^8.0.3
