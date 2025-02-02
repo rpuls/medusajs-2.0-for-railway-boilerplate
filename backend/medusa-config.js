@@ -1,5 +1,4 @@
 import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
-import { getMeilisearchAdminKey } from './src/utils/meilisearch';
 import {
   ADMIN_CORS,
   AUTH_CORS,
@@ -22,8 +21,7 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY,
-  MEILISEARCH_MASTER_KEY
+  MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
@@ -132,13 +130,12 @@ const medusaConfig = {
     }] : [])
   ],
   plugins: [
-  ...(MEILISEARCH_HOST && (MEILISEARCH_ADMIN_KEY || MEILISEARCH_MASTER_KEY) ? [{
+  ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
       resolve: '@rokmohar/medusa-plugin-meilisearch',
       options: {
         config: {
           host: MEILISEARCH_HOST,
-        apiKey: MEILISEARCH_ADMIN_KEY || 
-                await getMeilisearchAdminKey(MEILISEARCH_HOST, MEILISEARCH_MASTER_KEY)
+          apiKey: MEILISEARCH_ADMIN_KEY
         },
         settings: {
           products: {
