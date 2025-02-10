@@ -54,9 +54,9 @@ Updated: to `version 2.1.3` 🥳
 ## Preconfigured 3rd party integrations
 
 - MinIO file storage: Replaces local file storage with MinIO cloud storage, automatically creating a 'medusa-media' bucket for your media files. [README](backend/src/modules/minio-file/README.md)
-- Resend email integration [setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
-- Stripe payment service: [setup video](https://youtu.be/dcSOpIzc1Og)
-- Meilisearch integration: Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured and products are automatically indexed through subscribers (backend/src/subscribers/product-upsert.ts and product-delete.ts).
+- Resend email integration [Watch setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
+- Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
+- Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
 
 # /backend
 
