@@ -30,26 +30,17 @@ export const REDIS_URL = process.env.REDIS_URL;
 /**
  * Admin CORS origins
  */
-export const ADMIN_CORS = assertValue(
-  process.env.ADMIN_CORS,
-  'Environment variable for ADMIN_CORS is not set',
-)
+export const ADMIN_CORS = process.env.ADMIN_CORS;
 
 /**
  * Auth CORS origins
  */
-export const AUTH_CORS = assertValue(
-  process.env.AUTH_CORS,
-  'Environment variable for AUTH_CORS is not set',
-)
+export const AUTH_CORS = process.env.AUTH_CORS;
 
 /**
  * Store/frontend CORS origins
  */
-export const STORE_CORS = assertValue(
-  process.env.STORE_CORS,
-  'Environment variable for STORE_CORS is not set',
-)
+export const STORE_CORS = process.env.STORE_CORS;
 
 /**
  * JWT Secret used for signing JWT tokens

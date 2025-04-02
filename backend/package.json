@@ -36,7 +36,7 @@
     "@react-email/components": "^0.0.26",
     "@rokmohar/medusa-plugin-meilisearch": "^1.0.3",
     "awilix": "^8.0.1",
-    "medusajs-launch-utils": "latest",
+    "medusajs-launch-utils": "^0.0.15",
     "minio": "^8.0.3",
     "pg": "^8.13.1",
     "resend": "4.0.1",
