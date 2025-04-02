@@ -16,7 +16,13 @@
 </p>
 
 <h2 align="center">
-  Prebaked medusajs 2.0 monorepo (backend + postgres + redis + storefront)<br>
+  Prebaked medusajs 2.0 monorepo
+</h2>
+<h4 align="center">
+  Backend + Storefront + postgres + redis + MinIO + MeiliSearch
+</h4>
+
+<h2 align="center">
   <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
 </h2>
 
@@ -28,46 +34,38 @@
 <p align="center">
 Combine Medusa's modules for your commerce backend with the newest Next.js 14 features for a performant storefront.</p>
 
-<p align="center">
-  <a href="https://github.com/medusajs/medusa/blob/master/CONTRIBUTING.md">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
-  </a>
-  <a href="https://discord.gg/xpCwq3Kfn8">
-    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
-  </a>
-  <a href="https://twitter.com/intent/follow?screen_name=medusajs">
-    <img src="https://img.shields.io/twitter/follow/medusajs.svg?label=Follow%20@medusajs" alt="Follow @medusajs" />
-  </a>
-</p>
-
 ## About this boilerplate
 This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application. It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
-Updated: to `version 2.0.4` 🥳
+Updated: to `version 2.4.0` 🥳
 
 ## Preconfigured 3rd party integrations
 
 - MinIO file storage: Replaces local file storage with MinIO cloud storage, automatically creating a 'medusa-media' bucket for your media files. [README](backend/src/modules/minio-file/README.md)
-- Resend email integration [setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
-- Stripe payment service: [setup video](https://youtu.be/dcSOpIzc1Og)
+- Resend email integration [Watch setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
+- Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
+- Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
 
 # /backend
 
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-- Install dependencies using either:
-  - `npm i`
-  - `pnpm install` (now supported!)
+- `cd /backend`
+- `pnpm install` or `npm i`
 - Rename `.env.template` ->  `.env`
 - To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
+  - If connecting to a new database, for example a local one, run `pnpm ib` or `npm run ib` to seed the database.
+- `pnpm dev` or `npm run dev`
 
 ### requirements
 - **postgres database** (Automatic setup when using the Railway template)
 - **redis** (Automatic setup when using the Railway template) - fallback to simulated redis.
 - **MinIO storage** (Automatic setup when using the Railway template) - fallback to local storage.
+- **Meilisearch** (Automatic setup when using the Railway template)
 
 ### commands
+
 `cd backend/`
 `npm run ib` or `pnpm ib` will initialize the backend by running migrations and seed the database with required system data.
 `npm run dev` or `pnpm dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
@@ -78,7 +76,7 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-Install dependencies `npm i`
+Install dependencies `npm i` of `pnpm i`
 Rename `.env.local.template` ->  `.env.local`
 
 ### requirements
@@ -86,7 +84,7 @@ Rename `.env.local.template` ->  `.env.local`
 
 ### commands
 `cd storefront/`
-`npm run dev` will run the storefront on uncompiled code, with hot-reloading as files are saved with changes.
+`npm run dev` or `pnpm dev` will run the storefront on uncompiled code, with hot-reloading as files are saved with changes.
 
 ## Useful resources
 - How to setup credit card payment with Stripe payment module: https://youtu.be/dcSOpIzc1Og

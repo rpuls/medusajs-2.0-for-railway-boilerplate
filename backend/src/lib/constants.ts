@@ -1,4 +1,4 @@
-import { loadEnv } from '@medusajs/utils'
+import { loadEnv } from '@medusajs/framework/utils'
 
 import { assertValue } from 'utils/assert-value'
 
@@ -12,7 +12,7 @@ export const IS_DEV = process.env.NODE_ENV === 'development'
 /**
  * Public URL for the backend
  */
-export const BACKEND_URL = process.env.RAILWAY_PUBLIC_DOMAIN_VALUE ?? 'http://localhost:9000'
+export const BACKEND_URL = process.env.BACKEND_PUBLIC_URL ?? process.env.RAILWAY_PUBLIC_DOMAIN_VALUE ?? 'http://localhost:9000'
 
 /**
  * Database URL for Postgres instance used by the backend
@@ -92,6 +92,12 @@ export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
  */
 export const STRIPE_API_KEY = process.env.STRIPE_API_KEY;
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+
+/**
+ * (optional) Meilisearch configuration
+ */
+export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
+export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 
 /**
  * Worker mode

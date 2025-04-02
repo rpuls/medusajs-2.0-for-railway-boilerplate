@@ -12,15 +12,14 @@
     "launcher": "launch-storefront",
     "dev": "npm run wait && npm run launcher dev",
     "build": "npm run wait && npm run launcher build",
-    "build:next": "next build",
     "start": "npm run launcher start",
+    "build:next": "next build",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
     "test-e2e": "playwright test e2e"
   },
   "resolutions": {
-    "webpack": "^5",
-    "@types/react": "17.0.40"
+    "webpack": "^5"
   },
   "dependencies": {
     "@headlessui/react": "^1.6.1",
@@ -36,7 +35,7 @@
     "algoliasearch": "^4.20.0",
     "axios": "^1.6.7",
     "lodash": "^4.17.21",
-    "medusajs-launch-utils": "^0.0.4",
+    "medusajs-launch-utils": "latest",
     "next": "^14.0.0",
     "pg": "^8.11.3",
     "qs": "^6.12.1",

@@ -1,7 +1,6 @@
-import { Router } from 'express';
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework";
-import { IApiKeyModuleService } from '@medusajs/types';
-import { Modules } from '@medusajs/utils';
+import { IApiKeyModuleService } from '@medusajs/framework/types';
+import { Modules } from '@medusajs/framework/utils';
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
