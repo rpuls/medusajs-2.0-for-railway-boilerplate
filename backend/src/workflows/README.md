@@ -11,7 +11,7 @@ import {
   createStep,
   createWorkflow,
   StepResponse,
-} from "@medusajs/workflows-sdk"
+} from "@medusajs/framework/workflows-sdk"
 
 const step1 = createStep("step-1", async () => {
   return new StepResponse(`Hello from step one!`)
@@ -58,7 +58,7 @@ For example, to execute the workflow in an API route:
 import type {
   MedusaRequest,
   MedusaResponse,
-} from "@medusajs/medusa"
+} from "@medusajs/framework"
 import myWorkflow from "../../../workflows/hello-world"
 
 export async function GET(

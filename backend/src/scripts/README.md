@@ -12,16 +12,16 @@ For example, create the file `src/scripts/my-script.ts` with the following conte
 import { 
   ExecArgs,
   IProductModuleService
-} from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
+} from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
 export default async function myScript ({
   container
 }: ExecArgs) {
   const productModuleService: IProductModuleService = 
-    container.resolve(ModuleRegistrationName.PRODUCT)
+    container.resolve(Modules.PRODUCT)
 
-  const [, count] = await productModuleService.listAndCount()
+  const [, count] = await productModuleService.listAndCountProducts()
 
   console.log(`You have ${count} product(s)`)
 }
@@ -48,7 +48,7 @@ Your script can accept arguments from the command line. Arguments are passed to 
 For example:
 
 ```ts
-import { ExecArgs } from "@medusajs/types"
+import { ExecArgs } from "@medusajs/framework/types"
 
 export default async function myScript ({
   args

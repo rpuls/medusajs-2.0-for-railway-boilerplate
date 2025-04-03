@@ -1,0 +1,1 @@
+export const SUPER_ADMIN_STORE_NAME = "SUPER ADMIN STORE";

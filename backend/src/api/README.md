@@ -7,7 +7,7 @@ An API Route is created in a TypeScript or JavaScript file under the `/src/api` 
 For example, to create a `GET` API Route at `/store/hello-world`, create the file `src/api/store/hello-world/route.ts` with the following content:
 
 ```ts
-import type { MedusaRequest, MedusaResponse } from "@medusajs/medusa";
+import type { MedusaRequest, MedusaResponse } from "@medusajs/framework";
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   res.json({
@@ -33,7 +33,7 @@ You can define a handler for each of these methods by exporting a function with 
 For example:
 
 ```ts
-import type { MedusaRequest, MedusaResponse } from "@medusajs/medusa";
+import type { MedusaRequest, MedusaResponse } from "@medusajs/framework";
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   // Handle GET requests
@@ -58,7 +58,7 @@ For example, if you want to define a route that takes a `productId` parameter, y
 import type {
   MedusaRequest,
   MedusaResponse,
-} from "@medusajs/medusa"
+} from "@medusajs/framework"
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const { productId } = req.params;
@@ -81,16 +81,16 @@ The Medusa container is available on `req.scope`. Use it to access modules' main
 import type {
   MedusaRequest,
   MedusaResponse,
-} from "@medusajs/medusa"
-import { IProductModuleService } from "@medusajs/types"
-import { ModuleRegistrationName } from "@medusajs/utils"
+} from "@medusajs/framework"
+import { IProductModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 
 export const GET = async (
   req: MedusaRequest,
   res: MedusaResponse
 ) => {
   const productModuleService: IProductModuleService =
-    req.scope.resolve(ModuleRegistrationName.PRODUCT)
+    req.scope.resolve(Modules.PRODUCT)
 
   const [, count] = await productModuleService.listAndCount()
 
@@ -107,12 +107,12 @@ You can apply middleware to your routes by creating a file called `/api/middlewa
 For example, if you want to apply a custom middleware function to the `/store/custom` route, you can do so by adding the following to your `/api/middlewares.ts` file:
 
 ```ts
+import { defineMiddlewares } from "@medusajs/medusa"
 import type {
-  MiddlewaresConfig,
   MedusaRequest,
   MedusaResponse,
   MedusaNextFunction,
-} from "@medusajs/medusa";
+} from "@medusajs/framework";
 
 async function logger(
   req: MedusaRequest,
@@ -123,14 +123,14 @@ async function logger(
   next();
 }
 
-export const config: MiddlewaresConfig = {
+export default defineMiddlewares({
   routes: [
     {
       matcher: "/store/custom",
       middlewares: [logger],
     },
   ],
-};
+})
 ```
 
 The `matcher` property can be either a string or a regular expression. The `middlewares` property accepts an array of middleware functions.
