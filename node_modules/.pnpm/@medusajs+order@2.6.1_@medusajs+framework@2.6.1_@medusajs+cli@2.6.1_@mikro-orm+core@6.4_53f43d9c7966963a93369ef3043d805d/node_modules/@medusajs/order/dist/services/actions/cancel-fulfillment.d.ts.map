@@ -1,1 +1,0 @@
-{"version":3,"file":"cancel-fulfillment.d.ts","sourceRoot":"","sources":["../../../src/services/actions/cancel-fulfillment.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,UAAU,EAAE,MAAM,2BAA2B,CAAA;AAG/D,wBAAsB,iBAAiB,CACrC,IAAI,EAAE,GAAG,EACT,IAAI,EAAE,UAAU,CAAC,yBAAyB,EAC1C,aAAa,CAAC,EAAE,OAAO,GACtB,OAAO,CAAC,IAAI,CAAC,CA8Bf"}

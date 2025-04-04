@@ -4763,7 +4763,7 @@ math-intrinsics@^1.1.0:
   resolved "https://registry.yarnpkg.com/math-intrinsics/-/math-intrinsics-1.1.0.tgz#a0dd74be81e2aa5c2f27e65ce283605ee4e2b7f9"
   integrity sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==
 
-medusajs-launch-utils@latest:
+medusajs-launch-utils@^0.0.15:
   version "0.0.15"
   resolved "https://registry.yarnpkg.com/medusajs-launch-utils/-/medusajs-launch-utils-0.0.15.tgz#da831d60dcc1817ace0ec25101e7ab7a05058d7f"
   integrity sha512-tLrAyvQLqu4KebiVeFbLSHRnIlAjJ+iI3ryr+gRudaAnHdEZOpSuWQe0SzZVYpJQlLDjoBq3zXztGh/fDOGVuQ==

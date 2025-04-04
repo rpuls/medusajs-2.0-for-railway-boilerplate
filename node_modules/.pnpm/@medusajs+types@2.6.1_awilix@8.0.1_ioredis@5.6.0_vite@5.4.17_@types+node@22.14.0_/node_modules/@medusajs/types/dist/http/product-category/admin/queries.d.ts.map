@@ -1,1 +1,0 @@
-{"version":3,"file":"queries.d.ts","sourceRoot":"","sources":["../../../../src/http/product-category/admin/queries.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,6BAA6B,EAC7B,yBAAyB,EAC1B,MAAM,WAAW,CAAA;AAElB,MAAM,WAAW,8BACf,SAAQ,6BAA6B;IACrC;;OAEG;IACH,WAAW,CAAC,EAAE,OAAO,CAAA;IACrB;;OAEG;IACH,SAAS,CAAC,EAAE,OAAO,CAAA;CACpB;AAED,MAAM,WAAW,0BAA2B,SAAQ,yBAAyB;CAAG"}

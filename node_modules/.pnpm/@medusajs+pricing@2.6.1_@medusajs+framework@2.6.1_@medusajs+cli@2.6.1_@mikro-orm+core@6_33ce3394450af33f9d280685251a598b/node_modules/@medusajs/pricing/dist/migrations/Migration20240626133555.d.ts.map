@@ -1,1 +1,0 @@
-{"version":3,"file":"Migration20240626133555.d.ts","sourceRoot":"","sources":["../../src/migrations/Migration20240626133555.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,uBAAuB,CAAA;AAEjD,qBAAa,uBAAwB,SAAQ,SAAS;IAC9C,EAAE,IAAI,OAAO,CAAC,IAAI,CAAC;CAoE1B"}

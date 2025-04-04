@@ -1,1 +1,0 @@
-{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../src/api/store/products/[id]/route.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,cAAc,EAAE,MAAM,0BAA0B,CAAA;AAEzD,OAAO,EAEL,kBAAkB,EAEnB,MAAM,YAAY,CAAA;AACnB,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAErD,eAAO,MAAM,GAAG,QACT,kBAAkB,CAAC,SAAS,CAAC,kBAAkB,CAAC,OAChD,cAAc,CAAC,SAAS,CAAC,oBAAoB,CAAC,kBA6CpD,CAAA"}

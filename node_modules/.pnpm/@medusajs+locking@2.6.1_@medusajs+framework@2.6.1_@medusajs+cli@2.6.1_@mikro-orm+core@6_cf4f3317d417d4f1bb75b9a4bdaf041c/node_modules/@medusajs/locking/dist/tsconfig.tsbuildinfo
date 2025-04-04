@@ -1,1 +1,0 @@
-{"root":["../src/index.ts","../src/loaders/providers.ts","../src/providers/in-memory.ts","../src/services/index.ts","../src/services/locking-module.ts","../src/services/locking-provider.ts","../src/types/index.ts"],"version":"5.6.2"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../../src/components/date-segment/index.ts"],"names":[],"mappings":"AAAA,cAAc,gBAAgB,CAAA","sourcesContent":["export * from \"./date-segment\"\n"]}

@@ -1,1 +1,0 @@
-{"version":3,"file":"validate-rule-attribute.d.ts","sourceRoot":"","sources":["../../../../../src/api/admin/promotions/utils/validate-rule-attribute.ts"],"names":[],"mappings":"AAGA,wBAAgB,qBAAqB,CAAC,UAAU,EAAE;IAChD,aAAa,EAAE,MAAM,GAAG,SAAS,CAAA;IACjC,QAAQ,EAAE,MAAM,CAAA;IAChB,eAAe,EAAE,MAAM,CAAA;IACvB,qBAAqB,CAAC,EAAE,MAAM,CAAA;CAC/B,QAkBA"}

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/AccessibleIcon.tsx"],
-  "sourcesContent": ["import * as React from 'react';\nimport * as VisuallyHiddenPrimitive from '@radix-ui/react-visually-hidden';\n\nconst NAME = 'AccessibleIcon';\n\ninterface AccessibleIconProps {\n  children?: React.ReactNode;\n  /**\n   * The accessible label for the icon. This label will be visually hidden but announced to screen\n   * reader users, similar to `alt` text for `img` tags.\n   */\n  label: string;\n}\n\nconst AccessibleIcon: React.FC<AccessibleIconProps> = ({ children, label }) => {\n  const child = React.Children.only(children);\n  return (\n    <>\n      {React.cloneElement(child as React.ReactElement<React.SVGAttributes<SVGElement>>, {\n        // accessibility\n        'aria-hidden': 'true',\n        focusable: 'false', // See: https://allyjs.io/tutorials/focusing-in-svg.html#making-svg-elements-focusable\n      })}\n      <VisuallyHiddenPrimitive.Root>{label}</VisuallyHiddenPrimitive.Root>\n    </>\n  );\n};\n\nAccessibleIcon.displayName = NAME;\n\nconst Root = AccessibleIcon;\n\nexport {\n  AccessibleIcon,\n  //\n  Root,\n};\nexport type { AccessibleIconProps };\n"],
-  "mappings": ";AAAA,YAAY,WAAW;AACvB,YAAY,6BAA6B;AAgBrC,mBAME,KANF;AAdJ,IAAM,OAAO;AAWb,IAAM,iBAAgD,CAAC,EAAE,UAAU,MAAM,MAAM;AAC7E,QAAM,QAAc,eAAS,KAAK,QAAQ;AAC1C,SACE,iCACG;AAAA,IAAM,mBAAa,OAA8D;AAAA;AAAA,MAEhF,eAAe;AAAA,MACf,WAAW;AAAA;AAAA,IACb,CAAC;AAAA,IACD,oBAAyB,8BAAxB,EAA8B,iBAAM;AAAA,KACvC;AAEJ;AAEA,eAAe,cAAc;AAE7B,IAAMA,QAAO;",
-  "names": ["Root"]
-}

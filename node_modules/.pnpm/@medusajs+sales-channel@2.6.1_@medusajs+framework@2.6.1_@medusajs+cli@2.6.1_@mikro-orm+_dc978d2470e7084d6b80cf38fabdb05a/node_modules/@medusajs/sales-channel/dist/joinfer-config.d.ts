@@ -1,2 +1,0 @@
-export declare const joinerConfig: Omit<import("@medusajs/types").ModuleJoinerConfig, "serviceName" | "primaryKeys" | "alias" | "linkableKeys"> & Required<Pick<import("@medusajs/types").ModuleJoinerConfig, "serviceName" | "primaryKeys" | "alias" | "linkableKeys">>;
-//# sourceMappingURL=joinfer-config.d.ts.map

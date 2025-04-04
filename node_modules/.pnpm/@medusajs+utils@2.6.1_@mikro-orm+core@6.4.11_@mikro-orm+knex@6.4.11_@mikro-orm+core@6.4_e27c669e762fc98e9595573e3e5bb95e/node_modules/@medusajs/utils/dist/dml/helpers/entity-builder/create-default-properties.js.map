@@ -1,1 +1,0 @@
-{"version":3,"file":"create-default-properties.js","sourceRoot":"","sources":["../../../../src/dml/helpers/entity-builder/create-default-properties.ts"],"names":[],"mappings":";;AASA,0DAMC;AAfD,0DAA6D;AAS7D,SAAgB,uBAAuB;IACrC,OAAO;QACL,UAAU,EAAE,IAAI,4BAAgB,EAAE;QAClC,UAAU,EAAE,IAAI,4BAAgB,EAAE;QAClC,UAAU,EAAE,IAAI,4BAAgB,EAAE,CAAC,QAAQ,EAAE;KAC9C,CAAA;AACH,CAAC"}

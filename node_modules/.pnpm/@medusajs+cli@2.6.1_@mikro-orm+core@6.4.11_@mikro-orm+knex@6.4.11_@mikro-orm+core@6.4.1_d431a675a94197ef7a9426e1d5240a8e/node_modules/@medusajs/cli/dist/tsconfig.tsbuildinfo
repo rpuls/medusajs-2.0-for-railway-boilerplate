@@ -1,1 +1,0 @@
-{"root":["../src/create-cli.ts","../src/did-you-mean.ts","../src/index.ts","../src/commands/new.ts","../src/reporter/index.ts","../src/reporter/panic-handler.ts","../src/reporter/__tests__/index.js","../src/util/clear-project.ts","../src/util/package-manager.ts"],"version":"5.6.2"}

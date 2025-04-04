@@ -1,1 +1,0 @@
-{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../../src/api/admin/stock-locations/[id]/fulfillment-providers/route.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,SAAS,EAAE,iBAAiB,EAAE,MAAM,2BAA2B,CAAA;AAGxE,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAYjC,eAAO,MAAM,IAAI,QACV,0BAA0B,CAAC,iBAAiB,CAAC,OAC7C,cAAc,CAAC,SAAS,CAAC,0BAA0B,CAAC,kBAmB1D,CAAA"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"linking-error.d.ts","sourceRoot":"","sources":["../../src/utils/linking-error.ts"],"names":[],"mappings":"AAKA,KAAK,wBAAwB,GAAG;IAC9B,OAAO,EAAE,MAAM,CAAA;IACf,UAAU,EAAE,MAAM,CAAA;IAClB,OAAO,EAAE,MAAM,CAAA;IACf,UAAU,EAAE,MAAM,CAAA;IAClB,IAAI,EAAE,SAAS,GAAG,MAAM,CAAA;CACzB,CAAA;AAED;;;GAGG;AACH,eAAO,MAAM,mBAAmB,UAAW,wBAAwB,WAMlE,CAAA"}

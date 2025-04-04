@@ -1,1 +1,0 @@
-{"version":3,"file":"mutations.d.ts","sourceRoot":"","sources":["../../src/workflows-sdk/mutations.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,0BAA0B;IACzC,WAAW,EAAE,MAAM,CAAA;IACnB,cAAc,EAAE,MAAM,CAAA;IACtB,SAAS,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;IAClC,OAAO,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;IAChC,KAAK,EAAE,GAAG,CAAA;CACX"}

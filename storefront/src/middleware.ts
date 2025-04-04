@@ -18,29 +18,69 @@ async function getRegionMap() {
     !regionMap.keys().next().value ||
     regionMapUpdated < Date.now() - 3600 * 1000
   ) {
-    // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-    const { regions } = await fetch(`${BACKEND_URL}/store/regions`, {
-      headers: {
-        "x-publishable-api-key": PUBLISHABLE_API_KEY!,
-      },
-      next: {
-        revalidate: 3600,
-        tags: ["regions"],
-      },
-    }).then((res) => res.json())
+    try {
+      if (!BACKEND_URL) {
+        throw new Error("NEXT_PUBLIC_MEDUSA_BACKEND_URL is not defined")
+      }
 
-    if (!regions?.length) {
-      notFound()
-    }
+      if (!PUBLISHABLE_API_KEY) {
+        throw new Error("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not defined")
+      }
 
-    // Create a map of country codes to regions.
-    regions.forEach((region: HttpTypes.StoreRegion) => {
-      region.countries?.forEach((c) => {
-        regionMapCache.regionMap.set(c.iso_2 ?? "", region)
+      console.log('Fetching regions from:', `${BACKEND_URL}/store/regions`)
+      console.log('Using publishable key:', PUBLISHABLE_API_KEY)
+      
+      const response = await fetch(`${BACKEND_URL}/store/regions`, {
+        headers: {
+          "x-publishable-api-key": PUBLISHABLE_API_KEY!,
+        },
+        next: {
+          revalidate: 3600,
+          tags: ["regions"],
+        },
       })
-    })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch regions: ${response.status} ${response.statusText}`)
+      }
 
-    regionMapCache.regionMapUpdated = Date.now()
+      console.log('Response status:', response.status)
+      const data = await response.json()
+      console.log('Response data:', data)
+      
+      const { regions } = data
+
+      if (!regions?.length) {
+        console.error('No regions found in response')
+        throw new Error("No regions found in the response")
+      }
+
+      // Clear the existing map
+      regionMapCache.regionMap.clear()
+
+      // Create a map of country codes to regions.
+      regions.forEach((region: HttpTypes.StoreRegion) => {
+        region.countries?.forEach((c) => {
+          if (c?.iso_2) {
+            regionMapCache.regionMap.set(c.iso_2.toLowerCase(), region)
+          }
+        })
+      })
+
+      regionMapCache.regionMapUpdated = Date.now()
+
+      // Log available regions for debugging
+      console.log('Available regions:', Array.from(regionMapCache.regionMap.keys()))
+    } catch (error) {
+      console.error("Error in getRegionMap:", error)
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "Middleware.ts: Error getting the region map. Did you set up regions in your Medusa Admin and define a NEXT_PUBLIC_MEDUSA_BACKEND_URL environment variable?"
+        )
+      }
+      // Return empty map instead of throwing to allow the application to continue
+      return new Map()
+    }
   }
 
   return regionMapCache.regionMap
@@ -64,23 +104,40 @@ async function getCountryCode(
 
     const urlCountryCode = request.nextUrl.pathname.split("/")[1]?.toLowerCase()
 
+    // First try the URL country code
     if (urlCountryCode && regionMap.has(urlCountryCode)) {
       countryCode = urlCountryCode
-    } else if (vercelCountryCode && regionMap.has(vercelCountryCode)) {
+    } 
+    // Then try the Vercel country code
+    else if (vercelCountryCode && regionMap.has(vercelCountryCode)) {
       countryCode = vercelCountryCode
-    } else if (regionMap.has(DEFAULT_REGION)) {
-      countryCode = DEFAULT_REGION
-    } else if (regionMap.keys().next().value) {
-      countryCode = regionMap.keys().next().value
+    } 
+    // Then try the default region
+    else if (DEFAULT_REGION && regionMap.has(DEFAULT_REGION.toLowerCase())) {
+      countryCode = DEFAULT_REGION.toLowerCase()
+    } 
+    // Finally, try to get any available region
+    else {
+      const firstRegion = regionMap.keys().next().value
+      if (firstRegion) {
+        console.log(`Default region ${DEFAULT_REGION} not found, using first available region: ${firstRegion}`)
+        countryCode = firstRegion
+      } else {
+        console.error("No regions available in the region map")
+        return undefined
+      }
     }
 
+    console.log(`Selected country code: ${countryCode}`)
     return countryCode
   } catch (error) {
+    console.error("Error in getCountryCode:", error)
     if (process.env.NODE_ENV === "development") {
       console.error(
         "Middleware.ts: Error getting the country code. Did you set up regions in your Medusa Admin and define a NEXT_PUBLIC_MEDUSA_BACKEND_URL environment variable?"
       )
     }
+    return undefined
   }
 }
 

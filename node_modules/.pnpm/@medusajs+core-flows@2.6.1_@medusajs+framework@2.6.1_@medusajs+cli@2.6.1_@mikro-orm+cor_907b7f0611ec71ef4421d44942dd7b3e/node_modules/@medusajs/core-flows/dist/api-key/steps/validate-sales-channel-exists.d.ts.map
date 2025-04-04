@@ -1,1 +1,0 @@
-{"version":3,"file":"validate-sales-channel-exists.d.ts","sourceRoot":"","sources":["../../../src/api-key/steps/validate-sales-channel-exists.ts"],"names":[],"mappings":"AAQA;;GAEG;AACH,MAAM,WAAW,mCAAmC;IAClD;;OAEG;IACH,iBAAiB,EAAE,MAAM,EAAE,CAAA;CAC5B;AAED,eAAO,MAAM,gCAAgC,kCAAkC,CAAA;AAC/E;;;GAGG;AACH,eAAO,MAAM,8BAA8B,yGAwB1C,CAAA"}

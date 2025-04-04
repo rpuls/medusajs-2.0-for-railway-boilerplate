@@ -1,1 +1,0 @@
-{"version":3,"file":"query-config.js","sourceRoot":"","sources":["../../../../src/api/store/payment-providers/query-config.ts"],"names":[],"mappings":";;;AAAa,QAAA,iCAAiC,GAAG,CAAC,IAAI,EAAE,YAAY,CAAC,CAAA;AAExD,QAAA,wCAAwC,GAAG;IACtD,QAAQ,EAAE,yCAAiC;IAC3C,MAAM,EAAE,IAAI;CACb,CAAA"}

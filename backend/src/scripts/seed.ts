@@ -28,7 +28,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
   const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
   const storeModuleService = container.resolve(Modules.STORE);
 
-  const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
+  const countries = ["gb", "de", "dk", "se", "fr", "es", "it", "us"];
 
   logger.info("Seeding store data...");
   const [store] = await storeModuleService.listStores();
@@ -58,11 +58,11 @@ export default async function seedDemoData({ container }: ExecArgs) {
       update: {
         supported_currencies: [
           {
-            currency_code: "eur",
+            currency_code: "usd",
             is_default: true,
           },
           {
-            currency_code: "usd",
+            currency_code: "eur",
           },
         ],
         default_sales_channel_id: defaultSalesChannel[0].id,
@@ -76,7 +76,13 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           name: "Europe",
           currency_code: "eur",
-          countries,
+          countries: ["gb", "de", "dk", "se", "fr", "es", "it"],
+          payment_providers: ["pp_system_default"],
+        },
+        {
+          name: "United States",
+          currency_code: "usd",
+          countries: ["us"],
           payment_providers: ["pp_system_default"],
         },
       ],

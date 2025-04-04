@@ -1,9 +1,0 @@
-export * from "./create-addresses";
-export * from "./create-customer-account";
-export * from "./create-customers";
-export * from "./delete-addresses";
-export * from "./delete-customers";
-export * from "./remove-customer-account";
-export * from "./update-addresses";
-export * from "./update-customers";
-//# sourceMappingURL=index.d.ts.map

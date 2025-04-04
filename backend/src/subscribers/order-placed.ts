@@ -113,7 +113,7 @@ export default async function orderPlacedHandler({
             authorized_amount: paymentCollection.authorized_amount,
             captured_amount: paymentCollection.captured_amount,
             currencyCode: paymentCollection.currency_code,
-            regionId: paymentCollection.regionId,
+            regionId: order.region_id,
             status: paymentCollection.status,
           },
         });

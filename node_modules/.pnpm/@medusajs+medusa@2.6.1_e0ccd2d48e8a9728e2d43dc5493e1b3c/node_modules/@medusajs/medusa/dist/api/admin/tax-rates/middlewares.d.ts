@@ -1,3 +1,0 @@
-import { MiddlewareRoute } from "@medusajs/framework/http";
-export declare const adminTaxRateRoutesMiddlewares: MiddlewareRoute[];
-//# sourceMappingURL=middlewares.d.ts.map

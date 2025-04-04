@@ -1,1 +1,0 @@
-{"version":3,"file":"module-provider-registration-key.d.ts","sourceRoot":"","sources":["../../src/modules-sdk/module-provider-registration-key.ts"],"names":[],"mappings":"AAAA,eAAO,MAAM,mCAAmC,kBAAkB,CAAA;AAElE;;;;GAIG;AACH,wBAAgB,0BAA0B,CAAC,EACzC,UAAU,EACV,kBAAkB,GACnB,EAAE;IACD,UAAU,CAAC,EAAE,MAAM,CAAA;IACnB,kBAAkB,CAAC,EAAE,MAAM,CAAA;CAC5B,GAAG,MAAM,CAKT"}

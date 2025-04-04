@@ -1,1 +1,0 @@
-{"version":3,"file":"update-reservations.d.ts","sourceRoot":"","sources":["../../../src/workflow/reservation/update-reservations.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,0BAA0B,EAAE,MAAM,iBAAiB,CAAA;AAEhF;;GAEG;AACH,MAAM,WAAW,+BAA+B;IAC9C;;OAEG;IACH,OAAO,EAAE,0BAA0B,EAAE,CAAA;CACtC;AAED;;GAEG;AACH,MAAM,MAAM,gCAAgC,GAAG,kBAAkB,EAAE,CAAA"}

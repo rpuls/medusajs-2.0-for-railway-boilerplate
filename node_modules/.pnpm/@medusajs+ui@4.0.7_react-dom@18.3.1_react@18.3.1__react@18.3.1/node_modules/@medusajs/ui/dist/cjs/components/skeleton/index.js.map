@@ -1,1 +1,0 @@
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../../src/components/skeleton/index.ts"],"names":[],"mappings":";;;AAAA,qDAA2B","sourcesContent":["export * from \"./skeleton\";\n"]}

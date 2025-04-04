@@ -1,1 +1,0 @@
-{"version":3,"file":"to-unix-slash.js","sourceRoot":"","sources":["../../src/common/to-unix-slash.ts"],"names":[],"mappings":";;AAAA,kCAOC;AAPD,SAAgB,WAAW,CAAC,IAAY;IACtC,MAAM,oBAAoB,GAAG,IAAI,CAAC,UAAU,CAAC,SAAS,CAAC,CAAA;IACvD,IAAI,oBAAoB,EAAE,CAAC;QACzB,OAAO,IAAI,CAAA;IACb,CAAC;IAED,OAAO,IAAI,CAAC,OAAO,CAAC,KAAK,EAAE,GAAG,CAAC,CAAA;AACjC,CAAC"}

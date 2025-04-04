@@ -1,1 +1,0 @@
-{"mappings":";AAAA,4BAAiB;IAAG,oBAAoB,CAAC,oFAAwE,CAAC;AAClH","sources":["packages/@react-aria/menu/intl/fi-FI.json"],"sourcesContent":["{\n  \"longPressMessage\": \"Avaa valikko painamalla pohjassa tai näppäinyhdistelmällä Alt + Alanuoli\"\n}\n"],"names":[],"version":3,"file":"fi-FI.module.js.map"}

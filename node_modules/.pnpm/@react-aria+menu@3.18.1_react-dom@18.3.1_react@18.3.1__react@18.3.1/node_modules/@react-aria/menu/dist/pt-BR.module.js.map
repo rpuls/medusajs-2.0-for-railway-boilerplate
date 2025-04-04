@@ -1,1 +1,0 @@
-{"mappings":";AAAA,4BAAiB;IAAG,oBAAoB,CAAC,uEAAuE,CAAC;AACjH","sources":["packages/@react-aria/menu/intl/pt-BR.json"],"sourcesContent":["{\n  \"longPressMessage\": \"Pressione e segure ou pressione Alt + Seta para baixo para abrir o menu\"\n}\n"],"names":[],"version":3,"file":"pt-BR.module.js.map"}

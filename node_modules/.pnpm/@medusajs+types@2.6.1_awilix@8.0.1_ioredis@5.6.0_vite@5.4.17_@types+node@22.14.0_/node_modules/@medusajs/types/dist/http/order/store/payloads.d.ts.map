@@ -1,1 +1,0 @@
-{"version":3,"file":"payloads.d.ts","sourceRoot":"","sources":["../../../../src/http/order/store/payloads.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,yBAAyB;IACxC;;OAEG;IACH,WAAW,CAAC,EAAE,MAAM,CAAA;CACrB;AAED,MAAM,WAAW,wBAAwB;IACvC,KAAK,EAAE,MAAM,CAAA;CACd;AAED,MAAM,WAAW,yBAAyB;IACxC,KAAK,EAAE,MAAM,CAAA;CACd"}

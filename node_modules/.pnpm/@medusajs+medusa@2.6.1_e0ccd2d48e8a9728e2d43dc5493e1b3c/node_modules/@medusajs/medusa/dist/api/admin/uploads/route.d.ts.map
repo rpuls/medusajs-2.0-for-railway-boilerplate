@@ -1,1 +1,0 @@
-{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../src/api/admin/uploads/route.ts"],"names":[],"mappings":"AACA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAEjC,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAErD,eAAO,MAAM,IAAI,QACV,0BAA0B,CAAC,SAAS,CAAC,eAAe,CAAC,OACrD,cAAc,CAAC,SAAS,CAAC,qBAAqB,CAAC,kBAuBrD,CAAA"}

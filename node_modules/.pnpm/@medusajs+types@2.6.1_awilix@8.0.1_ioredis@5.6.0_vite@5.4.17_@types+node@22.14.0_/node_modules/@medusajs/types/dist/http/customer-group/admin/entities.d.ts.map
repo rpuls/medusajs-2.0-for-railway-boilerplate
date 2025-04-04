@@ -1,1 +1,0 @@
-{"version":3,"file":"entities.d.ts","sourceRoot":"","sources":["../../../../src/http/customer-group/admin/entities.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,MAAM,sBAAsB,CAAA;AACpD,OAAO,EAAE,iBAAiB,EAAE,MAAM,WAAW,CAAA;AAE7C,MAAM,WAAW,kBAAmB,SAAQ,iBAAiB;IAC3D;;OAEG;IACH,SAAS,EAAE,aAAa,EAAE,CAAA;CAC3B"}

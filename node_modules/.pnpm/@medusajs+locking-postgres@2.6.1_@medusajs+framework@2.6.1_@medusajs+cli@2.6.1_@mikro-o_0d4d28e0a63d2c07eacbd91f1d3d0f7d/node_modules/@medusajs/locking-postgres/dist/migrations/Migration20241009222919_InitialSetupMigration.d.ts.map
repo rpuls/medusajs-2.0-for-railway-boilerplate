@@ -1,1 +1,0 @@
-{"version":3,"file":"Migration20241009222919_InitialSetupMigration.d.ts","sourceRoot":"","sources":["../../src/migrations/Migration20241009222919_InitialSetupMigration.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,uBAAuB,CAAA;AAEjD,qBAAa,6CAA8C,SAAQ,SAAS;IACpE,EAAE,IAAI,OAAO,CAAC,IAAI,CAAC;IAMnB,IAAI,IAAI,OAAO,CAAC,IAAI,CAAC;CAG5B"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"add.js","sourceRoot":"","sources":["../../../src/commands/plugin/add.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;AAKA,iCAWC;AAhBD,2CAA4B;AAE5B;;GAEG;AACY,KAAK,UAAU,cAAc,CAAC,EAC3C,SAAS,EACT,YAAY,GAIb;IACC,MAAM,IAAI,CAAC,WAAW,CAAC,YAAY,EAAE;QACnC,UAAU,EAAE,SAAS;QACrB,OAAO,EAAE,IAAI;KACd,CAAC,CAAA;AACJ,CAAC"}

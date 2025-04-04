@@ -1,1 +1,0 @@
-{"mappings":";AAAA,4BAAiB;IAAG,oBAAoB,CAAC,4DAAsD,CAAC;AAChG","sources":["packages/@react-aria/menu/intl/nb-NO.json"],"sourcesContent":["{\n  \"longPressMessage\": \"Langt trykk eller trykk Alt + PilNed for å åpne menyen\"\n}\n"],"names":[],"version":3,"file":"nb-NO.module.js.map"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"graphql-to-fields.d.ts","sourceRoot":"","sources":["../../src/graphql/graphql-to-fields.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,gBAAgB,EAAmC,MAAM,SAAS,CAAA;AAE3E;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GAsDG;AACH,wBAAgB,qBAAqB,CACnC,aAAa,EAAE;IAAE,CAAC,GAAG,EAAE,MAAM,GAAG,gBAAgB,CAAA;CAAE,EAClD,QAAQ,EAAE,MAAM,EAChB,SAAS,GAAE,MAAM,EAAO,YAgCzB"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"publish.js","sourceRoot":"","sources":["../../../src/commands/plugin/publish.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;AAKA,qCAWC;AAhBD,2CAA4B;AAE5B;;GAEG;AACY,KAAK,UAAU,kBAAkB,CAAC,EAC/C,SAAS,GAGV;IACC,MAAM,IAAI,CAAC,cAAc,CAAC;QACxB,UAAU,EAAE,SAAS;QACrB,OAAO,EAAE,IAAI;QACb,OAAO,EAAE,IAAI;QACb,OAAO,EAAE,IAAI;KACd,CAAC,CAAA;AACJ,CAAC"}

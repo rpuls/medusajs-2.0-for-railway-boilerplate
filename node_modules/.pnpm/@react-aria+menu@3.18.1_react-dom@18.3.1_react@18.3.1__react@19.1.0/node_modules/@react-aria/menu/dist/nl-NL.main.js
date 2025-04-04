@@ -1,6 +1,0 @@
-module.exports = {
-    "longPressMessage": `Druk lang op Alt + pijl-omlaag of druk op Alt om het menu te openen`
-};
-
-
-//# sourceMappingURL=nl-NL.main.js.map

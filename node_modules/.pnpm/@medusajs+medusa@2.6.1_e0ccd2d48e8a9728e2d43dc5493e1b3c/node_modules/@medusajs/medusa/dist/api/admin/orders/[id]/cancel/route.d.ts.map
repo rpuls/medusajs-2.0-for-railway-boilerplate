@@ -1,1 +1,0 @@
-{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../../src/api/admin/orders/[id]/cancel/route.ts"],"names":[],"mappings":"AACA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AACjC,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAMrD,eAAO,MAAM,IAAI,QACV,0BAA0B,OAC1B,cAAc,CAAC,SAAS,CAAC,kBAAkB,CAAC,kBAwBlD,CAAA"}

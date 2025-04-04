@@ -1,3 +1,0 @@
-declare const _default: "\ntype StockLocationAddress {\n  id: ID\n  address_1: String!\n  address_2: String\n  company: String\n  country_code: String!\n  city: String\n  phone: String\n  postal_code: String\n  province: String\n  metadata: JSON\n  created_at: DateTime!\n  updated_at: DateTime!\n  deleted_at: DateTime\n}\n\ntype StockLocation {\n  id: ID!\n  name: String!\n  metadata: JSON\n  address_id: ID!\n  address: StockLocationAddress\n  created_at: DateTime!\n  updated_at: DateTime!\n  deleted_at: DateTime\n}\n\n";
-export default _default;
-//# sourceMappingURL=index.d.ts.map

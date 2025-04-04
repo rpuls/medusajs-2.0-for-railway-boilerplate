@@ -1,1 +1,0 @@
-{"version":3,"file":"stripe-giropay.d.ts","sourceRoot":"","sources":["../../src/services/stripe-giropay.ts"],"names":[],"mappings":"AAAA,OAAO,UAAU,MAAM,qBAAqB,CAAA;AAC5C,OAAO,EAAE,oBAAoB,EAAuB,MAAM,UAAU,CAAA;AAEpE,cAAM,sBAAuB,SAAQ,UAAU;IAC7C,MAAM,CAAC,UAAU,SAA8B;gBAEnC,CAAC,KAAA,EAAE,OAAO,KAAA;IAItB,IAAI,oBAAoB,IAAI,oBAAoB,CAK/C;CACF;AAED,eAAe,sBAAsB,CAAA"}

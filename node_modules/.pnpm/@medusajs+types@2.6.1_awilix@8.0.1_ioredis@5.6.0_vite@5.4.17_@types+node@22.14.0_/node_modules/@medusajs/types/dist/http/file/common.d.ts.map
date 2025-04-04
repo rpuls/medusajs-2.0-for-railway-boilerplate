@@ -1,1 +1,0 @@
-{"version":3,"file":"common.d.ts","sourceRoot":"","sources":["../../../src/http/file/common.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,QAAQ;IACvB,EAAE,EAAE,MAAM,CAAA;IACV,GAAG,EAAE,MAAM,CAAA;CACZ;AAED,MAAM,MAAM,cAAc,GACtB;IACE,KAAK,EAAE,CAAC;QAAE,IAAI,EAAE,MAAM,CAAC;QAAC,OAAO,EAAE,MAAM,CAAA;KAAE,GAAG,IAAI,CAAC,EAAE,CAAA;CACpD,GACD,QAAQ,CAAA"}

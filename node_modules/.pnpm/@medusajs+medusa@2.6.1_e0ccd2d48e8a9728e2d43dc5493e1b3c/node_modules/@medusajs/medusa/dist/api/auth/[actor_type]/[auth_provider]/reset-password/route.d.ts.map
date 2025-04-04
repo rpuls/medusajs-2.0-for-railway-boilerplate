@@ -1,1 +1,0 @@
-{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../../src/api/auth/[actor_type]/[auth_provider]/reset-password/route.ts"],"names":[],"mappings":"AAEA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AACjC,OAAO,EAAE,wBAAwB,EAAE,MAAM,qBAAqB,CAAA;AAE9D,eAAO,MAAM,IAAI,QACV,0BAA0B,CAAC,wBAAwB,CAAC,OACpD,cAAc,kBAoBpB,CAAA;AAED,eAAO,MAAM,YAAY,QAAQ,CAAA"}

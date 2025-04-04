@@ -1,1 +1,0 @@
-{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../src/api/admin/fulfillment-providers/route.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAKrD,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAEjC,eAAO,MAAM,GAAG,QACT,0BAA0B,CAAC,SAAS,CAAC,kCAAkC,CAAC,OACxE,cAAc,CAAC,SAAS,CAAC,oCAAoC,CAAC,kBAsBpE,CAAA"}

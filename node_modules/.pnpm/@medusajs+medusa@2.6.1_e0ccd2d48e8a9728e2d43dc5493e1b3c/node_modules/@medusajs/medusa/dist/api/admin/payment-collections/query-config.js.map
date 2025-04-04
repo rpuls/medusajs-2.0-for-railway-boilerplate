@@ -1,1 +1,0 @@
-{"version":3,"file":"query-config.js","sourceRoot":"","sources":["../../../../src/api/admin/payment-collections/query-config.ts"],"names":[],"mappings":";;;AAAa,QAAA,8BAA8B,GAAG;IAC5C,IAAI;IACJ,eAAe;IACf,QAAQ;IACR,QAAQ;IACR,mBAAmB;IACnB,iBAAiB;IACjB,iBAAiB;IACjB,mBAAmB;IACnB,WAAW;CACZ,CAAA;AAEY,QAAA,6CAA6C,GAAG;IAC3D,QAAQ,EAAE,sCAA8B;IACxC,MAAM,EAAE,KAAK;CACd,CAAA"}

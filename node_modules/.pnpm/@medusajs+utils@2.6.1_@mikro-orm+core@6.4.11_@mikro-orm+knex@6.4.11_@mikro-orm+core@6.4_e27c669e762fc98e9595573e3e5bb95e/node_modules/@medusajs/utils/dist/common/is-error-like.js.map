@@ -1,1 +1,0 @@
-{"version":3,"file":"is-error-like.js","sourceRoot":"","sources":["../../src/common/is-error-like.ts"],"names":[],"mappings":";;AAAA,kCAQC;AARD,SAAgB,WAAW,CAAC,KAAK;IAC/B,OAAO,CACL,CAAC,CAAC,KAAK;QACP,OAAO,KAAK,KAAK,QAAQ;QACzB,MAAM,IAAI,KAAK;QACf,SAAS,IAAI,KAAK;QAClB,OAAO,IAAI,KAAK,CACjB,CAAA;AACH,CAAC"}

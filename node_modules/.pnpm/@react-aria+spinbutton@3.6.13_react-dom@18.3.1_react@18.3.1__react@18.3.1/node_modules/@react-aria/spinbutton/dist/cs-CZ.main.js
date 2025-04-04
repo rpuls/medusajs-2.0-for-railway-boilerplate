@@ -1,6 +1,0 @@
-module.exports = {
-    "Empty": `Pr\xe1zdn\xe9`
-};
-
-
-//# sourceMappingURL=cs-CZ.main.js.map

@@ -1,1 +1,0 @@
-{"version":3,"file":"line-item-tax-line.d.ts","sourceRoot":"","sources":["../../src/types/line-item-tax-line.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,gBAAgB,EAAE,gBAAgB,EAAE,MAAM,YAAY,CAAA;AAE/D,MAAM,WAAW,wBAAyB,SAAQ,gBAAgB;IAChE,OAAO,EAAE,MAAM,CAAA;CAChB;AAED,MAAM,WAAW,wBAAyB,SAAQ,gBAAgB;IAChE,OAAO,EAAE,MAAM,CAAA;CAChB"}

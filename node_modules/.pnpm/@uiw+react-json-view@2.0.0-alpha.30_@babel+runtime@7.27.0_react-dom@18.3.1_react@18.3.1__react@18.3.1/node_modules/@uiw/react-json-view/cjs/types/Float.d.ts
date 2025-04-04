@@ -1,5 +1,0 @@
-import { type TagType, type TypesElement } from '../store/Types';
-export declare const Float: {
-    <K extends TagType = "span">(props: TypesElement<K>): null;
-    displayName: string;
-};

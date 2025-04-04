@@ -1,1 +1,0 @@
-{"version":3,"file":"big-number.js","sourceRoot":"","sources":["../../../src/dml/properties/big-number.ts"],"names":[],"mappings":";;;AAAA,iCAAqC;AAErC;;;GAGG;AACH,MAAa,iBAAkB,SAAQ,mBAAoB;IAA3D;;QACY,aAAQ,GAAG;YACnB,IAAI,EAAE,WAAW;SACT,CAAA;IAKZ,CAAC;IAHC,MAAM,CAAC,mBAAmB,CAAC,GAAQ;QACjC,OAAO,GAAG,EAAE,QAAQ,EAAE,IAAI,KAAK,WAAW,CAAA;IAC5C,CAAC;CACF;AARD,8CAQC"}
