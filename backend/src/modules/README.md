@@ -22,11 +22,11 @@ export default class HelloModuleService {
 
 A module must have an `index.ts` file in its root directory that exports its definition. The definition specifies the main service of the module.
 
-For example, create the file `src/modules/hello/index.ts` with the following content:
+For example, create the file `src/modules/hello.index.ts` with the following content:
 
 ```ts title="src/modules/hello.index.ts" highlights={[["4", "", "The main service of the module."]]}
 import HelloModuleService from "./service"
-import { Module } from "@medusajs/framework/utils"
+import { Module } from "@medusajs/utils"
 
 export const HELLO_MODULE = "helloModuleService"
 
@@ -61,7 +61,7 @@ Its key (`helloModuleService` or `HELLO_MODULE`) is the name of the module’s m
 You can resolve the main service of the module in other resources, such as an API route:
 
 ```ts
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
+import { MedusaRequest, MedusaResponse } from "@medusajs/medusa"
 import HelloModuleService from "../../../modules/hello/service"
 import { HELLO_MODULE } from "../../../modules/hello"
 
