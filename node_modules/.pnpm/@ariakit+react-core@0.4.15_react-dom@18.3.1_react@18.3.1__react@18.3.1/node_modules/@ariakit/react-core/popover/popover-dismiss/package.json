@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/popover/popover-dismiss",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/popover/popover-dismiss.cjs",
+  "module": "../../esm/popover/popover-dismiss.js",
+  "types": "../../cjs/popover/popover-dismiss.d.ts"
+}

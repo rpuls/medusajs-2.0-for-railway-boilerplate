@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/use-root-dialog",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/use-root-dialog.cjs",
+  "module": "../../../esm/dialog/utils/use-root-dialog.js",
+  "types": "../../../cjs/dialog/utils/use-root-dialog.d.ts"
+}

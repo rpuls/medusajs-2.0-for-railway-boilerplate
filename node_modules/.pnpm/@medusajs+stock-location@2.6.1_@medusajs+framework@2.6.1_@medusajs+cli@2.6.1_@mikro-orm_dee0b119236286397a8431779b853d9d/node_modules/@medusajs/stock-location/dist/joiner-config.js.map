@@ -1,0 +1,1 @@
+{"version":3,"file":"joiner-config.js","sourceRoot":"","sources":["../src/joiner-config.ts"],"names":[],"mappings":";;;;;;AAAA,qDAAuE;AACvE,qCAAwC;AACxC,sDAA4C;AAE/B,QAAA,YAAY,GAAG,IAAA,0BAAkB,EAAC,eAAO,CAAC,cAAc,EAAE;IACrE,MAAM,EAAN,gBAAM;IACN,YAAY,EAAE;QACZ,iBAAiB,EAAE,sBAAa,CAAC,IAAI;QACrC,WAAW,EAAE,sBAAa,CAAC,IAAI;KAChC;CACF,CAAC,CAAA"}

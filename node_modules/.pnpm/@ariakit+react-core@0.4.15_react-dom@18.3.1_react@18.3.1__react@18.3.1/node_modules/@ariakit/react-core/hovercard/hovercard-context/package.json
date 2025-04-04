@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/hovercard/hovercard-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/hovercard/hovercard-context.cjs",
+  "module": "../../esm/hovercard/hovercard-context.js",
+  "types": "../../cjs/hovercard/hovercard-context.d.ts"
+}

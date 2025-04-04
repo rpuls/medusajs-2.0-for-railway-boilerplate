@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/collection/collection",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/collection/collection.cjs",
+  "module": "../../esm/collection/collection.js",
+  "types": "../../cjs/collection/collection.d.ts"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-separator",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-separator.cjs",
+  "module": "../../esm/menu/menu-separator.js",
+  "types": "../../cjs/menu/menu-separator.d.ts"
+}

@@ -4,7 +4,7 @@ import {
   CreateStoreInput,
   createStoreWorkflow,
 } from "../../workflows/create-store";
-import { SUPER_ADMIN_STORE_NAME } from "src/constants";
+import { SUPER_ADMIN_STORE_NAME } from "../../constants";
 
 // curl -X POST http://localhost:9000/create-super-store -d '{ "email":"admin1@test.com", "password": "123"}' -H 'Content-Type: application/json' -H 'Authorization: 123'
 

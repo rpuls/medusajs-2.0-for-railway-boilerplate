@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/composite/composite-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/composite-provider.cjs",
+  "module": "../../esm/composite/composite-provider.js",
+  "types": "../../cjs/composite/composite-provider.d.ts"
+}

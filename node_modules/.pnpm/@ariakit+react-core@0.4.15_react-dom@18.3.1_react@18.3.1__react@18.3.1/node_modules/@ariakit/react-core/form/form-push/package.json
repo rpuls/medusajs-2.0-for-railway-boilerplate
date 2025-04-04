@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-push",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-push.cjs",
+  "module": "../../esm/form/form-push.js",
+  "types": "../../cjs/form/form-push.d.ts"
+}

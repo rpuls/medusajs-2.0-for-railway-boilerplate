@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-control",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-control.cjs",
+  "module": "../../esm/form/form-control.js",
+  "types": "../../cjs/form/form-control.d.ts"
+}

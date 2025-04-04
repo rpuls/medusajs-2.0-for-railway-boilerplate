@@ -1,0 +1,1 @@
+{"version":3,"file":"resolve-exports.js","sourceRoot":"","sources":["../../src/common/resolve-exports.ts"],"names":[],"mappings":";;AAAA,wCASC;AATD,SAAgB,cAAc,CAAC,aAAa;IAC1C,IACE,SAAS,IAAI,aAAa;QAC1B,aAAa,CAAC,OAAO;QACrB,SAAS,IAAI,aAAa,CAAC,OAAO,EAClC,CAAC;QACD,OAAO,cAAc,CAAC,aAAa,CAAC,OAAO,CAAC,CAAA;IAC9C,CAAC;IACD,OAAO,aAAa,CAAA;AACtB,CAAC"}

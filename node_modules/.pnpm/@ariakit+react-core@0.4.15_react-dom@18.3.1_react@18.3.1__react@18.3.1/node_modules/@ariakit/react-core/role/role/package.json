@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/role/role",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/role/role.cjs",
+  "module": "../../esm/role/role.js",
+  "types": "../../cjs/role/role.d.ts"
+}

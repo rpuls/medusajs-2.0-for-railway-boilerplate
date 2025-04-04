@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/composite/composite-hover",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/composite-hover.cjs",
+  "module": "../../esm/composite/composite-hover.js",
+  "types": "../../cjs/composite/composite-hover.d.ts"
+}

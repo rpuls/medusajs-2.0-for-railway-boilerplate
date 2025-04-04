@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/is-backdrop",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/is-backdrop.cjs",
+  "module": "../../../esm/dialog/utils/is-backdrop.js",
+  "types": "../../../cjs/dialog/utils/is-backdrop.d.ts"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-value",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-value.cjs",
+  "module": "../../esm/select/select-value.js",
+  "types": "../../cjs/select/select-value.d.ts"
+}

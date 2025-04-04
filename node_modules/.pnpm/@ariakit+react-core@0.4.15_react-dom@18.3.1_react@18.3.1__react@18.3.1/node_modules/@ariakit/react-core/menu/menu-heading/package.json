@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-heading",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-heading.cjs",
+  "module": "../../esm/menu/menu-heading.js",
+  "types": "../../cjs/menu/menu-heading.d.ts"
+}

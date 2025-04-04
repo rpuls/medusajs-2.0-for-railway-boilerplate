@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/dialog/dialog-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/dialog/dialog-store.cjs",
+  "module": "../../esm/dialog/dialog-store.js",
+  "types": "../../cjs/dialog/dialog-store.d.ts"
+}

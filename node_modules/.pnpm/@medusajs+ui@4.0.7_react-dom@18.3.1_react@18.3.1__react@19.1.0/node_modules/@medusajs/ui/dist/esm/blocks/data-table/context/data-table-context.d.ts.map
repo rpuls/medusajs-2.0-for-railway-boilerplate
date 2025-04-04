@@ -1,0 +1,1 @@
+{"version":3,"file":"data-table-context.d.ts","sourceRoot":"","sources":["../../../../../src/blocks/data-table/context/data-table-context.tsx"],"names":[],"mappings":";AACA,OAAO,EAAE,kBAAkB,EAAE,MAAM,mBAAmB,CAAA;AAEtD,MAAM,WAAW,qBAAqB,CAAC,KAAK;IAC1C,QAAQ,EAAE,kBAAkB,CAAC,KAAK,CAAC,CAAA;CACpC;AAED,eAAO,MAAM,gBAAgB,4DAC2B,CAAA"}

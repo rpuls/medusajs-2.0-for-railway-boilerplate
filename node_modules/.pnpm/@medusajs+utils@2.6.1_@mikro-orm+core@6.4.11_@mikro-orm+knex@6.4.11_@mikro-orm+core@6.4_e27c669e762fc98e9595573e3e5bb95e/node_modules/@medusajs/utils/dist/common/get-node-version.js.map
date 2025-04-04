@@ -1,0 +1,1 @@
+{"version":3,"file":"get-node-version.js","sourceRoot":"","sources":["../../src/common/get-node-version.ts"],"names":[],"mappings":";;;AAAA,wCAIC;AAJD,SAAgB,cAAc;IAC5B,MAAM,CAAC,KAAK,CAAC,GAAG,OAAO,CAAC,QAAQ,CAAC,IAAI,CAAC,KAAK,CAAC,GAAG,CAAC,CAAC,GAAG,CAAC,MAAM,CAAC,CAAA;IAE5D,OAAO,KAAK,CAAA;AACd,CAAC;AAEY,QAAA,0BAA0B,GAAG,EAAE,CAAA"}

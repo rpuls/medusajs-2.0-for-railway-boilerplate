@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/hovercard/hovercard-dismiss",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/hovercard/hovercard-dismiss.cjs",
+  "module": "../../esm/hovercard/hovercard-dismiss.js",
+  "types": "../../cjs/hovercard/hovercard-dismiss.d.ts"
+}

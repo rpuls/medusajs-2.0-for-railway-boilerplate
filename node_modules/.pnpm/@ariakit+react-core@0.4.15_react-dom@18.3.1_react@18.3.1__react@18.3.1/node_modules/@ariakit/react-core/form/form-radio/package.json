@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-radio",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-radio.cjs",
+  "module": "../../esm/form/form-radio.js",
+  "types": "../../cjs/form/form-radio.d.ts"
+}

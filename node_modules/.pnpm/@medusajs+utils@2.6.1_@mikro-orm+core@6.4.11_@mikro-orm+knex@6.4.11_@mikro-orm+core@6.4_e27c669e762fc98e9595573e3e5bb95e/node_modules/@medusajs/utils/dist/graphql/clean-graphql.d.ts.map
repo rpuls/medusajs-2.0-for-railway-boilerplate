@@ -1,0 +1,1 @@
+{"version":3,"file":"clean-graphql.d.ts","sourceRoot":"","sources":["../../src/graphql/clean-graphql.ts"],"names":[],"mappings":"AAEA,wBAAgB,kBAAkB,CAAC,MAAM,EAAE,MAAM,GAAG;IAClD,MAAM,EAAE,MAAM,CAAA;IACd,QAAQ,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,CAAC,CAAA;CACjD,CAqFA"}

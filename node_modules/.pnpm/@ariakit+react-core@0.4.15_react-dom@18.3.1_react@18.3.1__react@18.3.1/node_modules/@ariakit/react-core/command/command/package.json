@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/command/command",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/command/command.cjs",
+  "module": "../../esm/command/command.js",
+  "types": "../../cjs/command/command.d.ts"
+}

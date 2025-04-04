@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/popover/popover-anchor",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/popover/popover-anchor.cjs",
+  "module": "../../esm/popover/popover-anchor.js",
+  "types": "../../cjs/popover/popover-anchor.d.ts"
+}

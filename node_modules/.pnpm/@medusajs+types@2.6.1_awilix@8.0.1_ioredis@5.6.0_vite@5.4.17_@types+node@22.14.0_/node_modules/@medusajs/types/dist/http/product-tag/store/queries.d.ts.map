@@ -1,0 +1,1 @@
+{"version":3,"file":"queries.d.ts","sourceRoot":"","sources":["../../../../src/http/product-tag/store/queries.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,cAAc,EAAE,MAAM,cAAc,CAAA;AAC7C,OAAO,EAAE,YAAY,EAAE,MAAM,cAAc,CAAA;AAC3C,OAAO,EAAE,wBAAwB,EAAE,MAAM,WAAW,CAAA;AAEpD,MAAM,WAAW,yBACf,SAAQ,wBAAwB,EAC9B,cAAc,CAAC,yBAAyB,CAAC;CAAG;AAEhD,MAAM,WAAW,qBAAsB,SAAQ,YAAY;CAAG"}

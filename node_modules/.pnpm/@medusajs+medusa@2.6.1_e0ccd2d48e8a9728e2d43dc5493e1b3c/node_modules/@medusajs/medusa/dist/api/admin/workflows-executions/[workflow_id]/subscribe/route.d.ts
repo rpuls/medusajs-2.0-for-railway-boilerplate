@@ -1,0 +1,3 @@
+import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+export declare const GET: (req: AuthenticatedMedusaRequest, res: MedusaResponse) => Promise<void>;
+//# sourceMappingURL=route.d.ts.map

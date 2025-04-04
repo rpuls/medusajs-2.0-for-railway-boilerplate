@@ -1,0 +1,1 @@
+{"version":3,"file":"dynamic-service-class.d.ts","sourceRoot":"","sources":["../../src/services/dynamic-service-class.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,WAAW,EACX,WAAW,EACX,kBAAkB,EACnB,MAAM,2BAA2B,CAAA;AAIlC,wBAAgB,gBAAgB,CAC9B,YAAY,EAAE,kBAAkB,GAC/B,WAAW,CAAC,WAAW,CAAC,CAmB1B;AAED,wBAAgB,wBAAwB,CAAC,YAAY,EAAE,kBAAkB;;0BAEnD,kBAAkB;;EAIvC"}

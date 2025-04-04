@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../src/api/store/payment-providers/route.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAMjC,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAGrD,eAAO,MAAM,GAAG,QACT,0BAA0B,CAAC,SAAS,CAAC,2BAA2B,CAAC,OACjE,cAAc,CAAC,SAAS,CAAC,gCAAgC,CAAC,kBAmChE,CAAA"}

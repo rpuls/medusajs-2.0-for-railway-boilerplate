@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/focus-trap/focus-trap-region",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/focus-trap/focus-trap-region.cjs",
+  "module": "../../esm/focus-trap/focus-trap-region.js",
+  "types": "../../cjs/focus-trap/focus-trap-region.d.ts"
+}

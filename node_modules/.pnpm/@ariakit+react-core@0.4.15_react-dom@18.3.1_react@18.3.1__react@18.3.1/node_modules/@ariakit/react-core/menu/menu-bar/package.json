@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-bar",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-bar.cjs",
+  "module": "../../esm/menu/menu-bar.js",
+  "types": "../../cjs/menu/menu-bar.d.ts"
+}

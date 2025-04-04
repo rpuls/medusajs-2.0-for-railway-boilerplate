@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/disclosure/disclosure-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/disclosure/disclosure-provider.cjs",
+  "module": "../../esm/disclosure/disclosure-provider.js",
+  "types": "../../cjs/disclosure/disclosure-provider.d.ts"
+}

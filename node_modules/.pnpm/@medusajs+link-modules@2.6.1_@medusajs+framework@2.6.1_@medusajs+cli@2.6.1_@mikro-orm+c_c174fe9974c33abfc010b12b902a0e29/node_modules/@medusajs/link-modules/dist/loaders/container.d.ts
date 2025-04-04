@@ -1,0 +1,3 @@
+import { InternalModuleDeclaration, LoaderOptions, ModuleJoinerConfig, ModulesSdkTypes } from "@medusajs/framework/types";
+export declare function containerLoader(entity: any, joinerConfig: ModuleJoinerConfig): ({ options, container, }: LoaderOptions<ModulesSdkTypes.ModuleServiceInitializeOptions | ModulesSdkTypes.ModuleServiceInitializeCustomDataLayerOptions>, moduleDeclaration?: InternalModuleDeclaration) => Promise<void>;
+//# sourceMappingURL=container.d.ts.map

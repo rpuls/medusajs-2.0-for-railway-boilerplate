@@ -1,0 +1,63 @@
+{
+    "author": {
+        "name": "Mike Rodrigues",
+        "email": "rodrigues.mi@northeastern.edu"
+    },
+    "name": "json-2-csv",
+    "description": "A JSON to CSV and CSV to JSON converter that natively supports sub-documents and auto-generates the CSV heading.",
+    "version": "5.5.9",
+    "homepage": "https://mrodrig.github.io/json-2-csv",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/mrodrig/json-2-csv.git"
+    },
+    "bugs": {
+        "url": "https://github.com/mrodrig/json-2-csv/issues"
+    },
+    "main": "./lib/converter.js",
+    "types": "./lib/converter.d.ts",
+    "scripts": {
+        "build": "npm run lint && npm run test && npm run compile",
+        "compile": "tsc -p tsconfig.build.json",
+        "coverage": "nyc npm run test",
+        "lint": "eslint --ext .js,.ts src test",
+        "lint:fix": "eslint --fix --ext .js,.ts src test",
+        "prepublishOnly": "npm run build",
+        "test": "mocha -r ts-node/register test/index.ts"
+    },
+    "keywords": [
+        "json",
+        "to",
+        "csv",
+        "converter",
+        "export",
+        "json2csv",
+        "csv2json",
+        "parse",
+        "parser",
+        "json-2-csv",
+        "csv-2-json",
+        "cli"
+    ],
+    "dependencies": {
+        "deeks": "3.1.0",
+        "doc-path": "4.1.1"
+    },
+    "devDependencies": {
+        "@types/mocha": "10.0.1",
+        "@types/node": "18.15.3",
+        "@typescript-eslint/eslint-plugin": "5.55.0",
+        "@typescript-eslint/parser": "5.55.0",
+        "eslint": "8.36.0",
+        "eslint-config-google": "0.14.0",
+        "eslint-plugin-import": "2.27.5",
+        "mocha": "11.1.0",
+        "nyc": "15.1.0",
+        "ts-node": "10.9.1",
+        "typescript": "5.0.2"
+    },
+    "engines": {
+        "node": ">= 16"
+    },
+    "license": "MIT"
+}

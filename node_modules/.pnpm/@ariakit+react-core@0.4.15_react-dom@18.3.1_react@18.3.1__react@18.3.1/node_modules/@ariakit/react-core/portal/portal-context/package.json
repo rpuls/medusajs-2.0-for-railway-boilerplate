@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/portal/portal-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/portal/portal-context.cjs",
+  "module": "../../esm/portal/portal-context.js",
+  "types": "../../cjs/portal/portal-context.d.ts"
+}

@@ -1,0 +1,2 @@
+import{toNestErrors as r,validateFieldsNatively as e}from"@hookform/resolvers";var o=function(r){for(var e={};r.length;){var o=r[0],a=o.path.join(".");e[a]||(e[a]={message:o.message,type:o.code}),r.shift()}return e},a=function(a,s,t){return void 0===t&&(t={}),function(s,n,i){var u=a(s);return u.problems?{values:{},errors:r(o(u.problems),i)}:(i.shouldUseNativeValidation&&e({},i),{errors:{},values:t.raw?s:u.data})}};export{a as arktypeResolver};
+//# sourceMappingURL=arktype.module.js.map

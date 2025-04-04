@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/utils/misc",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/utils/misc.cjs",
+  "module": "../../esm/utils/misc.js",
+  "types": "../../cjs/utils/misc.d.ts"
+}

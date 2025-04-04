@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/form/form-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-store.cjs",
+  "module": "../../esm/form/form-store.js",
+  "types": "../../cjs/form/form-store.d.ts"
+}

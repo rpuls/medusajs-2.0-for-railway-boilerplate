@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/walk-tree-outside",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/walk-tree-outside.cjs",
+  "module": "../../../esm/dialog/utils/walk-tree-outside.js",
+  "types": "../../../cjs/dialog/utils/walk-tree-outside.d.ts"
+}

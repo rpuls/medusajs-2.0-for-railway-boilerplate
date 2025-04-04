@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menubar/menubar-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menubar/menubar-provider.cjs",
+  "module": "../../esm/menubar/menubar-provider.js",
+  "types": "../../cjs/menubar/menubar-provider.d.ts"
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"clean-response-data.d.ts","sourceRoot":"","sources":["../../src/utils/clean-response-data.ts"],"names":[],"mappings":"AA0BA;;;;;;GAMG;AACH,iBAAS,iBAAiB,CAAC,CAAC,SAAS,OAAO,GAAG,OAAO,EAAE,EACtD,IAAI,EAAE,CAAC,EACP,MAAM,EAAE,MAAM,EAAE,GACf,CAAC,SAAS,EAAE,GAAG,OAAO,CAAC,CAAC,CAAC,EAAE,GAAG,OAAO,CAAC,CAAC,CAAC,CAwB1C;AAED,OAAO,EAAE,iBAAiB,EAAE,CAAA"}

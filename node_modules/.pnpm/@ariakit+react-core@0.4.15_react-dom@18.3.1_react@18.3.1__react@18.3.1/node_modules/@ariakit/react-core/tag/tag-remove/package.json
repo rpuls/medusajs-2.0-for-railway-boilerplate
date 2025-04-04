@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tag/tag-remove",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tag/tag-remove.cjs",
+  "module": "../../esm/tag/tag-remove.js",
+  "types": "../../cjs/tag/tag-remove.d.ts"
+}

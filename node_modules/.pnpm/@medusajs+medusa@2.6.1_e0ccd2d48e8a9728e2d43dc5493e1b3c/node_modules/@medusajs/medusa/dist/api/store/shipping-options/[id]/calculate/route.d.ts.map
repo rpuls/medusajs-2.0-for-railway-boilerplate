@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../../src/api/store/shipping-options/[id]/calculate/route.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AACrD,OAAO,EAAE,aAAa,EAAE,cAAc,EAAE,MAAM,0BAA0B,CAAA;AAIxE,eAAO,MAAM,IAAI,QACV,aAAa,CAAC,SAAS,CAAC,iCAAiC,CAAC,OAC1D,cAAc,CAAC,SAAS,CAAC,2BAA2B,CAAC,kBA6B3D,CAAA"}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/radio/radio-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/radio/radio-context.cjs",
+  "module": "../../esm/radio/radio-context.js",
+  "types": "../../cjs/radio/radio-context.d.ts"
+}

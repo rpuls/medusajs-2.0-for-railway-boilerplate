@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/popover/popover-disclosure-arrow",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/popover/popover-disclosure-arrow.cjs",
+  "module": "../../esm/popover/popover-disclosure-arrow.js",
+  "types": "../../cjs/popover/popover-disclosure-arrow.d.ts"
+}

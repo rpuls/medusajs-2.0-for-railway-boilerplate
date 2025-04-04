@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/hovercard/hovercard-heading",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/hovercard/hovercard-heading.cjs",
+  "module": "../../esm/hovercard/hovercard-heading.js",
+  "types": "../../cjs/hovercard/hovercard-heading.d.ts"
+}

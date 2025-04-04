@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/dialog-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/dialog/dialog-context.cjs",
+  "module": "../../esm/dialog/dialog-context.js",
+  "types": "../../cjs/dialog/dialog-context.d.ts"
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"resolve-plugins.d.ts","sourceRoot":"","sources":["../../../src/loaders/helpers/resolve-plugins.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,YAAY,EAAE,aAAa,EAAE,MAAM,2BAA2B,CAAA;AAMvE,eAAO,MAAM,mBAAmB,mBAAmB,CAAA;AAkGnD,wBAAsB,kBAAkB,CACtC,aAAa,EAAE,MAAM,EACrB,YAAY,EAAE,YAAY,EAC1B,eAAe,UAAQ,GACtB,OAAO,CAAC,aAAa,EAAE,CAAC,CAuB1B"}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/collection/collection-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/collection/collection-provider.cjs",
+  "module": "../../esm/collection/collection-provider.js",
+  "types": "../../cjs/collection/collection-provider.d.ts"
+}

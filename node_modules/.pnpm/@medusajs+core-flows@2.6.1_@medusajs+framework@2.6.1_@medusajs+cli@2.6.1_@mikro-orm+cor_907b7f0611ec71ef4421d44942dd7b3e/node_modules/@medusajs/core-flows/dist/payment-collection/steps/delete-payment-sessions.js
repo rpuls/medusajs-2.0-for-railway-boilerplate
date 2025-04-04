@@ -1,0 +1,78 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deletePaymentSessionsStep = exports.deletePaymentSessionsStepId = void 0;
+const utils_1 = require("@medusajs/framework/utils");
+const workflows_sdk_1 = require("@medusajs/framework/workflows-sdk");
+exports.deletePaymentSessionsStepId = "delete-payment-sessions";
+/**
+ * This step deletes one or more payment sessions.
+ *
+ * Note: This step should not be used alone as it doesn't consider a revert
+ * Use {@link deletePaymentSessionsWorkflow} instead, which uses this step.
+ */
+exports.deletePaymentSessionsStep = (0, workflows_sdk_1.createStep)(exports.deletePaymentSessionsStepId, async (input, { container }) => {
+    const { ids = [] } = input;
+    const deleted = [];
+    const logger = container.resolve(utils_1.ContainerRegistrationKeys.LOGGER);
+    const service = container.resolve(utils_1.Modules.PAYMENT);
+    if (!ids?.length) {
+        return new workflows_sdk_1.StepResponse([], null);
+    }
+    const select = [
+        "provider_id",
+        "currency_code",
+        "amount",
+        "data",
+        "context",
+        "payment_collection.id",
+    ];
+    const sessions = await service.listPaymentSessions({ id: ids }, { select });
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+    const promises = [];
+    for (const id of ids) {
+        const session = sessionMap.get(id);
+        // As this requires an external method call, we will try to delete as many successful calls
+        // as possible and pass them over to the compensation step to be recreated if any of the
+        // payment sessions fails to delete.
+        const promise = service
+            .deletePaymentSession(id)
+            .then((res) => {
+            deleted.push(session);
+        })
+            .catch((e) => {
+            logger.error(`Encountered an error when trying to delete payment session - ${id} - ${e}`);
+        });
+        promises.push(promise);
+    }
+    await (0, utils_1.promiseAll)(promises);
+    return new workflows_sdk_1.StepResponse(deleted.map((d) => d.id), deleted);
+}, async (deletedPaymentSessions, { container }) => {
+    const logger = container.resolve(utils_1.ContainerRegistrationKeys.LOGGER);
+    const service = container.resolve(utils_1.Modules.PAYMENT);
+    if (!deletedPaymentSessions?.length) {
+        return;
+    }
+    for (const paymentSession of deletedPaymentSessions) {
+        if (!paymentSession.payment_collection?.id) {
+            continue;
+        }
+        const payload = {
+            provider_id: paymentSession.provider_id,
+            currency_code: paymentSession.currency_code,
+            amount: paymentSession.amount,
+            data: paymentSession.data ?? {},
+            context: paymentSession.context,
+        };
+        // Creating a payment session also requires an external call. If we fail to recreate the
+        // payment step, we would have to compensate successfully even though it didn't recreate
+        // all the necessary sessions. We accept a level of risk here for the payment collection to
+        // be set in an incomplete state.
+        try {
+            await service.createPaymentSession(paymentSession.payment_collection?.id, payload);
+        }
+        catch (e) {
+            logger.error(`Encountered an error when trying to recreate a payment session - ${payload} - ${e}`);
+        }
+    }
+});
+//# sourceMappingURL=delete-payment-sessions.js.map

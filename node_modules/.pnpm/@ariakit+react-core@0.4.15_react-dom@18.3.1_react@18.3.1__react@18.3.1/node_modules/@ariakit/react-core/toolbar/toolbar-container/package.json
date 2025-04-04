@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/toolbar/toolbar-container",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/toolbar/toolbar-container.cjs",
+  "module": "../../esm/toolbar/toolbar-container.js",
+  "types": "../../cjs/toolbar/toolbar-container.d.ts"
+}

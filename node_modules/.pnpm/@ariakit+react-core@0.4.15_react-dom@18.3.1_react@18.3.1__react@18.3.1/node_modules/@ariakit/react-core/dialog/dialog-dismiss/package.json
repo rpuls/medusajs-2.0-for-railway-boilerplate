@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/dialog-dismiss",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/dialog/dialog-dismiss.cjs",
+  "module": "../../esm/dialog/dialog-dismiss.js",
+  "types": "../../cjs/dialog/dialog-dismiss.d.ts"
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../../src/api/admin/stock-locations/[id]/sales-channels/route.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAGjC,OAAO,EAAE,SAAS,EAAE,iBAAiB,EAAE,MAAM,2BAA2B,CAAA;AAGxE,eAAO,MAAM,IAAI,QACV,0BAA0B,CAAC,iBAAiB,CAAC,OAC7C,cAAc,CAAC,SAAS,CAAC,0BAA0B,CAAC,kBAoB1D,CAAA"}

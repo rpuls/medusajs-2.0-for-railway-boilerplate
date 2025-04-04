@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/combobox/combobox-list",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/combobox/combobox-list.cjs",
+  "module": "../../esm/combobox/combobox-list.js",
+  "types": "../../cjs/combobox/combobox-list.d.ts"
+}

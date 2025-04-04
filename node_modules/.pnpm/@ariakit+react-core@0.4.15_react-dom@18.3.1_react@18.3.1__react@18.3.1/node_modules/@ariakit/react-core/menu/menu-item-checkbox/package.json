@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-item-checkbox",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-item-checkbox.cjs",
+  "module": "../../esm/menu/menu-item-checkbox.js",
+  "types": "../../cjs/menu/menu-item-checkbox.d.ts"
+}

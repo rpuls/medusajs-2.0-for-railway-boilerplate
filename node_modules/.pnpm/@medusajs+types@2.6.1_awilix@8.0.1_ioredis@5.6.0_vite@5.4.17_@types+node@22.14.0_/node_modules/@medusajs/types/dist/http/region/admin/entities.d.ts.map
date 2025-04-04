@@ -1,0 +1,1 @@
+{"version":3,"file":"entities.d.ts","sourceRoot":"","sources":["../../../../src/http/region/admin/entities.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,iBAAiB,EAAE,MAAM,WAAW,CAAA;AAEzD,MAAM,WAAW,WAAY,SAAQ,IAAI,CAAC,UAAU,EAAE,WAAW,CAAC;IAChE,SAAS,CAAC,EAAE,kBAAkB,EAAE,CAAA;CACjC;AACD,MAAM,WAAW,kBAAmB,SAAQ,iBAAiB;CAAG"}

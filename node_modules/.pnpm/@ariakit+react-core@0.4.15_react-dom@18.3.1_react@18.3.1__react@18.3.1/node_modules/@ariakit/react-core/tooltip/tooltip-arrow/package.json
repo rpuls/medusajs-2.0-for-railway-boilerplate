@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tooltip/tooltip-arrow",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tooltip/tooltip-arrow.cjs",
+  "module": "../../esm/tooltip/tooltip-arrow.js",
+  "types": "../../cjs/tooltip/tooltip-arrow.d.ts"
+}

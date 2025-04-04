@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/dialog-disclosure",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/dialog/dialog-disclosure.cjs",
+  "module": "../../esm/dialog/dialog-disclosure.js",
+  "types": "../../cjs/dialog/dialog-disclosure.d.ts"
+}

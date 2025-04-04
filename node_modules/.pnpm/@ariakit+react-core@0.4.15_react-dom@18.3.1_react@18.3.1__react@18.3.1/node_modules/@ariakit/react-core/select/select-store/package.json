@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-store.cjs",
+  "module": "../../esm/select/select-store.js",
+  "types": "../../cjs/select/select-store.d.ts"
+}

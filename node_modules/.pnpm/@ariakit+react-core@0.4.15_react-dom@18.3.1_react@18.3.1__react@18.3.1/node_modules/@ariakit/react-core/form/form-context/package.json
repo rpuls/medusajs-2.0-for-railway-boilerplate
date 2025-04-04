@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-context.cjs",
+  "module": "../../esm/form/form-context.js",
+  "types": "../../cjs/form/form-context.d.ts"
+}

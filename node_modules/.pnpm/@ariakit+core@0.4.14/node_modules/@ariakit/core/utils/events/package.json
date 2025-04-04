@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/utils/events",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/utils/events.cjs",
+  "module": "../../esm/utils/events.js",
+  "types": "../../cjs/utils/events.d.ts"
+}

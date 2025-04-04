@@ -1,0 +1,51 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Hydrator = void 0;
+/* istanbul ignore next */
+class Hydrator {
+    metadata;
+    platform;
+    config;
+    running = false;
+    constructor(metadata, platform, config) {
+        this.metadata = metadata;
+        this.platform = platform;
+        this.config = config;
+    }
+    /**
+     * @inheritDoc
+     */
+    hydrate(entity, meta, data, factory, type, newEntity = false, convertCustomTypes = false, schema, parentSchema) {
+        // the running state is used to consider propagation as hydration, saving the values directly to the entity data,
+        // but we don't want that for new entities, their propagation should result in entity updates when flushing
+        this.running = !newEntity;
+        const props = this.getProperties(meta, type);
+        for (const prop of props) {
+            this.hydrateProperty(entity, prop, data, factory, newEntity, convertCustomTypes);
+        }
+        this.running = false;
+    }
+    /**
+     * @inheritDoc
+     */
+    hydrateReference(entity, meta, data, factory, convertCustomTypes, schema, parentSchema) {
+        this.running = true;
+        meta.primaryKeys.forEach(pk => {
+            this.hydrateProperty(entity, meta.properties[pk], data, factory, false, convertCustomTypes);
+        });
+        this.running = false;
+    }
+    isRunning() {
+        return this.running;
+    }
+    getProperties(meta, type) {
+        if (type === 'reference') {
+            return meta.primaryKeys.map(pk => meta.properties[pk]);
+        }
+        return meta.hydrateProps;
+    }
+    hydrateProperty(entity, prop, data, factory, newEntity, convertCustomTypes) {
+        entity[prop.name] = data[prop.name];
+    }
+}
+exports.Hydrator = Hydrator;

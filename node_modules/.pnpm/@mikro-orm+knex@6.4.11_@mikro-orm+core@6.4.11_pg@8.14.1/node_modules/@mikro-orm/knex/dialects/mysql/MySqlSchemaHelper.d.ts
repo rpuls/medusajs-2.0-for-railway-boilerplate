@@ -1,0 +1,42 @@
+import type { Knex } from 'knex';
+import type { CheckDef, Column, IndexDef, TableDifference, Table, ForeignKey, MySqlTableBuilder } from '../../typings';
+import { type Dictionary, type Type } from '@mikro-orm/core';
+import type { AbstractSqlConnection } from '../../AbstractSqlConnection';
+import { SchemaHelper } from '../../schema/SchemaHelper';
+import type { DatabaseSchema } from '../../schema/DatabaseSchema';
+import type { DatabaseTable } from '../../schema/DatabaseTable';
+export declare class MySqlSchemaHelper extends SchemaHelper {
+    private readonly _cache;
+    static readonly DEFAULT_VALUES: {
+        'now()': string[];
+        'current_timestamp(?)': string[];
+        '0': string[];
+    };
+    getSchemaBeginning(charset: string, disableForeignKeys?: boolean): string;
+    disableForeignKeysSQL(): string;
+    enableForeignKeysSQL(): string;
+    finalizeTable(table: Knex.CreateTableBuilder, charset: string, collate?: string): void;
+    getListTablesSQL(): string;
+    loadInformationSchema(schema: DatabaseSchema, connection: AbstractSqlConnection, tables: Table[]): Promise<void>;
+    getAllIndexes(connection: AbstractSqlConnection, tables: Table[]): Promise<Dictionary<IndexDef[]>>;
+    getAllColumns(connection: AbstractSqlConnection, tables: Table[]): Promise<Dictionary<Column[]>>;
+    getAllChecks(connection: AbstractSqlConnection, tables: Table[]): Promise<Dictionary<CheckDef[]>>;
+    getAllForeignKeys(connection: AbstractSqlConnection, tables: Table[]): Promise<Dictionary<Dictionary<ForeignKey>>>;
+    getPreAlterTable(tableDiff: TableDifference, safe: boolean): string;
+    createTableColumn(table: MySqlTableBuilder, column: Column, fromTable: DatabaseTable, changedProperties?: Set<string>, alter?: boolean): Knex.ColumnBuilder | undefined;
+    configureColumnDefault(column: Column, col: Knex.ColumnBuilder, knex: Knex, changedProperties?: Set<string>): Knex.ColumnBuilder;
+    getRenameColumnSQL(tableName: string, oldColumnName: string, to: Column): string;
+    getRenameIndexSQL(tableName: string, index: IndexDef, oldIndexName: string): string;
+    getChangeColumnCommentSQL(tableName: string, to: Column, schemaName?: string): string;
+    private getColumnDeclarationSQL;
+    getForeignKeysSQL(tableName: string, schemaName?: string): string;
+    getAllEnumDefinitions(connection: AbstractSqlConnection, tables: Table[]): Promise<Dictionary<Dictionary<string[]>>>;
+    private supportsCheckConstraints;
+    protected getChecksSQL(tables: Table[]): string;
+    getChecks(connection: AbstractSqlConnection, tableName: string, schemaName: string, columns?: Column[]): Promise<CheckDef[]>;
+    getEnumDefinitions(connection: AbstractSqlConnection, checks: CheckDef[], tableName: string, schemaName?: string): Promise<Dictionary<string[]>>;
+    getColumns(connection: AbstractSqlConnection, tableName: string, schemaName?: string): Promise<Column[]>;
+    getIndexes(connection: AbstractSqlConnection, tableName: string, schemaName?: string): Promise<IndexDef[]>;
+    normalizeDefaultValue(defaultValue: string, length: number): string | number;
+    protected wrap(val: string | null | undefined, type: Type<unknown>): string | null | undefined;
+}

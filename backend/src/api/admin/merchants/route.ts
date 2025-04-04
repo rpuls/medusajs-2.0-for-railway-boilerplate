@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { UserDTO } from "@medusajs/framework/types";
-import { retrieveMerchantsWorkflow } from "src/workflows/retrieve-merchants";
+import { retrieveMerchantsWorkflow } from "../../../workflows/retrieve-merchants";
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const loggedInUser = req.scope.resolve("loggedInUser") as UserDTO;

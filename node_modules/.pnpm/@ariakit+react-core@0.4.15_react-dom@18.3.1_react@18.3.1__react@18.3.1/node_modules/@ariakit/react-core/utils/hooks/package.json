@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/utils/hooks",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/utils/hooks.cjs",
+  "module": "../../esm/utils/hooks.js",
+  "types": "../../cjs/utils/hooks.d.ts"
+}

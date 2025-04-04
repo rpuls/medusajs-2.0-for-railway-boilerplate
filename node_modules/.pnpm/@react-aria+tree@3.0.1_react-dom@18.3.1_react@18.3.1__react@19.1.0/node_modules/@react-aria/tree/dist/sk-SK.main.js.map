@@ -1,0 +1,1 @@
+{"mappings":"AAAA,iBAAiB;IAAG,YAAY,CAAC,YAAM,CAAC;IACtC,UAAU,CAAC,cAAQ,CAAC;AACtB","sources":["packages/@react-aria/tree/intl/sk-SK.json"],"sourcesContent":["{\n  \"collapse\": \"Zbaliť\",\n  \"expand\": \"Rozbaliť\"\n}\n"],"names":[],"version":3,"file":"sk-SK.main.js.map"}

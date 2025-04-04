@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/supports-inert",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/supports-inert.cjs",
+  "module": "../../../esm/dialog/utils/supports-inert.js",
+  "types": "../../../cjs/dialog/utils/supports-inert.d.ts"
+}

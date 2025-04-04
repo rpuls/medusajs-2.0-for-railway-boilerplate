@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../src/api/admin/notifications/route.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EAEf,MAAM,0BAA0B,CAAA;AACjC,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAErD,eAAO,MAAM,GAAG,QACT,0BAA0B,CAAC,SAAS,CAAC,2BAA2B,CAAC,OACjE,cAAc,CAAC,SAAS,CAAC,6BAA6B,CAAC,kBAgB7D,CAAA"}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/composite/utils",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/utils.cjs",
+  "module": "../../esm/composite/utils.js",
+  "types": "../../cjs/composite/utils.d.ts"
+}

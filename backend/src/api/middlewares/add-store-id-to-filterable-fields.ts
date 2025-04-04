@@ -5,7 +5,7 @@ import {
 } from "@medusajs/framework/http";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { UserDTO } from "@medusajs/framework/types";
-import { SUPER_ADMIN_STORE_NAME } from "src/constants";
+import { SUPER_ADMIN_STORE_NAME } from "../../constants";
 
 export async function addStoreIdToFilterableFields(
   req: MedusaRequest,

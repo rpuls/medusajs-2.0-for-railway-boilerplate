@@ -1,0 +1,30 @@
+{
+    "name": "@types/pluralize",
+    "version": "0.0.33",
+    "description": "TypeScript definitions for pluralize",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pluralize",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Syu Kato",
+            "githubUsername": "ukyo",
+            "url": "https://github.com/ukyo"
+        },
+        {
+            "name": "Karol Majewski",
+            "githubUsername": "karol-majewski",
+            "url": "https://github.com/karol-majewski"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/pluralize"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "66441de7449bf13c1e4272d09a6536b646d4ba13bd851e7cefca59f61270cbf6",
+    "typeScriptVersion": "4.5"
+}

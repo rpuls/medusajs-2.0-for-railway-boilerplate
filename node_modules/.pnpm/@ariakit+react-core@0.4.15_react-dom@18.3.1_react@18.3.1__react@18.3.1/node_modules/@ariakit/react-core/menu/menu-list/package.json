@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-list",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-list.cjs",
+  "module": "../../esm/menu/menu-list.js",
+  "types": "../../cjs/menu/menu-list.d.ts"
+}

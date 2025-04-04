@@ -1,0 +1,1 @@
+{"version":3,"file":"normalize-for-export.d.ts","sourceRoot":"","sources":["../../../src/product/helpers/normalize-for-export.ts"],"names":[],"mappings":"AAAA,OAAO,EAEL,SAAS,EAET,WAAW,EACZ,MAAM,2BAA2B,CAAA;AAIlC,eAAO,MAAM,kBAAkB,YACpB,SAAS,CAAC,YAAY,EAAE,eACpB;IAAE,OAAO,EAAE,WAAW,CAAC,SAAS,EAAE,CAAA;CAAE,KAChD,MAAM,EAyBR,CAAA"}

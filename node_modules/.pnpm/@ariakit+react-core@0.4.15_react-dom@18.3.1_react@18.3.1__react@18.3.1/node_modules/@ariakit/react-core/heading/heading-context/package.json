@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/heading/heading-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/heading/heading-context.cjs",
+  "module": "../../esm/heading/heading-context.js",
+  "types": "../../cjs/heading/heading-context.d.ts"
+}

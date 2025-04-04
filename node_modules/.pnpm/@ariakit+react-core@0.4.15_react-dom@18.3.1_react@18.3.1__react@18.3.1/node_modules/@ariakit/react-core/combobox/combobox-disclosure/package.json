@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/combobox/combobox-disclosure",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/combobox/combobox-disclosure.cjs",
+  "module": "../../esm/combobox/combobox-disclosure.js",
+  "types": "../../cjs/combobox/combobox-disclosure.d.ts"
+}

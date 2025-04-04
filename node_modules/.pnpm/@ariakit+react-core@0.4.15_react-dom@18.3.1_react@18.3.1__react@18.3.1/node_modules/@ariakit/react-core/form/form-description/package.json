@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-description",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-description.cjs",
+  "module": "../../esm/form/form-description.js",
+  "types": "../../cjs/form/form-description.d.ts"
+}

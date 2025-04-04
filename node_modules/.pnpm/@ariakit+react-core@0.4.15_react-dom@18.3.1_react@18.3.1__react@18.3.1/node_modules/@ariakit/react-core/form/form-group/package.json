@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-group",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-group.cjs",
+  "module": "../../esm/form/form-group.js",
+  "types": "../../cjs/form/form-group.d.ts"
+}

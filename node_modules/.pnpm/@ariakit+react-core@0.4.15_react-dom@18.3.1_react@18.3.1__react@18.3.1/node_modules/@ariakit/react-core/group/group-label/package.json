@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/group/group-label",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/group/group-label.cjs",
+  "module": "../../esm/group/group-label.js",
+  "types": "../../cjs/group/group-label.d.ts"
+}

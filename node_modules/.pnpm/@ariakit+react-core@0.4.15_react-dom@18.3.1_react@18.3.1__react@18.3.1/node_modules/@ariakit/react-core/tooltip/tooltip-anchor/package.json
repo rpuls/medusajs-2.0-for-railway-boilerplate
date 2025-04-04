@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tooltip/tooltip-anchor",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tooltip/tooltip-anchor.cjs",
+  "module": "../../esm/tooltip/tooltip-anchor.js",
+  "types": "../../cjs/tooltip/tooltip-anchor.d.ts"
+}

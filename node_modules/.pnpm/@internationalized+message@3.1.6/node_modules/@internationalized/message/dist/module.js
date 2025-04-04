@@ -1,0 +1,19 @@
+import {MessageDictionary as $d6fd23bc337660df$export$64839e615120df17} from "./MessageDictionary.module.js";
+import {MessageFormatter as $972eb555d604f491$export$526ebc05ff964723} from "./MessageFormatter.module.js";
+
+/*
+ * Copyright 2020 Adobe. All rights reserved.
+ * This file is licensed to you under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+ * OF ANY KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */ 
+
+
+
+export {$d6fd23bc337660df$export$64839e615120df17 as MessageDictionary, $972eb555d604f491$export$526ebc05ff964723 as MessageFormatter};
+//# sourceMappingURL=module.js.map

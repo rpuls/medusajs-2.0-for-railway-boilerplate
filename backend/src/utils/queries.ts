@@ -1,5 +1,11 @@
-import { Response } from "@medusajs/medusa-js";
-import { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { QueryKey } from "@tanstack/query-core";
+import { UseQueryOptions } from "@tanstack/react-query";
+
+type Response<T> = {
+  data: T;
+  status: number;
+  statusText: string;
+};
 
 type UseQueryOptionsWrapper<TData, TError, TQueryKey> = {
   runOnMount?: boolean; // Add an enabled option here
@@ -37,8 +43,15 @@ export const useFetch = <TQuery extends Record<string, any>, TResponse = any>(
           Object.entries(effectiveQuery).filter(([_, v]) => v !== undefined)
         );
 
+        const searchParams = new URLSearchParams();
+        Object.entries(queryFiltered).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            searchParams.append(key, String(value));
+          }
+        });
+
         const response = await fetch(
-          `${path}?${new URLSearchParams(queryFiltered)}`
+          `${path}?${searchParams.toString()}`
         );
 
         // if (response.redirected) {

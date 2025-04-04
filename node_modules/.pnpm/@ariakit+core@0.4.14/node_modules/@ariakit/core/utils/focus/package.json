@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/utils/focus",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/utils/focus.cjs",
+  "module": "../../esm/utils/focus.js",
+  "types": "../../cjs/utils/focus.d.ts"
+}

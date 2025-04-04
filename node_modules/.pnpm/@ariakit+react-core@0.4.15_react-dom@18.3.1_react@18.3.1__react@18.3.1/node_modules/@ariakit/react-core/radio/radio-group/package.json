@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/radio/radio-group",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/radio/radio-group.cjs",
+  "module": "../../esm/radio/radio-group.js",
+  "types": "../../cjs/radio/radio-group.d.ts"
+}

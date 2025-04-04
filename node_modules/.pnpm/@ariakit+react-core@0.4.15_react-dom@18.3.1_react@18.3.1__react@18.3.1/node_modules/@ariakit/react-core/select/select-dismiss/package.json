@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-dismiss",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-dismiss.cjs",
+  "module": "../../esm/select/select-dismiss.js",
+  "types": "../../cjs/select/select-dismiss.d.ts"
+}

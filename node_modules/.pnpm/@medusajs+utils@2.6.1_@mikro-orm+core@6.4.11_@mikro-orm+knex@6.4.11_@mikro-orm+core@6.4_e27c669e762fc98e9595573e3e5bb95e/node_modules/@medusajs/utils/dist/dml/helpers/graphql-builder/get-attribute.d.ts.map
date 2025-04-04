@@ -1,0 +1,1 @@
+{"version":3,"file":"get-attribute.d.ts","sourceRoot":"","sources":["../../../../src/dml/helpers/graphql-builder/get-attribute.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,iBAAiB,CAAA;AAkB9C;;GAEG;AACH,wBAAgB,iCAAiC,CAC/C,SAAS,EAAE,MAAM,EACjB,YAAY,EAAE,MAAM,EACpB,QAAQ,EAAE,YAAY,CAAC,GAAG,CAAC,GAC1B;IACD,IAAI,CAAC,EAAE,MAAM,CAAA;IACb,SAAS,EAAE,MAAM,CAAA;CAClB,CAqDA"}

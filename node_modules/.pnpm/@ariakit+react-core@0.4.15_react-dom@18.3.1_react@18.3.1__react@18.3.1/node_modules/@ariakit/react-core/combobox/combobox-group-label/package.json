@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/combobox/combobox-group-label",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/combobox/combobox-group-label.cjs",
+  "module": "../../esm/combobox/combobox-group-label.js",
+  "types": "../../cjs/combobox/combobox-group-label.d.ts"
+}

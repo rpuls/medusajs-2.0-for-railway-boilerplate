@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Check = Check;
+const metadata_1 = require("../metadata");
+const Utils_1 = require("../utils/Utils");
+function Check(options) {
+    return function (target, propertyName) {
+        const meta = metadata_1.MetadataStorage.getMetadataFromDecorator((propertyName ? target.constructor : target));
+        options.property ??= propertyName;
+        meta.checks.push(options);
+        if (!propertyName) {
+            return target;
+        }
+        return Utils_1.Utils.propertyDecoratorReturnValue();
+    };
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/toolbar/toolbar-separator",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/toolbar/toolbar-separator.cjs",
+  "module": "../../esm/toolbar/toolbar-separator.js",
+  "types": "../../cjs/toolbar/toolbar-separator.d.ts"
+}

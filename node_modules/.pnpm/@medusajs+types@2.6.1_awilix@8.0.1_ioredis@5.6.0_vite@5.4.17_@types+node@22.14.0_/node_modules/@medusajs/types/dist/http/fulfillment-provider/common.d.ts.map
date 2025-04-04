@@ -1,0 +1,1 @@
+{"version":3,"file":"common.d.ts","sourceRoot":"","sources":["../../../src/http/fulfillment-provider/common.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,uBAAuB;IACtC;;OAEG;IACH,EAAE,EAAE,MAAM,CAAA;IACV;;OAEG;IACH,UAAU,EAAE,OAAO,CAAA;CACpB;AAED,MAAM,WAAW,6BAA6B;IAC5C;;OAEG;IACH,EAAE,EAAE,MAAM,CAAA;IACV;;OAEG;IACH,SAAS,EAAE,OAAO,CAAA;CACnB"}

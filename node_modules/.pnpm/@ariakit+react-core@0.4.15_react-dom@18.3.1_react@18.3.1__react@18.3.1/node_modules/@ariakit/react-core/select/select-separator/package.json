@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-separator",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-separator.cjs",
+  "module": "../../esm/select/select-separator.js",
+  "types": "../../cjs/select/select-separator.d.ts"
+}

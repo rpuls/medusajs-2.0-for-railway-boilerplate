@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/hovercard/hovercard-disclosure",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/hovercard/hovercard-disclosure.cjs",
+  "module": "../../esm/hovercard/hovercard-disclosure.js",
+  "types": "../../cjs/hovercard/hovercard-disclosure.d.ts"
+}

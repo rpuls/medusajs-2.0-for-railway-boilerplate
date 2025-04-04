@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/is-focus-trap",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/is-focus-trap.cjs",
+  "module": "../../../esm/dialog/utils/is-focus-trap.js",
+  "types": "../../../cjs/dialog/utils/is-focus-trap.d.ts"
+}

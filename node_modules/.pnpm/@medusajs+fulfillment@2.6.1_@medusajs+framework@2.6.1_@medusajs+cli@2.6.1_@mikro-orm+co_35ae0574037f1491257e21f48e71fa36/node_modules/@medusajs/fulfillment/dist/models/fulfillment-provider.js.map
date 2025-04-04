@@ -1,0 +1,1 @@
+{"version":3,"file":"fulfillment-provider.js","sourceRoot":"","sources":["../../src/models/fulfillment-provider.ts"],"names":[],"mappings":";;;AAAA,qDAAiD;AAEpC,QAAA,mBAAmB,GAAG,aAAK,CAAC,MAAM,CAAC,sBAAsB,EAAE;IACtE,EAAE,EAAE,aAAK,CAAC,EAAE,CAAC,EAAE,MAAM,EAAE,QAAQ,EAAE,CAAC,CAAC,UAAU,EAAE;IAC/C,UAAU,EAAE,aAAK,CAAC,OAAO,EAAE,CAAC,OAAO,CAAC,IAAI,CAAC;CAC1C,CAAC,CAAA"}

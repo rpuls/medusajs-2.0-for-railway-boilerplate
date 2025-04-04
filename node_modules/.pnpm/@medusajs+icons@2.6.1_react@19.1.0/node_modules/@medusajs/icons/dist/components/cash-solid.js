@@ -1,0 +1,24 @@
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+import * as React from "react";
+const CashSolid = React.forwardRef((_a, ref) => {
+    var { color = "currentColor" } = _a, props = __rest(_a, ["color"]);
+    return (React.createElement("svg", Object.assign({ xmlns: "http://www.w3.org/2000/svg", width: 15, height: 15, fill: "none", ref: ref }, props),
+        React.createElement("g", { fill: color, clipPath: "url(#a)" },
+            React.createElement("path", { d: "M7.61 6.837q-.656-.117-.686-.413c-.014-.15.03-.198.05-.22.113-.125.393-.192.553-.192.372 0 .488.187.531.257a.667.667 0 1 0 1.133-.702 1.8 1.8 0 0 0-1.034-.786.66.66 0 0 0-.656-.614.663.663 0 0 0-.659.627c-.308.096-.62.255-.855.513-.301.333-.436.763-.39 1.245.048.486.342 1.341 1.78 1.597.798.143.804.352.806.463.003.1-.029.182-.1.256-.12.124-.328.197-.556.197-.542 0-.647-.208-.691-.296a.666.666 0 1 0-1.19.602c.185.364.543.779 1.22.947.07.292.321.515.635.515a.66.66 0 0 0 .638-.528c.347-.096.66-.264.897-.506.32-.33.492-.762.48-1.22-.022-.936-.664-1.522-1.906-1.744z" }),
+            React.createElement("path", { d: "M12.167 2.167H2.833A2.446 2.446 0 0 0 .39 4.61v5.778a2.446 2.446 0 0 0 2.444 2.444h9.334a2.446 2.446 0 0 0 2.444-2.444V4.611a2.446 2.446 0 0 0-2.444-2.444m-1.43 9.333H4.263a3.55 3.55 0 0 0-2.54-2.54V6.04a3.55 3.55 0 0 0 2.54-2.54h6.474a3.55 3.55 0 0 0 2.54 2.54v2.92a3.55 3.55 0 0 0-2.54 2.54" })),
+        React.createElement("defs", null,
+            React.createElement("clipPath", { id: "a" },
+                React.createElement("path", { fill: "#fff", d: "M0 0h15v15H0z" })))));
+});
+CashSolid.displayName = "CashSolid";
+export default CashSolid;

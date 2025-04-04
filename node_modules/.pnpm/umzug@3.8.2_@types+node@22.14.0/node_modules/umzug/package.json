@@ -1,0 +1,92 @@
+{
+  "name": "umzug",
+  "version": "3.8.2",
+  "description": "Framework-agnostic migration tool for Node",
+  "keywords": [
+    "migrate",
+    "migration",
+    "migrations",
+    "sequelize",
+    "database"
+  ],
+  "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
+  "packageManager": "pnpm@8.10.2",
+  "dependencies": {
+    "@rushstack/ts-command-line": "^4.12.2",
+    "emittery": "^0.13.0",
+    "fast-glob": "^3.3.2",
+    "pony-cause": "^2.1.4",
+    "type-fest": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/lodash": "4.17.0",
+    "@types/node": "20.12.7",
+    "@types/uuid": "8.3.4",
+    "@types/verror": "1.10.10",
+    "@vitest/coverage-v8": "^0.34.6",
+    "@vitest/ui": "^0.34.6",
+    "del": "^5.0.0",
+    "eslint": "8.57.0",
+    "eslint-plugin-mmkal": "0.5.1",
+    "execa": "^5.1.1",
+    "expect-type": "0.19.0",
+    "fs-syncer": "0.5.3",
+    "lodash": "4.17.21",
+    "np": "10.0.5",
+    "p-event": "^4.0.0",
+    "pkg-pr-new": "0.0.20",
+    "sequelize": "6.37.3",
+    "source-map-support": "0.5.21",
+    "sqlite3": "5.1.7",
+    "strip-ansi": "6.0.1",
+    "ts-node": "10.9.2",
+    "typescript": "4.9.5",
+    "uuid": "9.0.1",
+    "verror": "1.10.1",
+    "vitest": "^0.34.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sequelize/umzug.git"
+  },
+  "author": "Sascha Depold <sascha@depold.com>",
+  "contributors": [
+    {
+      "name": "Misha Kaletsky",
+      "email": "mmkal@kaletsky.com"
+    },
+    {
+      "name": "Jukka Hyytiälä",
+      "email": "hyytiala.jukka@gmail.com"
+    },
+    {
+      "name": "Pascal Pflaum",
+      "email": "mail@pascalpflaum.de"
+    },
+    {
+      "name": "Pedro Augusto de Paula Barbosa",
+      "email": "papb1996@gmail.com"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sequelize/umzug/issues"
+  },
+  "homepage": "https://github.com/sequelize/umzug",
+  "engines": {
+    "node": ">=12"
+  },
+  "scripts": {
+    "clean": "rm -rf lib",
+    "compile": "tsc -p tsconfig.lib.json",
+    "build": "pnpm clean && pnpm compile",
+    "eslint": "eslint . --max-warnings 0",
+    "lint": "pnpm type-check && pnpm eslint",
+    "pretest": "rm -rf test/generated",
+    "test": "vitest run",
+    "type-check": "tsc -p ."
+  }
+}

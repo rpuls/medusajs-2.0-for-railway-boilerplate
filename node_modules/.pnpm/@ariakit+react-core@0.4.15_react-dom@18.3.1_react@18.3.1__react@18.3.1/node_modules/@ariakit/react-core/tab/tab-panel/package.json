@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tab/tab-panel",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tab/tab-panel.cjs",
+  "module": "../../esm/tab/tab-panel.js",
+  "types": "../../cjs/tab/tab-panel.d.ts"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-heading",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-heading.cjs",
+  "module": "../../esm/select/select-heading.js",
+  "types": "../../cjs/select/select-heading.d.ts"
+}

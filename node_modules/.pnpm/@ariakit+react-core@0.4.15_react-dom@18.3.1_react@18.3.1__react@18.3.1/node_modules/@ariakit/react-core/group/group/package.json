@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/group/group",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/group/group.cjs",
+  "module": "../../esm/group/group.js",
+  "types": "../../cjs/group/group.d.ts"
+}

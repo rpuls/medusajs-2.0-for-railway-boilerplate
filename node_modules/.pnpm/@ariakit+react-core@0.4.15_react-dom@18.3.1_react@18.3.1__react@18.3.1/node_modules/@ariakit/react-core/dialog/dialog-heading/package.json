@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/dialog-heading",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/dialog/dialog-heading.cjs",
+  "module": "../../esm/dialog/dialog-heading.js",
+  "types": "../../cjs/dialog/dialog-heading.d.ts"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/utils/dom",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/utils/dom.cjs",
+  "module": "../../esm/utils/dom.js",
+  "types": "../../cjs/utils/dom.d.ts"
+}

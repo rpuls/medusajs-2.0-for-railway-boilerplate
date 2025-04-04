@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/checkbox/checkbox-check",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/checkbox/checkbox-check.cjs",
+  "module": "../../esm/checkbox/checkbox-check.js",
+  "types": "../../cjs/checkbox/checkbox-check.d.ts"
+}

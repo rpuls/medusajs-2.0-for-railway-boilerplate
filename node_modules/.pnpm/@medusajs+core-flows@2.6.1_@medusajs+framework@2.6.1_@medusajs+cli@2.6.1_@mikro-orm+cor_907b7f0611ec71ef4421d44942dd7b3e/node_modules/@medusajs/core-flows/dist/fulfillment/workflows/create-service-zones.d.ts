@@ -1,0 +1,38 @@
+import { FulfillmentWorkflow, ServiceZoneDTO } from "@medusajs/framework/types";
+/**
+ * The service zones to create.
+ */
+export type CreateServiceZonesWorkflowOutput = ServiceZoneDTO[];
+export declare const createServiceZonesWorkflowId = "create-service-zones-workflow";
+/**
+ * This workflow creates one or more service zones. It's used by the
+ * [Add Service Zone to Fulfillment Set Admin API Route](https://docs.medusajs.com/api/admin#fulfillment-sets_postfulfillmentsetsidservicezones).
+ *
+ * You can use this workflow within your own customizations or custom workflows, allowing you to
+ * create service zones within your custom flows.
+ *
+ * @example
+ * const { result } = await createServiceZonesWorkflow(container)
+ * .run({
+ *   input: {
+ *     data: [
+ *       {
+ *         name: "US",
+ *         fulfillment_set_id: "fuset_123",
+ *         geo_zones: [
+ *           {
+ *             type: "country",
+ *             country_code: "us",
+ *           }
+ *         ]
+ *       }
+ *     ]
+ *   }
+ * })
+ *
+ * @summary
+ *
+ * Create one or more service zones.
+ */
+export declare const createServiceZonesWorkflow: import("@medusajs/framework/workflows-sdk").ReturnWorkflow<FulfillmentWorkflow.CreateServiceZonesWorkflowInput, CreateServiceZonesWorkflowOutput, []>;
+//# sourceMappingURL=create-service-zones.d.ts.map

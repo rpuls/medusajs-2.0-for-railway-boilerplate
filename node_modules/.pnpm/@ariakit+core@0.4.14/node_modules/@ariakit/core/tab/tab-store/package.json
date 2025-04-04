@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/tab/tab-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tab/tab-store.cjs",
+  "module": "../../esm/tab/tab-store.js",
+  "types": "../../cjs/tab/tab-store.d.ts"
+}

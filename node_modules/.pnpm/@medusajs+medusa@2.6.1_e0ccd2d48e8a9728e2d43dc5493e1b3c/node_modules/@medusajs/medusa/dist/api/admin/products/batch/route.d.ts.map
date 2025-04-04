@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../src/api/admin/products/batch/route.ts"],"names":[],"mappings":"AACA,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAEjC,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AAErD,eAAO,MAAM,IAAI,QACV,0BAA0B,CAAC,SAAS,CAAC,wBAAwB,CAAC,OAC9D,cAAc,CAAC,SAAS,CAAC,yBAAyB,CAAC,kBAiBzD,CAAA"}

@@ -1,0 +1,1 @@
+{"version":3,"file":"query-context.d.ts","sourceRoot":"","sources":["../../src/modules-sdk/query-context.ts"],"names":[],"mappings":"AAAA,KAAK,gBAAgB,GAAG;IACtB,CAAC,KAAK,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,GAAG,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,CAAA;IACzD,cAAc,EAAE,CAAC,GAAG,EAAE,GAAG,KAAK,OAAO,CAAA;CACtC,CAAA;AAeD,eAAO,MAAM,YAAY,EAAE,gBAAiC,CAAA"}

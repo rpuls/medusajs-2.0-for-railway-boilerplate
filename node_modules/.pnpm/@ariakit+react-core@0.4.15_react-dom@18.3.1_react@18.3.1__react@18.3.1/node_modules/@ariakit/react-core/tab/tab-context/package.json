@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tab/tab-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tab/tab-context.cjs",
+  "module": "../../esm/tab/tab-context.js",
+  "types": "../../cjs/tab/tab-context.d.ts"
+}

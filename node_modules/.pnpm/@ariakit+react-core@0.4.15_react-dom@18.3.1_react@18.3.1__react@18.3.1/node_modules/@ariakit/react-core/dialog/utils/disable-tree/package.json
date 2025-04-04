@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/disable-tree",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/disable-tree.cjs",
+  "module": "../../../esm/dialog/utils/disable-tree.js",
+  "types": "../../../cjs/dialog/utils/disable-tree.d.ts"
+}

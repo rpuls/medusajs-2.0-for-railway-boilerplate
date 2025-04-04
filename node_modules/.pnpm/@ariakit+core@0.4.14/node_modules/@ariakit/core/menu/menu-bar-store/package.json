@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/menu/menu-bar-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-bar-store.cjs",
+  "module": "../../esm/menu/menu-bar-store.js",
+  "types": "../../cjs/menu/menu-bar-store.d.ts"
+}

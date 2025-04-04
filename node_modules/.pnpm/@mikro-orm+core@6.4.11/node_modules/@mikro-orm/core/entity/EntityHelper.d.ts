@@ -1,0 +1,29 @@
+import type { EntityManager } from '../EntityManager';
+import { type EntityMetadata, type EntityProperty, type IHydrator } from '../typings';
+/**
+ * @internal
+ */
+export declare class EntityHelper {
+    static decorate<T extends object>(meta: EntityMetadata<T>, em: EntityManager): void;
+    /**
+     * As a performance optimization, we create entity state methods in a lazy manner. We first add
+     * the `null` value to the prototype to reserve space in memory. Then we define a setter on the
+     * prototype, that will be executed exactly once per entity instance. There we redefine given
+     * property on the entity instance, so shadowing the prototype setter.
+     */
+    private static defineBaseProperties;
+    /**
+     * Defines getter and setter for every owning side of m:1 and 1:1 relation. This is then used for propagation of
+     * changes to the inverse side of bi-directional relations. Rest of the properties are also defined this way to
+     * achieve dirtiness, which is then used for fast checks whether we need to auto-flush because of managed entities.
+     *
+     * First defines a setter on the prototype, once called, actual get/set handlers are registered on the instance rather
+     * than on its prototype. Thanks to this we still have those properties enumerable (e.g. part of `Object.keys(entity)`).
+     */
+    private static defineProperties;
+    static defineCustomInspect<T extends object>(meta: EntityMetadata<T>): void;
+    static defineReferenceProperty<T extends object>(meta: EntityMetadata<T>, prop: EntityProperty<T>, ref: T, hydrator: IHydrator): void;
+    static propagate<T extends object>(meta: EntityMetadata<T>, entity: T, owner: T, prop: EntityProperty<T>, value?: T[keyof T & string], old?: T): void;
+    private static propagateOneToOne;
+    static ensurePropagation<T extends object>(entity: T): void;
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"meilisearch-request-error.d.ts","sourceRoot":"","sources":["../../../src/errors/meilisearch-request-error.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,gBAAgB,EAAE,MAAM,wBAAwB,CAAC;AAE1D,qBAAa,uBAAwB,SAAQ,gBAAgB;IAClD,IAAI,SAA6B;gBAE9B,GAAG,EAAE,MAAM,EAAE,KAAK,EAAE,OAAO;CAGxC"}

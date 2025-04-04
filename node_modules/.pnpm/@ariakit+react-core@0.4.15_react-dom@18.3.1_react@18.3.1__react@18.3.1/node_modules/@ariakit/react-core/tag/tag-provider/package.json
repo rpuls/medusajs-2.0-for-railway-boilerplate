@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tag/tag-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tag/tag-provider.cjs",
+  "module": "../../esm/tag/tag-provider.js",
+  "types": "../../cjs/tag/tag-provider.d.ts"
+}

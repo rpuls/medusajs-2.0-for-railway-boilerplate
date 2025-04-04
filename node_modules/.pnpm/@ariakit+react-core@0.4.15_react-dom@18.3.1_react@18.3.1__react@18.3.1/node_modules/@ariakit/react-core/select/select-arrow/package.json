@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-arrow",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-arrow.cjs",
+  "module": "../../esm/select/select-arrow.js",
+  "types": "../../cjs/select/select-arrow.d.ts"
+}

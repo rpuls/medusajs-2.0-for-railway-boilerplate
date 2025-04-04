@@ -1,0 +1,10 @@
+import * as React from "react";
+const Slack = React.forwardRef((props, ref) => {
+    return (React.createElement("svg", Object.assign({ xmlns: "http://www.w3.org/2000/svg", width: 15, height: 15, fill: "none", ref: ref }, props),
+        React.createElement("path", { fill: "#E01E5A", d: "M3.573 9.309a1.41 1.41 0 0 1-1.412 1.412A1.41 1.41 0 0 1 .749 9.309c0-.78.631-1.412 1.412-1.412h1.412zm.706 0c0-.78.631-1.412 1.412-1.412s1.412.631 1.412 1.412v3.53a1.41 1.41 0 0 1-1.412 1.412 1.41 1.41 0 0 1-1.412-1.412z" }),
+        React.createElement("path", { fill: "#36C5F0", d: "M5.693 3.568c-.78 0-1.41-.63-1.41-1.41S4.914.75 5.694.75s1.41.63 1.41 1.41v1.41zm0 .716c.78 0 1.41.63 1.41 1.41s-.63 1.409-1.41 1.409H2.16c-.78 0-1.41-.63-1.41-1.41s.63-1.41 1.41-1.41z" }),
+        React.createElement("path", { fill: "#2EB67D", d: "M11.427 5.693c0-.78.631-1.41 1.412-1.41a1.41 1.41 0 1 1 0 2.82h-1.412zm-.706 0c0 .78-.631 1.41-1.412 1.41a1.41 1.41 0 0 1-1.412-1.41V2.16c0-.78.631-1.41 1.412-1.41s1.412.63 1.412 1.41z" }),
+        React.createElement("path", { fill: "#ECB22E", d: "M9.307 11.427c.78 0 1.41.631 1.41 1.412a1.41 1.41 0 1 1-2.82 0v-1.412zm0-.706a1.41 1.41 0 0 1-1.41-1.412c0-.78.63-1.412 1.41-1.412h3.534c.78 0 1.41.631 1.41 1.412s-.63 1.412-1.41 1.412z" })));
+});
+Slack.displayName = "Slack";
+export default Slack;

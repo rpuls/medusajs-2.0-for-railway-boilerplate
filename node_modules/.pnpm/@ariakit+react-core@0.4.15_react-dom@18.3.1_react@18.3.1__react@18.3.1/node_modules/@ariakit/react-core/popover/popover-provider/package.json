@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/popover/popover-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/popover/popover-provider.cjs",
+  "module": "../../esm/popover/popover-provider.js",
+  "types": "../../cjs/popover/popover-provider.d.ts"
+}

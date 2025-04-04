@@ -1,0 +1,81 @@
+import {useState as $8rdZD$useState, useRef as $8rdZD$useRef} from "react";
+
+/*
+ * Copyright 2020 Adobe. All rights reserved.
+ * This file is licensed to you under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+ * OF ANY KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */ 
+function $b45bbbaf0c3785df$export$29efd034f1d79f81(props) {
+    let { getItems: getItems, isDisabled: isDisabled, collection: collection, selectionManager: selectionManager, onDragStart: onDragStart, onDragMove: onDragMove, onDragEnd: onDragEnd, preview: preview, getAllowedDropOperations: getAllowedDropOperations } = props;
+    let [, setDragging] = (0, $8rdZD$useState)(false);
+    let draggingKeys = (0, $8rdZD$useRef)(new Set());
+    let draggedKey = (0, $8rdZD$useRef)(null);
+    let getKeys = (key)=>{
+        // The clicked item is always added to the drag. If it is selected, then all of the
+        // other selected items are also dragged. If it is not selected, the only the clicked
+        // item is dragged. This matches native macOS behavior.
+        let keys = new Set(selectionManager.isSelected(key) ? new Set([
+            ...selectionManager.selectedKeys
+        ].filter((key)=>!!collection.getItem(key))) : []);
+        keys.add(key);
+        return keys;
+    };
+    return {
+        collection: collection,
+        selectionManager: selectionManager,
+        get draggedKey () {
+            return draggedKey.current;
+        },
+        get draggingKeys () {
+            return draggingKeys.current;
+        },
+        isDragging (key) {
+            return draggingKeys.current.has(key);
+        },
+        getKeysForDrag: getKeys,
+        getItems (key) {
+            return getItems(getKeys(key));
+        },
+        isDisabled: isDisabled,
+        preview: preview,
+        getAllowedDropOperations: getAllowedDropOperations,
+        startDrag (key, event) {
+            let keys = getKeys(key);
+            draggingKeys.current = keys;
+            draggedKey.current = key;
+            selectionManager.setFocused(false);
+            setDragging(true);
+            if (typeof onDragStart === 'function') onDragStart({
+                ...event,
+                keys: keys
+            });
+        },
+        moveDrag (event) {
+            if (typeof onDragMove === 'function') onDragMove({
+                ...event,
+                keys: draggingKeys.current
+            });
+        },
+        endDrag (event) {
+            let { isInternal: isInternal } = event;
+            if (typeof onDragEnd === 'function') onDragEnd({
+                ...event,
+                keys: draggingKeys.current,
+                isInternal: isInternal
+            });
+            draggingKeys.current = new Set();
+            draggedKey.current = null;
+            setDragging(false);
+        }
+    };
+}
+
+
+export {$b45bbbaf0c3785df$export$29efd034f1d79f81 as useDraggableCollectionState};
+//# sourceMappingURL=useDraggableCollectionState.module.js.map

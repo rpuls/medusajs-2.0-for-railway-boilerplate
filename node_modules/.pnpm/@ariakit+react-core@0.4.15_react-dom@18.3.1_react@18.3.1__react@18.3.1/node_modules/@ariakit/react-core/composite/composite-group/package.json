@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/composite/composite-group",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/composite-group.cjs",
+  "module": "../../esm/composite/composite-group.js",
+  "types": "../../cjs/composite/composite-group.d.ts"
+}

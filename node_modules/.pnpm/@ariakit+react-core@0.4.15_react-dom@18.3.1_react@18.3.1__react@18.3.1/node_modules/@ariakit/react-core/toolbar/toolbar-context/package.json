@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/toolbar/toolbar-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/toolbar/toolbar-context.cjs",
+  "module": "../../esm/toolbar/toolbar-context.js",
+  "types": "../../cjs/toolbar/toolbar-context.d.ts"
+}

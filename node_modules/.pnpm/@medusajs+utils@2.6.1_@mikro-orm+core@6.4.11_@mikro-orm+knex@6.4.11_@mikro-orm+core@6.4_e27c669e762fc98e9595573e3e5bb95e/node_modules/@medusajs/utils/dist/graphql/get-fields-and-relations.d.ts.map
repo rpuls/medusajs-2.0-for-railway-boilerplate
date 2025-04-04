@@ -1,0 +1,1 @@
+{"version":3,"file":"get-fields-and-relations.d.ts","sourceRoot":"","sources":["../../src/graphql/get-fields-and-relations.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,gBAAgB,EAAmC,MAAM,SAAS,CAAA;AAE3E;;;;;GAKG;AACH,wBAAgB,wBAAwB,CACtC,aAAa,EAAE;IAAE,CAAC,GAAG,EAAE,MAAM,GAAG,gBAAgB,CAAA;CAAE,EAClD,QAAQ,EAAE,MAAM,EAChB,SAAS,GAAE,MAAM,EAAO,YA+BzB"}

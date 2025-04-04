@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/mark-tree-outside",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/mark-tree-outside.cjs",
+  "module": "../../../esm/dialog/utils/mark-tree-outside.js",
+  "types": "../../../cjs/dialog/utils/mark-tree-outside.d.ts"
+}

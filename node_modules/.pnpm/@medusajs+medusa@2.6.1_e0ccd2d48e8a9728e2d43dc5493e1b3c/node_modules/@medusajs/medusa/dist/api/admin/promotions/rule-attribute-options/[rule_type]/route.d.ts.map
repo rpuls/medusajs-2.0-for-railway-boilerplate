@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../../src/api/admin/promotions/rule-attribute-options/[rule_type]/route.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,2BAA2B,CAAA;AACrD,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAGjC,eAAO,MAAM,GAAG,QACT,0BAA0B,CAAC,SAAS,CAAC,2BAA2B,CAAC,OACjE,cAAc,CAAC,SAAS,CAAC,qCAAqC,CAAC,kBAerE,CAAA"}

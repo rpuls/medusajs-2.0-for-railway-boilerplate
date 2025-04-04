@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/combobox/combobox-item-value",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/combobox/combobox-item-value.cjs",
+  "module": "../../esm/combobox/combobox-item-value.js",
+  "types": "../../cjs/combobox/combobox-item-value.d.ts"
+}

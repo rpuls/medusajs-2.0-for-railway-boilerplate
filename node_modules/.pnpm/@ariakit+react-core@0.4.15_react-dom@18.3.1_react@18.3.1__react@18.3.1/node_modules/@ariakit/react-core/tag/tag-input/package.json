@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tag/tag-input",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tag/tag-input.cjs",
+  "module": "../../esm/tag/tag-input.js",
+  "types": "../../cjs/tag/tag-input.d.ts"
+}

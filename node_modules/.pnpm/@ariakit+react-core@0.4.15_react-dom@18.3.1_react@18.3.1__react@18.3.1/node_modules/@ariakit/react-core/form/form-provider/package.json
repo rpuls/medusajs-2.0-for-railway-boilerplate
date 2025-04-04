@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/form/form-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/form/form-provider.cjs",
+  "module": "../../esm/form/form-provider.js",
+  "types": "../../cjs/form/form-provider.d.ts"
+}

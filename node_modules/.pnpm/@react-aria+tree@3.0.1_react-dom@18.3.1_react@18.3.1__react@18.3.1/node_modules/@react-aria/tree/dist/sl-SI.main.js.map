@@ -1,0 +1,1 @@
+{"mappings":"AAAA,iBAAiB;IAAG,YAAY,CAAC,KAAK,CAAC;IACrC,UAAU,CAAC,aAAO,CAAC;AACrB","sources":["packages/@react-aria/tree/intl/sl-SI.json"],"sourcesContent":["{\n  \"collapse\": \"Strni\",\n  \"expand\": \"Razširi\"\n}\n"],"names":[],"version":3,"file":"sl-SI.main.js.map"}

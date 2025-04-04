@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/checkbox/checkbox-checked-context",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/checkbox/checkbox-checked-context.cjs",
+  "module": "../../esm/checkbox/checkbox-checked-context.js",
+  "types": "../../cjs/checkbox/checkbox-checked-context.d.ts"
+}

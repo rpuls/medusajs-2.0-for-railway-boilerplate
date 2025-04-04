@@ -1,0 +1,1 @@
+{"version":3,"file":"flatten-object-to-key-value-pairs.d.ts","sourceRoot":"","sources":["../../src/common/flatten-object-to-key-value-pairs.ts"],"names":[],"mappings":"AAEA,KAAK,YAAY,GAAG;IAClB,CAAC,GAAG,EAAE,MAAM,GAAG,GAAG,CAAA;CACnB,CAAA;AA0BD,wBAAgB,4BAA4B,CAAC,GAAG,EAAE,YAAY,GAAG,YAAY,CA+G5E"}

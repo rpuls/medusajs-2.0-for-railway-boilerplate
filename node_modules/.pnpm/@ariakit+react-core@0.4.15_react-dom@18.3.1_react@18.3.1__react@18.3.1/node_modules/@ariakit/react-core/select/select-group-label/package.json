@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-group-label",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-group-label.cjs",
+  "module": "../../esm/select/select-group-label.js",
+  "types": "../../cjs/select/select-group-label.d.ts"
+}

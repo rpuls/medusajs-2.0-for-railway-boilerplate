@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-renderer",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-renderer.cjs",
+  "module": "../../esm/select/select-renderer.js",
+  "types": "../../cjs/select/select-renderer.d.ts"
+}

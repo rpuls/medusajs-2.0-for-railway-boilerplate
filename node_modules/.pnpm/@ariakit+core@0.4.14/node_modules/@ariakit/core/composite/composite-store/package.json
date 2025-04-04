@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/composite/composite-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/composite-store.cjs",
+  "module": "../../esm/composite/composite-store.js",
+  "types": "../../cjs/composite/composite-store.d.ts"
+}

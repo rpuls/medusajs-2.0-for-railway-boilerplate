@@ -1,0 +1,2 @@
+export declare function versionErrorHintMessage(message: string, method: string): string;
+//# sourceMappingURL=version-hint-message.d.ts.map

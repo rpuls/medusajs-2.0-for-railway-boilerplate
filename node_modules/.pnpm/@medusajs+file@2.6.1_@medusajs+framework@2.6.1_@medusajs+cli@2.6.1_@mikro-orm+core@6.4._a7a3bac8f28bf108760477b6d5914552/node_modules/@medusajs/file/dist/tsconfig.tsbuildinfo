@@ -1,0 +1,1 @@
+{"root":["../src/index.ts","../src/joiner-config.ts","../src/loaders/providers.ts","../src/services/file-module-service.ts","../src/services/file-provider-service.ts","../src/services/index.ts","../src/services/__tests__/file.spec.ts","../src/types/index.ts"],"version":"5.6.2"}

@@ -1,0 +1,3 @@
+import { MiddlewareRoute } from "@medusajs/framework/http";
+export declare const adminApiKeyRoutesMiddlewares: MiddlewareRoute[];
+//# sourceMappingURL=middlewares.d.ts.map

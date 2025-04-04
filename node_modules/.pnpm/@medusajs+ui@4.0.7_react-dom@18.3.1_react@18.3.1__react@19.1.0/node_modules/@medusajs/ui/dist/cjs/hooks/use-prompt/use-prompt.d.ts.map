@@ -1,0 +1,1 @@
+{"version":3,"file":"use-prompt.d.ts","sourceRoot":"","sources":["../../../../src/hooks/use-prompt/use-prompt.tsx"],"names":[],"mappings":"AAKA,OAAO,EAAgB,iBAAiB,EAAE,MAAM,iBAAiB,CAAA;AAEjE,KAAK,cAAc,GAAG,IAAI,CAAC,iBAAiB,EAAE,WAAW,GAAG,UAAU,GAAG,MAAM,CAAC,CAAA;AAEhF,QAAA,MAAM,SAAS,gBAGgB,cAAc,KAAG,QAAQ,OAAO,CAgD9D,CAAA;AAED,OAAO,EAAE,SAAS,EAAE,CAAA"}

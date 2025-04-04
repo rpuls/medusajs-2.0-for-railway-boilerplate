@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/core/utils/undo",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/utils/undo.cjs",
+  "module": "../../esm/utils/undo.js",
+  "types": "../../cjs/utils/undo.d.ts"
+}

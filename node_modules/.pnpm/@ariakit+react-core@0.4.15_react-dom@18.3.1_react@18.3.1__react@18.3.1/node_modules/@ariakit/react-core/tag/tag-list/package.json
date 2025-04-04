@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tag/tag-list",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tag/tag-list.cjs",
+  "module": "../../esm/tag/tag-list.js",
+  "types": "../../cjs/tag/tag-list.d.ts"
+}

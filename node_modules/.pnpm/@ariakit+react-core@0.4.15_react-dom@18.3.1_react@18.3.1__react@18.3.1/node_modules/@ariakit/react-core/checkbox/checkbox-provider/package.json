@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/checkbox/checkbox-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/checkbox/checkbox-provider.cjs",
+  "module": "../../esm/checkbox/checkbox-provider.js",
+  "types": "../../cjs/checkbox/checkbox-provider.d.ts"
+}

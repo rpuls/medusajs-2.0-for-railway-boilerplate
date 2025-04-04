@@ -1,0 +1,1 @@
+{"version":3,"file":"cancel-order.d.ts","sourceRoot":"","sources":["../../../src/workflow/order/cancel-order.ts"],"names":[],"mappings":"AAAA;;GAEG;AACH,MAAM,WAAW,wBAAwB;IACvC;;OAEG;IACH,QAAQ,EAAE,MAAM,CAAA;IAChB;;OAEG;IACH,eAAe,CAAC,EAAE,OAAO,CAAA;IACzB;;OAEG;IACH,WAAW,CAAC,EAAE,MAAM,CAAA;CACrB"}

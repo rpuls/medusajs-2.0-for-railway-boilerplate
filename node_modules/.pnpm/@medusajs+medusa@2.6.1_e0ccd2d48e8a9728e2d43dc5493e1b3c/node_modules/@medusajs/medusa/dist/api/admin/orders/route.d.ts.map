@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../src/api/admin/orders/route.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,SAAS,EAAY,MAAM,2BAA2B,CAAA;AAC/D,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAEjC,eAAO,MAAM,GAAG,QACT,0BAA0B,CAAC,SAAS,CAAC,iBAAiB,CAAC,OACvD,cAAc,CAAC,SAAS,CAAC,sBAAsB,CAAC,kBA4BtD,CAAA"}

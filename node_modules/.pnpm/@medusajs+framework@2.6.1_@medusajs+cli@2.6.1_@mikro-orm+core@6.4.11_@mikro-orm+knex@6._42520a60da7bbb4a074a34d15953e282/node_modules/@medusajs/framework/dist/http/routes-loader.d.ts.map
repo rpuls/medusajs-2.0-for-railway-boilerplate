@@ -1,0 +1,1 @@
+{"version":3,"file":"routes-loader.d.ts","sourceRoot":"","sources":["../../src/http/routes-loader.ts"],"names":[],"mappings":"AAGA,OAAO,EAAgB,KAAK,eAAe,EAAkB,MAAM,SAAS,CAAA;AAqC5E;;;;;;GAMG;AACH,qBAAa,YAAY;;IAyGvB;;;OAGG;IACG,OAAO,CAAC,SAAS,EAAE,MAAM;IA0C/B;;OAEG;IACH,aAAa,CAAC,KAAK,EAAE,eAAe;IAMpC;;OAEG;IACH,cAAc,CAAC,MAAM,EAAE,eAAe,EAAE;IAIxC;;;OAGG;IACH,SAAS;CAaV"}

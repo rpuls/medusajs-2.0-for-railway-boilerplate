@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tag/tag-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tag/tag-store.cjs",
+  "module": "../../esm/tag/tag-store.js",
+  "types": "../../cjs/tag/tag-store.d.ts"
+}

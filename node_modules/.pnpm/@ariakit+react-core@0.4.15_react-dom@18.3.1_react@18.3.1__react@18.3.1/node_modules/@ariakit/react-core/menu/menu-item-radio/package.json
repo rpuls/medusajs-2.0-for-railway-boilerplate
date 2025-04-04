@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-item-radio",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-item-radio.cjs",
+  "module": "../../esm/menu/menu-item-radio.js",
+  "types": "../../cjs/menu/menu-item-radio.d.ts"
+}

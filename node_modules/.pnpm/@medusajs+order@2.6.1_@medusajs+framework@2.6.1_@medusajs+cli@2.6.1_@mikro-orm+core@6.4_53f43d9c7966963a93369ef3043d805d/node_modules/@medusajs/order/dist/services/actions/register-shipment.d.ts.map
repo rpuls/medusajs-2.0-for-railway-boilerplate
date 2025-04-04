@@ -1,0 +1,1 @@
+{"version":3,"file":"register-shipment.d.ts","sourceRoot":"","sources":["../../../src/services/actions/register-shipment.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,OAAO,EAEP,UAAU,EACX,MAAM,2BAA2B,CAAA;AAGlC,wBAAsB,gBAAgB,CACpC,IAAI,EAAE,GAAG,EACT,IAAI,EAAE,UAAU,CAAC,wBAAwB,EACzC,aAAa,CAAC,EAAE,OAAO,GACtB,OAAO,CAAC,IAAI,CAAC,CAsCf"}

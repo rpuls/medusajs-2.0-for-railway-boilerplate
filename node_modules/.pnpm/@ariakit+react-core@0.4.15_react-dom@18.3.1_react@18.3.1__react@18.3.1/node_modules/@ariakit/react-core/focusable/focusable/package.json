@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/focusable/focusable",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/focusable/focusable.cjs",
+  "module": "../../esm/focusable/focusable.js",
+  "types": "../../cjs/focusable/focusable.d.ts"
+}

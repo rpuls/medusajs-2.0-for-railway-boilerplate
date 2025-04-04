@@ -1,0 +1,150 @@
+import { HashConstructor as __HashConstructor } from "@aws-sdk/types";
+import { NodeHttpHandler as RequestHandler } from "@smithy/node-http-handler";
+import { S3ClientConfig } from "./S3Client";
+export declare const getRuntimeConfig: (config: S3ClientConfig) => {
+  runtime: string;
+  defaultsMode: import("@aws-sdk/types").Provider<
+    import("@smithy/smithy-client").ResolvedDefaultsMode
+  >;
+  bodyLengthChecker: import("@aws-sdk/types").BodyLengthCalculator;
+  credentialDefaultProvider:
+    | ((input: any) => import("@aws-sdk/types").AwsCredentialIdentityProvider)
+    | ((
+        init?:
+          | import("@aws-sdk/credential-provider-node").DefaultProviderInit
+          | undefined
+      ) => import("@aws-sdk/types").MemoizedProvider<
+        import("@aws-sdk/types").AwsCredentialIdentity
+      >);
+  defaultUserAgentProvider: (
+    config?:
+      | import("@aws-sdk/util-user-agent-node").PreviouslyResolved
+      | undefined
+  ) => Promise<import("@aws-sdk/types").UserAgent>;
+  disableS3ExpressSessionAuth:
+    | boolean
+    | import("@aws-sdk/types").Provider<boolean>;
+  eventStreamSerdeProvider: import("@aws-sdk/types").EventStreamSerdeProvider;
+  maxAttempts: number | import("@aws-sdk/types").Provider<number>;
+  md5: __HashConstructor;
+  region: string | import("@aws-sdk/types").Provider<string>;
+  requestChecksumCalculation:
+    | import("@aws-sdk/middleware-flexible-checksums").RequestChecksumCalculation
+    | import("@aws-sdk/types").Provider<
+        import("@aws-sdk/middleware-flexible-checksums").RequestChecksumCalculation
+      >;
+  requestHandler:
+    | RequestHandler
+    | import("@smithy/protocol-http").HttpHandler<any>;
+  responseChecksumValidation:
+    | import("@aws-sdk/middleware-flexible-checksums").ResponseChecksumValidation
+    | import("@aws-sdk/types").Provider<
+        import("@aws-sdk/middleware-flexible-checksums").ResponseChecksumValidation
+      >;
+  retryMode: string | import("@aws-sdk/types").Provider<string>;
+  sha1: __HashConstructor;
+  sha256: __HashConstructor;
+  sigv4aSigningRegionSet:
+    | string[]
+    | import("@aws-sdk/types").Provider<string[] | undefined>;
+  streamCollector: import("@aws-sdk/types").StreamCollector;
+  streamHasher:
+    | import("@aws-sdk/types").StreamHasher<import("stream").Readable>
+    | import("@aws-sdk/types").StreamHasher<Blob>;
+  useArnRegion: boolean | import("@aws-sdk/types").Provider<boolean>;
+  useDualstackEndpoint: boolean | import("@aws-sdk/types").Provider<boolean>;
+  useFipsEndpoint: boolean | import("@aws-sdk/types").Provider<boolean>;
+  userAgentAppId:
+    | string
+    | import("@aws-sdk/types").Provider<string | undefined>;
+  apiVersion: string;
+  cacheMiddleware?: boolean | undefined;
+  urlParser: import("@aws-sdk/types").UrlParser;
+  base64Decoder: import("@aws-sdk/types").Decoder;
+  base64Encoder: (_input: string | Uint8Array) => string;
+  utf8Decoder: import("@aws-sdk/types").Decoder;
+  utf8Encoder: (input: string | Uint8Array) => string;
+  disableHostPrefix: boolean;
+  serviceId: string;
+  profile?: string | undefined;
+  getAwsChunkedEncodingStream:
+    | import("@aws-sdk/types").GetAwsChunkedEncodingStream<any>
+    | import("@aws-sdk/types").GetAwsChunkedEncodingStream<
+        import("stream").Readable
+      >;
+  logger: import("@aws-sdk/types").Logger;
+  extensions: import("./runtimeExtensions").RuntimeExtension[];
+  signingEscapePath: boolean;
+  sdkStreamMixin: import("@aws-sdk/types").SdkStreamMixinInjector;
+  customUserAgent?: string | import("@aws-sdk/types").UserAgent | undefined;
+  requestStreamBufferSize?: number | false | undefined;
+  retryStrategy?:
+    | import("@aws-sdk/types").RetryStrategy
+    | import("@aws-sdk/types").RetryStrategyV2
+    | undefined;
+  endpoint?:
+    | ((
+        | string
+        | import("@aws-sdk/types").Endpoint
+        | import("@aws-sdk/types").Provider<import("@aws-sdk/types").Endpoint>
+        | import("@aws-sdk/types").EndpointV2
+        | import("@aws-sdk/types").Provider<import("@aws-sdk/types").EndpointV2>
+      ) &
+        (
+          | string
+          | import("@aws-sdk/types").Provider<string>
+          | import("@aws-sdk/types").Endpoint
+          | import("@aws-sdk/types").Provider<import("@aws-sdk/types").Endpoint>
+          | import("@aws-sdk/types").EndpointV2
+          | import("@aws-sdk/types").Provider<
+              import("@aws-sdk/types").EndpointV2
+            >
+        ))
+    | undefined;
+  endpointProvider: (
+    endpointParams: import("./endpoint/EndpointParameters").EndpointParameters,
+    context?: {
+      logger?: import("@aws-sdk/types").Logger | undefined;
+    }
+  ) => import("@aws-sdk/types").EndpointV2;
+  tls?: boolean | undefined;
+  serviceConfiguredEndpoint?: undefined;
+  httpAuthSchemes: import("@smithy/types").HttpAuthScheme[];
+  httpAuthSchemeProvider: import("./auth/httpAuthSchemeProvider").S3HttpAuthSchemeProvider;
+  credentials?:
+    | import("@aws-sdk/types").AwsCredentialIdentity
+    | import("@aws-sdk/types").AwsCredentialIdentityProvider
+    | undefined;
+  signer?:
+    | import("@aws-sdk/types").RequestSigner
+    | ((
+        authScheme?: import("@aws-sdk/types").AuthScheme | undefined
+      ) => Promise<import("@aws-sdk/types").RequestSigner>)
+    | undefined;
+  systemClockOffset?: number | undefined;
+  signingRegion?: string | undefined;
+  signerConstructor:
+    | (new (
+        options: import("@smithy/signature-v4").SignatureV4Init &
+          import("@smithy/signature-v4").SignatureV4CryptoInit
+      ) => import("@aws-sdk/types").RequestSigner)
+    | typeof import("@aws-sdk/signature-v4-multi-region").SignatureV4MultiRegion;
+  forcePathStyle?:
+    | (boolean & (boolean | import("@aws-sdk/types").Provider<boolean>))
+    | undefined;
+  useAccelerateEndpoint?:
+    | (boolean & (boolean | import("@aws-sdk/types").Provider<boolean>))
+    | undefined;
+  disableMultiregionAccessPoints?:
+    | (boolean & (boolean | import("@aws-sdk/types").Provider<boolean>))
+    | undefined;
+  followRegionRedirects?: boolean | undefined;
+  s3ExpressIdentityProvider?:
+    | import("@aws-sdk/middleware-sdk-s3").S3ExpressIdentityProvider
+    | undefined;
+  bucketEndpoint?: boolean | undefined;
+  useGlobalEndpoint?:
+    | boolean
+    | import("@aws-sdk/types").Provider<boolean>
+    | undefined;
+};

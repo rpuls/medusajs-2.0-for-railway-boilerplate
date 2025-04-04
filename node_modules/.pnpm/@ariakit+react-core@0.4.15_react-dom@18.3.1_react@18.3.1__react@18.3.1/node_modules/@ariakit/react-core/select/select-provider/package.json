@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/select/select-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/select/select-provider.cjs",
+  "module": "../../esm/select/select-provider.js",
+  "types": "../../cjs/select/select-provider.d.ts"
+}

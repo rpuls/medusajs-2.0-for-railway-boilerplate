@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/use-prevent-body-scroll",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/use-prevent-body-scroll.cjs",
+  "module": "../../../esm/dialog/utils/use-prevent-body-scroll.js",
+  "types": "../../../cjs/dialog/utils/use-prevent-body-scroll.d.ts"
+}

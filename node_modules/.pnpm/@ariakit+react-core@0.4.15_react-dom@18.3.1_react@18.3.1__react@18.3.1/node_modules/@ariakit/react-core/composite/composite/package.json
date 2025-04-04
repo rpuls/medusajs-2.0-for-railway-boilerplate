@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/composite/composite",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/composite.cjs",
+  "module": "../../esm/composite/composite.js",
+  "types": "../../cjs/composite/composite.d.ts"
+}

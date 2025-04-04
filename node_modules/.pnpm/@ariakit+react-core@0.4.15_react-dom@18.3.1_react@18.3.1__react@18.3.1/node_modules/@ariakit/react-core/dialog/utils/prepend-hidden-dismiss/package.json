@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/prepend-hidden-dismiss",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/prepend-hidden-dismiss.cjs",
+  "module": "../../../esm/dialog/utils/prepend-hidden-dismiss.js",
+  "types": "../../../cjs/dialog/utils/prepend-hidden-dismiss.d.ts"
+}

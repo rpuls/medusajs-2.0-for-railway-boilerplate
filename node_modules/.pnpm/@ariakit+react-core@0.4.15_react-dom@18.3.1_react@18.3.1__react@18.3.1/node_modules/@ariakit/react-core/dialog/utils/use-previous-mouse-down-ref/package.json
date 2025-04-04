@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/dialog/utils/use-previous-mouse-down-ref",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../../cjs/dialog/utils/use-previous-mouse-down-ref.cjs",
+  "module": "../../../esm/dialog/utils/use-previous-mouse-down-ref.js",
+  "types": "../../../cjs/dialog/utils/use-previous-mouse-down-ref.d.ts"
+}

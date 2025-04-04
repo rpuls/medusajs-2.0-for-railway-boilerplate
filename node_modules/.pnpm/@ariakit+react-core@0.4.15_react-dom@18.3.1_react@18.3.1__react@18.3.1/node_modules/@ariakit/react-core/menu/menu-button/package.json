@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/menu/menu-button",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/menu/menu-button.cjs",
+  "module": "../../esm/menu/menu-button.js",
+  "types": "../../cjs/menu/menu-button.d.ts"
+}

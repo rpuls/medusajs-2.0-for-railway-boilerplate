@@ -1,0 +1,1 @@
+{"version":3,"file":"route.d.ts","sourceRoot":"","sources":["../../../../../src/api/store/product-tags/[id]/route.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,uBAAuB,EAAE,MAAM,2BAA2B,CAAA;AAKnE,OAAO,EACL,0BAA0B,EAC1B,cAAc,EACf,MAAM,0BAA0B,CAAA;AAEjC,OAAO,EAAE,yBAAyB,EAAE,MAAM,eAAe,CAAA;AAEzD,eAAO,MAAM,GAAG,QACT,0BAA0B,CAAC,yBAAyB,CAAC,OACrD,cAAc,CAAC,uBAAuB,CAAC,kBAmB7C,CAAA"}

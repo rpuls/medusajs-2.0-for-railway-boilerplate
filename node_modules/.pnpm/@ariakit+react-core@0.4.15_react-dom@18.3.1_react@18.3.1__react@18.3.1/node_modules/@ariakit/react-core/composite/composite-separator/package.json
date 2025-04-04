@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/composite/composite-separator",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/composite/composite-separator.cjs",
+  "module": "../../esm/composite/composite-separator.js",
+  "types": "../../cjs/composite/composite-separator.d.ts"
+}

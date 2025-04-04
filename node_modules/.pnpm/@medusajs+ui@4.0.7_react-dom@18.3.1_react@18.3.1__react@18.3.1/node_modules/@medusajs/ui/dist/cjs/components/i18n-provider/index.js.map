@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../../src/components/i18n-provider/index.ts"],"names":[],"mappings":";;;AAAA,0DAA+B","sourcesContent":["export * from \"./i18n-provider\"\n"]}

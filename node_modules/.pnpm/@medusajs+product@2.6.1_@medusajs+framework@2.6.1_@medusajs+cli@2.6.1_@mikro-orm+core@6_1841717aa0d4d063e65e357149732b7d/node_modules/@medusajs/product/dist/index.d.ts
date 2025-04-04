@@ -1,0 +1,6 @@
+import { ProductModuleService } from "./services";
+declare const _default: import("@medusajs/types").ModuleExports<typeof ProductModuleService> & {
+    linkable: Record<string, any>;
+};
+export default _default;
+//# sourceMappingURL=index.d.ts.map

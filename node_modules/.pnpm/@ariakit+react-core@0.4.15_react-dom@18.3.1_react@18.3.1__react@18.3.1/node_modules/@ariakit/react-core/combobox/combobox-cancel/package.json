@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/combobox/combobox-cancel",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/combobox/combobox-cancel.cjs",
+  "module": "../../esm/combobox/combobox-cancel.js",
+  "types": "../../cjs/combobox/combobox-cancel.d.ts"
+}

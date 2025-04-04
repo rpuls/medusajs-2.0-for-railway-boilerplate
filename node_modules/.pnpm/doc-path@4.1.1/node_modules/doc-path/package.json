@@ -1,0 +1,55 @@
+{
+    "author": "mrodrig",
+    "name": "doc-path",
+    "description": "A document path library for Node",
+    "version": "4.1.1",
+    "homepage": "https://mrodrig.github.io/doc-path",
+    "repository": {
+        "type": "git",
+        "url": "git+ssh://git@github.com/mrodrig/doc-path.git"
+    },
+    "main": "./lib/path.js",
+    "types": "./lib/path.d.ts",
+    "scripts": {
+        "build": "npm run lint && npm run test && npm run compile",
+        "compile": "tsc -p tsconfig.build.json",
+        "coverage": "nyc npm run test",
+        "lint": "eslint --ext .js,.ts src test",
+        "prepublishOnly": "npm run build",
+        "test": "mocha -r ts-node/register test/index.ts"
+    },
+    "keywords": [
+        "document",
+        "json",
+        "json library",
+        "document path",
+        "doc-path",
+        "doc path",
+        "doc",
+        "path",
+        "json path",
+        "path evaluator",
+        "object",
+        "object path",
+        "parse",
+        "parser"
+    ],
+    "dependencies": {},
+    "devDependencies": {
+        "@types/mocha": "10.0.1",
+        "@types/node": "18.15.3",
+        "@typescript-eslint/eslint-plugin": "5.55.0",
+        "@typescript-eslint/parser": "5.55.0",
+        "eslint": "8.36.0",
+        "eslint-config-google": "0.14.0",
+        "eslint-plugin-import": "2.27.5",
+        "mocha": "10.2.0",
+        "nyc": "15.1.0",
+        "ts-node": "10.9.1",
+        "typescript": "5.0.2"
+    },
+    "engines": {
+        "node": ">=16"
+    },
+    "license": "MIT"
+}

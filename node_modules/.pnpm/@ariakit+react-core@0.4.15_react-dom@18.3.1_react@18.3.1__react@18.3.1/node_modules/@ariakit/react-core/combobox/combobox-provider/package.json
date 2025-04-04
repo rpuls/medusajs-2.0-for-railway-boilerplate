@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/combobox/combobox-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/combobox/combobox-provider.cjs",
+  "module": "../../esm/combobox/combobox-provider.js",
+  "types": "../../cjs/combobox/combobox-provider.d.ts"
+}

@@ -18,7 +18,7 @@ export type CreateStoreInput = {
   password: string;
   is_super_admin?: boolean;
 };
-// test comment
+
 export const createStoreWorkflow = createWorkflow(
   "create-store",
   (input: CreateStoreInput) => {

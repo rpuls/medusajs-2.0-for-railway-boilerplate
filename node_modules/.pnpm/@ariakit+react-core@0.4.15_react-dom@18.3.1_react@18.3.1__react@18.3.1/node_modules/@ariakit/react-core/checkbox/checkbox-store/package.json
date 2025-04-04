@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/checkbox/checkbox-store",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/checkbox/checkbox-store.cjs",
+  "module": "../../esm/checkbox/checkbox-store.js",
+  "types": "../../cjs/checkbox/checkbox-store.d.ts"
+}

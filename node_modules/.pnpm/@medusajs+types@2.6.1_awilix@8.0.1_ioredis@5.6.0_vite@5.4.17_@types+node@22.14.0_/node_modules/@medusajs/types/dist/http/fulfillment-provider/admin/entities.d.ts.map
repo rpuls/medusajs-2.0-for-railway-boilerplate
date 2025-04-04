@@ -1,0 +1,1 @@
+{"version":3,"file":"entities.d.ts","sourceRoot":"","sources":["../../../../src/http/fulfillment-provider/admin/entities.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,uBAAuB,EACvB,6BAA6B,EAC9B,MAAM,WAAW,CAAA;AAElB,MAAM,WAAW,wBAAyB,SAAQ,uBAAuB;CAAG;AAE5E,MAAM,WAAW,8BACf,SAAQ,6BAA6B;CAAG"}

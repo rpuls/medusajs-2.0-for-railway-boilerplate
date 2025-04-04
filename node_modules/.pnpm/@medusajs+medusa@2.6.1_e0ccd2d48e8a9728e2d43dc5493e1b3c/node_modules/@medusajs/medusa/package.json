@@ -1,0 +1,152 @@
+{
+  "name": "@medusajs/medusa",
+  "version": "2.6.1",
+  "description": "Building blocks for digital commerce",
+  "main": "dist/index.js",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./dist/index.js",
+    "./types": "./dist/types/index.js",
+    "./utils": "./dist/utils/index.js",
+    "./api/*": "./dist/api/*.js",
+    "./subscribers/*": "./dist/subscribers/*.js",
+    "./jobs/*": "./dist/jobs/*.js",
+    "./core-flows": "./dist/core-flows/index.js",
+    "./loaders/*": "./dist/loaders/*.js",
+    "./commands/*": "./dist/commands/*.js",
+    "./*": "./dist/modules/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medusajs/medusa",
+    "directory": "packages/medusa"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "oas",
+    "!dist/**/__tests__",
+    "!dist/**/__mocks__",
+    "!dist/**/__fixtures__"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Sebastian Rindom",
+  "license": "MIT",
+  "scripts": {
+    "watch": "tsc --build --watch",
+    "build": "rimraf dist && tsc --build",
+    "serve": "node dist/app.js",
+    "test": "jest --runInBand --bail --forceExit --testPathIgnorePatterns='/integration-tests/' -- src/**/__tests__/**/*.ts",
+    "test:integration": "jest --forceExit -- src/**/integration-tests/**/__tests__/**/*.ts"
+  },
+  "devDependencies": {
+    "@medusajs/framework": "2.6.1",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/instrumentation": "^0.53.0",
+    "@opentelemetry/instrumentation-pg": "^0.44.0",
+    "@opentelemetry/resources": "^1.26.0",
+    "@opentelemetry/sdk-node": "^0.53.0",
+    "@opentelemetry/sdk-trace-node": "^1.26.0",
+    "@swc/core": "1.5.7",
+    "@swc/helpers": "^0.5.11",
+    "@swc/jest": "^0.2.36",
+    "@types/express": "^4.17.17",
+    "@types/jsonwebtoken": "^8.5.9",
+    "@types/lodash": "^4.14.191",
+    "@types/multer": "^1.4.7",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.1",
+    "supertest": "^4.0.2",
+    "typescript": "^5.6.2",
+    "yalc": "1.0.0-pre.53"
+  },
+  "dependencies": {
+    "@inquirer/checkbox": "^2.3.11",
+    "@inquirer/input": "^2.2.9",
+    "@medusajs/admin-bundler": "2.6.1",
+    "@medusajs/api-key": "2.6.1",
+    "@medusajs/auth": "2.6.1",
+    "@medusajs/auth-emailpass": "2.6.1",
+    "@medusajs/auth-github": "2.6.1",
+    "@medusajs/auth-google": "2.6.1",
+    "@medusajs/cache-inmemory": "2.6.1",
+    "@medusajs/cache-redis": "2.6.1",
+    "@medusajs/cart": "2.6.1",
+    "@medusajs/core-flows": "2.6.1",
+    "@medusajs/currency": "2.6.1",
+    "@medusajs/customer": "2.6.1",
+    "@medusajs/event-bus-local": "2.6.1",
+    "@medusajs/event-bus-redis": "2.6.1",
+    "@medusajs/file": "2.6.1",
+    "@medusajs/file-local": "2.6.1",
+    "@medusajs/file-s3": "2.6.1",
+    "@medusajs/fulfillment": "2.6.1",
+    "@medusajs/fulfillment-manual": "2.6.1",
+    "@medusajs/index": "2.6.1",
+    "@medusajs/inventory": "2.6.1",
+    "@medusajs/link-modules": "2.6.1",
+    "@medusajs/locking": "2.6.1",
+    "@medusajs/locking-postgres": "2.6.1",
+    "@medusajs/locking-redis": "2.6.1",
+    "@medusajs/notification": "2.6.1",
+    "@medusajs/notification-local": "2.6.1",
+    "@medusajs/notification-sendgrid": "2.6.1",
+    "@medusajs/order": "2.6.1",
+    "@medusajs/payment": "2.6.1",
+    "@medusajs/payment-stripe": "2.6.1",
+    "@medusajs/pricing": "2.6.1",
+    "@medusajs/product": "2.6.1",
+    "@medusajs/promotion": "2.6.1",
+    "@medusajs/region": "2.6.1",
+    "@medusajs/sales-channel": "2.6.1",
+    "@medusajs/stock-location": "2.6.1",
+    "@medusajs/store": "2.6.1",
+    "@medusajs/tax": "2.6.1",
+    "@medusajs/telemetry": "2.6.1",
+    "@medusajs/user": "2.6.1",
+    "@medusajs/workflow-engine-inmemory": "2.6.1",
+    "@medusajs/workflow-engine-redis": "2.6.1",
+    "boxen": "^5.0.1",
+    "chalk": "^4.0.0",
+    "chokidar": "^3.4.2",
+    "compression": "^1.7.4",
+    "express": "^4.21.0",
+    "fs-exists-cached": "^1.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "multer": "^1.4.5-lts.1",
+    "node-schedule": "^2.1.1",
+    "qs": "^6.11.2",
+    "request-ip": "^3.3.0",
+    "slugify": "^1.6.6",
+    "uuid": "^9.0.0",
+    "zod": "3.22.4"
+  },
+  "peerDependencies": {
+    "@medusajs/framework": "2.6.1",
+    "@mikro-orm/core": "6.4.3",
+    "@mikro-orm/knex": "6.4.3",
+    "@mikro-orm/migrations": "6.4.3",
+    "@mikro-orm/postgresql": "6.4.3",
+    "@swc/core": "1.5.7",
+    "awilix": "^8.0.1",
+    "react-dom": "^18.0.0",
+    "yalc": "1.0.0-pre.53"
+  },
+  "peerDependenciesMeta": {
+    "@swc/core": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "yalc": {
+      "optional": true
+    }
+  },
+  "gitHead": "cd1f5afa5aa8c0b15ea957008ee19f1d695cbd2e"
+}

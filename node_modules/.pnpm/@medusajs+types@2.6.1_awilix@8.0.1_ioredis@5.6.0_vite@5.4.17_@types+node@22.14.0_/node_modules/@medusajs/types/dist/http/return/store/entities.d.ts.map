@@ -1,0 +1,1 @@
+{"version":3,"file":"entities.d.ts","sourceRoot":"","sources":["../../../../src/http/return/store/entities.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAE,cAAc,EAAE,MAAM,WAAW,CAAA;AAEtD,MAAM,WAAW,WACf,SAAQ,IAAI,CAAC,UAAU,EAAE,iBAAiB,GAAG,eAAe,CAAC;IAC7D,KAAK,EAAE,eAAe,EAAE,CAAA;CACzB;AACD,MAAM,WAAW,eAAgB,SAAQ,cAAc;CAAG"}

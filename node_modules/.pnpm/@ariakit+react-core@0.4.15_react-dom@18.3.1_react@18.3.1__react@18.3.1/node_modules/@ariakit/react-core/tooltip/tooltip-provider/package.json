@@ -1,0 +1,8 @@
+{
+  "name": "@ariakit/react-core/tooltip/tooltip-provider",
+  "private": true,
+  "sideEffects": false,
+  "main": "../../cjs/tooltip/tooltip-provider.cjs",
+  "module": "../../esm/tooltip/tooltip-provider.js",
+  "types": "../../cjs/tooltip/tooltip-provider.d.ts"
+}
