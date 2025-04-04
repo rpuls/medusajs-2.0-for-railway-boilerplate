@@ -18,11 +18,8 @@
     "analyze": "ANALYZE=true next build",
     "test-e2e": "playwright test e2e"
   },
-  "resolutions": {
-    "webpack": "^5"
-  },
   "dependencies": {
-    "@headlessui/react": "^1.6.1",
+    "@headlessui/react": "^1.7.17",
     "@hookform/error-message": "^2.0.0",
     "@medusajs/js-sdk": "preview",
     "@medusajs/types": "preview",
@@ -36,38 +33,36 @@
     "axios": "^1.6.7",
     "lodash": "^4.17.21",
     "medusajs-launch-utils": "latest",
-    "next": "^15.0.0",
+    "next": "^14.1.0",
     "pg": "^8.11.3",
     "qs": "^6.12.1",
-    "react": "^18.3.1",
+    "react": "^18.2.0",
     "react-country-flag": "^3.0.2",
-    "react-dom": "^18.3.5",
+    "react-dom": "^18.2.0",
     "react-instantsearch-hooks-web": "^6.29.0",
     "react-intersection-observer": "^9.3.4",
     "server-only": "^0.0.1",
-    "tailwindcss-radix": "^2.8.0",
-    "webpack": "^5"
+    "tailwindcss-radix": "^2.8.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.17.5",
+    "@babel/core": "^7.23.9",
     "@medusajs/client-types": "preview",
     "@medusajs/ui-preset": "preview",
     "@playwright/test": "^1.41.1",
-    "@types/lodash": "^4.14.195",
-    "@types/node": "20.17.10",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^20.11.19",
     "@types/pg": "^8.11.0",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
     "@types/react-instantsearch-dom": "^6.12.3",
     "ansi-colors": "^4.1.3",
-    "autoprefixer": "^10.4.2",
-    "babel-loader": "^8.2.3",
-    "eslint": "8.10.0",
-    "eslint-config-next": "^13.4.5",
-    "postcss": "^8.4.8",
-    "prettier": "^2.8.8",
-    "tailwindcss": "^3.0.23",
-    "typescript": "^5.7.2"
-  },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+    "autoprefixer": "^10.4.17",
+    "babel-loader": "^9.1.3",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.1.0",
+    "postcss": "^8.4.35",
+    "prettier": "^3.2.5",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
+  }
 }
