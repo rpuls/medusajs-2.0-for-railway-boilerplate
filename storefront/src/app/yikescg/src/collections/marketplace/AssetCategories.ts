@@ -1,7 +1,9 @@
 import { CollectionConfig } from 'payload/types';
 import { anyone } from '../../access/anyone';
 import { authenticated } from '../../access/authenticated';
+import { authenticatedOrPublished } from '../../access/authenticatedOrPublished';
 import { slugField } from '@/fields/slug';
+import { generatePreviewPath } from '../../utilities/generatePreviewPath';
 
 export const AssetCategories: CollectionConfig = {
   slug: 'asset-categories',
@@ -9,9 +11,26 @@ export const AssetCategories: CollectionConfig = {
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'parent'],
     group: 'Marketplace',
+    livePreview: {
+      url: ({ data, req }) => {
+        const path = generatePreviewPath({
+          slug: typeof data?.slug === 'string' ? data.slug : '',
+          collection: 'asset-categories',
+          req,
+        })
+
+        return path
+      },
+    },
+    preview: (data, { req }) =>
+      generatePreviewPath({
+        slug: typeof data?.slug === 'string' ? data.slug : '',
+        collection: 'asset-categories',
+        req,
+      }),
   },
   access: {
-    read: anyone,
+    read: authenticatedOrPublished,
     create: authenticated,
     update: authenticated,
     delete: authenticated,
@@ -79,5 +98,34 @@ export const AssetCategories: CollectionConfig = {
         description: 'Meta description for SEO',
       },
     },
+    {
+      name: 'publishedAt',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        date: {
+          pickerAppearance: 'dayAndTime',
+        },
+      },
+      hooks: {
+        beforeChange: [
+          ({ siblingData, value }) => {
+            if (siblingData._status === 'published' && !value) {
+              return new Date()
+            }
+            return value
+          },
+        ],
+      },
+    },
   ],
+  versions: {
+    drafts: {
+      autosave: {
+        interval: 100, // We set this interval for optimal live preview
+      },
+      schedulePublish: true,
+    },
+    maxPerDoc: 50,
+  },
 };

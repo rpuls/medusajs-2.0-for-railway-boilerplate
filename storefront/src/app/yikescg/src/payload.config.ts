@@ -71,6 +71,10 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
     },
+    // Use a separate schema for Payload CMS tables to avoid conflicts with Medusa.js
+    schemaName: 'payload',
+    // Create the schema if it doesn't exist
+    createSchema: true,
   }),
   collections: [
     // Core collections
