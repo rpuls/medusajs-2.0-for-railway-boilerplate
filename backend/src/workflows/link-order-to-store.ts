@@ -1,5 +1,19 @@
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
-import { Workflow } from "@medusajs/workflows-sdk";
+
+// Define a simple Workflow class since we can't import it directly
+class Workflow {
+  config: any;
+  handler: any;
+
+  constructor(config: any, handler: any) {
+    this.config = config;
+    this.handler = handler;
+  }
+
+  run(options: any) {
+    return this.handler(options);
+  }
+}
 
 export const linkOrderToStoreWorkflow = (container) => {
   return new Workflow(
@@ -32,4 +46,4 @@ export const linkOrderToStoreWorkflow = (container) => {
       };
     }
   );
-}; 
+};

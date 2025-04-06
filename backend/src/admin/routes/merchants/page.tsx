@@ -25,11 +25,11 @@ type ImpersonateQuery = {
 
 type ImpersonateUserResponse = {
   email: string;
-  id: string;
+  id?: string;
 };
 
 type ImpersonateResponse = {
-  impersionated_as: ImpersonateUserResponse;
+  impersonated_as: ImpersonateUserResponse;
 };
 
 const MerchantPage = () => {
@@ -71,17 +71,17 @@ const MerchantPage = () => {
   ];
 
   useEffect(() => {
-    if (impersonateResponse?.impersionated_as) {
-      storeImpersonation(impersonateResponse?.impersionated_as.email);
+    if (impersonateResponse?.data?.impersonated_as) {
+      storeImpersonation(impersonateResponse.data.impersonated_as.email);
       window.location.href = "/app";
     }
   }, [impersonateResponse]);
 
   const actions = useMemo(() => {
-    if (!merchantsResponse?.merchants) {
+    if (!merchantsResponse?.data?.merchants) {
       return [];
     }
-    return merchantsResponse?.merchants.map((merchant) => {
+    return merchantsResponse.data.merchants.map((merchant) => {
       const items = [
         {
           icon: <Snooze />,
@@ -103,7 +103,7 @@ const MerchantPage = () => {
       }
       return items;
     });
-  }, [merchantsResponse?.merchants]);
+  }, [merchantsResponse?.data?.merchants]);
 
   return (
     <Container>
@@ -112,7 +112,7 @@ const MerchantPage = () => {
       </div>
       <Table
         columns={columns}
-        data={merchantsResponse?.merchants || []}
+        data={merchantsResponse?.data?.merchants || []}
         pageSize={2}
         count={2}
         currentPage={currentPage}

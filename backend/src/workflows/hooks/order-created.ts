@@ -1,5 +1,9 @@
 import { createOrdersWorkflow } from "@medusajs/medusa/core-flows";
-import { UserDTO } from "@medusajs/framework/types";
+// Define UserDTO interface
+interface UserDTO {
+  id: string;
+  email: string;
+}
 import { linkOrderToStoreWorkflow } from "../link-order-to-store";
 
 createOrdersWorkflow.hooks.orderCreated(async ({ order }, { container }) => {

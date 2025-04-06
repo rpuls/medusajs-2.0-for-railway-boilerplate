@@ -13,7 +13,7 @@ export type LinkOrderToStoreInput = {
   userId?: string;
 };
 
-export const linkOrderToStoreWorkflow = createWorkflow(
+export const linkOrderToStoreWorkflow: any = createWorkflow(
   "link-order-to-store",
   (input: LinkOrderToStoreInput) => {
     const storeIdFromUser = when("get-store-id-from-user", input, (input) => {

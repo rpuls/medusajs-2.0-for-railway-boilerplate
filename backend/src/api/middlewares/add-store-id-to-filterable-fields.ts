@@ -39,7 +39,8 @@ export async function addStoreIdToFilterableFields(
     req.filterableFields["store_id"] = store.id;
     // super admin?
   } else if (req.url.includes("/admin/stores") && req.method === "GET") {
-    req.filterableFields["store_name"] = SUPER_ADMIN_STORE_NAME;
+    // For super admin, we don't need to filter by store name
+    // Just let them see all stores
   }
 
   return next();

@@ -154,8 +154,8 @@ const Shipping: React.FC<ShippingProps> = ({
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
                   {selectedShippingMethod?.name}{" "}
-                  {convertToLocale({
-                    amount: selectedShippingMethod?.amount!,
+                  {selectedShippingMethod?.amount && convertToLocale({
+                    amount: selectedShippingMethod.amount,
                     currency_code: cart?.currency_code,
                   })}
                 </Text>

@@ -19,9 +19,7 @@ export async function moveIdsToQueryFromFilterableFields(
   // this is for /admin/stores to get only one user's store
   } else if (req.filterableFields.store_id) {
     req.query["id"] = req.filterableFields.store_id as string;
-  // super admin?
-  } else if (req.filterableFields.store_name) {
-    req.query["name"] = req.filterableFields.store_name as string;
+  // We no longer need to filter by store_name for super admin
   }
 
   return next();

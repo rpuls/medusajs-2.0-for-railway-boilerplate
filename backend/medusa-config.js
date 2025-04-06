@@ -1,5 +1,5 @@
-import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
-import {
+const { Modules, defineConfig } = require('@medusajs/utils');
+const {
   ADMIN_CORS,
   AUTH_CORS,
   BACKEND_URL,
@@ -13,8 +13,6 @@ import {
   SENDGRID_FROM_EMAIL,
   SHOULD_DISABLE_ADMIN,
   STORE_CORS,
-  STRIPE_API_KEY,
-  STRIPE_WEBHOOK_SECRET,
   WORKER_MODE,
   MINIO_ENDPOINT,
   MINIO_ACCESS_KEY,
@@ -22,9 +20,7 @@ import {
   MINIO_BUCKET,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY
-} from 'lib/constants';
-
-loadEnv(process.env.NODE_ENV, process.cwd());
+} = require('./src/lib/constants');
 
 const medusaConfig = {
   projectConfig: {
@@ -112,25 +108,27 @@ const medusaConfig = {
         ]
       }
     }] : []),
-    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
+    {
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
       options: {
         providers: [
           {
-            resolve: '@medusajs/payment-stripe',
-            id: 'stripe',
+            resolve: './src/payment/square-payment',
+            id: 'square',
             options: {
-              apiKey: STRIPE_API_KEY,
-              webhookSecret: STRIPE_WEBHOOK_SECRET,
+              squareApiKey: process.env.SQUARE_API_KEY,
+              applicationId: process.env.SQUARE_APPLICATION_ID,
+              locationId: process.env.SQUARE_LOCATION_ID,
+              isProduction: process.env.NODE_ENV === 'production',
             },
-          },
+          }
         ],
       },
-    }] : [])
+    },
   ],
   plugins: [
-  ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
+    ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
       resolve: '@rokmohar/medusa-plugin-meilisearch',
       options: {
         config: {
@@ -148,8 +146,47 @@ const medusaConfig = {
         }
       }
     }] : [])
-  ]
+  ],
+  // Register custom entities
+  entities: {
+    Review: {
+      resolve: './src/models/review'
+    },
+    DigitalAsset: {
+      resolve: './src/models/digital-asset'
+    },
+    Changelog: {
+      resolve: './src/models/changelog'
+    },
+    // We're not registering StoreExtension as an entity anymore
+    // Instead, we'll use the metadata field in the Store entity
+  },
+  // Register custom services
+  services: {
+    // Add our custom services here
+    asset_cache: {
+      resolve: './src/services/asset-cache-service',
+      options: {
+        ttl: 3600, // 1 hour cache TTL
+      }
+    },
+    file_scan: {
+      resolve: './src/services/file-scan-service',
+      options: {
+        // Add any configuration options for the file scanner
+      }
+    },
+    minio_asset: {
+      resolve: './src/services/minio-asset-service',
+      options: {
+        endPoint: MINIO_ENDPOINT,
+        accessKey: MINIO_ACCESS_KEY,
+        secretKey: MINIO_SECRET_KEY,
+        bucket: MINIO_BUCKET
+      }
+    }
+  }
 };
 
 console.log(JSON.stringify(medusaConfig, null, 2));
-export default defineConfig(medusaConfig);
+module.exports = defineConfig(medusaConfig);

@@ -17,8 +17,8 @@ const fetchCart = async () => {
     return null
   }
 
-  if (cart?.items?.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
+  if (cart?.items?.length && cart?.region_id) {
+    const enrichedItems = await enrichLineItems(cart.items, cart.region_id)
     cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
   }
 
