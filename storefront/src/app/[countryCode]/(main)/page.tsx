@@ -15,7 +15,7 @@ export default async function Home({
       <div className="relative w-full h-screen overflow-hidden">
         <video
           className="absolute top-0 left-0 w-full h-full object-cover"
-          src="/intro.mp4"
+          src="/flower_power_AI.mp4"
           autoPlay
           muted
           loop
