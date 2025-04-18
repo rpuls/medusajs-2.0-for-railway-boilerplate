@@ -9,8 +9,14 @@ export const metadata: Metadata = {
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="en" data-mode="light">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>
-        <main className="relative">{props.children}</main>
+        <main className="relative font-sans">{props.children}</main>
       </body>
     </html>
   )
