@@ -47,9 +47,7 @@
     "react-intersection-observer": "^9.3.4",
     "server-only": "^0.0.1",
     "tailwindcss-radix": "^2.8.0",
-    "webpack": "^5",
-    "yet-another-react-lightbox": "^2.15.0",
-    "react-photo-album": "^1.5.0"
+    "webpack": "^5"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",
