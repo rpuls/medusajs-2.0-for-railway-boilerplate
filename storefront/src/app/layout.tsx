@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
 }
 
-export default function RootLayout(props: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-mode="light">
       <head>
@@ -22,7 +22,8 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         {/* Хедер */}
         <Nav />
 
-        <main className="relative">{props.children}</main>
+        {/* Основной контент */}
+        <main className="relative min-h-screen">{children}</main>
 
         {/* Футер */}
         <Footer />
