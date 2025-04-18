@@ -15,7 +15,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="font-sans tracking-wider text-base uppercase">
+      <body className="font-sans tracking-wider text-base">
         {props.children}
       </body>
     </html>
