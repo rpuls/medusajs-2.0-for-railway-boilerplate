@@ -1,73 +1,82 @@
-"use client"
+'use client'
 
-import { useEffect, useState } from "react"
-import Image from "next/image"
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import clsx from 'clsx'
 
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
-  const [index, setIndex] = useState<number | null>(null)
+  const [selected, setSelected] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch("/api/gallery/list")
-      .then((res) => res.json())
-      .then(setImages)
+    const context = require.context(
+      '../../../../public/gallery',
+      false,
+      /\.(jpe?g|png|gif|webp)$/i
+    )
+    const paths = context.keys().map((key) => `/gallery/${key.replace('./', '')}`)
+    setImages(paths)
   }, [])
-
-  const close = () => setIndex(null)
-  const next = () => setIndex((prev) => (prev! + 1) % images.length)
-  const prev = () => setIndex((prev) => (prev! - 1 + images.length) % images.length)
 
   return (
     <div className="px-6 py-20 font-sans tracking-wide">
       <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <div className="columns-2 sm:columns-3 gap-4 space-y-4">
         {images.map((src, i) => (
           <div
             key={i}
-            onClick={() => setIndex(i)}
-            className="cursor-pointer overflow-hidden rounded-lg shadow-md"
+            className="break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
+            onClick={() => setSelected(i)}
           >
             <Image
               src={src}
               alt={`Gallery ${i}`}
-              width={0}
-              height={0}
-              sizes="100vw"
-              style={{ width: "100%", height: "auto" }}
-              className="rounded-lg"
+              width={800}
+              height={800}
+              className="w-full h-auto rounded-lg"
             />
           </div>
         ))}
       </div>
 
-      {/* Модалка */}
-      {index !== null && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <button className="absolute top-4 right-6 text-white text-4xl" onClick={close}>
-            &times;
-          </button>
-          <button
-            className="absolute left-4 text-white text-3xl"
-            onClick={prev}
-          >
-            ⬅
-          </button>
-          <button
-            className="absolute right-4 text-white text-3xl"
-            onClick={next}
-          >
-            ➡
-          </button>
-          <Image
-            src={images[index]}
-            alt={`Gallery ${index}`}
-            width={0}
-            height={0}
-            sizes="80vw"
-            style={{ width: "auto", height: "80vh" }}
-            className="rounded-xl shadow-xl"
-          />
+      {selected !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center cursor-zoom-out"
+          onClick={() => setSelected(null)}
+        >
+          <div className="relative max-w-full max-h-full p-4">
+            <Image
+              src={images[selected]}
+              alt={`Fullscreen ${selected}`}
+              width={1200}
+              height={1200}
+              className="max-h-[90vh] w-auto h-auto object-contain rounded-xl"
+            />
+            {/* Стрелка влево */}
+            {selected > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelected(selected - 1)
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl"
+              >
+                ‹
+              </button>
+            )}
+            {/* Стрелка вправо */}
+            {selected < images.length - 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelected(selected + 1)
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl"
+              >
+                ›
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
