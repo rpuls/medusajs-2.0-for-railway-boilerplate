@@ -9,21 +9,22 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
-const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Gallery: "/gallery", // 👈 добавлено
-  About: "/about", // 👈 добавлено
-  Search: "/search",
-  Account: "/account",
-  Cart: "/cart",
-}
+const SideMenuItems = [
+  { name: "Home", href: "/" },
+  { name: "Store", href: "/store" },
+  { name: "About", href: "/about" },
+  { name: "Gallery", href: "/gallery" },
+  { name: "Search", href: "/search" },
+  { name: "Account", href: "/account" },
+  { name: "Cart", href: "/cart" },
+]
 
 const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
   const toggleState = useToggleState()
 
-  // Принудительно DE
-  const forcedRegion = regions?.find((r) => r.currency_code === "eur" && r.name.toLowerCase().includes("germany"))
+  const forcedRegion = regions?.find(
+    (r) => r.currency_code === "eur" && r.name.toLowerCase().includes("germany")
+  )
 
   return (
     <div className="h-full">
@@ -61,7 +62,7 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                       </button>
                     </div>
                     <ul className="flex flex-col gap-6 items-start justify-start">
-                      {Object.entries(SideMenuItems).map(([name, href]) => (
+                      {SideMenuItems.map(({ name, href }) => (
                         <li key={name}>
                           <LocalizedClientLink
                             href={href}
