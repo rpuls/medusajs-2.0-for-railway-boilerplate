@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
+import Link from "next/link"
 
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
@@ -27,12 +28,11 @@ export default function GalleryPage() {
     if (index !== null) setIndex((prev) => (prev! - 1 + images.length) % images.length)
   }, [index, images])
 
-  // Клавиатурная навигация
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (index === null) return
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") next()
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") prev()
+      if (e.key === "ArrowRight") next()
+      if (e.key === "ArrowLeft") prev()
       if (e.key === "Escape") close()
     }
     window.addEventListener("keydown", handleKey)
@@ -43,12 +43,12 @@ export default function GalleryPage() {
     <div className="px-6 py-20 font-sans tracking-wide">
       <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
 
-      <div className="columns-2 sm:columns-3 gap-4 space-y-4">
+      <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4 space-y-4">
         {images.map((src, i) => (
           <div
             key={i}
-            onClick={() => setIndex(i)}
             className="break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
+            onClick={() => setIndex(i)}
           >
             <Image
               src={src}
@@ -63,35 +63,52 @@ export default function GalleryPage() {
 
       {index !== null && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center"
           onClick={close}
         >
-          {/* Левая зона для перехода назад */}
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              prev()
-            }}
-            className="absolute inset-y-0 left-0 w-1/2 cursor-pointer z-40 flex items-center justify-start pl-4"
+          {/* Кнопка Back */}
+          <Link
+            href="/store"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-4 left-4 text-white uppercase tracking-wider text-sm hover:underline z-50"
           >
-            <div className="text-white text-4xl select-none">&lsaquo;</div>
-          </div>
+            ← Back to Store
+          </Link>
 
-          {/* Правая зона для перехода вперёд */}
+          {/* Стрелка влево */}
+          {index > 0 && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                prev()
+              }}
+              className="absolute left-0 top-0 bottom-0 w-1/5 flex items-center justify-start pl-4 z-50"
+            >
+              <div className="text-white text-5xl font-light select-none">&#x2039;</div>
+            </div>
+          )}
+
+          {/* Стрелка вправо */}
+          {index < images.length - 1 && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                next()
+              }}
+              className="absolute right-0 top-0 bottom-0 w-1/5 flex items-center justify-end pr-4 z-50"
+            >
+              <div className="text-white text-5xl font-light select-none">&#x203A;</div>
+            </div>
+          )}
+
+          {/* Изображение */}
           <div
-            onClick={(e) => {
-              e.stopPropagation()
-              next()
-            }}
-            className="absolute inset-y-0 right-0 w-1/2 cursor-pointer z-40 flex items-center justify-end pr-4"
+            className="max-w-[90vw] max-h-[90vh] p-4 z-40 cursor-default"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-white text-4xl select-none">&rsaquo;</div>
-          </div>
-
-          <div className="relative max-w-[90vw] max-h-[90vh]">
             <Image
               src={images[index]}
-              alt="Fullscreen"
+              alt={`Fullscreen ${index}`}
               width={1200}
               height={1200}
               className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
