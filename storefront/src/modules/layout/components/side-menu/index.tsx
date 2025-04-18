@@ -9,16 +9,15 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
-const SideMenuItems = [
-  { name: "Home", href: "/" },
-  { name: "Store", href: "/store" },
-  { name: "About", href: "/(main)/about" },   // <-- исправлено
-  { name: "Gallery", href: "/(main)/gallery" }, // <-- исправлено
-  { name: "Search", href: "/search" },
-  { name: "Account", href: "/account" },
-  { name: "Cart", href: "/cart" },
-]
-
+const SideMenuItems = {
+  Home: "/",
+  Store: "/store",
+  Gallery: "/gallery", // ✅ теперь правильно
+  About: "/about",     // ✅ теперь правильно
+  Search: "/search",
+  Account: "/account",
+  Cart: "/cart",
+}
 const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
   const toggleState = useToggleState()
 
