@@ -1,5 +1,7 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
+import Nav from "@modules/layout/templates/nav"
+import Footer from "@modules/layout/templates/footer"
 import "styles/globals.css"
 
 export const metadata: Metadata = {
@@ -17,7 +19,13 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         />
       </head>
       <body className="font-sans tracking-wide text-base antialiased">
+        {/* Хедер */}
+        <Nav />
+
         <main className="relative">{props.children}</main>
+
+        {/* Футер */}
+        <Footer />
       </body>
     </html>
   )
