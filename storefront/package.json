@@ -2,8 +2,11 @@
   "name": "medusa-next",
   "version": "1.0.3",
   "private": true,
-  "author": "Kasper Fabricius Kristensen <kasper@medusajs.com> & Victor Gerbrands <victor@medusajs.com>",
+  "author": "Kasper Fabricius Kristensen <kasper@medusajs.com> & Victor Gerbrands <victor@medusajs.com> (https://www.medusajs.com)",
   "description": "Next.js Starter to be used with Medusa server",
+  "keywords": [
+    "medusa-storefront"
+  ],
   "scripts": {
     "wait": "await-backend",
     "launcher": "launch-storefront",
@@ -44,9 +47,7 @@
     "react-intersection-observer": "^9.3.4",
     "server-only": "^0.0.1",
     "tailwindcss-radix": "^2.8.0",
-    "webpack": "^5",
-    "yet-another-react-lightbox": "^2.14.1",
-    "react-photo-album": "^3.1.0"
+    "webpack": "^5"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",
