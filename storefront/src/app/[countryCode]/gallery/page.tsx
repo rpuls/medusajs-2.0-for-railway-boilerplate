@@ -6,6 +6,7 @@ import Image from "next/image"
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
   const [index, setIndex] = useState<number | null>(null)
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const context = require.context(
@@ -47,16 +48,19 @@ export default function GalleryPage() {
           <div
             key={i}
             className="break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
-            onClick={() => setIndex(i)}
+            onClick={() => loaded[src] && setIndex(i)}
           >
-            <Image
-              src={src}
-              alt={`Image ${i}`}
-              width={600}
-              height={900}
-              className="w-full h-auto rounded-lg transition-opacity duration-300"
-              loading="lazy"
-            />
+            <div className="relative w-full aspect-[3/4]">
+              <Image
+                src={src}
+                alt={`Gallery ${i}`}
+                fill
+                className="object-cover rounded-lg transition-opacity duration-300"
+                onLoadingComplete={() =>
+                  setLoaded((prev) => ({ ...prev, [src]: true }))
+                }
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -69,7 +73,6 @@ export default function GalleryPage() {
         >
           {/* Стрелки */}
           <div className="absolute inset-0 z-50 pointer-events-none">
-            {/* Левая стрелка */}
             <div className="absolute left-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
@@ -81,8 +84,6 @@ export default function GalleryPage() {
                 &#x2039;
               </button>
             </div>
-
-            {/* Правая стрелка */}
             <div className="absolute right-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
@@ -96,7 +97,7 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          {/* Картинка */}
+          {/* Фото */}
           <div
             className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
           >
