@@ -12,6 +12,24 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["'Barlow Condensed'", "sans-serif"],
+      },
+      fontSize: {
+        base: "1rem",
+        sm: "0.95rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+      },
+      letterSpacing: {
+        wider: "0.05em",
+        widest: "0.1em",
+      },
+      fontWeight: {
+        normal: "400",
+      },
       transitionProperty: {
         width: "width margin",
         height: "height",
@@ -54,20 +72,6 @@ module.exports = {
         large: "1440px",
         xlarge: "1680px",
         "2xlarge": "1920px",
-      },
-      fontSize: {
-        base: "1.05rem", // увеличено
-        lg: "1.25rem",
-        xl: "1.5rem",
-        "2xl": "1.875rem",
-        "3xl": "2rem",
-      },
-      fontFamily: {
-        sans: ["'Barlow Condensed'", "sans-serif"], // ← используем только этот шрифт
-      },
-      letterSpacing: {
-        wider: "0.05em",
-        widest: "0.1em",
       },
       keyframes: {
         ring: {
