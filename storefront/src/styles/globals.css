@@ -1,18 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500&display=swap');
+
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-/* Глобальные стили для всего сайта */
+/* Глобально применяем Barlow Condensed */
 html,
 body {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.05em;
-  font-size: 16px;
-  line-height: 1.5;
+  @apply font-sans text-[16px] leading-[1.5] tracking-wide text-black;
 }
 
-/* Scrollbar и autofill стили */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -23,8 +20,8 @@ body {
   }
 
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE и Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   input:focus ~ label,
@@ -59,7 +56,6 @@ body {
   }
 }
 
-/* Компонентные утилиты */
 @layer components {
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6;
@@ -70,54 +66,54 @@ body {
   }
 
   .text-xsmall-regular {
-    @apply text-[10px] leading-4 font-normal;
+    @apply text-[10px] leading-4 font-normal font-sans;
   }
 
   .text-small-regular {
-    @apply text-sm leading-5 font-normal;
+    @apply text-xs leading-5 font-normal font-sans;
   }
 
   .text-small-semi {
-    @apply text-sm leading-5 font-semibold;
+    @apply text-xs leading-5 font-semibold font-sans;
   }
 
   .text-base-regular {
-    @apply text-base leading-6 font-normal;
+    @apply text-sm leading-6 font-normal font-sans;
   }
 
   .text-base-semi {
-    @apply text-base leading-6 font-semibold;
+    @apply text-sm leading-6 font-semibold font-sans;
   }
 
   .text-large-regular {
-    @apply text-lg leading-6 font-normal;
+    @apply text-base leading-6 font-normal font-sans;
   }
 
   .text-large-semi {
-    @apply text-lg leading-6 font-semibold;
+    @apply text-base leading-6 font-semibold font-sans;
   }
 
   .text-xl-regular {
-    @apply text-xl leading-[36px] font-normal;
+    @apply text-2xl leading-[36px] font-normal font-sans;
   }
 
   .text-xl-semi {
-    @apply text-xl leading-[36px] font-semibold;
+    @apply text-2xl leading-[36px] font-semibold font-sans;
   }
 
   .text-2xl-regular {
-    @apply text-2xl leading-[48px] font-normal;
+    @apply text-[30px] leading-[48px] font-normal font-sans;
   }
 
   .text-2xl-semi {
-    @apply text-2xl leading-[48px] font-semibold;
+    @apply text-[30px] leading-[48px] font-semibold font-sans;
   }
 
   .text-3xl-regular {
-    @apply text-3xl leading-[44px] font-normal;
+    @apply text-[32px] leading-[44px] font-normal font-sans;
   }
 
   .text-3xl-semi {
-    @apply text-3xl leading-[44px] font-semibold;
+    @apply text-[32px] leading-[44px] font-semibold font-sans;
   }
 }
