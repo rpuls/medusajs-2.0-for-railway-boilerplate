@@ -13,7 +13,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["'Barlow Condensed'", "sans-serif"],
+        sans: ["'Barlow Condensed'", "sans-serif"], // ← подключён нужный шрифт
       },
       fontSize: {
         base: "1rem",
