@@ -1,5 +1,3 @@
-// src/app/layout.tsx
-
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
 import "styles/globals.css"
