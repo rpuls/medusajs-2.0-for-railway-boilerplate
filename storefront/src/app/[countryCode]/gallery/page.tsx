@@ -43,35 +43,33 @@ export default function GalleryPage() {
     <div className="px-6 pt-20 pb-32 font-sans tracking-wide">
       <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
 
-      <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4 space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {images.map((src, i) => (
           <div
             key={i}
-            className="break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
+            className="w-full cursor-pointer overflow-hidden rounded-lg"
             onClick={() => loaded[src] && setIndex(i)}
           >
-            <div className="relative w-full aspect-[3/4]">
-              <Image
-                src={src}
-                alt={`Gallery ${i}`}
-                fill
-                className="object-cover rounded-lg transition-opacity duration-300"
-                onLoadingComplete={() =>
-                  setLoaded((prev) => ({ ...prev, [src]: true }))
-                }
-              />
-            </div>
+            <Image
+              src={src}
+              alt={`Image ${i}`}
+              width={1000}
+              height={1000}
+              onLoadingComplete={() =>
+                setLoaded((prev) => ({ ...prev, [src]: true }))
+              }
+              className="w-full h-auto object-contain rounded-lg transition-all duration-300"
+              loading="lazy"
+            />
           </div>
         ))}
       </div>
 
-      {/* Fullscreen Modal */}
       {index !== null && (
         <div
           className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
           onClick={close}
         >
-          {/* Стрелки */}
           <div className="absolute inset-0 z-50 pointer-events-none">
             <div className="absolute left-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
               <button
@@ -97,14 +95,13 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          {/* Фото */}
           <div
             className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
           >
             <Image
               src={images[index]}
               alt={`Fullscreen ${index}`}
-              width={1200}
+              width={1600}
               height={1600}
               className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
               loading="eager"
