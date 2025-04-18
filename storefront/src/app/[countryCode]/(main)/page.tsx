@@ -14,7 +14,7 @@ export default function Home() {
           gmorkl spring collection
         </h1>
         <h2 className="text-lg md:text-2xl text-white opacity-80 mt-4">
-          discover wearable art from Cologne
+          wearable art from Cologne
         </h2>
       </div>
     </div>
