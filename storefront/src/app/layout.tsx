@@ -11,12 +11,12 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html lang="en" data-mode="light">
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body>
-        <main className="relative font-sans">{props.children}</main>
+      <body className="font-sans tracking-wider text-base">
+        <main className="relative">{props.children}</main>
       </body>
     </html>
   )
