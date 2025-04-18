@@ -1,12 +1,11 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import Image from 'next/image'
-import clsx from 'clsx'
+import { useEffect, useState, useCallback } from "react"
+import Image from "next/image"
 
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
-  const [selected, setSelected] = useState<number | null>(null)
+  const [index, setIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const context = require.context(
@@ -18,19 +17,42 @@ export default function GalleryPage() {
     setImages(paths)
   }, [])
 
+  const close = () => setIndex(null)
+
+  const next = useCallback(() => {
+    if (index !== null) setIndex((prev) => (prev! + 1) % images.length)
+  }, [index, images])
+
+  const prev = useCallback(() => {
+    if (index !== null) setIndex((prev) => (prev! - 1 + images.length) % images.length)
+  }, [index, images])
+
+  // Клавиатурная навигация
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (index === null) return
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") next()
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") prev()
+      if (e.key === "Escape") close()
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [index, next, prev])
+
   return (
     <div className="px-6 py-20 font-sans tracking-wide">
       <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
+
       <div className="columns-2 sm:columns-3 gap-4 space-y-4">
         {images.map((src, i) => (
           <div
             key={i}
+            onClick={() => setIndex(i)}
             className="break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
-            onClick={() => setSelected(i)}
           >
             <Image
               src={src}
-              alt={`Gallery ${i}`}
+              alt={`Image ${i}`}
               width={800}
               height={800}
               className="w-full h-auto rounded-lg"
@@ -39,43 +61,41 @@ export default function GalleryPage() {
         ))}
       </div>
 
-      {selected !== null && (
+      {index !== null && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center cursor-zoom-out"
-          onClick={() => setSelected(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center"
+          onClick={close}
         >
-          <div className="relative max-w-full max-h-full p-4">
+          {/* Левая зона для перехода назад */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              prev()
+            }}
+            className="absolute inset-y-0 left-0 w-1/2 cursor-pointer z-40 flex items-center justify-start pl-4"
+          >
+            <div className="text-white text-4xl select-none">&lsaquo;</div>
+          </div>
+
+          {/* Правая зона для перехода вперёд */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              next()
+            }}
+            className="absolute inset-y-0 right-0 w-1/2 cursor-pointer z-40 flex items-center justify-end pr-4"
+          >
+            <div className="text-white text-4xl select-none">&rsaquo;</div>
+          </div>
+
+          <div className="relative max-w-[90vw] max-h-[90vh]">
             <Image
-              src={images[selected]}
-              alt={`Fullscreen ${selected}`}
+              src={images[index]}
+              alt="Fullscreen"
               width={1200}
               height={1200}
-              className="max-h-[90vh] w-auto h-auto object-contain rounded-xl"
+              className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
             />
-            {/* Стрелка влево */}
-            {selected > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelected(selected - 1)
-                }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white text-4xl"
-              >
-                ‹
-              </button>
-            )}
-            {/* Стрелка вправо */}
-            {selected < images.length - 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelected(selected + 1)
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-4xl"
-              >
-                ›
-              </button>
-            )}
           </div>
         </div>
       )}
