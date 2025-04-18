@@ -22,7 +22,7 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="hover:text-ui-fg-base font-sans text-lg uppercase tracking-widest"
+              className="hover:text-ui-fg-base font-sans font-bold text-lg uppercase tracking-widest"
               data-testid="nav-store-link"
             >
               GMORKL STORE
@@ -38,7 +38,7 @@ export default async function Nav() {
                   scroll={false}
                   data-testid="nav-search-link"
                 >
-                  Search
+                  SEARCH
                 </LocalizedClientLink>
               )}
               <LocalizedClientLink
@@ -46,7 +46,7 @@ export default async function Nav() {
                 href="/account"
                 data-testid="nav-account-link"
               >
-                Account
+                ACCOUNT
               </LocalizedClientLink>
             </div>
             <Suspense
@@ -56,7 +56,7 @@ export default async function Nav() {
                   href="/cart"
                   data-testid="nav-cart-link"
                 >
-                  Cart (0)
+                  CART (0)
                 </LocalizedClientLink>
               }
             >
