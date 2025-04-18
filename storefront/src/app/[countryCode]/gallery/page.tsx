@@ -6,13 +6,12 @@ import Image from "next/image"
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
   const [index, setIndex] = useState<number | null>(null)
-  const [loaded, setLoaded] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const context = require.context(
       '../../../../public/gallery',
       false,
-      /\.(jpe?g|png|gif|webp)$/i
+      /\.(jpe?g|png|webp)$/i
     )
     const paths = context.keys().map((key) => `/gallery/${key.replace('./', '')}`)
     setImages(paths)
@@ -43,22 +42,17 @@ export default function GalleryPage() {
     <div className="px-6 pt-20 pb-32 font-sans tracking-wide">
       <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4 space-y-4">
         {images.map((src, i) => (
           <div
             key={i}
-            className="w-full cursor-pointer overflow-hidden rounded-lg"
-            onClick={() => loaded[src] && setIndex(i)}
+            className="break-inside-avoid cursor-pointer overflow-hidden rounded-lg"
+            onClick={() => setIndex(i)}
           >
-            <Image
+            <img
               src={src}
-              alt={`Image ${i}`}
-              width={1000}
-              height={1000}
-              onLoadingComplete={() =>
-                setLoaded((prev) => ({ ...prev, [src]: true }))
-              }
-              className="w-full h-auto object-contain rounded-lg transition-all duration-300"
+              alt={`Gallery ${i}`}
+              className="w-full h-auto rounded-lg transition-opacity duration-300 hover:opacity-80"
               loading="lazy"
             />
           </div>
@@ -95,16 +89,11 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          <div
-            className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
-          >
-            <Image
+          <div className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none">
+            <img
               src={images[index]}
               alt={`Fullscreen ${index}`}
-              width={1600}
-              height={1600}
-              className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
-              loading="eager"
+              className="max-h-[90vh] w-auto h-auto rounded-xl shadow-xl pointer-events-none object-contain"
             />
           </div>
         </div>
