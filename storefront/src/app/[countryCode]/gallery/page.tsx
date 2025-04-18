@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
-import clsx from "clsx"
 
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
@@ -62,47 +61,48 @@ export default function GalleryPage() {
         ))}
       </div>
 
-      {/* Fullscreen modal */}
+      {/* Модалка */}
       {index !== null && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md"
           onClick={close}
         >
-          {/* ← стрелка */}
+          {/* Левая стрелка */}
           <div
             onClick={(e) => {
               e.stopPropagation()
               prev()
             }}
-            className="absolute left-0 top-0 bottom-0 w-1/3 flex items-center justify-start pl-6 cursor-pointer z-50"
+            className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-6 z-50 cursor-pointer"
           >
             <div className="text-white text-5xl font-light">&#x2039;</div>
           </div>
 
-          {/* → стрелка */}
+          {/* Правая стрелка */}
           <div
             onClick={(e) => {
               e.stopPropagation()
               next()
             }}
-            className="absolute right-0 top-0 bottom-0 w-1/3 flex items-center justify-end pr-6 cursor-pointer z-50"
+            className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-6 z-50 cursor-pointer"
           >
             <div className="text-white text-5xl font-light">&#x203A;</div>
           </div>
 
           {/* Изображение */}
           <div
-            className="max-w-[90vw] max-h-[90vh] p-4 z-40 cursor-default"
-            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none"
           >
-            <Image
-              src={images[index]}
-              alt={`Fullscreen ${index}`}
-              width={1200}
-              height={1600}
-              className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
-              loading="eager"
-            />
+            <div className="relative max-w-[90vw] max-h-[90vh] p-4">
+              <Image
+                src={images[index]}
+                alt={`Fullscreen ${index}`}
+                width={1200}
+                height={1600}
+                className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl pointer-events-none"
+                loading="eager"
+              />
+            </div>
           </div>
         </div>
       )}
