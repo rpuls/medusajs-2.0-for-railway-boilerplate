@@ -10,9 +10,9 @@ export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
 
   return (
-    <div className="sticky top-0 inset-x-0 z-50 group font-sans">
+    <div className="sticky top-0 inset-x-0 z-50 group">
       <header className="relative h-16 mx-auto border-b duration-200 bg-white border-ui-border-base">
-        <nav className="content-container flex items-center justify-between w-full h-full text-base font-normal tracking-wide text-ui-fg-subtle">
+        <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-base uppercase tracking-wide">
           <div className="flex-1 basis-0 h-full flex items-center">
             <div className="h-full">
               <SideMenu regions={regions} />
@@ -22,10 +22,10 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="text-lg hover:text-ui-fg-base font-normal tracking-wide font-sans"
+              className="hover:text-ui-fg-base uppercase tracking-wider"
               data-testid="nav-store-link"
             >
-              Gmorkl Store
+              GMORKL STORE
             </LocalizedClientLink>
           </div>
 
@@ -33,30 +33,30 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base font-sans"
+                  className="hover:text-ui-fg-base"
                   href="/search"
                   scroll={false}
                   data-testid="nav-search-link"
                 >
-                  Search
+                  SEARCH
                 </LocalizedClientLink>
               )}
               <LocalizedClientLink
-                className="hover:text-ui-fg-base font-sans"
+                className="hover:text-ui-fg-base"
                 href="/account"
                 data-testid="nav-account-link"
               >
-                Account
+                ACCOUNT
               </LocalizedClientLink>
             </div>
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base flex gap-2 font-sans"
+                  className="hover:text-ui-fg-base flex gap-2"
                   href="/cart"
                   data-testid="nav-cart-link"
                 >
-                  Cart (0)
+                  CART (0)
                 </LocalizedClientLink>
               }
             >
