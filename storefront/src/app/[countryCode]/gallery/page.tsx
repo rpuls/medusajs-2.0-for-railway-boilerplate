@@ -61,48 +61,53 @@ export default function GalleryPage() {
         ))}
       </div>
 
-      {/* Модалка */}
+      {/* Fullscreen Modal */}
       {index !== null && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
           onClick={close}
         >
-          {/* Левая стрелка */}
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              prev()
-            }}
-            className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-6 z-50 cursor-pointer"
-          >
-            <div className="text-white text-5xl font-light">&#x2039;</div>
-          </div>
-
-          {/* Правая стрелка */}
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              next()
-            }}
-            className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-6 z-50 cursor-pointer"
-          >
-            <div className="text-white text-5xl font-light">&#x203A;</div>
-          </div>
-
-          {/* Изображение */}
-          <div
-            className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none"
-          >
-            <div className="relative max-w-[90vw] max-h-[90vh] p-4">
-              <Image
-                src={images[index]}
-                alt={`Fullscreen ${index}`}
-                width={1200}
-                height={1600}
-                className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl pointer-events-none"
-                loading="eager"
-              />
+          {/* Стрелки */}
+          <div className="absolute inset-0 z-50 pointer-events-none">
+            {/* Левая стрелка */}
+            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  prev()
+                }}
+                className="text-white text-7xl font-light hover:opacity-80"
+              >
+                &#x2039;
+              </button>
             </div>
+
+            {/* Правая стрелка */}
+            <div className="absolute right-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  next()
+                }}
+                className="text-white text-7xl font-light hover:opacity-80"
+              >
+                &#x203A;
+              </button>
+            </div>
+          </div>
+
+          {/* Картинка */}
+          <div
+            className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
+          >
+            <Image
+              src={images[index]}
+              alt={`Fullscreen ${index}`}
+              width={1200}
+              height={1600}
+              className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
+              loading="eager"
+            />
           </div>
         </div>
       )}
