@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
-import Link from "next/link"
+import clsx from "clsx"
 
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
@@ -40,7 +40,7 @@ export default function GalleryPage() {
   }, [index, next, prev])
 
   return (
-    <div className="px-6 py-20 font-sans tracking-wide">
+    <div className="px-6 pt-20 pb-32 font-sans tracking-wide">
       <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
 
       <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4 space-y-4">
@@ -61,41 +61,43 @@ export default function GalleryPage() {
         ))}
       </div>
 
+      {/* Модалка */}
       {index !== null && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center"
           onClick={close}
         >
-          {/* Кнопка Back */}
-          <Link
-            href="/store"
-            onClick={(e) => e.stopPropagation()}
-            className="absolute top-4 left-4 text-white uppercase tracking-wider text-sm hover:underline z-50"
-          >
-            ← Back to Store
-          </Link>
+          {/* Навигация ← Назад */}
+          <div className="absolute top-6 left-6 z-50 text-white">
+            <button
+              onClick={close}
+              className="uppercase text-sm tracking-wider hover:underline"
+            >
+              ← back to gallery
+            </button>
+          </div>
 
-          {/* Стрелка влево */}
-          {index > 0 && (
+          {/* Левая стрелка */}
+          {images.length > 1 && (
             <div
               onClick={(e) => {
                 e.stopPropagation()
                 prev()
               }}
-              className="absolute left-0 top-0 bottom-0 w-1/5 flex items-center justify-start pl-4 z-50"
+              className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-4 z-50"
             >
               <div className="text-white text-5xl font-light select-none">&#x2039;</div>
             </div>
           )}
 
-          {/* Стрелка вправо */}
-          {index < images.length - 1 && (
+          {/* Правая стрелка */}
+          {images.length > 1 && (
             <div
               onClick={(e) => {
                 e.stopPropagation()
                 next()
               }}
-              className="absolute right-0 top-0 bottom-0 w-1/5 flex items-center justify-end pr-4 z-50"
+              className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-4 z-50"
             >
               <div className="text-white text-5xl font-light select-none">&#x203A;</div>
             </div>
