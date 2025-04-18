@@ -56,10 +56,18 @@ module.exports = {
         "2xlarge": "1920px",
       },
       fontSize: {
+        base: "1.05rem", // увеличено
+        lg: "1.25rem",
+        xl: "1.5rem",
+        "2xl": "1.875rem",
         "3xl": "2rem",
       },
       fontFamily: {
-        sans: ["'Barlow Condensed'", "sans-serif"], // ← тут подключён нужный шрифт
+        sans: ["'Barlow Condensed'", "sans-serif"], // ← используем только этот шрифт
+      },
+      letterSpacing: {
+        wider: "0.05em",
+        widest: "0.1em",
       },
       keyframes: {
         ring: {
