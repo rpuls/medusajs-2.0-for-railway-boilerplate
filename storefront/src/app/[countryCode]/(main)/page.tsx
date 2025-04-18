@@ -1,16 +1,3 @@
-import { Metadata } from "next"
-
-import FeaturedProducts from "@modules/home/components/featured-products"
-import Hero from "@modules/home/components/hero"
-import { getCollectionsWithProducts } from "@lib/data/collections"
-import { getRegion } from "@lib/data/regions"
-
-export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
-  description:
-    "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
-}
-
 export default async function Home({
   params: { countryCode },
 }: {
@@ -25,7 +12,22 @@ export default async function Home({
 
   return (
     <>
-      <Hero />
+      <div className="relative w-full h-screen overflow-hidden">
+        <video
+          className="absolute top-0 left-0 w-full h-full object-cover"
+          src="/intro.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+        <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
+          <h1 className="text-white text-4xl md:text-6xl font-bold">
+            Welcome to My Store
+          </h1>
+        </div>
+      </div>
+
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">
           <FeaturedProducts collections={collections} region={region} />
