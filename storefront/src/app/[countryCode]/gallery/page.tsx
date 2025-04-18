@@ -1,65 +1,75 @@
 "use client"
 
-import fs from "fs"
-import path from "path"
 import { useEffect, useState } from "react"
 import Image from "next/image"
 
-const GalleryPage = () => {
+export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
-  const [selected, setSelected] = useState<string | null>(null)
+  const [index, setIndex] = useState<number | null>(null)
 
   useEffect(() => {
-    const fetchImages = async () => {
-      const res = await fetch("/api/gallery/list")
-      const files: string[] = await res.json()
-      setImages(files)
-    }
-
-    fetchImages()
+    fetch("/api/gallery/list")
+      .then((res) => res.json())
+      .then(setImages)
   }, [])
 
-  return (
-    <div className="px-4 py-20 font-sans tracking-wide">
-      <h1 className="text-4xl text-center uppercase mb-10">Gallery</h1>
+  const close = () => setIndex(null)
+  const next = () => setIndex((prev) => (prev! + 1) % images.length)
+  const prev = () => setIndex((prev) => (prev! - 1 + images.length) % images.length)
 
-      <div className="columns-2 sm:columns-3 md:columns-4 gap-4 space-y-4">
+  return (
+    <div className="px-6 py-20 font-sans tracking-wide">
+      <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {images.map((src, i) => (
           <div
             key={i}
-            className="overflow-hidden rounded-lg cursor-pointer hover:opacity-80"
-            onClick={() => setSelected(src)}
+            onClick={() => setIndex(i)}
+            className="cursor-pointer overflow-hidden rounded-lg shadow-md"
           >
             <Image
               src={src}
-              alt={`Image ${i}`}
-              width={800}
-              height={800}
-              layout="responsive"
+              alt={`Gallery ${i}`}
+              width={0}
+              height={0}
+              sizes="100vw"
+              style={{ width: "100%", height: "auto" }}
               className="rounded-lg"
             />
           </div>
         ))}
       </div>
 
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur"
-          onClick={() => setSelected(null)}
-        >
-          <div className="max-w-[90%] max-h-[90%]">
-            <Image
-              src={selected}
-              alt="Selected"
-              width={1200}
-              height={1200}
-              className="rounded-xl"
-            />
-          </div>
+      {/* Модалка */}
+      {index !== null && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <button className="absolute top-4 right-6 text-white text-4xl" onClick={close}>
+            &times;
+          </button>
+          <button
+            className="absolute left-4 text-white text-3xl"
+            onClick={prev}
+          >
+            ⬅
+          </button>
+          <button
+            className="absolute right-4 text-white text-3xl"
+            onClick={next}
+          >
+            ➡
+          </button>
+          <Image
+            src={images[index]}
+            alt={`Gallery ${index}`}
+            width={0}
+            height={0}
+            sizes="80vw"
+            style={{ width: "auto", height: "80vh" }}
+            className="rounded-xl shadow-xl"
+          />
         </div>
       )}
     </div>
   )
 }
-
-export default GalleryPage
