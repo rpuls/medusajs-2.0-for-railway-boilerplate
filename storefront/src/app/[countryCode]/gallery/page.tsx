@@ -1,83 +1,59 @@
 "use client"
 
+import fs from "fs"
+import path from "path"
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
 
-export default function GalleryPage() {
+const GalleryPage = () => {
   const [images, setImages] = useState<string[]>([])
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("/api/gallery-list")
-      .then((res) => res.json())
-      .then(setImages)
+    const fetchImages = async () => {
+      const res = await fetch("/api/gallery/list")
+      const files: string[] = await res.json()
+      setImages(files)
+    }
+
+    fetchImages()
   }, [])
 
-  const closeModal = () => setSelectedIndex(null)
-  const prevImage = () => setSelectedIndex((prev) => (prev! - 1 + images.length) % images.length)
-  const nextImage = () => setSelectedIndex((prev) => (prev! + 1) % images.length)
-
   return (
-    <div className="px-6 py-20 font-sans tracking-wide">
-      <h1 className="text-4xl font-bold uppercase mb-10 text-center">Gallery</h1>
+    <div className="px-4 py-20 font-sans tracking-wide">
+      <h1 className="text-4xl text-center uppercase mb-10">Gallery</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-        {images.map((file, i) => (
+      <div className="columns-2 sm:columns-3 md:columns-4 gap-4 space-y-4">
+        {images.map((src, i) => (
           <div
             key={i}
-            onClick={() => setSelectedIndex(i)}
-            className="cursor-zoom-in relative aspect-[3/4] overflow-hidden rounded-lg shadow"
+            className="overflow-hidden rounded-lg cursor-pointer hover:opacity-80"
+            onClick={() => setSelected(src)}
           >
             <Image
-              src={`/gallery/${file}`}
-              alt={`Gallery ${i}`}
-              fill
-              className="object-cover"
+              src={src}
+              alt={`Image ${i}`}
+              width={800}
+              height={800}
+              layout="responsive"
+              className="rounded-lg"
             />
           </div>
         ))}
       </div>
 
-      {selectedIndex !== null && (
+      {selected && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center"
-          onClick={closeModal}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur"
+          onClick={() => setSelected(null)}
         >
-          <div
-            className="absolute top-4 right-4 text-white cursor-pointer"
-            onClick={closeModal}
-          >
-            <XMarkIcon className="h-8 w-8" />
-          </div>
-
-          <div
-            className="absolute left-4 text-white cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              prevImage()
-            }}
-          >
-            <ChevronLeftIcon className="h-10 w-10" />
-          </div>
-
-          <div
-            className="absolute right-4 text-white cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              nextImage()
-            }}
-          >
-            <ChevronRightIcon className="h-10 w-10" />
-          </div>
-
-          <div className="relative w-[90vw] h-[90vh]">
+          <div className="max-w-[90%] max-h-[90%]">
             <Image
-              src={`/gallery/${images[selectedIndex]}`}
-              alt="Preview"
-              fill
-              className="object-contain"
-              priority
+              src={selected}
+              alt="Selected"
+              width={1200}
+              height={1200}
+              className="rounded-xl"
             />
           </div>
         </div>
@@ -85,3 +61,5 @@ export default function GalleryPage() {
     </div>
   )
 }
+
+export default GalleryPage
