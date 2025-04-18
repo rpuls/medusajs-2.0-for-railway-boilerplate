@@ -1,36 +1,23 @@
-import { Metadata } from "next"
-
-import FeaturedProducts from "@modules/home/components/featured-products"
-import Hero from "@modules/home/components/hero"
-import { getCollectionsWithProducts } from "@lib/data/collections"
-import { getRegion } from "@lib/data/regions"
-
-export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
-  description:
-    "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
-}
-
-export default async function Home({
-  params: { countryCode },
-}: {
-  params: { countryCode: string }
-}) {
-  const collections = await getCollectionsWithProducts(countryCode)
-  const region = await getRegion(countryCode)
-
-  if (!collections || !region) {
-    return null
-  }
-
+export default function Home() {
   return (
-    <>
-      <Hero />
-      <div className="py-12">
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
+    <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
+      <video
+        className="absolute inset-0 w-full h-full object-cover"
+        src="/flower_power_AI.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+
+      <div className="absolute inset-0 flex items-center justify-start pl-20 z-10">
+        <div>
+          <h1 className="text-5xl font-bold uppercase">gmorkl spring collection</h1>
+          <h2 className="text-xl mt-2 tracking-wide uppercase">
+            discover wearable art from cologne
+          </h2>
+        </div>
       </div>
-    </>
+    </div>
   )
 }
