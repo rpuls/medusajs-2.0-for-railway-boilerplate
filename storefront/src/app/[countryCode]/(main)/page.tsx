@@ -10,7 +10,8 @@ export default function Home() {
         playsInline
       />
 
-      <div className="absolute inset-0 flex items-center justify-start pl-20 z-10">
+      {/* контент поверх видео */}
+      <div className="absolute inset-0 flex items-center justify-start pl-20 z-0">
         <div>
           <h1 className="text-5xl font-bold uppercase">gmorkl spring collection</h1>
           <h2 className="text-xl mt-2 tracking-wide uppercase">
