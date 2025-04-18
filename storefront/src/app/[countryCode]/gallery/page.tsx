@@ -53,55 +53,42 @@ export default function GalleryPage() {
             <Image
               src={src}
               alt={`Image ${i}`}
-              width={800}
-              height={800}
-              className="w-full h-auto rounded-lg"
+              width={600}
+              height={900}
+              className="w-full h-auto rounded-lg transition-opacity duration-300"
+              loading="lazy"
             />
           </div>
         ))}
       </div>
 
-      {/* Модалка */}
+      {/* Fullscreen modal */}
       {index !== null && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
           onClick={close}
         >
-          {/* Навигация ← Назад */}
-          <div className="absolute top-6 left-6 z-50 text-white">
-            <button
-              onClick={close}
-              className="uppercase text-sm tracking-wider hover:underline"
-            >
-              ← back to gallery
-            </button>
+          {/* ← стрелка */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              prev()
+            }}
+            className="absolute left-0 top-0 bottom-0 w-1/3 flex items-center justify-start pl-6 cursor-pointer z-50"
+          >
+            <div className="text-white text-5xl font-light">&#x2039;</div>
           </div>
 
-          {/* Левая стрелка */}
-          {images.length > 1 && (
-            <div
-              onClick={(e) => {
-                e.stopPropagation()
-                prev()
-              }}
-              className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-4 z-50"
-            >
-              <div className="text-white text-5xl font-light select-none">&#x2039;</div>
-            </div>
-          )}
-
-          {/* Правая стрелка */}
-          {images.length > 1 && (
-            <div
-              onClick={(e) => {
-                e.stopPropagation()
-                next()
-              }}
-              className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-4 z-50"
-            >
-              <div className="text-white text-5xl font-light select-none">&#x203A;</div>
-            </div>
-          )}
+          {/* → стрелка */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              next()
+            }}
+            className="absolute right-0 top-0 bottom-0 w-1/3 flex items-center justify-end pr-6 cursor-pointer z-50"
+          >
+            <div className="text-white text-5xl font-light">&#x203A;</div>
+          </div>
 
           {/* Изображение */}
           <div
@@ -112,8 +99,9 @@ export default function GalleryPage() {
               src={images[index]}
               alt={`Fullscreen ${index}`}
               width={1200}
-              height={1200}
+              height={1600}
               className="object-contain w-auto h-auto max-h-[90vh] rounded-xl shadow-xl"
+              loading="eager"
             />
           </div>
         </div>
