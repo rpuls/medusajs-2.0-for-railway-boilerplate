@@ -1,6 +1,18 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400&display=swap");
+
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+@layer base {
+  html {
+    @apply font-sans text-base tracking-wider;
+  }
+
+  body {
+    @apply font-sans text-base tracking-wider text-ui-fg-base bg-ui-bg-base;
+  }
+}
 
 @layer utilities {
   /* Chrome, Safari and Opera */
