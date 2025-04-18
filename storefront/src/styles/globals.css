@@ -1,21 +1,19 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400&display=swap");
-
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-@layer base {
-  html {
-    @apply font-sans text-base tracking-wider;
-  }
-
-  body {
-    @apply font-sans text-base tracking-wider text-ui-fg-base bg-ui-bg-base;
-  }
+/* Глобальные стили для всего сайта */
+html,
+body {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
+/* Scrollbar и autofill стили */
 @layer utilities {
-  /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -25,7 +23,7 @@
   }
 
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
+    -ms-overflow-style: none; /* IE и Edge */
     scrollbar-width: none; /* Firefox */
   }
 
@@ -61,6 +59,7 @@
   }
 }
 
+/* Компонентные утилиты */
 @layer components {
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6;
@@ -75,50 +74,50 @@
   }
 
   .text-small-regular {
-    @apply text-xs leading-5 font-normal;
+    @apply text-sm leading-5 font-normal;
   }
 
   .text-small-semi {
-    @apply text-xs leading-5 font-semibold;
+    @apply text-sm leading-5 font-semibold;
   }
 
   .text-base-regular {
-    @apply text-sm leading-6 font-normal;
-  }
-
-  .text-base-semi {
-    @apply text-sm leading-6 font-semibold;
-  }
-
-  .text-large-regular {
     @apply text-base leading-6 font-normal;
   }
 
-  .text-large-semi {
+  .text-base-semi {
     @apply text-base leading-6 font-semibold;
   }
 
+  .text-large-regular {
+    @apply text-lg leading-6 font-normal;
+  }
+
+  .text-large-semi {
+    @apply text-lg leading-6 font-semibold;
+  }
+
   .text-xl-regular {
-    @apply text-2xl leading-[36px] font-normal;
+    @apply text-xl leading-[36px] font-normal;
   }
 
   .text-xl-semi {
-    @apply text-2xl leading-[36px] font-semibold;
+    @apply text-xl leading-[36px] font-semibold;
   }
 
   .text-2xl-regular {
-    @apply text-[30px] leading-[48px] font-normal;
+    @apply text-2xl leading-[48px] font-normal;
   }
 
   .text-2xl-semi {
-    @apply text-[30px] leading-[48px] font-semibold;
+    @apply text-2xl leading-[48px] font-semibold;
   }
 
   .text-3xl-regular {
-    @apply text-[32px] leading-[44px] font-normal;
+    @apply text-3xl leading-[44px] font-normal;
   }
 
   .text-3xl-semi {
-    @apply text-[32px] leading-[44px] font-semibold;
+    @apply text-3xl leading-[44px] font-semibold;
   }
 }
