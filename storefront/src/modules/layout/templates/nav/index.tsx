@@ -33,7 +33,7 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base font-sans uppercase"
+                  className="hover:text-ui-fg-base font-sans uppercase font-normal"
                   href="/search"
                   scroll={false}
                   data-testid="nav-search-link"
@@ -42,7 +42,7 @@ export default async function Nav() {
                 </LocalizedClientLink>
               )}
               <LocalizedClientLink
-                className="hover:text-ui-fg-base font-sans uppercase"
+                className="hover:text-ui-fg-base font-sans uppercase font-normal"
                 href="/account"
                 data-testid="nav-account-link"
               >
@@ -52,7 +52,7 @@ export default async function Nav() {
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base flex gap-2 font-sans uppercase"
+                  className="hover:text-ui-fg-base flex gap-2 font-sans uppercase font-normal"
                   href="/cart"
                   data-testid="nav-cart-link"
                 >
