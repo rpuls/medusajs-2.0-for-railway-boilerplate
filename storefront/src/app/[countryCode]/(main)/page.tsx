@@ -10,7 +10,7 @@ export default function Home() {
         playsInline
       />
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black bg-opacity-50 p-8">
-        <h1 className="text-4xl md:text-6xl text-white font-bold drop-shadow-lg">
+        <h1 className="text-4xl md:text-6xl text-white font-drop-shadow-lg">
           gmorkl spring collection
         </h1>
         <h2 className="text-lg md:text-2xl text-white opacity-80 mt-4">
