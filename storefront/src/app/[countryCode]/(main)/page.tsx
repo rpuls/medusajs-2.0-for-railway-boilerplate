@@ -1,38 +1,22 @@
-export default async function Home({
-  params: { countryCode },
-}: {
-  params: { countryCode: string }
-}) {
-  const collections = await getCollectionsWithProducts(countryCode)
-  const region = await getRegion(countryCode)
-
-  if (!collections || !region) {
-    return null
-  }
-
+export default function Home() {
   return (
-    <>
-      <div className="relative w-full h-screen overflow-hidden">
-        <video
-          className="absolute top-0 left-0 w-full h-full object-cover"
-          src="/flower_power_AI.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-        <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
-          <h1 className="text-white text-4xl md:text-6xl font-bold">
-            Welcome to My Store
-          </h1>
-        </div>
+    <div className="relative w-full h-screen overflow-hidden">
+      <video
+        className="absolute inset-0 w-full h-full object-cover"
+        src="/flower_power_AI.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black bg-opacity-50 p-8">
+        <h1 className="text-4xl md:text-6xl text-white font-bold drop-shadow-lg">
+          Welcome to Gmorkl Store
+        </h1>
+        <h2 className="text-lg md:text-2xl text-white opacity-80 mt-4">
+          Discover curated products with cinematic experience
+        </h2>
       </div>
-
-      <div className="py-12">
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
-      </div>
-    </>
+    </div>
   )
 }
