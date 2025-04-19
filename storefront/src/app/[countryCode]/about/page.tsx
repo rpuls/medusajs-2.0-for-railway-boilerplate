@@ -1,10 +1,11 @@
 import Image from "next/image"
+import Link from "next/link"
 
 export default function AboutPage() {
   return (
     <div className="w-full px-4 md:px-8 py-12">
       <div className="max-w-3xl mx-auto space-y-10">
-        <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-lg">
+        <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-lg">
           <Image
             src="/about/mascha.jpg"
             alt="Mascha Rodigina"
@@ -12,6 +13,22 @@ export default function AboutPage() {
             className="object-cover object-top"
             priority
           />
+        </div>
+
+        <div className="flex justify-center">
+          <Link
+            href="https://www.instagram.com/gmorkl/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              src="/about/instagram-black-logo-on-transparent-background-free-vector.jpg"
+              alt="Instagram"
+              width={40}
+              height={40}
+              className="opacity-80 hover:opacity-100 transition-opacity"
+            />
+          </Link>
         </div>
 
         <h1 className="text-left text-3xl md:text-4xl font-bold uppercase tracking-wide">
