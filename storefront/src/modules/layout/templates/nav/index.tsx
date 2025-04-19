@@ -1,27 +1,22 @@
 "use client"
 
-import { Suspense } from "react"
 import { usePathname } from "next/navigation"
+import { Suspense } from "react"
 
-import { listRegions } from "@lib/data/regions"
-import { StoreRegion } from "@medusajs/types"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
+import Link from "next/link"
 
-export default async function Nav() {
-  const regions = await listRegions().then((regions: StoreRegion[]) => regions)
+const sections = [
+  { name: "store", href: "/" },
+  { name: "gallery", href: "/gallery" },
+  { name: "about", href: "/about" },
+]
 
-  return <NavClient regions={regions} />
-}
-
-function NavClient({ regions }: { regions: StoreRegion[] }) {
+export default function Nav() {
   const pathname = usePathname()
 
-  let section = ""
-  if (pathname.includes("/gallery")) section = "GALLERY"
-  else if (pathname.includes("/about")) section = "ABOUT"
-  else if (pathname === "/" || pathname.includes("/store")) section = "STORE"
+  const current = sections.find((s) => pathname.includes(s.href))?.name
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -30,54 +25,32 @@ function NavClient({ regions }: { regions: StoreRegion[] }) {
           {/* Side Menu */}
           <div className="flex-1 basis-0 h-full flex items-center">
             <div className="h-full">
-              <SideMenu regions={regions} />
+              <SideMenu regions={[]} /> {/* Пока просто, без async */}
             </div>
           </div>
 
-          {/* Logo / Section */}
-          <div className="flex items-center h-full">
-            <LocalizedClientLink
-              href="/"
-              className="hover:text-ui-fg-base font-sans font-bold text-lg uppercase tracking-widest flex items-center gap-1"
-              data-testid="nav-store-link"
-            >
-              <span className="text-black">GMORKL</span>
-              {section && <span className="text-rose-600">.{section}</span>}
-            </LocalizedClientLink>
+          {/* Логотип + путь */}
+          <div className="flex items-center h-full font-sans font-bold text-lg uppercase tracking-widest">
+            <Link href="/" className="text-black">GMORKL</Link>
+            {current && (
+              <>
+                <span className="mx-1">.</span>
+                <span className="text-red-600">{current}</span>
+              </>
+            )}
           </div>
 
-          {/* Right Side Links */}
+          {/* Навигация */}
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
-              {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
-                <LocalizedClientLink
-                  className="hover:text-ui-fg-base font-sans uppercase font-normal"
-                  href="/search"
-                  scroll={false}
-                  data-testid="nav-search-link"
-                >
-                  SEARCH
-                </LocalizedClientLink>
-              )}
-              <LocalizedClientLink
+              <Link
                 className="hover:text-ui-fg-base font-sans uppercase font-normal"
                 href="/account"
-                data-testid="nav-account-link"
               >
                 ACCOUNT
-              </LocalizedClientLink>
+              </Link>
             </div>
-            <Suspense
-              fallback={
-                <LocalizedClientLink
-                  className="hover:text-ui-fg-base flex gap-2 font-sans uppercase font-normal"
-                  href="/cart"
-                  data-testid="nav-cart-link"
-                >
-                  CART (0)
-                </LocalizedClientLink>
-              }
-            >
+            <Suspense fallback={<Link href="/cart">CART (0)</Link>}>
               <CartButton />
             </Suspense>
           </div>
