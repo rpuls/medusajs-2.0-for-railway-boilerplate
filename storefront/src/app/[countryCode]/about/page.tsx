@@ -3,22 +3,23 @@ import Image from "next/image"
 export default function AboutPage() {
   return (
     <div className="w-full px-4 md:px-8 py-12">
-      <h1 className="text-center text-3xl md:text-4xl font-bold uppercase mb-10 tracking-wide">
+      <div className="w-full max-w-xl mx-auto mb-6">
+        <div className="relative aspect-square rounded-xl overflow-hidden shadow-lg">
+          <Image
+            src="/about/mascha.jpg"
+            alt="Mascha Rodigina"
+            fill
+            className="object-cover object-top"
+            priority
+          />
+        </div>
+      </div>
+
+      <h1 className="text-left text-3xl md:text-4xl font-bold uppercase mb-10 tracking-wide max-w-3xl mx-auto">
         GMORKL – Wearable Art Made in Cologne
       </h1>
 
-      <div className="w-full max-w-4xl mx-auto mb-12">
-        <Image
-          src="/about/mascha.jpg"
-          alt="Mascha Rodigina"
-          width={1200}
-          height={800}
-          className="rounded-xl shadow-lg w-full h-auto object-contain"
-          priority
-        />
-      </div>
-
-      <div className="max-w-2xl mx-auto space-y-6 leading-relaxed text-center text-base md:text-lg">
+      <div className="max-w-3xl mx-auto space-y-6 leading-relaxed text-left text-base md:text-lg">
         <p>
           GMORKL is an art project by visual artist and designer Masha Rodigina, based in Cologne, Germany. Specializing in handprinted, one-of-a-kind T-shirts and textiles, GMORKL brings together art, fashion, and activism.
         </p>
@@ -35,8 +36,8 @@ export default function AboutPage() {
           In this store, you’ll also find not only a limited selection of art prints and original illustrations but also artworks made by Mascha&apos;s friends.
         </p>
 
-        <div className="text-left mt-8">
-          <h2 className="text-xl uppercase font-bold mb-4 tracking-wider text-center">
+        <div className="mt-8">
+          <h2 className="text-xl uppercase font-bold mb-4 tracking-wider">
             Why Choose GMORKL?
           </h2>
           <ul className="list-disc list-inside space-y-2">
