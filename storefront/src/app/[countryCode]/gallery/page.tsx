@@ -5,8 +5,9 @@ import { useEffect, useState, useCallback, useRef } from "react"
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
   const [index, setIndex] = useState<number | null>(null)
-  const touchStartX = useRef<number | null>(null)
-  const touchEndX = useRef<number | null>(null)
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const dragStartX = useRef<number | null>(null)
+  const dragOffsetX = useRef<number>(0)
 
   useEffect(() => {
     const context = require.context(
@@ -40,15 +41,29 @@ export default function GalleryPage() {
   }, [index, next, prev])
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.changedTouches[0].screenX
+    dragStartX.current = e.touches[0].clientX
+    dragOffsetX.current = 0
   }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    touchEndX.current = e.changedTouches[0].screenX
-    if (!touchStartX.current || !touchEndX.current) return
-    const diff = touchStartX.current - touchEndX.current
-    if (diff > 50) next() // свайп влево
-    if (diff < -50) prev() // свайп вправо
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!dragStartX.current || !sliderRef.current) return
+    const currentX = e.touches[0].clientX
+    dragOffsetX.current = currentX - dragStartX.current
+    sliderRef.current.style.transition = 'none'
+    sliderRef.current.style.transform = `translateX(${dragOffsetX.current}px)`
+  }
+
+  const handleTouchEnd = () => {
+    if (!sliderRef.current) return
+    sliderRef.current.style.transition = 'transform 0.3s ease'
+    if (dragOffsetX.current < -50) next()
+    else if (dragOffsetX.current > 50) prev()
+    sliderRef.current.style.transform = 'translateX(0)'
+    setTimeout(() => {
+      if (sliderRef.current) sliderRef.current.style.transition = 'none'
+    }, 300)
+    dragStartX.current = null
+    dragOffsetX.current = 0
   }
 
   return (
@@ -79,34 +94,40 @@ export default function GalleryPage() {
           className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
           onClick={close}
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
+          {/* Стрелки */}
           <div className="absolute inset-0 z-50 pointer-events-none">
-            <div className="absolute left-3 top-2/3 transform -translate-y-1/2 pointer-events-auto sm:left-6 sm:top-1/2">
+            <div className="absolute left-[-40px] top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   prev()
                 }}
-                className="text-white text-9xl sm:text-7xl font-light hover:opacity-80"
+                className="text-white text-6xl sm:text-7xl font-light hover:opacity-80"
               >
                 &#x2039;
               </button>
             </div>
-            <div className="absolute right-3 top-2/3 transform -translate-y-1/2 pointer-events-auto sm:right-6 sm:top-1/2">
+            <div className="absolute right-[-40px] top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   next()
                 }}
-                className="text-white text-9xl sm:text-7xl font-light hover:opacity-80"
+                className="text-white text-6xl sm:text-7xl font-light hover:opacity-80"
               >
                 &#x203A;
               </button>
             </div>
           </div>
 
-          <div className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none">
+          {/* Изображение со свайпом */}
+          <div
+            ref={sliderRef}
+            className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
+          >
             <img
               src={images[index]}
               alt={`Fullscreen ${index}`}
