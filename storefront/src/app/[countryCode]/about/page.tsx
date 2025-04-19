@@ -1,5 +1,4 @@
 import Image from "next/image"
-import Link from "next/link"
 
 export default function AboutPage() {
   return (
@@ -15,25 +14,9 @@ export default function AboutPage() {
           />
         </div>
 
-        <div className="flex items-center justify-start gap-4">
-          <Link
-            href="https://www.instagram.com/gmorkl/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              src="/icons/instagram.jpeg"
-              alt="Instagram"
-              width={32}
-              height={32}
-              className="opacity-80 hover:opacity-100 transition-opacity"
-            />
-          </Link>
-
-          <h1 className="text-left text-3xl md:text-4xl font-bold uppercase tracking-wide">
-            GMORKL – Wearable Art Made in Cologne
-          </h1>
-        </div>
+        <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-wide text-center">
+          GMORKL – Wearable Art Made in Cologne
+        </h1>
 
         <div className="space-y-6 leading-relaxed text-left text-base md:text-lg">
           <p>
