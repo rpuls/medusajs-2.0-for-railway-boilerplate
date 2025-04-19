@@ -20,12 +20,12 @@ export default function Home() {
 
       {/* Контент поверх видео */}
       <div className="absolute inset-0 flex flex-col justify-center items-start pl-20 z-10">
-        <h1 className="text-[43px] font-[501] uppercase tracking-wider drop-shadow-md">
+        <h1 className="text-4xl font-[505] uppercase tracking-wider drop-shadow-md">
           GMORKL SPRING COLLECTION
         </h1>
 
         <Link
-          href={/${countryCode}/store}
+          href={`/${countryCode}/store`}
           className="mt-0.5 px-6 py-2 border border-white text-base font-semibold tracking-wide uppercase bg-white/10 hover:bg-white/30 transition-colors"
         >
           DISCOVER WEARABLE ART FROM COLOGNE
