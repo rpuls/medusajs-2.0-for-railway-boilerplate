@@ -13,7 +13,11 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["'Barlow Condensed'", "sans-serif"], // ← подключён нужный шрифт
+        sans: ["'Barlow Condensed'", "sans-serif"],
+      },
+      fontWeight: {
+        normal: "400",
+        bold: "700",
       },
       fontSize: {
         base: "1rem",
@@ -26,17 +30,6 @@ module.exports = {
       letterSpacing: {
         wider: "0.05em",
         widest: "0.1em",
-      },
-      fontWeight: {
-        normal: "400",
-      },
-      transitionProperty: {
-        width: "width margin",
-        height: "height",
-        bg: "background-color",
-        display: "display opacity",
-        visibility: "visibility",
-        padding: "padding-top padding-right padding-bottom padding-left",
       },
       colors: {
         grey: {
@@ -72,6 +65,14 @@ module.exports = {
         large: "1440px",
         xlarge: "1680px",
         "2xlarge": "1920px",
+      },
+      transitionProperty: {
+        width: "width margin",
+        height: "height",
+        bg: "background-color",
+        display: "display opacity",
+        visibility: "visibility",
+        padding: "padding-top padding-right padding-bottom padding-left",
       },
       keyframes: {
         ring: {
