@@ -1,36 +1,34 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 
-export default function Home() {
-  const pathname = usePathname()
-  const countryCode = pathname.split("/")[1] || "de" // fallback на "de"
-
+const Hero = () => {
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
+    <section className="relative w-full h-screen overflow-hidden">
       <video
-        className="absolute inset-0 w-full h-full object-cover"
-        src="/flower_power_AI.mp4"
+        className="absolute top-0 left-0 w-full h-full object-cover z-0"
         autoPlay
-        muted
         loop
+        muted
         playsInline
-      />
+      >
+        <source src="/hero-video.mp4" type="video/mp4" />
+      </video>
 
-      {/* Контент поверх видео */}
-      <div className="absolute inset-0 flex flex-col justify-center items-start pl-20 z-10">
-        <h1 className="text-[43px] font-[501] uppercase tracking-wider drop-shadow-md">
-          GMORKL SPRING COLLECTION
-        </h1>
-
-        <Link
-          href={`/${countryCode}/store`}
-          className="mt-0.5 px-6 py-2 border border-white text-base font-semibold tracking-wide uppercase bg-white/10 hover:bg-white/30 transition-colors"
-        >
-          DISCOVER WEARABLE ART FROM COLOGNE
-        </Link>
+      <div className="relative z-10 flex flex-col items-center justify-center h-full px-4 text-white text-center">
+        <div className="flex flex-col items-center gap-y-2 mt-10 mb-10">
+          <h1 className="text-white text-4xl tracking-wider font-medium uppercase text-center font-[505]">
+            GMORKL SPRING COLLECTION
+          </h1>
+          <Link href="/de/store">
+            <span className="text-white text-sm tracking-widest uppercase border border-white px-6 py-3 bg-white/10 hover:bg-white/20 transition-colors duration-300 cursor-pointer">
+              DISCOVER WEARABLE ART FROM COLOGNE
+            </span>
+          </Link>
+        </div>
       </div>
-    </div>
+    </section>
   )
 }
+
+export default Hero
