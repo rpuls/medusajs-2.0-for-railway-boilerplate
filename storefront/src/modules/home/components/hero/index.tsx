@@ -1,32 +1,36 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
-const Hero = () => {
+export default function Home() {
+  const pathname = usePathname()
+  const countryCode = pathname.split("/")[1] || "de" // fallback на "de"
+
   return (
-    <section className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
       <video
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        className="absolute inset-0 w-full h-full object-cover"
+        src="/flower_power_AI.mp4"
         autoPlay
-        loop
         muted
+        loop
         playsInline
-      >
-        <source src="/hero-video.mp4" type="video/mp4" />
-      </video>
+      />
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full px-4 text-white text-center">
-        <h1 className="mt-20 mb-6 text-white text-4xl tracking-wider font-medium uppercase text-center">
+      {/* Контент поверх видео */}
+      <div className="absolute inset-0 flex flex-col justify-center items-start pl-20 z-10">
+        <h1 className="text-[43px] font-[501] uppercase tracking-wider drop-shadow-md">
           GMORKL SPRING COLLECTION
         </h1>
-        <Link href="/de/store">
-          <span className="mb-12 text-white text-sm tracking-widest uppercase border border-white px-6 py-3 hover:bg-white/10 transition-colors duration-300">
-            DISCOVER WEARABLE ART FROM COLOGNE
-          </span>
+
+        <Link
+          href={/${countryCode}/store}
+          className="mt-0.5 px-6 py-2 border border-white text-base font-semibold tracking-wide uppercase bg-white/10 hover:bg-white/30 transition-colors"
+        >
+          DISCOVER WEARABLE ART FROM COLOGNE
         </Link>
       </div>
-    </section>
+    </div>
   )
 }
-
-export default Hero
