@@ -8,6 +8,7 @@ export default function GalleryPage() {
   const sliderRef = useRef<HTMLDivElement>(null)
   const dragStartX = useRef<number | null>(null)
   const dragOffsetX = useRef<number>(0)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
 
   useEffect(() => {
     const context = require.context(
@@ -41,12 +42,13 @@ export default function GalleryPage() {
   }, [index, next, prev])
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return
     dragStartX.current = e.touches[0].clientX
     dragOffsetX.current = 0
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!dragStartX.current || !sliderRef.current) return
+    if (!isMobile || dragStartX.current === null || !sliderRef.current) return
     const currentX = e.touches[0].clientX
     dragOffsetX.current = currentX - dragStartX.current
     sliderRef.current.style.transition = 'none'
@@ -54,10 +56,13 @@ export default function GalleryPage() {
   }
 
   const handleTouchEnd = () => {
-    if (!sliderRef.current) return
+    if (!isMobile || !sliderRef.current) return
     sliderRef.current.style.transition = 'transform 0.3s ease'
-    if (dragOffsetX.current < -50) next()
-    else if (dragOffsetX.current > 50) prev()
+    if (dragOffsetX.current < -100) {
+      next()
+    } else if (dragOffsetX.current > 100) {
+      prev()
+    }
     sliderRef.current.style.transform = 'translateX(0)'
     setTimeout(() => {
       if (sliderRef.current) sliderRef.current.style.transition = 'none'
@@ -97,15 +102,15 @@ export default function GalleryPage() {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Стрелки */}
-          <div className="absolute inset-0 z-50 pointer-events-none">
+          {/* Стрелки — только на десктопе */}
+          <div className="absolute inset-0 z-50 pointer-events-none hidden sm:block">
             <div className="absolute left-[-40px] top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   prev()
                 }}
-                className="text-white text-6xl sm:text-7xl font-light hover:opacity-80"
+                className="text-white text-6xl font-light hover:opacity-80"
               >
                 &#x2039;
               </button>
@@ -116,14 +121,14 @@ export default function GalleryPage() {
                   e.stopPropagation()
                   next()
                 }}
-                className="text-white text-6xl sm:text-7xl font-light hover:opacity-80"
+                className="text-white text-6xl font-light hover:opacity-80"
               >
                 &#x203A;
               </button>
             </div>
           </div>
 
-          {/* Изображение со свайпом */}
+          {/* Картинка со свайпом */}
           <div
             ref={sliderRef}
             className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
