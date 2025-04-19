@@ -14,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-mode="light">
       <head>
+        {/* Пре-загрузка шрифта для корректного рендеринга */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -24,9 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta charSet="UTF-8" />
         <title>GMORKL STORE</title>
       </head>
-      <body className="font-sans tracking-wide text-base antialiased bg-white text-[#111827]">
+      <body className="m-0 p-0 font-sans tracking-wide text-base antialiased bg-white text-[#111827]">
         <Nav />
-        <main className="relative min-h-screen">{children}</main>
+        {/* 👇 убрали лишние стили и отступы у main */}
+        <main className="m-0 p-0">{children}</main>
         <Footer />
       </body>
     </html>
