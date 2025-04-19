@@ -1,32 +1,32 @@
-// src/app/layout.tsx
-
-import { getBaseURL } from "@lib/util/env"
-import { Metadata } from "next"
+import "../globals.css"
+import { Inter } from "next/font/google"
+import { getCountryCode } from "@lib/localization/get-country-code"
 import Nav from "@modules/layout/templates/nav"
 import Footer from "@modules/layout/templates/footer"
-import "styles/globals.css"
+import SideMenu from "@modules/layout/templates/side-menu"
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getBaseURL()),
+const inter = Inter({ subsets: ["latin"], display: "swap" })
+
+export async function generateMetadata() {
+  return {
+    title: "GMORKL STORE",
+    description: "Discover wearable art from Cologne.",
+  }
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const countryCode = getCountryCode()
+
   return (
-    <html lang="en" data-mode="light">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta charSet="UTF-8" />
-        <title>GMORKL STORE</title>
-      </head>
-      <body className="font-sans tracking-wide text-base antialiased bg-white text-[#111827]">
+    <html lang={countryCode}>
+      <body className={inter.className}>
         <Nav />
-        <main className="relative min-h-screen">{children}</main>
+        <SideMenu />
+        <main className="relative">{children}</main>
         <Footer />
       </body>
     </html>
