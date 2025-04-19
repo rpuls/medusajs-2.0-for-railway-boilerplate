@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 
 const Hero = () => {
-  const { countryCode } = useParams()
+  const pathname = usePathname()
+  const countryCode = pathname.split("/")[1] || "de"
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
@@ -16,15 +17,16 @@ const Hero = () => {
         loop
         playsInline
       />
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-start text-left bg-black/40 px-6 sm:px-20">
-        <h1 className="text-4xl sm:text-5xl text-white font-light uppercase tracking-wide drop-shadow-lg">
-          Gmorkl Spring Collection
+      <div className="absolute inset-0 z-10 flex flex-col justify-center items-start text-left bg-black/40 p-8 sm:p-16">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl text-white font-semibold tracking-wide uppercase">
+          GMORKL SPRING COLLECTION
         </h1>
+
         <Link
           href={`/${countryCode}/store`}
-          className="mt-2 inline-block px-5 py-2 text-white text-sm uppercase tracking-wide bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 transition"
+          className="mt-3 px-5 py-2 bg-white/10 text-white text-sm sm:text-base tracking-wider uppercase transition hover:bg-white/20"
         >
-          Discover Wearable Art from Cologne
+          DISCOVER WEARABLE ART FROM COLOGNE
         </Link>
       </div>
     </div>
