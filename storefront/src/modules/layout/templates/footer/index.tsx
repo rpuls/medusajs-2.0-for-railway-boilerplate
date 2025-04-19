@@ -105,6 +105,44 @@ export default async function Footer() {
                 </ul>
               </div>
             )}
+
+            {/* Новый блок Gmorkl: About, Gallery, Instagram */}
+            <div className="flex flex-col gap-y-2">
+              <span className="uppercase text-ui-fg-base text-sm">Gmorkl</span>
+              <ul className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle text-sm">
+                <li>
+                  <LocalizedClientLink
+                    href="/about"
+                    className="hover:text-ui-fg-base"
+                  >
+                    About
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/gallery"
+                    className="hover:text-ui-fg-base"
+                  >
+                    Gallery
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <a
+                    href="https://www.instagram.com/gmorkl/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 hover:text-ui-fg-base"
+                  >
+                    <img
+                      src="/icons/instagram.png"
+                      alt="Instagram"
+                      className="w-5 h-5 object-contain"
+                    />
+                    Instagram
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
