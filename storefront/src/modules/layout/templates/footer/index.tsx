@@ -23,35 +23,22 @@ export default async function Footer() {
           </div>
 
           <div className="gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3 text-base tracking-wider">
+            {/* Categories */}
             {product_categories && product_categories.length > 0 && (
               <div className="flex flex-col gap-y-2">
-                <span className="uppercase text-ui-fg-base text-sm">
-                  Categories
-                </span>
-                <ul
-                  className="grid grid-cols-1 gap-2"
-                  data-testid="footer-categories"
-                >
+                <span className="uppercase text-ui-fg-base text-sm">Categories</span>
+                <ul className="grid grid-cols-1 gap-2" data-testid="footer-categories">
                   {product_categories.slice(0, 6).map((c) => {
                     if (c.parent_category) return
-
-                    const children =
-                      c.category_children?.map((child) => ({
-                        name: child.name,
-                        handle: child.handle,
-                        id: child.id,
-                      })) || null
-
+                    const children = c.category_children?.map((child) => ({
+                      name: child.name,
+                      handle: child.handle,
+                      id: child.id,
+                    })) || null
                     return (
-                      <li
-                        className="flex flex-col gap-2 text-ui-fg-subtle text-sm"
-                        key={c.id}
-                      >
+                      <li className="flex flex-col gap-2 text-ui-fg-subtle text-sm" key={c.id}>
                         <LocalizedClientLink
-                          className={clx(
-                            "hover:text-ui-fg-base",
-                            children && "text-sm"
-                          )}
+                          className={clx("hover:text-ui-fg-base", children && "text-sm")}
                           href={`/categories/${c.handle}`}
                           data-testid="category-link"
                         >
@@ -79,11 +66,10 @@ export default async function Footer() {
               </div>
             )}
 
+            {/* Collections */}
             {collections && collections.length > 0 && (
               <div className="flex flex-col gap-y-2">
-                <span className="uppercase text-ui-fg-base text-sm">
-                  Collections
-                </span>
+                <span className="uppercase text-ui-fg-base text-sm">Collections</span>
                 <ul
                   className={clx(
                     "grid grid-cols-1 gap-2 text-ui-fg-subtle text-sm",
@@ -106,9 +92,9 @@ export default async function Footer() {
               </div>
             )}
 
-            {/* Новый блок Gmorkl: About, Gallery, Instagram */}
+            {/* GMORKL Links */}
             <div className="flex flex-col gap-y-2">
-              <span className="uppercase text-ui-fg-base text-sm">Gmorkl</span>
+              <span className="uppercase text-ui-fg-base text-sm">GMORKL</span>
               <ul className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle text-sm">
                 <li>
                   <LocalizedClientLink
@@ -130,13 +116,15 @@ export default async function Footer() {
                   <a
                     href="https://www.instagram.com/gmorkl/"
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-2 hover:text-ui-fg-base"
                   >
                     <img
-                      src="/icons/instagram.png"
+                      src="/icons/instagram.jpeg"
                       alt="Instagram"
-                      className="w-5 h-5 object-contain"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
                     />
                     Instagram
                   </a>
