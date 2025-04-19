@@ -17,12 +17,12 @@ const Hero = () => {
         playsInline
       />
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-start text-left bg-black/40 px-6 sm:px-20">
-        <h1 className="text-5xl sm:text-6xl text-white font-semibold uppercase tracking-wide drop-shadow-lg">
+        <h1 className="text-4xl sm:text-5xl text-white font-light uppercase tracking-wide drop-shadow-lg">
           Gmorkl Spring Collection
         </h1>
         <Link
           href={`/${countryCode}/store`}
-          className="mt-4 sm:mt-3 inline-block bg-white/10 px-4 py-2 text-sm sm:text-base text-white uppercase tracking-wide backdrop-blur-md border border-white/30 hover:bg-white/20 transition"
+          className="mt-2 inline-block px-5 py-2 text-white text-sm uppercase tracking-wide bg-white/10 backdrop-blur border border-white/20 hover:bg-white/20 transition"
         >
           Discover Wearable Art from Cologne
         </Link>
