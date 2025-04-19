@@ -20,7 +20,7 @@ export default function Home() {
 
       {/* Контент поверх видео */}
       <div className="absolute inset-0 flex flex-col justify-center items-start pl-20 z-10">
-        <h1 className="text-5xl font-medium uppercase tracking-wide drop-shadow-md">
+        <h1 className="text-5xl font-[550] uppercase tracking-wide drop-shadow-md">
           GMORKL SPRING COLLECTION
         </h1>
 
