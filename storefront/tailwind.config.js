@@ -1,4 +1,4 @@
-const path = require("path")
+const path = require("path");
 
 module.exports = {
   darkMode: "class",
@@ -16,6 +16,7 @@ module.exports = {
         sans: ["'Barlow Condensed'", "sans-serif"],
       },
       fontWeight: {
+        light: "300",
         normal: "400",
         bold: "700",
       },
