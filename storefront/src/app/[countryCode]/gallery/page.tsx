@@ -39,9 +39,9 @@ export default function GalleryPage() {
   }, [index, next, prev])
 
   return (
-    <div className="px-6 pt-14 pb-32 font-sans tracking-wide">
-      <h1 className="text-3xl font-medium uppercase mb-10 text-center tracking-wide">
-        Gallery
+    <div className="px-6 pt-10 pb-32 font-sans tracking-wide">
+      <h1 className="text-4xl font-semibold uppercase mb-8 tracking-wider text-center">
+        GALLERY
       </h1>
 
       <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4 space-y-4">
