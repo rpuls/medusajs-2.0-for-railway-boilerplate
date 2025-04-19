@@ -1,6 +1,11 @@
+"use client"
+
 import Link from "next/link"
+import { useParams } from "next/navigation"
 
 export default function Home() {
+  const { countryCode } = useParams()
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
       <video
@@ -18,7 +23,7 @@ export default function Home() {
           gmorkl spring collection
         </h1>
 
-        <Link href="/store" passHref>
+        <Link href={`/${countryCode}/store`} passHref>
           <a className="inline-block text-sm md:text-base font-medium uppercase tracking-wide px-6 py-2 bg-white/10 backdrop-blur-md border border-white/30 hover:bg-white/20 transition-all duration-300">
             discover wearable art from cologne
           </a>
