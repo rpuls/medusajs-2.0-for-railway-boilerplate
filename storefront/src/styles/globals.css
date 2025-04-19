@@ -19,6 +19,8 @@ body {
   padding: 0;
   color: #111827;
   background-color: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Заголовки */
@@ -28,6 +30,14 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 1px;
   font-family: 'Barlow Condensed', sans-serif;
   margin-bottom: 1rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ссылки */
+a {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Утилиты */
