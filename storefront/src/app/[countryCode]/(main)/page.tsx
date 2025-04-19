@@ -26,7 +26,7 @@ export default function Home() {
 
         <Link
           href={`/${countryCode}/store`}
-          className="mt-1.1 px-6 py-2 border border-white text-base font-semibold tracking-wide uppercase bg-white/10 hover:bg-white/30 transition-colors"
+          className="mt-0.8 px-6 py-2 border border-white text-base font-semibold tracking-wide uppercase bg-white/10 hover:bg-white/30 transition-colors"
         >
           DISCOVER WEARABLE ART FROM COLOGNE
         </Link>
