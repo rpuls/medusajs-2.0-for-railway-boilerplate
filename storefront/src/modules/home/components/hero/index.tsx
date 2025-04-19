@@ -3,12 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-const Hero = () => {
+export default function Home() {
   const pathname = usePathname()
-  const countryCode = pathname.split("/")[1] || "de"
+  const countryCode = pathname.split("/")[1] || "de" // fallback на "de"
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
       <video
         className="absolute inset-0 w-full h-full object-cover"
         src="/flower_power_AI.mp4"
@@ -17,14 +17,16 @@ const Hero = () => {
         loop
         playsInline
       />
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-start text-left bg-black/40 p-8 sm:p-16">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl text-white font-semibold tracking-wide uppercase">
+
+      {/* Контент поверх видео */}
+      <div className="absolute inset-0 flex flex-col justify-center items-start pl-20 z-10">
+        <h1 className="text-5xl font-semibold uppercase tracking-wide drop-shadow-md">
           GMORKL SPRING COLLECTION
         </h1>
 
         <Link
           href={`/${countryCode}/store`}
-          className="mt-3 px-5 py-2 bg-white/10 text-white text-sm sm:text-base tracking-wider uppercase transition hover:bg-white/20"
+          className="mt-6 px-6 py-2 border border-white text-sm tracking-wide uppercase bg-white/10 hover:bg-white/20 transition-colors"
         >
           DISCOVER WEARABLE ART FROM COLOGNE
         </Link>
@@ -32,5 +34,3 @@ const Hero = () => {
     </div>
   )
 }
-
-export default Hero
