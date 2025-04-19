@@ -14,11 +14,11 @@ export default function AboutPage() {
           />
         </div>
 
-        <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-wide text-center">
-          GMORKL – Wearable Art Made in Cologne
-        </h1>
-
         <div className="space-y-6 leading-relaxed text-left text-base md:text-lg">
+          <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-wide">
+            GMORKL – Wearable Art Made in Cologne
+          </h1>
+
           <p>
             GMORKL is an art project by visual artist and designer Masha Rodigina, based in Cologne, Germany. Specializing in handprinted, one-of-a-kind T-shirts and textiles, GMORKL brings together art, fashion, and activism.
           </p>
