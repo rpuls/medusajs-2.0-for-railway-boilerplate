@@ -15,14 +15,14 @@ const Hero = () => {
       />
 
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black/40 px-6">
-        <h1 className="text-4xl md:text-6xl text-white font-extralight tracking-wide drop-shadow-lg uppercase mb-4">
+        <h1 className="text-4xl md:text-6xl text-white font-extralight tracking-wide drop-shadow-lg uppercase mb-6">
           gmorkl spring collection
         </h1>
 
         <Link href="/store" passHref>
-          <div className="text-white text-sm md:text-base font-light uppercase tracking-wider px-6 py-2 bg-white/10 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/20 transition-all duration-300 cursor-pointer">
+          <a className="text-white text-sm md:text-base font-light uppercase tracking-wider px-6 py-2 bg-white/10 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/20 transition-all duration-300">
             discover wearable art from cologne
-          </div>
+          </a>
         </Link>
       </div>
     </div>
