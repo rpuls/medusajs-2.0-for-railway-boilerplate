@@ -4,8 +4,7 @@ import Link from "next/link"
 export default function AboutPage() {
   return (
     <div className="w-full px-4 md:px-8 py-12">
-      <div className="max-w-2xl mx-auto space-y-10">
-        {/* Фото в квадрате с кропом вверх (голова выше центра) */}
+      <div className="max-w-3xl mx-auto space-y-10">
         <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-lg">
           <Image
             src="/about/mascha.jpg"
@@ -16,8 +15,7 @@ export default function AboutPage() {
           />
         </div>
 
-        {/* Иконка Instagram */}
-        <div className="flex justify-center">
+        <div className="flex items-center justify-start gap-4">
           <Link
             href="https://www.instagram.com/gmorkl/"
             target="_blank"
@@ -26,34 +24,34 @@ export default function AboutPage() {
             <Image
               src="/icons/instagram.jpeg"
               alt="Instagram"
-              width={40}
-              height={40}
+              width={32}
+              height={32}
               className="opacity-80 hover:opacity-100 transition-opacity"
             />
           </Link>
+
+          <h1 className="text-left text-3xl md:text-4xl font-bold uppercase tracking-wide">
+            GMORKL – Wearable Art Made in Cologne
+          </h1>
         </div>
 
-        {/* Заголовок */}
-        <h1 className="text-left text-3xl md:text-4xl font-bold uppercase tracking-wide">
-          GMORKL – Wearable Art Made in Cologne
-        </h1>
-
-        {/* Текст описания */}
         <div className="space-y-6 leading-relaxed text-left text-base md:text-lg">
           <p>
             GMORKL is an art project by visual artist and designer Masha Rodigina, based in Cologne, Germany. Specializing in handprinted, one-of-a-kind T-shirts and textiles, GMORKL brings together art, fashion, and activism.
           </p>
+
           <p>
             Each item is handprinted using silkscreen techniques on Fairtrade, organic cotton. From sketches on paper to digital experiments, every GMORKL piece is born as an artwork — then transformed into wearable art. No mass production. No replicas. Just unique fashion statements with soul.
           </p>
+
           <p>
             At GMORKL, we believe clothing should tell stories. That art should be worn. That a T-shirt can be a political message, a poetic gesture, or a symbol of independent culture.
           </p>
+
           <p>
             In this store, you’ll also find not only a limited selection of art prints and original illustrations but also artworks made by Mascha&apos;s friends.
           </p>
 
-          {/* Why choose */}
           <div className="mt-8">
             <h2 className="text-xl uppercase font-bold mb-4 tracking-wider">
               Why Choose GMORKL?
