@@ -14,16 +14,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-mode="light">
       <head>
-        {/* Пре-загрузка шрифта — важно для качества в Safari */}
+        {/* Variable Barlow Condensed — подключение через Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-
-        {/* Подключаем Light (300), Regular (400), и Bold (700) стили */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wdth,wght@75..100,100..900&display=swap"
           rel="stylesheet"
         />
-
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta charSet="UTF-8" />
         <title>GMORKL STORE</title>
