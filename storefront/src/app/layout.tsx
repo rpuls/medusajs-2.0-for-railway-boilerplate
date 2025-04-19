@@ -14,13 +14,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-mode="light">
       <head>
-        {/* 🧠 Добавь preconnect — это критически важно для font-smoothing и быстрой загрузки */}
+        {/* Пре-загрузка шрифта — важно для качества в Safari */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
-        {/* Подключение Barlow Condensed */}
+        {/* Подключаем Light (300), Regular (400), и Bold (700) стили */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;700&display=swap"
           rel="stylesheet"
         />
 
