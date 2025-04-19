@@ -40,7 +40,7 @@ export default function GalleryPage() {
 
   return (
     <div className="px-6 pt-10 pb-32 font-sans tracking-wide">
-      <h1 className="text-4xl font-semibold uppercase mb-8 tracking-wider text-center">
+      <h1 className="text-4xl font-medium uppercase mb-8 tracking-wider text-center">
         GALLERY
       </h1>
 
