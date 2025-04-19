@@ -10,12 +10,13 @@ const Hero = () => {
         playsInline
       />
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black bg-opacity-40 p-8">
-        <h1 className="text-4xl md:text-6xl text-white font-light tracking-wide drop-shadow-lg uppercase">
-          gmorkl 1st collection
+        <h1 className="text-4xl md:text-6xl text-white font-extralight tracking-wide drop-shadow-lg uppercase mb-4">
+          gmorkl spring collection
         </h1>
-        <h2 className="text-lg md:text-2xl text-white opacity-80 mt-4 font-light tracking-wide uppercase">
-          discover curated wearable art from Cologne
-        </h2>
+
+        <button className="text-white text-sm md:text-base font-light uppercase tracking-wider px-6 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full hover:bg-white/20 transition-all duration-300">
+          discover wearable art from cologne
+        </button>
       </div>
     </div>
   )
