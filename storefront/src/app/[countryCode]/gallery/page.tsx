@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import Image from "next/image"
+import { useEffect, useState, useCallback, useRef } from "react"
 
 export default function GalleryPage() {
   const [images, setImages] = useState<string[]>([])
   const [index, setIndex] = useState<number | null>(null)
+  const touchStartX = useRef<number | null>(null)
+  const touchEndX = useRef<number | null>(null)
 
   useEffect(() => {
     const context = require.context(
@@ -38,6 +39,18 @@ export default function GalleryPage() {
     return () => window.removeEventListener("keydown", handleKey)
   }, [index, next, prev])
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.changedTouches[0].screenX
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].screenX
+    if (!touchStartX.current || !touchEndX.current) return
+    const diff = touchStartX.current - touchEndX.current
+    if (diff > 50) next() // свайп влево
+    if (diff < -50) prev() // свайп вправо
+  }
+
   return (
     <div className="px-6 pt-10 pb-32 font-sans tracking-wide">
       <h1 className="text-4xl font-[505] uppercase mb-8 tracking-wider text-center">
@@ -65,26 +78,28 @@ export default function GalleryPage() {
         <div
           className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
           onClick={close}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           <div className="absolute inset-0 z-50 pointer-events-none">
-            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
+            <div className="absolute left-3 top-2/3 transform -translate-y-1/2 pointer-events-auto sm:left-6 sm:top-1/2">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   prev()
                 }}
-                className="text-white text-7xl font-light hover:opacity-80"
+                className="text-white text-9xl sm:text-7xl font-light hover:opacity-80"
               >
                 &#x2039;
               </button>
             </div>
-            <div className="absolute right-6 top-1/2 transform -translate-y-1/2 pointer-events-auto">
+            <div className="absolute right-3 top-2/3 transform -translate-y-1/2 pointer-events-auto sm:right-6 sm:top-1/2">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   next()
                 }}
-                className="text-white text-7xl font-light hover:opacity-80"
+                className="text-white text-9xl sm:text-7xl font-light hover:opacity-80"
               >
                 &#x203A;
               </button>
