@@ -5,6 +5,7 @@ export default function AboutPage() {
   return (
     <div className="w-full px-4 md:px-8 py-12">
       <div className="max-w-3xl mx-auto space-y-10">
+        {/* Фото — чуть выше центра (object-top), квадрат */}
         <div className="relative w-full aspect-square rounded-xl overflow-hidden shadow-lg">
           <Image
             src="/about/mascha.jpg"
@@ -15,6 +16,7 @@ export default function AboutPage() {
           />
         </div>
 
+        {/* Иконка Instagram */}
         <div className="flex justify-center">
           <Link
             href="https://www.instagram.com/gmorkl/"
@@ -22,7 +24,7 @@ export default function AboutPage() {
             rel="noopener noreferrer"
           >
             <Image
-              src="/about/instagram-black-logo-on-transparent-background-free-vector.jpg"
+              src="/about/instagram.jpeg"
               alt="Instagram"
               width={40}
               height={40}
@@ -31,10 +33,12 @@ export default function AboutPage() {
           </Link>
         </div>
 
+        {/* Заголовок */}
         <h1 className="text-left text-3xl md:text-4xl font-bold uppercase tracking-wide">
           GMORKL – Wearable Art Made in Cologne
         </h1>
 
+        {/* Основной текст */}
         <div className="space-y-6 leading-relaxed text-left text-base md:text-lg">
           <p>
             GMORKL is an art project by visual artist and designer Masha Rodigina, based in Cologne, Germany. Specializing in handprinted, one-of-a-kind T-shirts and textiles, GMORKL brings together art, fashion, and activism.
