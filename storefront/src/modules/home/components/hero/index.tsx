@@ -10,10 +10,10 @@ const Hero = () => {
         playsInline
       />
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black bg-opacity-40 p-8">
-        <h1 className="text-4xl md:text-6xl text-white font-bold drop-shadow-lg">
+        <h1 className="text-4xl md:text-6xl text-white font-light tracking-wide drop-shadow-lg uppercase">
           gmorkl 1st collection
         </h1>
-        <h2 className="text-lg md:text-2xl text-white opacity-80 mt-4">
+        <h2 className="text-lg md:text-2xl text-white opacity-80 mt-4 font-light tracking-wide uppercase">
           discover curated wearable art from Cologne
         </h2>
       </div>
