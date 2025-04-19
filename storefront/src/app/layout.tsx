@@ -1,4 +1,4 @@
-import "../globals.css"
+import "../../globals.css"
 import { Inter } from "next/font/google"
 import { getCountryCode } from "@lib/localization/get-country-code"
 import Nav from "@modules/layout/templates/nav"
