@@ -14,10 +14,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-mode="light">
       <head>
+        {/* 🧠 Добавь preconnect — это критически важно для font-smoothing и быстрой загрузки */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+
+        {/* Подключение Barlow Condensed */}
         <link
           href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&display=swap"
           rel="stylesheet"
         />
+
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta charSet="UTF-8" />
         <title>GMORKL STORE</title>
