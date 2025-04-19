@@ -16,16 +16,14 @@ const Hero = () => {
       </video>
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full px-4 text-white text-center">
-        <div className="flex flex-col items-center gap-y-2 mt-10 mb-10">
-          <h1 className="text-white text-4xl tracking-wider font-medium uppercase text-center font-[505]">
-            GMORKL SPRING COLLECTION
-          </h1>
-          <Link href="/de/store">
-            <span className="text-white text-sm tracking-widest uppercase border border-white px-6 py-3 bg-white/10 hover:bg-white/20 transition-colors duration-300 cursor-pointer">
-              DISCOVER WEARABLE ART FROM COLOGNE
-            </span>
-          </Link>
-        </div>
+        <h1 className="mt-20 mb-6 text-white text-4xl tracking-wider font-medium uppercase text-center">
+          GMORKL SPRING COLLECTION
+        </h1>
+        <Link href="/de/store">
+          <span className="mb-12 text-white text-sm tracking-widest uppercase border border-white px-6 py-3 hover:bg-white/10 transition-colors duration-300">
+            DISCOVER WEARABLE ART FROM COLOGNE
+          </span>
+        </Link>
       </div>
     </section>
   )
