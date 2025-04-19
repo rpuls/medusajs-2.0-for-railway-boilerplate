@@ -1,6 +1,11 @@
+"use client"
+
 import Link from "next/link"
+import { useParams } from "next/navigation"
 
 export default function Home() {
+  const { countryCode } = useParams()
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
       <video
@@ -13,13 +18,13 @@ export default function Home() {
       />
 
       {/* Контент поверх видео */}
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black/40 px-6">
-        <h1 className="text-4xl md:text-6xl font-extralight tracking-wide uppercase drop-shadow-lg mb-4">
+      <div className="absolute inset-0 z-10 flex flex-col justify-center items-start text-left pl-20 bg-black/40">
+        <h1 className="text-4xl md:text-6xl font-medium tracking-wide uppercase drop-shadow-lg mb-2">
           gmorkl spring collection
         </h1>
 
-        <Link href="/store" passHref>
-          <a className="text-sm md:text-base font-light uppercase tracking-wide px-6 py-2 bg-white/10 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/20 transition-all duration-300">
+        <Link href={`/${countryCode}/store`} passHref>
+          <a className="inline-block text-sm md:text-base font-medium uppercase tracking-wide px-6 py-2 bg-white/10 backdrop-blur-md border border-white/30 hover:bg-white/20 transition-all duration-300">
             discover wearable art from cologne
           </a>
         </Link>
