@@ -21,6 +21,7 @@ export default async function Footer() {
               Gmorkl Store
             </LocalizedClientLink>
           </div>
+
           <div className="gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3 text-base tracking-wider">
             {product_categories && product_categories.length > 0 && (
               <div className="flex flex-col gap-y-2">
@@ -77,6 +78,7 @@ export default async function Footer() {
                 </ul>
               </div>
             )}
+
             {collections && collections.length > 0 && (
               <div className="flex flex-col gap-y-2">
                 <span className="uppercase text-ui-fg-base text-sm">
@@ -103,43 +105,9 @@ export default async function Footer() {
                 </ul>
               </div>
             )}
-            <div className="flex flex-col gap-y-2">
-              <span className="uppercase text-ui-fg-base text-sm">Gmorkl</span>
-              <ul className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle text-sm">
-                <li>
-                  <a
-                    href="https://github.com/medusajs"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-ui-fg-base"
-                  >
-                    GitHub
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://docs.medusajs.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-ui-fg-base"
-                  >
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/medusajs/nextjs-starter-medusa"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-ui-fg-base"
-                  >
-                    Source code
-                  </a>
-                </li>
-              </ul>
-            </div>
           </div>
         </div>
+
         <div className="flex w-full mb-16 justify-between text-ui-fg-muted">
           <Text className="text-sm tracking-wide uppercase">
             © {new Date().getFullYear()} Gmorkl Store. All rights reserved.
