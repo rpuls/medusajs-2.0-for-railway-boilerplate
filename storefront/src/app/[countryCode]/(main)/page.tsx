@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function Home() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
@@ -10,14 +12,17 @@ export default function Home() {
         playsInline
       />
 
-      {/* контент поверх видео */}
-      <div className="absolute inset-0 flex items-center justify-start pl-20 z-0">
-        <div>
-          <h1 className="text-5xl font-bold uppercase">gmorkl spring collection</h1>
-          <h2 className="text-xl mt-2 tracking-wide uppercase">
+      {/* Контент поверх видео */}
+      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center bg-black/40 px-6">
+        <h1 className="text-4xl md:text-6xl font-extralight tracking-wide uppercase drop-shadow-lg mb-4">
+          gmorkl spring collection
+        </h1>
+
+        <Link href="/store" passHref>
+          <a className="text-sm md:text-base font-light uppercase tracking-wide px-6 py-2 bg-white/10 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/20 transition-all duration-300">
             discover wearable art from cologne
-          </h2>
-        </div>
+          </a>
+        </Link>
       </div>
     </div>
   )
