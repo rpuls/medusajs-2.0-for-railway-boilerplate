@@ -8,9 +8,8 @@ export default function GalleryPage() {
   const sliderRef = useRef<HTMLDivElement>(null)
   const dragStartX = useRef<number | null>(null)
   const dragOffsetX = useRef<number>(0)
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640
 
-  // Load images
   useEffect(() => {
     const context = require.context(
       '../../../../public/gallery',
@@ -21,29 +20,20 @@ export default function GalleryPage() {
     setImages(paths)
   }, [])
 
-  // Lock scroll on open
-  useEffect(() => {
-    if (index !== null) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'auto'
-    }
-    return () => {
-      document.body.style.overflow = 'auto'
-    }
-  }, [index])
-
   const close = () => setIndex(null)
 
   const next = useCallback(() => {
-    if (index !== null) setIndex((prev) => (prev! + 1) % images.length)
+    if (index !== null) {
+      setIndex((prev) => (prev! + 1) % images.length)
+    }
   }, [index, images])
 
   const prev = useCallback(() => {
-    if (index !== null) setIndex((prev) => (prev! - 1 + images.length) % images.length)
+    if (index !== null) {
+      setIndex((prev) => (prev! - 1 + images.length) % images.length)
+    }
   }, [index, images])
 
-  // Keyboard nav
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (index === null) return
@@ -72,7 +62,7 @@ export default function GalleryPage() {
   const handleTouchEnd = () => {
     if (!isMobile || !sliderRef.current) return
     const threshold = 80
-    sliderRef.current.style.transition = 'transform 0.25s ease'
+    sliderRef.current.style.transition = 'transform 0.3s ease'
 
     if (dragOffsetX.current < -threshold) {
       sliderRef.current.style.transform = 'translateX(-100vw)'
@@ -84,13 +74,13 @@ export default function GalleryPage() {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               if (sliderRef.current) {
-                sliderRef.current.style.transition = 'transform 0.25s ease'
+                sliderRef.current.style.transition = 'transform 0.3s ease'
                 sliderRef.current.style.transform = 'translateX(0)'
               }
             })
           })
         }
-      }, 250)
+      }, 150)
     } else if (dragOffsetX.current > threshold) {
       sliderRef.current.style.transform = 'translateX(100vw)'
       setTimeout(() => {
@@ -101,13 +91,13 @@ export default function GalleryPage() {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               if (sliderRef.current) {
-                sliderRef.current.style.transition = 'transform 0.25s ease'
+                sliderRef.current.style.transition = 'transform 0.3s ease'
                 sliderRef.current.style.transform = 'translateX(0)'
               }
             })
           })
         }
-      }, 250)
+      }, 150)
     } else {
       sliderRef.current.style.transform = 'translateX(0)'
     }
@@ -141,13 +131,13 @@ export default function GalleryPage() {
 
       {index !== null && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md overflow-hidden"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
           onClick={close}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Arrows for desktop */}
+          {/* Стрелки — только на десктопе */}
           <div className="absolute inset-0 z-50 pointer-events-none hidden sm:block">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
@@ -173,11 +163,11 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          {/* Image — fully centered */}
-          <div className="flex items-center justify-center h-screen pointer-events-none">
+          {/* Картинка с анимацией свайпа и отступом от хедера */}
+          <div className="flex justify-center items-start sm:items-center h-screen pointer-events-none">
             <div
               ref={sliderRef}
-              className="max-w-[90vw] max-h-[90vh] p-4"
+              className="max-w-[90vw] max-h-[90vh] p-4 mt-[48px] sm:mt-0"
             >
               <img
                 src={images[index]}
