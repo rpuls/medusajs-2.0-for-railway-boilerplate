@@ -1,103 +1,94 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
-
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import Link from "next/link"
 import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import { SortOptions } from "./sort-products"
-import SortProducts from "./sort-products"
 
-export type RefinementListProps = {
+const sortOptions = [
+  { value: "created_at", label: "Latest Arrivals" },
+  { value: "price_asc", label: "Price: Low -> High" },
+  { value: "price_desc", label: "Price: High -> Low" },
+]
+
+type RefinementListProps = {
   sortBy: SortOptions
-  search?: boolean
   "data-testid"?: string
 }
 
 const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListProps) => {
-  const router = useRouter()
+  const [categories, setCategories] = useState<{ name: string; handle: string; id: string }[]>([])
+  const [collections, setCollections] = useState<{ title: string; handle: string; id: string }[]>([])
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
-  const [collections, setCollections] = useState<{ id: string; title: string }[]>([])
 
   useEffect(() => {
-    getCategoriesList(0, 100).then(({ product_categories }) => {
-      setCategories(product_categories.filter((c) => !c.parent_category))
+    getCategoriesList(0, 10).then(({ product_categories }) => {
+      const flatCategories = product_categories
+        .filter((c: any) => !c.parent_category)
+        .map((c: any) => ({ name: c.name, handle: c.handle, id: c.id }))
+      setCategories(flatCategories)
     })
-    getCollectionsList(0, 100).then(({ collections }) => {
-      setCollections(collections)
+    getCollectionsList(0, 10).then(({ collections }) => {
+      setCollections(collections.map((c: any) => ({ title: c.title, handle: c.handle, id: c.id })))
     })
   }, [])
 
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams)
-      if (value) {
-        params.set(name, value)
-      } else {
-        params.delete(name)
-      }
-      return params.toString()
-    },
-    [searchParams]
-  )
-
-  const setQueryParams = (name: string, value: string) => {
-    const query = createQueryString(name, value)
-    router.push(`${pathname}?${query}`)
-  }
-
   return (
-    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
+    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem] text-sm tracking-wider uppercase">
       <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Sort by</span>
-        <SortProducts
-          sortBy={sortBy}
-          setQueryParams={setQueryParams}
-          data-testid={dataTestId}
-        />
+        <span className="text-xs text-gray-500">Sort by</span>
+        {sortOptions.map(({ value, label }) => (
+          <Link
+            key={value}
+            href={`${pathname}?sortBy=${value}`}
+            className={`hover:underline ${sortBy === value ? "font-semibold" : "text-gray-600"}`}
+            data-testid={dataTestId}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {categories.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs uppercase text-gray-500">Category</span>
-          <button
-            onClick={() => setQueryParams("categoryId", "")}
-            className={`text-left text-sm hover:underline ${!searchParams.get("categoryId") ? "font-semibold" : "text-gray-600"}`}
+          <span className="text-xs text-gray-500">Category</span>
+          <Link
+            href="/store"
+            className={`hover:underline ${pathname === "/store" ? "font-semibold" : "text-gray-600"}`}
           >
             All Categories
-          </button>
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setQueryParams("categoryId", c.id)}
-              className={`text-left text-sm hover:underline ${searchParams.get("categoryId") === c.id ? "font-semibold" : "text-gray-600"}`}
+          </Link>
+          {categories.map((cat) => (
+            <Link
+              key={cat.id}
+              href={`/categories/${cat.handle}`}
+              className="hover:underline text-gray-600"
             >
-              {c.name}
-            </button>
+              {cat.name}
+            </Link>
           ))}
         </div>
       )}
 
       {collections.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs uppercase text-gray-500">Collection</span>
-          <button
-            onClick={() => setQueryParams("collectionId", "")}
-            className={`text-left text-sm hover:underline ${!searchParams.get("collectionId") ? "font-semibold" : "text-gray-600"}`}
+          <span className="text-xs text-gray-500">Collection</span>
+          <Link
+            href="/store"
+            className={`hover:underline ${pathname === "/store" ? "font-semibold" : "text-gray-600"}`}
           >
             All Collections
-          </button>
-          {collections.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setQueryParams("collectionId", c.id)}
-              className={`text-left text-sm hover:underline ${searchParams.get("collectionId") === c.id ? "font-semibold" : "text-gray-600"}`}
+          </Link>
+          {collections.map((col) => (
+            <Link
+              key={col.id}
+              href={`/collections/${col.handle}`}
+              className="hover:underline text-gray-600"
             >
-              {c.title}
-            </button>
+              {col.title}
+            </Link>
           ))}
         </div>
       )}
