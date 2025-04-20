@@ -18,11 +18,12 @@ const nextConfig = {
       {
         protocol: "http",
         hostname: "localhost",
-        
+        pathname: "**",
       },
       { // Note: needed to serve images from /public folder
         protocol: process.env.NEXT_PUBLIC_BASE_URL?.startsWith('https') ? 'https' : 'http',
-        hostname: process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, ''),
+        hostname: process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, '') || 'localhost',
+        pathname: "**",
       },
       { // Note: only needed when using local-file for product media
         protocol: "https",

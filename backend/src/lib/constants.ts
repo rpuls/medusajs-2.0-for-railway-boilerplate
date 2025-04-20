@@ -91,6 +91,12 @@ export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
 export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 
 /**
+ * (optional) Solana payment provider configuration
+ */
+export const SOLANA_ADDRESS = process.env.SOLANA_ADDRESS;
+export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL;
+
+/**
  * Worker mode
  */
 export const WORKER_MODE =

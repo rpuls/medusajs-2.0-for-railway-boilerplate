@@ -21,7 +21,9 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY
+  MEILISEARCH_ADMIN_KEY,
+  SOLANA_ADDRESS,
+  SOLANA_RPC_URL
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
@@ -112,19 +114,29 @@ const medusaConfig = {
         ]
       }
     }] : []),
-    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
+    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET || SOLANA_ADDRESS ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
       options: {
         providers: [
-          {
+          ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
             resolve: '@medusajs/payment-stripe',
             id: 'stripe',
             options: {
               apiKey: STRIPE_API_KEY,
               webhookSecret: STRIPE_WEBHOOK_SECRET,
             },
-          },
+          }] : []),
+          ...(SOLANA_ADDRESS ? [{
+            resolve: 'medusa-payment-solana',
+            id: 'solana',
+            options: {
+              walletAddress: SOLANA_ADDRESS,
+              rpcUrl: SOLANA_RPC_URL,
+              // Optional: Set a custom polling interval (in ms) for checking payments
+              paymentPollingInterval: 30000,
+            }
+          }] : [])
         ],
       },
     }] : [])

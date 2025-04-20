@@ -1,7 +1,9 @@
+"use client"
+
 import { RadioGroup } from "@headlessui/react"
 import { InformationCircleSolid } from "@medusajs/icons"
 import { Text, Tooltip, clx } from "@medusajs/ui"
-import React from "react"
+import React, { useState, useEffect } from "react"
 
 import Radio from "@modules/common/components/radio"
 
@@ -22,6 +24,17 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
   disabled = false,
 }) => {
   const isDevelopment = process.env.NODE_ENV === "development"
+  const [isMounted, setIsMounted] = useState(false)
+  
+  // Set isMounted to true after component mounts to avoid hydration issues
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Use a placeholder title during SSR to ensure consistency
+  const paymentTitle = isMounted 
+    ? (paymentInfoMap[paymentProviderId]?.title || paymentProviderId)
+    : paymentProviderId
 
   return (
     <>
@@ -41,17 +54,17 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
           <div className="flex items-center gap-x-4">
             <Radio checked={selectedPaymentOptionId === paymentProviderId} />
             <Text className="text-base-regular">
-              {paymentInfoMap[paymentProviderId]?.title || paymentProviderId}
+              {paymentTitle}
             </Text>
-            {isManual(paymentProviderId) && isDevelopment && (
+            {isMounted && isManual(paymentProviderId) && isDevelopment && (
               <PaymentTest className="hidden small:block" />
             )}
           </div>
           <span className="justify-self-end text-ui-fg-base">
-            {paymentInfoMap[paymentProviderId]?.icon}
+            {isMounted && paymentInfoMap[paymentProviderId]?.icon}
           </span>
         </div>
-        {isManual(paymentProviderId) && isDevelopment && (
+        {isMounted && isManual(paymentProviderId) && isDevelopment && (
           <PaymentTest className="small:hidden text-[10px]" />
         )}
       </RadioGroup.Option>

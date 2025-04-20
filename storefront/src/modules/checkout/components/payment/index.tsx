@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { useCallback, useContext, useEffect, useMemo, useState, useRef } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { RadioGroup } from "@headlessui/react"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -11,9 +11,16 @@ import { StripeCardElementOptions } from "@stripe/stripe-js"
 
 import Divider from "@modules/common/components/divider"
 import PaymentContainer from "@modules/checkout/components/payment-container"
-import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
+import { isStripe as isStripeFunc, isSolana as isSolanaFunc, paymentInfoMap } from "@lib/constants"
 import { StripeContext } from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
+import dynamic from "next/dynamic"
+
+// Import SolanaPayment component with no SSR to avoid hydration issues
+const SolanaPayment = dynamic(
+  () => import("@modules/checkout/components/solana-payment"),
+  { ssr: false }
+)
 
 const Payment = ({
   cart,
@@ -33,6 +40,12 @@ const Payment = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
+  const [isMounted, setIsMounted] = useState(false)
+  
+  // Set isMounted to true after component mounts to avoid hydration issues
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -145,25 +158,30 @@ const Payment = ({
         <div className={isOpen ? "block" : "hidden"}>
           {!paidByGiftcard && availablePaymentMethods?.length && (
             <>
-              <RadioGroup
-                value={selectedPaymentMethod}
-                onChange={(value: string) => setSelectedPaymentMethod(value)}
-              >
-                {availablePaymentMethods
-                  .sort((a, b) => {
-                    return a.provider_id > b.provider_id ? 1 : -1
-                  })
-                  .map((paymentMethod) => {
-                    return (
-                      <PaymentContainer
-                        paymentInfoMap={paymentInfoMap}
-                        paymentProviderId={paymentMethod.id}
-                        key={paymentMethod.id}
-                        selectedPaymentOptionId={selectedPaymentMethod}
-                      />
-                    )
-                  })}
-              </RadioGroup>
+              {/* Only render payment methods on client side to avoid hydration mismatch */}
+              {isMounted ? (
+                <RadioGroup
+                  value={selectedPaymentMethod}
+                  onChange={(value: string) => setSelectedPaymentMethod(value)}
+                >
+                  {availablePaymentMethods
+                    .sort((a, b) => {
+                      return a.provider_id > b.provider_id ? 1 : -1
+                    })
+                    .map((paymentMethod) => {
+                      return (
+                        <PaymentContainer
+                          paymentInfoMap={paymentInfoMap}
+                          paymentProviderId={paymentMethod.id}
+                          key={paymentMethod.id}
+                          selectedPaymentOptionId={selectedPaymentMethod}
+                        />
+                      )
+                    })}
+                </RadioGroup>
+              ) : (
+                <div className="py-4">Loading payment methods...</div>
+              )}
               {isStripe && stripeReady && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
                   <Text className="txt-medium-plus text-ui-fg-base mb-1">
@@ -182,6 +200,11 @@ const Payment = ({
                     }}
                   />
                 </div>
+              )}
+
+              {/* Display Solana payment component when Solana is selected - only on client side */}
+              {isMounted && isSolanaFunc(selectedPaymentMethod) && activeSession && (
+                <SolanaPayment paymentSession={activeSession} cart={cart} />
               )}
             </>
           )}
@@ -211,7 +234,7 @@ const Payment = ({
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
-              (isStripe && !cardComplete) ||
+              (isStripeFunc(selectedPaymentMethod) && !cardComplete) ||
               (!selectedPaymentMethod && !paidByGiftcard)
             }
             data-testid="submit-payment-button"
@@ -253,6 +276,8 @@ const Payment = ({
                   <Text>
                     {isStripeFunc(selectedPaymentMethod) && cardBrand
                       ? cardBrand
+                      : isSolanaFunc(selectedPaymentMethod)
+                      ? "Solana cryptocurrency"
                       : "Another step will appear"}
                   </Text>
                 </div>
