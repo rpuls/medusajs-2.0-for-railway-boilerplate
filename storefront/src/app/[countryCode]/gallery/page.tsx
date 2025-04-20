@@ -57,16 +57,47 @@ export default function GalleryPage() {
 
   const handleTouchEnd = () => {
     if (!isMobile || !sliderRef.current) return
+    const threshold = 80
     sliderRef.current.style.transition = 'transform 0.3s ease'
-    if (dragOffsetX.current < -100) {
-      next()
-    } else if (dragOffsetX.current > 100) {
-      prev()
+
+    if (dragOffsetX.current < -threshold) {
+      sliderRef.current.style.transform = 'translateX(-100vw)'
+      setTimeout(() => {
+        next()
+        if (sliderRef.current) {
+          sliderRef.current.style.transition = 'none'
+          sliderRef.current.style.transform = 'translateX(100vw)'
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (sliderRef.current) {
+                sliderRef.current.style.transition = 'transform 0.3s ease'
+                sliderRef.current.style.transform = 'translateX(0)'
+              }
+            })
+          })
+        }
+      }, 300)
+    } else if (dragOffsetX.current > threshold) {
+      sliderRef.current.style.transform = 'translateX(100vw)'
+      setTimeout(() => {
+        prev()
+        if (sliderRef.current) {
+          sliderRef.current.style.transition = 'none'
+          sliderRef.current.style.transform = 'translateX(-100vw)'
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (sliderRef.current) {
+                sliderRef.current.style.transition = 'transform 0.3s ease'
+                sliderRef.current.style.transform = 'translateX(0)'
+              }
+            })
+          })
+        }
+      }, 300)
+    } else {
+      sliderRef.current.style.transform = 'translateX(0)'
     }
-    sliderRef.current.style.transform = 'translateX(0)'
-    setTimeout(() => {
-      if (sliderRef.current) sliderRef.current.style.transition = 'none'
-    }, 300)
+
     dragStartX.current = null
     dragOffsetX.current = 0
   }
@@ -104,7 +135,7 @@ export default function GalleryPage() {
         >
           {/* Стрелки — только на десктопе */}
           <div className="absolute inset-0 z-50 pointer-events-none hidden sm:block">
-            <div className="absolute left-[-40px] top-1/2 -translate-y-1/2 pointer-events-auto">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -115,7 +146,7 @@ export default function GalleryPage() {
                 &#x2039;
               </button>
             </div>
-            <div className="absolute right-[-40px] top-1/2 -translate-y-1/2 pointer-events-auto">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
