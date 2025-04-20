@@ -4,7 +4,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 
 import SortProducts, { SortOptions } from "./sort-products"
-import FilterRadioGroup from "@modules/common/components/filter-radio-group"
 
 const categories = [
   { value: "", label: "All Categories" },
@@ -48,27 +47,56 @@ const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListPro
     router.push(`${pathname}?${query}`)
   }
 
+  const selectedCategory = searchParams.get("category") ?? ""
+  const selectedCollection = searchParams.get("collection") ?? ""
+
   return (
-    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
-      <SortProducts
-        sortBy={sortBy}
-        setQueryParams={setQueryParams}
-        data-testid={dataTestId}
-      />
+    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem] font-sans tracking-wide text-sm">
+      {/* SORT BY */}
+      <div className="flex flex-col gap-2">
+        <span className="text-xs uppercase text-gray-500">Sort by</span>
+        <SortProducts
+          sortBy={sortBy}
+          setQueryParams={setQueryParams}
+          data-testid={dataTestId}
+        />
+      </div>
 
-      <FilterRadioGroup
-        title="Category"
-        items={categories}
-        value={searchParams.get("category") || ""}
-        handleChange={(value) => setQueryParams("category", value)}
-      />
+      {/* CATEGORY */}
+      <div className="flex flex-col gap-2">
+        <span className="text-xs uppercase text-gray-500">Category</span>
+        {categories.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setQueryParams("category", value)}
+            className={`text-left hover:underline ${
+              selectedCategory === value
+                ? "font-semibold before:content-['•'] before:mr-1"
+                : "text-gray-600"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <FilterRadioGroup
-        title="Collection"
-        items={collections}
-        value={searchParams.get("collection") || ""}
-        handleChange={(value) => setQueryParams("collection", value)}
-      />
+      {/* COLLECTION */}
+      <div className="flex flex-col gap-2">
+        <span className="text-xs uppercase text-gray-500">Collection</span>
+        {collections.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setQueryParams("collection", value)}
+            className={`text-left hover:underline ${
+              selectedCollection === value
+                ? "font-semibold before:content-['•'] before:mr-1"
+                : "text-gray-600"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
