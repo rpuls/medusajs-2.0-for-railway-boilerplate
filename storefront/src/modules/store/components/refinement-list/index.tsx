@@ -1,94 +1,110 @@
 "use client"
 
+import { useEffect, useState, useMemo } from "react"
+import { usePathname } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { usePathname, useSearchParams } from "next/navigation"
-import { useCallback } from "react"
 
-export type SortOptions = "price_asc" | "price_desc" | "created_at"
+import { getCategoriesList } from "@lib/data/categories"
+import { getCollectionsList } from "@lib/data/collections"
 
-const sortOptions: { value: SortOptions; label: string }[] = [
-  { value: "created_at", label: "Latest Arrivals" },
-  { value: "price_asc", label: "Price: Low → High" },
-  { value: "price_desc", label: "Price: High → Low" },
-]
-
-const RefinementList = () => {
+export default function RefinementList() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const countryCode = pathname.split("/")[1] // Correct extraction only once
 
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(name, value)
-      } else {
-        params.delete(name)
-      }
-      return params.toString()
-    },
-    [searchParams]
-  )
+  const [categories, setCategories] = useState([])
+  const [collections, setCollections] = useState([])
 
-  const currentSort = searchParams.get("sortBy") || "created_at"
+  useEffect(() => {
+    const fetchData = async () => {
+      const { product_categories } = await getCategoriesList(0, 100)
+      const { collections } = await getCollectionsList(0, 100)
+
+      setCategories(product_categories || [])
+      setCollections(collections || [])
+    }
+
+    fetchData()
+  }, [])
+
+  const sortOptions = [
+    { value: "created_at", label: "Latest Arrivals" },
+    { value: "price_asc", label: "Price: Low → High" },
+    { value: "price_desc", label: "Price: High → Low" },
+  ]
+
+  const currentSort = useMemo(() => {
+    if (typeof window === "undefined") return "created_at"
+    const url = new URL(window.location.href)
+    return url.searchParams.get("sortBy") || "created_at"
+  }, [])
 
   return (
-    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Sort by</span>
-        {sortOptions.map(({ value, label }) => (
-          <LocalizedClientLink
-            key={value}
-            href={`/${countryCode}/store?${createQueryString("sortBy", value)}`}
-            className={`text-left text-sm hover:underline ${
-              currentSort === value ? "font-semibold" : "text-gray-600"
-            }`}
-          >
-            {label}
-          </LocalizedClientLink>
-        ))}
+    <aside className="flex flex-col gap-y-8 text-base">
+      {/* Sort */}
+      <div className="flex flex-col gap-y-2">
+        <span className="uppercase font-semibold text-xs">Sort By</span>
+        <ul className="flex flex-col gap-y-1">
+          {sortOptions.map((option) => (
+            <li key={option.value}>
+              <LocalizedClientLink
+                href={`${pathname?.split("?")[0]}?sortBy=${option.value}`}
+                className={`hover:underline ${
+                  currentSort === option.value ? "font-semibold" : ""
+                }`}
+              >
+                {option.label}
+              </LocalizedClientLink>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Category</span>
-        <LocalizedClientLink
-          href={`/${countryCode}/categories/shirts`}
-          className="text-left text-sm hover:underline"
-        >
-          T-Shirts
-        </LocalizedClientLink>
-        <LocalizedClientLink
-          href={`/${countryCode}/categories/sweatshirts`}
-          className="text-left text-sm hover:underline"
-        >
-          Sweatshirts
-        </LocalizedClientLink>
-        <LocalizedClientLink
-          href={`/${countryCode}/categories/accessories`}
-          className="text-left text-sm hover:underline"
-        >
-          Accessories
-        </LocalizedClientLink>
-      </div>
+      {/* Categories */}
+      {categories.length > 0 && (
+        <div className="flex flex-col gap-y-2">
+          <span className="uppercase font-semibold text-xs">Category</span>
+          <ul className="flex flex-col gap-y-1">
+            {categories
+              .filter((cat) => !cat.parent_category)
+              .map((c) => (
+                <li key={c.id}>
+                  <LocalizedClientLink
+                    href={`/categories/${c.handle}`}
+                    className={`hover:underline ${
+                      pathname.includes(`/categories/${c.handle}`)
+                        ? "font-semibold"
+                        : ""
+                    }`}
+                  >
+                    {c.name}
+                  </LocalizedClientLink>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Collection</span>
-        <LocalizedClientLink
-          href={`/${countryCode}/collections/Springtime!`}
-          className="text-left text-sm hover:underline"
-        >
-          Spring
-        </LocalizedClientLink>
-        <LocalizedClientLink
-          href={`/${countryCode}/collections/friends`}
-          className="text-left text-sm hover:underline"
-        >
-          Love
-        </LocalizedClientLink>
-      </div>
-    </div>
+      {/* Collections */}
+      {collections.length > 0 && (
+        <div className="flex flex-col gap-y-2">
+          <span className="uppercase font-semibold text-xs">Collection</span>
+          <ul className="flex flex-col gap-y-1">
+            {collections.map((c) => (
+              <li key={c.id}>
+                <LocalizedClientLink
+                  href={`/collections/${c.handle}`}
+                  className={`hover:underline ${
+                    pathname.includes(`/collections/${c.handle}`)
+                      ? "font-semibold"
+                      : ""
+                  }`}
+                >
+                  {c.title}
+                </LocalizedClientLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </aside>
   )
 }
-
-export default RefinementList
-
