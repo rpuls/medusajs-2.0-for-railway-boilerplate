@@ -1,97 +1,90 @@
-// src/modules/store/components/refinement-list/index.tsx
+import { usePathname } from "next/navigation"
+import { useCountryCode } from "@lib/context/country-context"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import clsx from "clsx"
+import { useSearchParams } from "next/navigation"
+import { getCategoriesList } from "@lib/data/categories"
+import { getCollectionsList } from "@lib/data/collections"
+import { useEffect, useState } from "react"
 
-"use client";
+const sortOptions = [
+  { label: "Latest Arrivals", value: "created_at" },
+  { label: "Price: Low → High", value: "price_asc" },
+  { label: "Price: High → Low", value: "price_desc" },
+]
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getCategoriesList } from "@lib/data/categories";
-import { getCollectionsList } from "@lib/data/collections";
-import LocalizedClientLink from "@modules/common/components/localized-client-link";
-
-const RefinementList = ({ countryCode }: { countryCode: string }) => {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const sortBy = searchParams?.get("sortBy") || "created_at";
-  const [categories, setCategories] = useState<{ title: string; handle: string }[]>([]);
-  const [collections, setCollections] = useState<{ title: string; handle: string }[]>([]);
+export default function RefinementList() {
+  const countryCode = useCountryCode()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const sortBy = searchParams.get("sortBy") || "created_at"
+  const [categories, setCategories] = useState([])
+  const [collections, setCollections] = useState([])
 
   useEffect(() => {
-    getCategoriesList().then(setCategories);
-    getCollectionsList().then(setCollections);
-  }, []);
+    getCategoriesList().then(setCategories)
+    getCollectionsList().then(setCollections)
+  }, [])
 
-  const handleSortChange = (order: string) => {
-    const newParams = new URLSearchParams(searchParams?.toString() || "");
-    newParams.set("sortBy", order);
-    router.push(`${pathname}?${newParams.toString()}`);
-  };
+  const activeStyle = "font-semibold underline"
+
+  const isActive = (value) => value === sortBy
+
+  const generateSortHref = (value) => {
+    if (pathname.includes("/store")) {
+      return `/${countryCode}/store?sortBy=${value}`
+    }
+    return `${pathname.split("?")[0]}?sortBy=${value}`
+  }
 
   return (
-    <div className="text-xs uppercase tracking-wide p-4 sm:p-6">
-      <div className="mb-6">
-        <p className="font-semibold mb-2">Sort by</p>
-        <ul className="space-y-1">
-          <li>
-            <button
-              className={sortBy === "created_at" ? "font-semibold" : ""}
-              onClick={() => handleSortChange("created_at")}
-            >
-              Latest Arrivals
-            </button>
-          </li>
-          <li>
-            <button
-              className={sortBy === "price_asc" ? "font-semibold" : ""}
-              onClick={() => handleSortChange("price_asc")}
-            >
-              Price: Low → High
-            </button>
-          </li>
-          <li>
-            <button
-              className={sortBy === "price_desc" ? "font-semibold" : ""}
-              onClick={() => handleSortChange("price_desc")}
-            >
-              Price: High → Low
-            </button>
-          </li>
-        </ul>
-      </div>
-
-      <div className="mb-6">
-        <p className="font-semibold mb-2">Category</p>
-        <ul className="space-y-1">
-          {categories.map((c) => (
-            <li key={c.handle}>
+    <div className="flex flex-col gap-y-8 text-sm tracking-wide uppercase">
+      <div>
+        <p className="mb-1">Sort by</p>
+        <ul className="flex flex-col gap-y-1">
+          {sortOptions.map((opt) => (
+            <li key={opt.value}>
               <LocalizedClientLink
-                href={`/${countryCode}/categories/${c.handle}`}
-                className={`hover:underline`}
+                href={generateSortHref(opt.value)}
+                className={clsx(isActive(opt.value) && activeStyle)}
               >
-                {c.title}
+                {opt.label}
               </LocalizedClientLink>
             </li>
           ))}
         </ul>
       </div>
-
       <div>
-        <p className="font-semibold mb-2">Collection</p>
-        <ul className="space-y-1">
-          {collections.map((c) => (
-            <li key={c.handle}>
+        <p className="mb-1">Category</p>
+        <ul className="flex flex-col gap-y-1">
+          {categories.map((cat) => (
+            <li key={cat.id}>
               <LocalizedClientLink
-                href={`/${countryCode}/collections/${c.handle}`}
-                className={`hover:underline`}
+                href={`/${countryCode}/categories/${cat.handle}`}
+                className={clsx(pathname.includes(`/categories/${cat.handle}`) && activeStyle)}
               >
-                {c.title}
+                {cat.name}
+              </LocalizedClientLink>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <p className="mb-1">Collection</p>
+        <ul className="flex flex-col gap-y-1">
+          {collections.map((col) => (
+            <li key={col.id}>
+              <LocalizedClientLink
+                href={`/${countryCode}/collections/${col.handle}`}
+                className={clsx(pathname.includes(`/collections/${col.handle}`) && activeStyle)}
+              >
+                {col.title}
               </LocalizedClientLink>
             </li>
           ))}
         </ul>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default RefinementList;
