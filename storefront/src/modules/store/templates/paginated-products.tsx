@@ -34,26 +34,32 @@ export default async function PaginatedProducts({
   }
 
   if (collectionId) {
-    queryParams["collection_id"] = [collectionId]
+    queryParams.collection_id = [collectionId]
   }
 
   if (categoryId) {
-    queryParams["category_id"] = [categoryId]
+    queryParams.category_id = [categoryId]
   }
 
   if (productsIds) {
-    queryParams["id"] = productsIds
+    queryParams.id = productsIds
   }
 
-  if (sortBy === "created_at") {
-    queryParams["order"] = "created_at"
+  // добавим порядок сортировки для всех вариантов
+  switch (sortBy) {
+    case "created_at":
+      queryParams.order = "created_at"
+      break
+    case "price_asc":
+      queryParams.order = "prices.amount" // по возрастанию
+      break
+    case "price_desc":
+      queryParams.order = "-prices.amount" // по убыванию
+      break
   }
 
   const region = await getRegion(countryCode)
-
-  if (!region) {
-    return null
-  }
+  if (!region) return null
 
   const {
     response: { products, count },
@@ -68,10 +74,7 @@ export default async function PaginatedProducts({
 
   return (
     <>
-      <ul
-        className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
-        data-testid="products-list"
-      >
+      <ul className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8" data-testid="products-list">
         {products.map((p) => (
           <li key={p.id}>
             <ProductPreview product={p} region={region} />
