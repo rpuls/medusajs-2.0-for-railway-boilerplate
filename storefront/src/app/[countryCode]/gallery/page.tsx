@@ -129,7 +129,7 @@ export default function GalleryPage() {
 
       {index !== null && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center pt-12"
           onClick={close}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -164,7 +164,7 @@ export default function GalleryPage() {
           {/* Картинка со свайпом */}
           <div
             ref={sliderRef}
-            className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none"
+            className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pt-10 pointer-events-none"
           >
             <img
               src={images[index]}
