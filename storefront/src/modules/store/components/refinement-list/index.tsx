@@ -1,94 +1,90 @@
-"use client"
+import { getProductsListWithSort } from "@lib/data/products"
+import { getRegion } from "@lib/data/regions"
+import ProductPreview from "@modules/products/components/product-preview"
+import { Pagination } from "@modules/store/components/pagination"
+import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback } from "react"
+const PRODUCT_LIMIT = 12
 
-import SortProducts, { SortOptions } from "./sort-products"
-
-const categories = [
-  { value: "", label: "All Categories" },
-  { value: "tshirts", label: "T-Shirts" },
-  { value: "sweatshirts", label: "Sweatshirts" },
-  { value: "accessories", label: "Accessories" },
-]
-
-const collections = [
-  { value: "", label: "All Collections" },
-  { value: "spring", label: "Spring" },
-  { value: "love", label: "Love" },
-]
-
-type RefinementListProps = {
-  sortBy: SortOptions
-  search?: boolean
-  "data-testid"?: string
+type PaginatedProductsParams = {
+  limit: number
+  collection_id?: string[]
+  category_id?: string[]
+  id?: string[]
+  order?: string
 }
 
-const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListProps) => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams)
-      if (value) {
-        params.set(name, value)
-      } else {
-        params.delete(name)
-      }
-      return params.toString()
-    },
-    [searchParams]
-  )
-
-  const setQueryParams = (name: string, value: string) => {
-    const query = createQueryString(name, value)
-    router.push(`${pathname}?${query}`)
+export default async function PaginatedProducts({
+  sortBy,
+  page,
+  collectionId,
+  categoryId,
+  productsIds,
+  countryCode,
+}: {
+  sortBy?: SortOptions
+  page: number
+  collectionId?: string
+  categoryId?: string
+  productsIds?: string[]
+  countryCode: string
+}) {
+  const queryParams: PaginatedProductsParams = {
+    limit: PRODUCT_LIMIT,
   }
 
+  if (collectionId) {
+    queryParams["collection_id"] = [collectionId]
+  }
+
+  if (categoryId) {
+    queryParams["category_id"] = [categoryId]
+  }
+
+  if (productsIds) {
+    queryParams["id"] = productsIds
+  }
+
+  if (sortBy) {
+    queryParams["order"] = sortBy
+  }
+
+  const region = await getRegion(countryCode)
+
+  if (!region) {
+    return null
+  }
+
+  const {
+    response: { products, count },
+  } = await getProductsListWithSort({
+    page,
+    queryParams,
+    sortBy,
+    countryCode,
+  })
+
+  const totalPages = Math.ceil(count / PRODUCT_LIMIT)
+
   return (
-    <div className="flex flex-col gap-10 py-4 px-6 font-sans tracking-wide">
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Sort by</span>
-        <SortProducts
-          sortBy={sortBy}
-          setQueryParams={setQueryParams}
-          data-testid={dataTestId}
+    <>
+      <ul
+        className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
+        data-testid="products-list"
+      >
+        {products.map((p) => (
+          <li key={p.id}>
+            <ProductPreview product={p} region={region} />
+          </li>
+        ))}
+      </ul>
+      {totalPages > 1 && (
+        <Pagination
+          data-testid="product-pagination"
+          page={page}
+          totalPages={totalPages}
         />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Category</span>
-        {categories.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => setQueryParams("category", value)}
-            className={`text-left text-sm hover:underline ${
-              searchParams.get("category") === value ? "font-semibold" : "text-gray-600"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Collection</span>
-        {collections.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => setQueryParams("collection", value)}
-            className={`text-left text-sm hover:underline ${
-              searchParams.get("collection") === value ? "font-semibold" : "text-gray-600"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
+      )}
+    </>
   )
 }
-
-export default RefinementList
