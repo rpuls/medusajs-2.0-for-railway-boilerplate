@@ -50,7 +50,13 @@ export default function GalleryPage() {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isMobile || dragStartX.current === null || !sliderRef.current) return
     const currentX = e.touches[0].clientX
-    dragOffsetX.current = currentX - dragStartX.current
+    const currentY = e.touches[0].clientY
+    const deltaX = currentX - dragStartX.current
+
+    // Блокируем вертикальный драг
+    if (Math.abs(deltaX) < Math.abs(currentY)) return
+
+    dragOffsetX.current = deltaX
     sliderRef.current.style.transition = 'none'
     sliderRef.current.style.transform = `translateX(${dragOffsetX.current}px)`
   }
@@ -58,43 +64,45 @@ export default function GalleryPage() {
   const handleTouchEnd = () => {
     if (!isMobile || !sliderRef.current) return
     const threshold = 80
-    sliderRef.current.style.transition = 'transform 0.3s ease'
 
     if (dragOffsetX.current < -threshold) {
+      sliderRef.current.style.transition = 'transform 0.2s ease'
       sliderRef.current.style.transform = 'translateX(-100vw)'
-      setTimeout(() => {
-        next()
-        if (sliderRef.current) {
-          sliderRef.current.style.transition = 'none'
-          sliderRef.current.style.transform = 'translateX(100vw)'
-          requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          next()
+          if (sliderRef.current) {
+            sliderRef.current.style.transition = 'none'
+            sliderRef.current.style.transform = 'translateX(100vw)'
             requestAnimationFrame(() => {
               if (sliderRef.current) {
-                sliderRef.current.style.transition = 'transform 0.3s ease'
+                sliderRef.current.style.transition = 'transform 0.2s ease'
                 sliderRef.current.style.transform = 'translateX(0)'
               }
             })
-          })
-        }
-      }, 300)
+          }
+        }, 50)
+      })
     } else if (dragOffsetX.current > threshold) {
+      sliderRef.current.style.transition = 'transform 0.2s ease'
       sliderRef.current.style.transform = 'translateX(100vw)'
-      setTimeout(() => {
-        prev()
-        if (sliderRef.current) {
-          sliderRef.current.style.transition = 'none'
-          sliderRef.current.style.transform = 'translateX(-100vw)'
-          requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          prev()
+          if (sliderRef.current) {
+            sliderRef.current.style.transition = 'none'
+            sliderRef.current.style.transform = 'translateX(-100vw)'
             requestAnimationFrame(() => {
               if (sliderRef.current) {
-                sliderRef.current.style.transition = 'transform 0.3s ease'
+                sliderRef.current.style.transition = 'transform 0.2s ease'
                 sliderRef.current.style.transform = 'translateX(0)'
               }
             })
-          })
-        }
-      }, 300)
+          }
+        }, 50)
+      })
     } else {
+      sliderRef.current.style.transition = 'transform 0.2s ease'
       sliderRef.current.style.transform = 'translateX(0)'
     }
 
