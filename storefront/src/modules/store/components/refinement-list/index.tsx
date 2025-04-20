@@ -1,90 +1,134 @@
-import { getProductsListWithSort } from "@lib/data/products"
-import { getRegion } from "@lib/data/regions"
-import ProductPreview from "@modules/products/components/product-preview"
-import { Pagination } from "@modules/store/components/pagination"
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+"use client"
 
-const PRODUCT_LIMIT = 12
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { SortOptions } from "./sort-products"
 
-type PaginatedProductsParams = {
-  limit: number
-  collection_id?: string[]
-  category_id?: string[]
-  id?: string[]
-  order?: string
+type RefinementListProps = {
+  sortBy: SortOptions
+  search?: boolean
+  "data-testid"?: string
 }
 
-export default async function PaginatedProducts({
-  sortBy,
-  page,
-  collectionId,
-  categoryId,
-  productsIds,
-  countryCode,
-}: {
-  sortBy?: SortOptions
-  page: number
-  collectionId?: string
-  categoryId?: string
-  productsIds?: string[]
-  countryCode: string
-}) {
-  const queryParams: PaginatedProductsParams = {
-    limit: PRODUCT_LIMIT,
+type Category = {
+  id: string
+  name: string
+  handle: string
+  category_children?: Category[]
+  parent_category?: string
+}
+
+type Collection = {
+  id: string
+  title: string
+  handle: string
+}
+
+const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListProps) => {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [categories, setCategories] = useState<Category[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => setCategories(data.product_categories || []))
+
+    fetch("/api/collections")
+      .then((res) => res.json())
+      .then((data) => setCollections(data.collections || []))
+  }, [])
+
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams)
+      if (value) {
+        params.set(name, value)
+      } else {
+        params.delete(name)
+      }
+      return params.toString()
+    },
+    [searchParams]
+  )
+
+  const setQueryParams = (name: string, value: string) => {
+    const query = createQueryString(name, value)
+    router.push(`${pathname}?${query}`)
   }
-
-  if (collectionId) {
-    queryParams["collection_id"] = [collectionId]
-  }
-
-  if (categoryId) {
-    queryParams["category_id"] = [categoryId]
-  }
-
-  if (productsIds) {
-    queryParams["id"] = productsIds
-  }
-
-  if (sortBy) {
-    queryParams["order"] = sortBy
-  }
-
-  const region = await getRegion(countryCode)
-
-  if (!region) {
-    return null
-  }
-
-  const {
-    response: { products, count },
-  } = await getProductsListWithSort({
-    page,
-    queryParams,
-    sortBy,
-    countryCode,
-  })
-
-  const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 
   return (
-    <>
-      <ul
-        className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
-        data-testid="products-list"
-      >
-        {products.map((p) => (
-          <li key={p.id}>
-            <ProductPreview product={p} region={region} />
-          </li>
-        ))}
-      </ul>
-      {totalPages > 1 && (
-        <Pagination
-          data-testid="product-pagination"
-          page={page}
-          totalPages={totalPages}
-        />
+    <div className="flex flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem] text-sm tracking-wider font-sans">
+      {/* Categories */}
+      {categories.length > 0 && (
+        <div className="flex flex-col gap-y-2">
+          <span className="uppercase text-xs text-gray-500">Categories</span>
+          <ul className="grid grid-cols-1 gap-2">
+            {categories.map((c) => {
+              if (c.parent_category) return null
+              const isActive = searchParams.get("category") === c.handle
+              return (
+                <li key={c.id}>
+                  <button
+                    className={`hover:underline ${
+                      isActive ? "font-semibold" : "text-gray-600"
+                    }`}
+                    onClick={() => setQueryParams("category", c.handle)}
+                  >
+                    {c.name}
+                  </button>
+                  {c.category_children?.length > 0 && (
+                    <ul className="ml-4 mt-1">
+                      {c.category_children.map((child) => (
+                        <li key={child.id}>
+                          <button
+                            className={`hover:underline ${
+                              searchParams.get("category") === child.handle
+                                ? "font-semibold"
+                                : "text-gray-600"
+                            }`}
+                            onClick={() => setQueryParams("category", child.handle)}
+                          >
+                            {child.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
-    </>
+
+      {/* Collections */}
+      {collections.length > 0 && (
+        <div className="flex flex-col gap-y-2">
+          <span className="uppercase text-xs text-gray-500">Collections</span>
+          <ul className="grid grid-cols-1 gap-2">
+            {collections.map((c) => (
+              <li key={c.id}>
+                <button
+                  className={`hover:underline ${
+                    searchParams.get("collection") === c.handle
+                      ? "font-semibold"
+                      : "text-gray-600"
+                  }`}
+                  onClick={() => setQueryParams("collection", c.handle)}
+                >
+                  {c.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
+
+export default RefinementList
