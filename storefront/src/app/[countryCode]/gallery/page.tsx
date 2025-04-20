@@ -10,6 +10,7 @@ export default function GalleryPage() {
   const dragOffsetX = useRef<number>(0)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
 
+  // Load images
   useEffect(() => {
     const context = require.context(
       '../../../../public/gallery',
@@ -19,6 +20,18 @@ export default function GalleryPage() {
     const paths = context.keys().map((key) => `/gallery/${key.replace('./', '')}`)
     setImages(paths)
   }, [])
+
+  // Lock scroll on open
+  useEffect(() => {
+    if (index !== null) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'auto'
+    }
+    return () => {
+      document.body.style.overflow = 'auto'
+    }
+  }, [index])
 
   const close = () => setIndex(null)
 
@@ -30,6 +43,7 @@ export default function GalleryPage() {
     if (index !== null) setIndex((prev) => (prev! - 1 + images.length) % images.length)
   }, [index, images])
 
+  // Keyboard nav
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (index === null) return
@@ -58,45 +72,43 @@ export default function GalleryPage() {
   const handleTouchEnd = () => {
     if (!isMobile || !sliderRef.current) return
     const threshold = 80
+    sliderRef.current.style.transition = 'transform 0.25s ease'
 
     if (dragOffsetX.current < -threshold) {
-      sliderRef.current.style.transition = 'transform 0.2s ease'
       sliderRef.current.style.transform = 'translateX(-100vw)'
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          next()
-          if (sliderRef.current) {
-            sliderRef.current.style.transition = 'none'
-            sliderRef.current.style.transform = 'translateX(100vw)'
+      setTimeout(() => {
+        next()
+        if (sliderRef.current) {
+          sliderRef.current.style.transition = 'none'
+          sliderRef.current.style.transform = 'translateX(100vw)'
+          requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               if (sliderRef.current) {
-                sliderRef.current.style.transition = 'transform 0.2s ease'
+                sliderRef.current.style.transition = 'transform 0.25s ease'
                 sliderRef.current.style.transform = 'translateX(0)'
               }
             })
-          }
-        }, 50)
-      })
+          })
+        }
+      }, 250)
     } else if (dragOffsetX.current > threshold) {
-      sliderRef.current.style.transition = 'transform 0.2s ease'
       sliderRef.current.style.transform = 'translateX(100vw)'
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          prev()
-          if (sliderRef.current) {
-            sliderRef.current.style.transition = 'none'
-            sliderRef.current.style.transform = 'translateX(-100vw)'
+      setTimeout(() => {
+        prev()
+        if (sliderRef.current) {
+          sliderRef.current.style.transition = 'none'
+          sliderRef.current.style.transform = 'translateX(-100vw)'
+          requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               if (sliderRef.current) {
-                sliderRef.current.style.transition = 'transform 0.2s ease'
+                sliderRef.current.style.transition = 'transform 0.25s ease'
                 sliderRef.current.style.transform = 'translateX(0)'
               }
             })
-          }
-        }, 50)
-      })
+          })
+        }
+      }, 250)
     } else {
-      sliderRef.current.style.transition = 'transform 0.2s ease'
       sliderRef.current.style.transform = 'translateX(0)'
     }
 
@@ -129,13 +141,13 @@ export default function GalleryPage() {
 
       {index !== null && (
         <div
-          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center overflow-hidden pt-14 sm:pt-20"
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md overflow-hidden"
           onClick={close}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Стрелки — только на десктопе */}
+          {/* Arrows for desktop */}
           <div className="absolute inset-0 z-50 pointer-events-none hidden sm:block">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-auto">
               <button
@@ -161,16 +173,18 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          {/* Картинка со свайпом */}
-          <div
-            ref={sliderRef}
-            className="relative z-40 max-w-[90vw] max-h-[90vh] p-4 pointer-events-none flex items-center"
-          >
-            <img
-              src={images[index]}
-              alt={`Fullscreen ${index}`}
-              className="max-h-[90vh] max-w-full h-auto w-auto rounded-xl shadow-xl pointer-events-none object-contain mx-auto"
-            />
+          {/* Image — fully centered */}
+          <div className="flex items-center justify-center h-screen pointer-events-none">
+            <div
+              ref={sliderRef}
+              className="max-w-[90vw] max-h-[90vh] p-4"
+            >
+              <img
+                src={images[index]}
+                alt={`Fullscreen ${index}`}
+                className="max-h-[90vh] max-w-full h-auto w-auto rounded-xl shadow-xl object-contain"
+              />
+            </div>
           </div>
         </div>
       )}
