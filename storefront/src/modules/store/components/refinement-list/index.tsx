@@ -1,94 +1,59 @@
 "use client"
 
-import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
-import Link from "next/link"
 import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
-import { SortOptions } from "./sort-products"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 
-const sortOptions = [
-  { value: "created_at", label: "Latest Arrivals" },
-  { value: "price_asc", label: "Price: Low -> High" },
-  { value: "price_desc", label: "Price: High -> Low" },
-]
-
-type RefinementListProps = {
-  sortBy: SortOptions
-  "data-testid"?: string
-}
-
-const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListProps) => {
-  const [categories, setCategories] = useState<{ name: string; handle: string; id: string }[]>([])
-  const [collections, setCollections] = useState<{ title: string; handle: string; id: string }[]>([])
+const RefinementList = () => {
   const pathname = usePathname()
+  const [categories, setCategories] = useState<any[]>([])
+  const [collections, setCollections] = useState<any[]>([])
 
   useEffect(() => {
-    getCategoriesList(0, 10).then(({ product_categories }) => {
-      const flatCategories = product_categories
-        .filter((c: any) => !c.parent_category)
-        .map((c: any) => ({ name: c.name, handle: c.handle, id: c.id }))
-      setCategories(flatCategories)
-    })
-    getCollectionsList(0, 10).then(({ collections }) => {
-      setCollections(collections.map((c: any) => ({ title: c.title, handle: c.handle, id: c.id })))
-    })
+    const fetchData = async () => {
+      const { product_categories } = await getCategoriesList(0, 100)
+      const { collections } = await getCollectionsList(0, 100)
+      setCategories(product_categories)
+      setCollections(collections)
+    }
+
+    fetchData()
   }, [])
 
-  return (
-    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem] text-sm tracking-wider uppercase">
-      <div className="flex flex-col gap-2">
-        <span className="text-xs text-gray-500">Sort by</span>
-        {sortOptions.map(({ value, label }) => (
-          <Link
-            key={value}
-            href={`${pathname}?sortBy=${value}`}
-            className={`hover:underline ${sortBy === value ? "font-semibold" : "text-gray-600"}`}
-            data-testid={dataTestId}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+  const currentPath = pathname.split("/")[1] // e.g. "de" or "en"
 
+  return (
+    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem] uppercase text-xs text-gray-700">
+      {/* Categories */}
       {categories.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs text-gray-500">Category</span>
-          <Link
-            href="/store"
-            className={`hover:underline ${pathname === "/store" ? "font-semibold" : "text-gray-600"}`}
-          >
-            All Categories
-          </Link>
-          {categories.map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/categories/${cat.handle}`}
-              className="hover:underline text-gray-600"
+          <span className="text-gray-500">Categories</span>
+          {categories.map((c) => (
+            <LocalizedClientLink
+              key={c.id}
+              href={`/${currentPath}/categories/${c.handle}`}
+              className="text-left text-sm text-gray-600 hover:underline"
             >
-              {cat.name}
-            </Link>
+              {c.name}
+            </LocalizedClientLink>
           ))}
         </div>
       )}
 
+      {/* Collections */}
       {collections.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-xs text-gray-500">Collection</span>
-          <Link
-            href="/store"
-            className={`hover:underline ${pathname === "/store" ? "font-semibold" : "text-gray-600"}`}
-          >
-            All Collections
-          </Link>
-          {collections.map((col) => (
-            <Link
-              key={col.id}
-              href={`/collections/${col.handle}`}
-              className="hover:underline text-gray-600"
+          <span className="text-gray-500">Collections</span>
+          {collections.map((c) => (
+            <LocalizedClientLink
+              key={c.id}
+              href={`/${currentPath}/collections/${c.handle}`}
+              className="text-left text-sm text-gray-600 hover:underline"
             >
-              {col.title}
-            </Link>
+              {c.title}
+            </LocalizedClientLink>
           ))}
         </div>
       )}
