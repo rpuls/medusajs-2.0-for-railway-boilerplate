@@ -2,44 +2,32 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { SortOptions } from "./sort-products"
+import { getCategoriesList } from "@lib/data/categories"
+import { getCollectionsList } from "@lib/data/collections"
+import SortProducts, { SortOptions } from "./sort-products"
 
-type RefinementListProps = {
+const RefinementList = ({
+  sortBy,
+  "data-testid": dataTestId,
+}: {
   sortBy: SortOptions
-  search?: boolean
   "data-testid"?: string
-}
-
-type Category = {
-  id: string
-  name: string
-  handle: string
-  category_children?: Category[]
-  parent_category?: string
-}
-
-type Collection = {
-  id: string
-  title: string
-  handle: string
-}
-
-const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListProps) => {
+}) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [categories, setCategories] = useState<Category[]>([])
-  const [collections, setCollections] = useState<Collection[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [collections, setCollections] = useState<any[]>([])
 
   useEffect(() => {
-    fetch("/api/categories")
-      .then((res) => res.json())
-      .then((data) => setCategories(data.product_categories || []))
-
-    fetch("/api/collections")
-      .then((res) => res.json())
-      .then((data) => setCollections(data.collections || []))
+    const fetchData = async () => {
+      const { product_categories } = await getCategoriesList(0, 100)
+      const { collections } = await getCollectionsList(0, 100)
+      setCategories(product_categories.filter((c) => !c.parent_category))
+      setCollections(collections)
+    }
+    fetchData()
   }, [])
 
   const createQueryString = useCallback(
@@ -61,70 +49,63 @@ const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListPro
   }
 
   return (
-    <div className="flex flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem] text-sm tracking-wider font-sans">
-      {/* Categories */}
+    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
+      <div className="flex flex-col gap-2">
+        <span className="text-xs uppercase text-gray-500">Sort by</span>
+        <SortProducts
+          sortBy={sortBy}
+          setQueryParams={setQueryParams}
+          data-testid={dataTestId}
+        />
+      </div>
+
       {categories.length > 0 && (
-        <div className="flex flex-col gap-y-2">
-          <span className="uppercase text-xs text-gray-500">Categories</span>
-          <ul className="grid grid-cols-1 gap-2">
-            {categories.map((c) => {
-              if (c.parent_category) return null
-              const isActive = searchParams.get("category") === c.handle
-              return (
-                <li key={c.id}>
-                  <button
-                    className={`hover:underline ${
-                      isActive ? "font-semibold" : "text-gray-600"
-                    }`}
-                    onClick={() => setQueryParams("category", c.handle)}
-                  >
-                    {c.name}
-                  </button>
-                  {c.category_children?.length > 0 && (
-                    <ul className="ml-4 mt-1">
-                      {c.category_children.map((child) => (
-                        <li key={child.id}>
-                          <button
-                            className={`hover:underline ${
-                              searchParams.get("category") === child.handle
-                                ? "font-semibold"
-                                : "text-gray-600"
-                            }`}
-                            onClick={() => setQueryParams("category", child.handle)}
-                          >
-                            {child.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs uppercase text-gray-500">Category</span>
+          <button
+            onClick={() => setQueryParams("categoryId", "")}
+            className={`text-left text-sm hover:underline ${
+              !searchParams.get("categoryId") ? "font-semibold" : "text-gray-600"
+            }`}
+          >
+            All Categories
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setQueryParams("categoryId", cat.id)}
+              className={`text-left text-sm hover:underline ${
+                searchParams.get("categoryId") === cat.id ? "font-semibold" : "text-gray-600"
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Collections */}
       {collections.length > 0 && (
-        <div className="flex flex-col gap-y-2">
-          <span className="uppercase text-xs text-gray-500">Collections</span>
-          <ul className="grid grid-cols-1 gap-2">
-            {collections.map((c) => (
-              <li key={c.id}>
-                <button
-                  className={`hover:underline ${
-                    searchParams.get("collection") === c.handle
-                      ? "font-semibold"
-                      : "text-gray-600"
-                  }`}
-                  onClick={() => setQueryParams("collection", c.handle)}
-                >
-                  {c.title}
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs uppercase text-gray-500">Collection</span>
+          <button
+            onClick={() => setQueryParams("collectionId", "")}
+            className={`text-left text-sm hover:underline ${
+              !searchParams.get("collectionId") ? "font-semibold" : "text-gray-600"
+            }`}
+          >
+            All Collections
+          </button>
+          {collections.map((col) => (
+            <button
+              key={col.id}
+              onClick={() => setQueryParams("collectionId", col.id)}
+              className={`text-left text-sm hover:underline ${
+                searchParams.get("collectionId") === col.id ? "font-semibold" : "text-gray-600"
+              }`}
+            >
+              {col.title}
+            </button>
+          ))}
         </div>
       )}
     </div>
