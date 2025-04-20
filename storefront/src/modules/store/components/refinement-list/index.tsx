@@ -1,73 +1,65 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import { useMemo } from "react"
 import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
-import { useEffect, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-export default function RefinementList() {
+export default async function RefinementList() {
   const pathname = usePathname()
-  const [categories, setCategories] = useState([])
-  const [collections, setCollections] = useState([])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { product_categories } = await getCategoriesList(0, 100)
-      const { collections } = await getCollectionsList(0, 100)
-      setCategories(product_categories || [])
-      setCollections(collections || [])
-    }
-    fetchData()
+  const { product_categories } = await getCategoriesList(0, 100)
+  const { collections } = await getCollectionsList(0, 100)
+
+  const sortOptions = [
+    { value: "created_at", label: "Latest Arrivals" },
+    { value: "price_asc", label: "Price: Low → High" },
+    { value: "price_desc", label: "Price: High → Low" },
+  ]
+
+  const currentSort = useMemo(() => {
+    const url = new URL(window.location.href)
+    return url.searchParams.get("sortBy") || "created_at"
   }, [])
 
-  const currentPath = pathname.split("?")[0]
-
   return (
-    <div className="flex flex-col gap-y-8 text-small-regular">
+    <aside className="flex flex-col gap-y-8 text-base">
       {/* Sort By */}
       <div className="flex flex-col gap-y-2">
-        <span className="uppercase text-ui-fg-base text-sm">Sort by</span>
-        <ul className="flex flex-col gap-2 text-ui-fg-subtle text-sm">
-          <li>
-            <LocalizedClientLink
-              href={`${currentPath}?sortBy=created_at`}
-              className="hover:underline"
-            >
-              Latest Arrivals
-            </LocalizedClientLink>
-          </li>
-          <li>
-            <LocalizedClientLink
-              href={`${currentPath}?sortBy=price_asc`}
-              className="hover:underline"
-            >
-              Price: Low → High
-            </LocalizedClientLink>
-          </li>
-          <li>
-            <LocalizedClientLink
-              href={`${currentPath}?sortBy=price_desc`}
-              className="hover:underline"
-            >
-              Price: High → Low
-            </LocalizedClientLink>
-          </li>
+        <span className="uppercase font-semibold text-xs">Sort By</span>
+        <ul className="flex flex-col gap-y-1">
+          {sortOptions.map((option) => (
+            <li key={option.value}>
+              <LocalizedClientLink
+                href={`${pathname.split("?")[0]}?sortBy=${option.value}`}
+                className={`hover:underline ${
+                  currentSort === option.value ? "font-semibold" : ""
+                }`}
+              >
+                {option.label}
+              </LocalizedClientLink>
+            </li>
+          ))}
         </ul>
       </div>
 
       {/* Categories */}
-      {categories.length > 0 && (
+      {product_categories?.length > 0 && (
         <div className="flex flex-col gap-y-2">
-          <span className="uppercase text-ui-fg-base text-sm">Category</span>
-          <ul className="flex flex-col gap-2 text-ui-fg-subtle text-sm">
-            {categories
-              .filter((c) => !c.parent_category)
+          <span className="uppercase font-semibold text-xs">Category</span>
+          <ul className="flex flex-col gap-y-1">
+            {product_categories
+              .filter((cat) => !cat.parent_category)
               .map((category) => (
                 <li key={category.id}>
                   <LocalizedClientLink
                     href={`/categories/${category.handle}`}
-                    className="hover:underline"
+                    className={`hover:underline ${
+                      pathname.includes(`/categories/${category.handle}`)
+                        ? "font-semibold"
+                        : ""
+                    }`}
                   >
                     {category.name}
                   </LocalizedClientLink>
@@ -78,23 +70,27 @@ export default function RefinementList() {
       )}
 
       {/* Collections */}
-      {collections.length > 0 && (
+      {collections?.length > 0 && (
         <div className="flex flex-col gap-y-2">
-          <span className="uppercase text-ui-fg-base text-sm">Collection</span>
-          <ul className="flex flex-col gap-2 text-ui-fg-subtle text-sm">
-            {collections.map((collection) => (
-              <li key={collection.id}>
+          <span className="uppercase font-semibold text-xs">Collection</span>
+          <ul className="flex flex-col gap-y-1">
+            {collections.map((col) => (
+              <li key={col.id}>
                 <LocalizedClientLink
-                  href={`/collections/${collection.handle}`}
-                  className="hover:underline"
+                  href={`/collections/${col.handle}`}
+                  className={`hover:underline ${
+                    pathname.includes(`/collections/${col.handle}`)
+                      ? "font-semibold"
+                      : ""
+                  }`}
                 >
-                  {collection.title}
+                  {col.title}
                 </LocalizedClientLink>
               </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+    </aside>
   )
 }
