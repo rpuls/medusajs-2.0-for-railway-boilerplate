@@ -1,113 +1,97 @@
 // src/modules/store/components/refinement-list/index.tsx
 
-"use client"
+"use client";
 
-import { usePathname } from "next/navigation"
-import { useSearchParams } from "next/navigation"
-import { useRouter } from "next/navigation"
-import { getCollectionsList } from "@lib/data/collections"
-import { getCategoriesList } from "@lib/data/categories"
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { clx } from "@medusajs/ui"
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getCategoriesList } from "@lib/data/categories";
+import { getCollectionsList } from "@lib/data/collections";
+import LocalizedClientLink from "@modules/common/components/localized-client-link";
 
-export default function RefinementList({ countryCode }: { countryCode: string }) {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  const sortBy = searchParams.get("sortBy") || "created_at"
-  const [categories, setCategories] = useState([])
-  const [collections, setCollections] = useState([])
+const RefinementList = ({ countryCode }: { countryCode: string }) => {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sortBy = searchParams?.get("sortBy") || "created_at";
+  const [categories, setCategories] = useState<{ title: string; handle: string }[]>([]);
+  const [collections, setCollections] = useState<{ title: string; handle: string }[]>([]);
 
   useEffect(() => {
-    getCategoriesList(0, 100).then(({ product_categories }) => {
-      setCategories(product_categories.filter((c) => !c.parent_category))
-    })
-    getCollectionsList(0, 100).then(({ collections }) => {
-      setCollections(collections)
-    })
-  }, [])
+    getCategoriesList().then(setCategories);
+    getCollectionsList().then(setCollections);
+  }, []);
 
-  const buildLink = (base: string) => {
-    return `/${countryCode}${base}${sortBy ? `?sortBy=${sortBy}` : ""}`
-  }
-
-  const updateSort = (sort: string) => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    newParams.set("sortBy", sort)
-    router.replace(`${pathname}?${newParams.toString()}`)
-  }
+  const handleSortChange = (order: string) => {
+    const newParams = new URLSearchParams(searchParams?.toString() || "");
+    newParams.set("sortBy", order);
+    router.push(`${pathname}?${newParams.toString()}`);
+  };
 
   return (
-    <div className="w-full px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-0 lg:pt-10">
-      <div className="flex flex-col gap-y-8 text-sm tracking-wider">
-        <div className="flex flex-col gap-2">
-          <span className="font-medium text-ui-fg-base uppercase">Sort by</span>
-          <ul className="grid grid-cols-1 gap-1">
-            <li>
-              <button
-                onClick={() => updateSort("created_at")}
-                className={clx("hover:underline", sortBy === "created_at" && "font-semibold")}
-              >
-                Latest Arrivals
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => updateSort("price_asc")}
-                className={clx("hover:underline", sortBy === "price_asc" && "font-semibold")}
-              >
-                Price: Low → High
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => updateSort("price_desc")}
-                className={clx("hover:underline", sortBy === "price_desc" && "font-semibold")}
-              >
-                Price: High → Low
-              </button>
-            </li>
-          </ul>
-        </div>
+    <div className="text-xs uppercase tracking-wide p-4 sm:p-6">
+      <div className="mb-6">
+        <p className="font-semibold mb-2">Sort by</p>
+        <ul className="space-y-1">
+          <li>
+            <button
+              className={sortBy === "created_at" ? "font-semibold" : ""}
+              onClick={() => handleSortChange("created_at")}
+            >
+              Latest Arrivals
+            </button>
+          </li>
+          <li>
+            <button
+              className={sortBy === "price_asc" ? "font-semibold" : ""}
+              onClick={() => handleSortChange("price_asc")}
+            >
+              Price: Low → High
+            </button>
+          </li>
+          <li>
+            <button
+              className={sortBy === "price_desc" ? "font-semibold" : ""}
+              onClick={() => handleSortChange("price_desc")}
+            >
+              Price: High → Low
+            </button>
+          </li>
+        </ul>
+      </div>
 
-        {categories.length > 0 && (
-          <div className="flex flex-col gap-2 pt-4">
-            <span className="font-medium text-ui-fg-base uppercase">Category</span>
-            <ul className="grid grid-cols-1 gap-1">
-              {categories.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={buildLink(`/categories/${c.handle}`)}
-                    className={clx("hover:underline", pathname.includes(c.handle) && "font-semibold")}
-                  >
-                    {c.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div className="mb-6">
+        <p className="font-semibold mb-2">Category</p>
+        <ul className="space-y-1">
+          {categories.map((c) => (
+            <li key={c.handle}>
+              <LocalizedClientLink
+                href={`/${countryCode}/categories/${c.handle}`}
+                className={`hover:underline`}
+              >
+                {c.title}
+              </LocalizedClientLink>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-        {collections.length > 0 && (
-          <div className="flex flex-col gap-2 pt-4">
-            <span className="font-medium text-ui-fg-base uppercase">Collection</span>
-            <ul className="grid grid-cols-1 gap-1">
-              {collections.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={buildLink(`/collections/${c.handle}`)}
-                    className={clx("hover:underline", pathname.includes(c.handle) && "font-semibold")}
-                  >
-                    {c.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+      <div>
+        <p className="font-semibold mb-2">Collection</p>
+        <ul className="space-y-1">
+          {collections.map((c) => (
+            <li key={c.handle}>
+              <LocalizedClientLink
+                href={`/${countryCode}/collections/${c.handle}`}
+                className={`hover:underline`}
+              >
+                {c.title}
+              </LocalizedClientLink>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
-  )
-}
+  );
+};
+
+export default RefinementList;
