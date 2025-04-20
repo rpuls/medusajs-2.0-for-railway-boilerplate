@@ -23,12 +23,15 @@ export default async function StorePage({ searchParams, params }: Params) {
   const { sortBy, page, categoryId, collectionId } = searchParams
 
   return (
-    <StoreTemplate
-      sortBy={sortBy}
-      page={page}
-      categoryId={categoryId}
-      collectionId={collectionId}
-      countryCode={params.countryCode}
-    />
+    <div className="px-4 sm:px-8">
+      <h1 className="text-4xl font-[505] tracking-wider mb-6">All Products</h1>
+      <StoreTemplate
+        sortBy={sortBy}
+        page={page}
+        categoryId={categoryId}
+        collectionId={collectionId}
+        countryCode={params.countryCode}
+      />
+    </div>
   )
 }
