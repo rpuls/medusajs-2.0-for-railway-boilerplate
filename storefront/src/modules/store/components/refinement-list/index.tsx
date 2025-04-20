@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname, useSearchParams } from "next/navigation"
+import { useMemo } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export type SortOptions = "price_asc" | "price_desc" | "created_at"
@@ -11,21 +12,33 @@ const sortOptions: { value: SortOptions; label: string }[] = [
   { value: "price_desc", label: "Price: High → Low" },
 ]
 
+// Фикс для countryCode
+const getCountryCode = (pathname: string) => {
+  const parts = pathname.split("/")
+  return parts[1] || "de"
+}
+
 const RefinementList = () => {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const countryCode = pathname.split("/")[1] // get 'de' from /de/store
+  const countryCode = getCountryCode(pathname)
 
   const currentSort = searchParams.get("sortBy") || "created_at"
 
+  const sortQuery = useMemo(() => {
+    const sort = currentSort ? `?sortBy=${currentSort}` : ""
+    return sort
+  }, [currentSort])
+
   return (
     <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
+      {/* СОРТИРОВКА */}
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Sort by</span>
         {sortOptions.map(({ value, label }) => (
           <LocalizedClientLink
             key={value}
-            href={`/${countryCode}/store?sortBy=${value}`}
+            href={`${pathname.split("?")[0]}?sortBy=${value}`}
             className={`text-left text-sm hover:underline ${
               currentSort === value ? "font-semibold" : "text-gray-600"
             }`}
@@ -35,45 +48,39 @@ const RefinementList = () => {
         ))}
       </div>
 
+      {/* КАТЕГОРИИ */}
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Category</span>
-        <LocalizedClientLink
-          href={`/${countryCode}/store`}
-          className={`text-left text-sm hover:underline`}
-        >
-          All Categories
-        </LocalizedClientLink>
         {[
-          { value: "shirts", label: "T-Shirts" },
-          { value: "sweatshirts", label: "Sweatshirts" },
-          { value: "accessories", label: "Accessories" },
-        ].map(({ value, label }) => (
+          { handle: "shirts", label: "T-Shirts" },
+          { handle: "sweatshirts", label: "Sweatshirts" },
+          { handle: "accessories", label: "Accessories" },
+        ].map(({ handle, label }) => (
           <LocalizedClientLink
-            key={value}
-            href={`/${countryCode}/categories/${value}`}
-            className="text-left text-sm hover:underline"
+            key={handle}
+            href={`/${countryCode}/categories/${handle}${sortQuery}`}
+            className={`text-left text-sm hover:underline ${
+              pathname.includes(`/categories/${handle}`) ? "font-semibold" : "text-gray-600"
+            }`}
           >
             {label}
           </LocalizedClientLink>
         ))}
       </div>
 
+      {/* КОЛЛЕКЦИИ */}
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Collection</span>
-        <LocalizedClientLink
-          href={`/${countryCode}/store`}
-          className={`text-left text-sm hover:underline`}
-        >
-          All Collections
-        </LocalizedClientLink>
         {[
-          { value: "spring", label: "Spring" },
-          { value: "love", label: "Love" },
-        ].map(({ value, label }) => (
+          { handle: "spring", label: "Spring" },
+          { handle: "love", label: "Love" },
+        ].map(({ handle, label }) => (
           <LocalizedClientLink
-            key={value}
-            href={`/${countryCode}/collections/${value}`}
-            className="text-left text-sm hover:underline"
+            key={handle}
+            href={`/${countryCode}/collections/${handle}${sortQuery}`}
+            className={`text-left text-sm hover:underline ${
+              pathname.includes(`/collections/${handle}`) ? "font-semibold" : "text-gray-600"
+            }`}
           >
             {label}
           </LocalizedClientLink>
