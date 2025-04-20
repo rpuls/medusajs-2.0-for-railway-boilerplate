@@ -50,13 +50,7 @@ export default function GalleryPage() {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isMobile || dragStartX.current === null || !sliderRef.current) return
     const currentX = e.touches[0].clientX
-    const currentY = e.touches[0].clientY
-    const deltaX = currentX - dragStartX.current
-
-    // Блокируем вертикальный драг
-    if (Math.abs(deltaX) < Math.abs(currentY)) return
-
-    dragOffsetX.current = deltaX
+    dragOffsetX.current = currentX - dragStartX.current
     sliderRef.current.style.transition = 'none'
     sliderRef.current.style.transform = `translateX(${dragOffsetX.current}px)`
   }
