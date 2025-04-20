@@ -3,6 +3,7 @@ import { getRegion } from "@lib/data/regions"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { getSortOrder } from "@lib/utils/sorting"
 
 const PRODUCT_LIMIT = 12
 
@@ -31,6 +32,7 @@ export default async function PaginatedProducts({
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: PRODUCT_LIMIT,
+    order: getSortOrder(sortBy || "created_at"),
   }
 
   if (collectionId) {
@@ -43,19 +45,6 @@ export default async function PaginatedProducts({
 
   if (productsIds) {
     queryParams.id = productsIds
-  }
-
-  // добавим порядок сортировки для всех вариантов
-  switch (sortBy) {
-    case "created_at":
-      queryParams.order = "created_at"
-      break
-    case "price_asc":
-      queryParams.order = "prices.amount" // по возрастанию
-      break
-    case "price_desc":
-      queryParams.order = "-prices.amount" // по убыванию
-      break
   }
 
   const region = await getRegion(countryCode)
