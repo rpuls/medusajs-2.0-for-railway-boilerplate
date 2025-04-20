@@ -1,73 +1,55 @@
-"use client"
+import { Suspense } from "react"
 
-import SortProducts, { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
+import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import RefinementSidebar from "@modules/store/components/refinement-list/refinement-sidebar"
+import PaginatedProducts from "./paginated-products"
 
 type Props = {
-  sortBy: SortOptions
+  sortBy?: SortOptions
+  page?: string
+  countryCode: string
+  categoryId?: string
+  collectionId?: string
 }
 
-const categories = [
-  { label: "T-Shirts", value: "tshirts" },
-  { label: "Sweatshirts", value: "sweatshirts" },
-  { label: "Accessories", value: "accessories" },
-]
-
-const collections = [
-  { label: "Spring 2025", value: "spring2025" },
-  { label: "Limited Edition", value: "limited" },
-]
-
-const RefinementSidebar = ({ sortBy }: Props) => {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  const setQueryParams = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams?.toString())
-    params.set(key, value)
-    router.push(`${pathname}?${params.toString()}`)
-  }
+const StoreTemplate = ({
+  sortBy,
+  page,
+  countryCode,
+  categoryId,
+  collectionId,
+}: Props) => {
+  const pageNumber = page ? parseInt(page) : 1
+  const sort = sortBy || "created_at"
 
   return (
-    <div className="text-xs uppercase tracking-wider font-[505] space-y-10">
-      <div>
-        <SortProducts sortBy={sortBy} setQueryParams={setQueryParams} />
+    <div
+      className="flex flex-col small:flex-row small:items-start py-6 content-container"
+      data-testid="category-container"
+    >
+      {/* Левая панель — сортировка + фильтры */}
+      <div className="w-full small:max-w-[200px] mb-8">
+        <RefinementSidebar sortBy={sort} />
       </div>
 
-      <div>
-        <h3 className="mb-2 font-[505]">Categories</h3>
-        <ul className="space-y-1 font-normal normal-case">
-          {categories.map((c) => (
-            <li key={c.value}>
-              <button
-                onClick={() => setQueryParams("categoryId", c.value)}
-                className="hover:underline"
-              >
-                {c.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h3 className="mb-2 font-[505]">Collections</h3>
-        <ul className="space-y-1 font-normal normal-case">
-          {collections.map((c) => (
-            <li key={c.value}>
-              <button
-                onClick={() => setQueryParams("collectionId", c.value)}
-                className="hover:underline"
-              >
-                {c.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+      {/* Сетка товаров */}
+      <div className="w-full">
+        <div className="mb-8 text-2xl-semi">
+          <h1 data-testid="store-page-title">All products</h1>
+        </div>
+        <Suspense fallback={<SkeletonProductGrid />}>
+          <PaginatedProducts
+            sortBy={sort}
+            page={pageNumber}
+            countryCode={countryCode}
+            categoryId={categoryId}
+            collectionId={collectionId}
+          />
+        </Suspense>
       </div>
     </div>
   )
 }
 
-export default RefinementSidebar
+export default StoreTemplate
