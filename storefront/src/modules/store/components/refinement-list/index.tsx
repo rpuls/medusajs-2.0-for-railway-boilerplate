@@ -1,4 +1,3 @@
-// src/modules/store/components/refinement-list/index.tsx
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
@@ -11,7 +10,6 @@ import { getCollectionsList } from "@lib/data/collections"
 export default function RefinementList() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const currentSort = searchParams.get("sortBy") || "created_at"
 
   const [categories, setCategories] = useState([])
   const [collections, setCollections] = useState([])
@@ -20,9 +18,11 @@ export default function RefinementList() {
     const fetchData = async () => {
       const { product_categories } = await getCategoriesList(0, 100)
       const { collections } = await getCollectionsList(0, 100)
+
       setCategories(product_categories || [])
       setCollections(collections || [])
     }
+
     fetchData()
   }, [])
 
@@ -32,10 +32,17 @@ export default function RefinementList() {
     { value: "price_desc", label: "Price: High → Low" },
   ]
 
+  const currentSort = useMemo(() => {
+    if (typeof window === "undefined") return "created_at"
+    const url = new URL(window.location.href)
+    return url.searchParams.get("sortBy") || "created_at"
+  }, [])
+
   return (
-    <aside className="flex flex-col gap-y-8 text-base pr-4">
+    <aside className="flex flex-col gap-y-10 pr-6 text-base tracking-wide">
+      {/* Сортировка */}
       <div className="flex flex-col gap-y-2">
-        <span className="font-semibold text-xs">Sort By</span>
+        <span className="text-sm font-semibold">Sort By</span>
         <ul className="flex flex-col gap-y-1">
           {sortOptions.map((option) => (
             <li key={option.value}>
@@ -52,9 +59,10 @@ export default function RefinementList() {
         </ul>
       </div>
 
+      {/* Категории */}
       {categories.length > 0 && (
         <div className="flex flex-col gap-y-2">
-          <span className="font-semibold text-xs">Category</span>
+          <span className="text-sm font-semibold">Categories</span>
           <ul className="flex flex-col gap-y-1">
             {categories
               .filter((cat) => !cat.parent_category)
@@ -76,9 +84,10 @@ export default function RefinementList() {
         </div>
       )}
 
+      {/* Коллекции */}
       {collections.length > 0 && (
         <div className="flex flex-col gap-y-2">
-          <span className="font-semibold text-xs">Collection</span>
+          <span className="text-sm font-semibold">Collections</span>
           <ul className="flex flex-col gap-y-1">
             {collections.map((c) => (
               <li key={c.id}>
@@ -100,23 +109,3 @@ export default function RefinementList() {
     </aside>
   )
 }
-
-
-// lib/utils/sorting.ts
-export const getSortOrder = (key: string): string => {
-  switch (key) {
-    case "price_asc":
-      return "variants.prices.amount"
-    case "price_desc":
-      return "-variants.prices.amount"
-    case "created_at":
-    default:
-      return "created_at"
-  }
-}
-
-
-// В компоненте PaginatedProducts:
-// const sortBy = searchParams.get("sortBy") || "created_at"
-// const order = getSortOrder(sortBy)
-// И передать `order` в products.list() как параметр.
