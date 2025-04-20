@@ -1,83 +1,72 @@
 "use client"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { usePathname, useSearchParams } from "next/navigation"
 
-type SortOption = "created_at" | "price_asc" | "price_desc"
-
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "created_at", label: "Latest Arrivals" },
-  { value: "price_asc", label: "Price: Low → High" },
-  { value: "price_desc", label: "Price: High → Low" },
-]
-
-const categories = [
-  { handle: "shirts", label: "T-Shirts" },
-  { handle: "sweatshirts", label: "Sweatshirts" },
-  { handle: "accessories", label: "Accessories" },
-]
-
-const collections = [
-  { handle: "Springtime", label: "Spring" },
-  { handle: "friends", label: "Love" },
-]
-
-const RefinementList = ({ countryCode }: { countryCode: string }) => {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const sortBy = searchParams.get("sortBy") || "created_at"
-
+export default function RefinementList() {
   return (
     <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
-      {/* Sort */}
+      {/* Сортировка — работает только на /store */}
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Sort by</span>
-        {sortOptions.map(({ value, label }) => (
-          <LocalizedClientLink
-            key={value}
-            href={`/${countryCode}/store?sortBy=${value}`}
-            className={`text-left text-sm hover:underline ${
-              sortBy === value ? "font-semibold" : "text-gray-600"
-            }`}
-          >
-            {label}
-          </LocalizedClientLink>
-        ))}
+        <LocalizedClientLink
+          href={`/store?sortBy=created_at`}
+          className="text-left text-sm hover:underline font-semibold"
+        >
+          Latest Arrivals
+        </LocalizedClientLink>
+        <LocalizedClientLink
+          href={`/store?sortBy=price_asc`}
+          className="text-left text-sm hover:underline text-gray-600"
+        >
+          Price: Low → High
+        </LocalizedClientLink>
+        <LocalizedClientLink
+          href={`/store?sortBy=price_desc`}
+          className="text-left text-sm hover:underline text-gray-600"
+        >
+          Price: High → Low
+        </LocalizedClientLink>
       </div>
 
-      {/* Categories */}
+      {/* Категории — как в футере */}
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Category</span>
-        {categories.map(({ handle, label }) => (
-          <LocalizedClientLink
-            key={handle}
-            href={`/${countryCode}/categories/${handle}`}
-            className={`text-left text-sm hover:underline ${
-              pathname.includes(`/categories/${handle}`) ? "font-semibold" : "text-gray-600"
-            }`}
-          >
-            {label}
-          </LocalizedClientLink>
-        ))}
+        <LocalizedClientLink
+          href={`/categories/shirts`}
+          className="text-left text-sm hover:underline"
+        >
+          T-Shirts
+        </LocalizedClientLink>
+        <LocalizedClientLink
+          href={`/categories/sweatshirts`}
+          className="text-left text-sm hover:underline"
+        >
+          Sweatshirts
+        </LocalizedClientLink>
+        <LocalizedClientLink
+          href={`/categories/accessories`}
+          className="text-left text-sm hover:underline"
+        >
+          Accessories
+        </LocalizedClientLink>
       </div>
 
-      {/* Collections */}
+      {/* Коллекции — как в футере */}
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Collection</span>
-        {collections.map(({ handle, label }) => (
-          <LocalizedClientLink
-            key={handle}
-            href={`/${countryCode}/collections/${handle}`}
-            className={`text-left text-sm hover:underline ${
-              pathname.includes(`/collections/${handle}`) ? "font-semibold" : "text-gray-600"
-            }`}
-          >
-            {label}
-          </LocalizedClientLink>
-        ))}
+        <LocalizedClientLink
+          href={`/collections/spring`}
+          className="text-left text-sm hover:underline"
+        >
+          Spring
+        </LocalizedClientLink>
+        <LocalizedClientLink
+          href={`/collections/love`}
+          className="text-left text-sm hover:underline"
+        >
+          Love
+        </LocalizedClientLink>
       </div>
     </div>
   )
 }
-
-export default RefinementList
