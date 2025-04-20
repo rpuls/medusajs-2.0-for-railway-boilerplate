@@ -49,23 +49,21 @@ const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListPro
 
   return (
     <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
-      <div className="flex flex-col gap-2">
-        <span className="text-xs uppercase text-gray-500">Sort by</span>
-        <SortProducts
-          sortBy={sortBy}
-          setQueryParams={setQueryParams}
-          data-testid={dataTestId}
-        />
-      </div>
+      {/* SortProducts уже содержит заголовок */}
+      <SortProducts
+        sortBy={sortBy}
+        setQueryParams={setQueryParams}
+        data-testid={dataTestId}
+      />
 
       <div className="flex flex-col gap-2">
         <span className="text-xs uppercase text-gray-500">Category</span>
         {categories.map(({ value, label }) => (
           <button
             key={value}
-            onClick={() => setQueryParams("category", value)}
+            onClick={() => setQueryParams("categoryId", value)}
             className={`text-left text-sm hover:underline ${
-              searchParams.get("category") === value ? "font-semibold" : "text-gray-600"
+              searchParams.get("categoryId") === value ? "font-semibold" : "text-gray-600"
             }`}
           >
             {label}
@@ -78,9 +76,9 @@ const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListPro
         {collections.map(({ value, label }) => (
           <button
             key={value}
-            onClick={() => setQueryParams("collection", value)}
+            onClick={() => setQueryParams("collectionId", value)}
             className={`text-left text-sm hover:underline ${
-              searchParams.get("collection") === value ? "font-semibold" : "text-gray-600"
+              searchParams.get("collectionId") === value ? "font-semibold" : "text-gray-600"
             }`}
           >
             {label}
