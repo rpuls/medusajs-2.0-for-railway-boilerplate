@@ -2,32 +2,33 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
+
 import { getCategoriesList } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
-import SortProducts, { SortOptions } from "./sort-products"
+import { SortOptions } from "./sort-products"
+import SortProducts from "./sort-products"
 
-const RefinementList = ({
-  sortBy,
-  "data-testid": dataTestId,
-}: {
+export type RefinementListProps = {
   sortBy: SortOptions
+  search?: boolean
   "data-testid"?: string
-}) => {
+}
+
+const RefinementList = ({ sortBy, "data-testid": dataTestId }: RefinementListProps) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [categories, setCategories] = useState<any[]>([])
-  const [collections, setCollections] = useState<any[]>([])
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
+  const [collections, setCollections] = useState<{ id: string; title: string }[]>([])
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { product_categories } = await getCategoriesList(0, 100)
-      const { collections } = await getCollectionsList(0, 100)
+    getCategoriesList(0, 100).then(({ product_categories }) => {
       setCategories(product_categories.filter((c) => !c.parent_category))
+    })
+    getCollectionsList(0, 100).then(({ collections }) => {
       setCollections(collections)
-    }
-    fetchData()
+    })
   }, [])
 
   const createQueryString = useCallback(
@@ -64,21 +65,17 @@ const RefinementList = ({
           <span className="text-xs uppercase text-gray-500">Category</span>
           <button
             onClick={() => setQueryParams("categoryId", "")}
-            className={`text-left text-sm hover:underline ${
-              !searchParams.get("categoryId") ? "font-semibold" : "text-gray-600"
-            }`}
+            className={`text-left text-sm hover:underline ${!searchParams.get("categoryId") ? "font-semibold" : "text-gray-600"}`}
           >
             All Categories
           </button>
-          {categories.map((cat) => (
+          {categories.map((c) => (
             <button
-              key={cat.id}
-              onClick={() => setQueryParams("categoryId", cat.id)}
-              className={`text-left text-sm hover:underline ${
-                searchParams.get("categoryId") === cat.id ? "font-semibold" : "text-gray-600"
-              }`}
+              key={c.id}
+              onClick={() => setQueryParams("categoryId", c.id)}
+              className={`text-left text-sm hover:underline ${searchParams.get("categoryId") === c.id ? "font-semibold" : "text-gray-600"}`}
             >
-              {cat.name}
+              {c.name}
             </button>
           ))}
         </div>
@@ -89,21 +86,17 @@ const RefinementList = ({
           <span className="text-xs uppercase text-gray-500">Collection</span>
           <button
             onClick={() => setQueryParams("collectionId", "")}
-            className={`text-left text-sm hover:underline ${
-              !searchParams.get("collectionId") ? "font-semibold" : "text-gray-600"
-            }`}
+            className={`text-left text-sm hover:underline ${!searchParams.get("collectionId") ? "font-semibold" : "text-gray-600"}`}
           >
             All Collections
           </button>
-          {collections.map((col) => (
+          {collections.map((c) => (
             <button
-              key={col.id}
-              onClick={() => setQueryParams("collectionId", col.id)}
-              className={`text-left text-sm hover:underline ${
-                searchParams.get("collectionId") === col.id ? "font-semibold" : "text-gray-600"
-              }`}
+              key={c.id}
+              onClick={() => setQueryParams("collectionId", c.id)}
+              className={`text-left text-sm hover:underline ${searchParams.get("collectionId") === c.id ? "font-semibold" : "text-gray-600"}`}
             >
-              {col.title}
+              {c.title}
             </button>
           ))}
         </div>
