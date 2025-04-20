@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import StoreTemplate from "@modules/store/templates"
 
@@ -12,8 +11,8 @@ type Params = {
   searchParams: {
     sortBy?: SortOptions
     page?: string
-    category?: string
-    collection?: string
+    categoryId?: string
+    collectionId?: string
   }
   params: {
     countryCode: string
@@ -21,14 +20,14 @@ type Params = {
 }
 
 export default async function StorePage({ searchParams, params }: Params) {
-  const { sortBy, page, category, collection } = searchParams
+  const { sortBy, page, categoryId, collectionId } = searchParams
 
   return (
     <StoreTemplate
       sortBy={sortBy}
       page={page}
-      categoryId={category}
-      collectionId={collection}
+      categoryId={categoryId}
+      collectionId={collectionId}
       countryCode={params.countryCode}
     />
   )
