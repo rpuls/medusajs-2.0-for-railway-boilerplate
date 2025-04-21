@@ -53,9 +53,6 @@ importers:
       awilix:
         specifier: ^8.0.1
         version: 8.0.1
-      medusa-payment-solana:
-        specifier: link:..\medusa-payment-solana
-        version: link:../medusa-payment-solana
       medusajs-launch-utils:
         specifier: ^0.0.15
         version: 0.0.15

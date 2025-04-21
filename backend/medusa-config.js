@@ -128,13 +128,18 @@ const medusaConfig = {
             },
           }] : []),
           ...(SOLANA_ADDRESS ? [{
-            resolve: 'medusa-payment-solana',
+            // resolve: 'medusa-payment-solana',
+            resolve: './src/modules/medusa-payment-solana',
             id: 'solana',
             options: {
               walletAddress: SOLANA_ADDRESS,
               rpcUrl: SOLANA_RPC_URL,
               // Optional: Set a custom polling interval (in ms) for checking payments
               paymentPollingInterval: 30000,
+              currencyConverter: {
+                provider: 'coingecko',
+                apiKey: process.env.COINGECK_API_KEY
+              }
             }
           }] : [])
         ],

@@ -106,7 +106,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
       <div className="space-y-4">
         <div>
           <Text className="text-ui-fg-subtle mb-1">Amount:</Text>
-          <Text className="font-medium">{sol_amount} SOL</Text>
+          <Text className="font-medium">{JSON.stringify(sol_amount)} SOL</Text>
         </div>
         
         <div>
