@@ -31,10 +31,6 @@ export const paymentInfoMap: Record<
     title: "Manual Payment",
     icon: <CreditCard />,
   },
-  solana: {
-    title: "Pay with Solana",
-    icon: <Solana />,
-  },
   pp_solana_solana: {
     title: "Pay with Solana",
     icon: <Solana />,

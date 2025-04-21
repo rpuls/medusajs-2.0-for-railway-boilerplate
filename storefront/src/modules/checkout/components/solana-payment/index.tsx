@@ -31,7 +31,6 @@ type SolanaPaymentProps = {
 }
 
 const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) => {
-  console.log(paymentSession, cart);
   const [isLoading, setIsLoading] = useState(true)
   const [paymentStatus, setPaymentStatus] = useState("pending")
   const [qrCodeUrl, setQrCodeUrl] = useState("")
