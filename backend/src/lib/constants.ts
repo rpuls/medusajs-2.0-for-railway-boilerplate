@@ -93,7 +93,7 @@ export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 /**
  * (optional) Solana payment provider configuration
  */
-export const SOLANA_ADDRESS = process.env.SOLANA_ADDRESS;
+export const SOLANA_MNEMONIC = process.env.SOLANA_MNEMONIC;
 export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL;
 
 /**

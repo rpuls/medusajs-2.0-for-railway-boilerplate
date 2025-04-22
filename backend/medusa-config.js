@@ -22,7 +22,7 @@ import {
   MINIO_BUCKET,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY,
-  SOLANA_ADDRESS,
+  SOLANA_MNEMONIC,
   SOLANA_RPC_URL
 } from 'lib/constants';
 
@@ -114,7 +114,7 @@ const medusaConfig = {
         ]
       }
     }] : []),
-    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET || SOLANA_ADDRESS ? [{
+    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET || SOLANA_MNEMONIC ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
       options: {
@@ -127,15 +127,13 @@ const medusaConfig = {
               webhookSecret: STRIPE_WEBHOOK_SECRET,
             },
           }] : []),
-          ...(SOLANA_ADDRESS ? [{
+          ...(SOLANA_MNEMONIC ? [{
             // resolve: 'medusa-payment-solana',
             resolve: './src/modules/medusa-payment-solana',
             id: 'solana',
             options: {
-              walletAddress: SOLANA_ADDRESS,
+              passPhrase: SOLANA_MNEMONIC,
               rpcUrl: SOLANA_RPC_URL,
-              // Optional: Set a custom polling interval (in ms) for checking payments
-              paymentPollingInterval: 30000,
               currencyConverter: {
                 provider: 'coingecko',
                 apiKey: process.env.COINGECK_API_KEY

@@ -11,16 +11,18 @@ const QRCode = dynamic(() => import("react-qr-code"), { ssr: false })
 // QR code placeholder component - also client-side only
 const QRCodeWithPlaceholder = dynamic(() => 
   Promise.resolve(({ value }: { value: string }) => (
-    <div className="relative">
-      <div className="bg-white p-4 rounded-lg">
-        <QRCode value={value} size={200} />
+    <div>
+      <div className="relative flex items-center justify-center">
+        <div className="bg-white p-4 rounded-lg max-w-[240px]">
+          <QRCode value={value} size={200} />
+        </div>
       </div>
-      <div className="mt-2 text-center">
-        <Text className="text-xs break-all text-ui-fg-subtle">
-          QR Code for: {value}
-        </Text>
+        <div className="mt-2 text-center">
+          <Text className="text-xs break-all text-ui-fg-subtle">
+            QR Code for: {value}
+          </Text>
+        </div>
       </div>
-    </div>
   )),
   { ssr: false }
 )
@@ -37,18 +39,17 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
 
   // Extract payment details from the payment session
   const paymentData = paymentSession.data
-  const { sol_amount, wallet_address, description } = paymentData || {}
+  console.log('paymentData', paymentData);
+  const { sol_amount, solana_one_time_address } = paymentData || {}
 
   // Create a Solana payment URL for the QR code
   useEffect(() => {
-    if (wallet_address && sol_amount) {
-      const paymentUrl = `solana:${wallet_address}?amount=${sol_amount}${
-        description ? `&message=${encodeURIComponent(description)}` : ""
-      }`
+    if (solana_one_time_address && sol_amount) {
+      const paymentUrl = `solana:${solana_one_time_address}?amount=${sol_amount}`
       setQrCodeUrl(paymentUrl)
       setIsLoading(false)
     }
-  }, [wallet_address, sol_amount, description])
+  }, [solana_one_time_address, sol_amount])
 
   // Poll for payment status
   useEffect(() => {
@@ -111,9 +112,9 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
         <div>
           <Text className="text-ui-fg-subtle mb-1">Send to wallet address:</Text>
           <Container className="bg-ui-bg-subtle p-3 rounded flex items-center justify-between">
-            <Text className="text-xs break-all">{wallet_address}</Text>
+            <Text className="text-xs break-all">{solana_one_time_address}</Text>
             <button 
-              onClick={() => navigator.clipboard.writeText(wallet_address)}
+              onClick={() => navigator.clipboard.writeText(solana_one_time_address)}
               className="ml-2 text-ui-fg-interactive hover:text-ui-fg-interactive-hover text-sm"
             >
               Copy
