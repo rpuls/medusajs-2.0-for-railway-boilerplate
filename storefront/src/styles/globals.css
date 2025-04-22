@@ -2,8 +2,49 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+/* === Глобальные стили сайта === */
+html {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  font-weight: 400;
+  text-transform: none;
+  scroll-behavior: smooth;
+
+  /* 💡 Улучшение рендеринга в Safari/Chrome */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: #111827;
+  background-color: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Заголовки === */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Barlow Condensed', sans-serif;
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Ссылки === */
+a {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Утилиты === */
 @layer utilities {
-  /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -13,8 +54,8 @@
   }
 
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   input:focus ~ label,
@@ -49,6 +90,7 @@
   }
 }
 
+/* === Компоненты Tailwind === */
 @layer components {
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6;

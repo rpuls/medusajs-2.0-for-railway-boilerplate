@@ -1,35 +1,36 @@
-import { Github } from "@medusajs/icons"
-import { Button, Heading } from "@medusajs/ui"
+"use client"
 
-const Hero = () => {
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+export default function Home() {
+  const pathname = usePathname()
+  const countryCode = pathname.split("/")[1] || "de" // fallback на "de"
+
   return (
-    <div className="h-[75vh] w-full border-b border-ui-border-base relative bg-ui-bg-subtle">
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center small:p-32 gap-6">
-        <span>
-          <Heading
-            level="h1"
-            className="text-3xl leading-10 text-ui-fg-base font-normal"
-          >
-            Well done! You have successfully deployed your Medusa 2.0 store on Railway!
-          </Heading>
-          <Heading
-            level="h2"
-            className="text-3xl leading-10 text-ui-fg-subtle font-normal"
-          >
-            Need help customizing your store?
-          </Heading>
-        </span>
-        <a
-          href="https://funkyton.com/medusajs-2-0-is-finally-here/"
-          target="_blank"
+    <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">
+      <video
+        className="absolute inset-0 w-full h-full object-cover"
+        src="/flower_power_AI.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+
+      {/* Контент поверх видео */}
+      <div className="absolute inset-0 flex flex-col justify-center items-start pl-20 z-10">
+        <h1 className="text-4xl font-[505] uppercase tracking-wider drop-shadow-md">
+          GMORKL SPRING COLLECTION
+        </h1>
+
+        <Link
+          href={`/${countryCode}/store`}
+          className="mt-0.5 px-6 py-2 border border-white text-base font-semibold tracking-wide uppercase bg-white/10 hover:bg-white/30 transition-colors"
         >
-          <h1 style={{ textDecoration: "underline" }}>
-            Visit the tutorial
-          </h1>
-        </a>
+          DISCOVER WEARABLE ART FROM COLOGNE
+        </Link>
       </div>
     </div>
   )
 }
-
-export default Hero

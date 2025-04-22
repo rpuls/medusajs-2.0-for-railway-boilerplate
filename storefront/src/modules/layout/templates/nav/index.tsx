@@ -12,7 +12,7 @@ export default async function Nav() {
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
       <header className="relative h-16 mx-auto border-b duration-200 bg-white border-ui-border-base">
-        <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
+        <nav className="content-container flex items-center justify-between w-full h-full text-base font-sans tracking-wide">
           <div className="flex-1 basis-0 h-full flex items-center">
             <div className="h-full">
               <SideMenu regions={regions} />
@@ -22,10 +22,10 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
+              className="hover:text-ui-fg-base font-sans font-bold text-lg uppercase tracking-widest"
               data-testid="nav-store-link"
             >
-              Medusa Store
+              GMORKL STORE
             </LocalizedClientLink>
           </div>
 
@@ -33,30 +33,30 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base"
+                  className="hover:text-ui-fg-base font-sans uppercase font-normal"
                   href="/search"
                   scroll={false}
                   data-testid="nav-search-link"
                 >
-                  Search
+                  SEARCH
                 </LocalizedClientLink>
               )}
               <LocalizedClientLink
-                className="hover:text-ui-fg-base"
+                className="hover:text-ui-fg-base font-sans uppercase font-normal"
                 href="/account"
                 data-testid="nav-account-link"
               >
-                Account
+                ACCOUNT
               </LocalizedClientLink>
             </div>
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base flex gap-2"
+                  className="hover:text-ui-fg-base flex gap-2 font-sans uppercase font-normal"
                   href="/cart"
                   data-testid="nav-cart-link"
                 >
-                  Cart (0)
+                  CART (0)
                 </LocalizedClientLink>
               }
             >
