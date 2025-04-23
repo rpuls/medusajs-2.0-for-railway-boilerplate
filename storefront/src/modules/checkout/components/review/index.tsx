@@ -1,14 +1,19 @@
 "use client"
 
 import { Heading, Text, clx } from "@medusajs/ui"
+import { isSolana as isSolanaFunc } from "@lib/constants"
 
 import PaymentButton from "../payment-button"
+import SolanaPayment from "../solana-payment"
 import { useSearchParams } from "next/navigation"
 
 const Review = ({ cart }: { cart: any }) => {
   const searchParams = useSearchParams()
 
   const isOpen = searchParams.get("step") === "review"
+
+  const paymentSessions = cart?.payment_collection?.payment_sessions
+  const payWithSolana = paymentSessions.length === 1 && isSolanaFunc(paymentSessions[0].provider_id)
 
   const paidByGiftcard =
     cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
@@ -35,17 +40,30 @@ const Review = ({ cart }: { cart: any }) => {
       </div>
       {isOpen && previousStepsCompleted && (
         <>
-          <div className="flex items-start gap-x-1 w-full mb-6">
-            <div className="w-full">
-              <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                By clicking the Place Order button, you confirm that you have
-                read, understand and accept our Terms of Use, Terms of Sale and
-                Returns Policy and acknowledge that you have read Medusa
-                Store&apos;s Privacy Policy.
-              </Text>
+          {payWithSolana ? (
+            <div>
+              <div className="flex items-start gap-x-1 w-full mb-6">
+                <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                  To place order, please complete the payment below.
+                </Text>
+              </div>
+              <SolanaPayment cart={cart} />
             </div>
-          </div>
-          <PaymentButton cart={cart} data-testid="submit-order-button" />
+          ) : (
+            <>
+              <div className="flex items-start gap-x-1 w-full mb-6">
+                <div className="w-full">
+                  <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                    By clicking the Place Order button, you confirm that you have
+                    read, understand and accept our Terms of Use, Terms of Sale and
+                    Returns Policy and acknowledge that you have read Medusa
+                    Store&apos;s Privacy Policy.
+                  </Text>
+                </div>
+              </div>
+              <PaymentButton cart={cart} data-testid="submit-order-button" />
+            </>
+          )}
         </>
       )}
     </div>

@@ -28,17 +28,17 @@ const QRCodeWithPlaceholder = dynamic(() =>
 )
 
 type SolanaPaymentProps = {
-  paymentSession: any
-  cart?: any
+  cart: any
 }
 
-const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) => {
+const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
+  const paymentSession = cart?.payment_collection?.payment_sessions?.[0]
   const [isLoading, setIsLoading] = useState(true)
   const [paymentStatus, setPaymentStatus] = useState("pending")
   const [qrCodeUrl, setQrCodeUrl] = useState("")
 
   // Extract payment details from the payment session
-  const paymentData = paymentSession.data
+  const paymentData = paymentSession?.data
   console.log('paymentData', paymentData);
   const { sol_amount, solana_one_time_address } = paymentData || {}
 
@@ -53,7 +53,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
 
   // Poll for payment status
   useEffect(() => {
-    if (paymentSession.id && paymentStatus === "pending") {
+    if (paymentSession?.id && paymentStatus === "pending") {
       const checkPaymentStatus = async () => {
         try {
           // console.log("Checking payment status for cart with session:", paymentSession.id);
@@ -72,7 +72,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
           
           // Find the Solana payment session in the cart
           const solanaSession = updatedCart?.payment_collection?.payment_sessions?.find(
-            (session: any) => session.id === paymentSession.id
+            (session: any) => session.id === paymentSession?.id
           );
           
           if (solanaSession && solanaSession.status !== "pending") {
@@ -149,7 +149,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
               <button
                 onClick={async () => {
                   try {
-                    console.log("Manually checking payment status for cart with session:", paymentSession.id);
+                    console.log("Manually checking payment status for cart with session:", paymentSession?.id);
                     
                     const cartId = cart?.id;
                     
@@ -165,7 +165,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ paymentSession, cart }) =
                     
                     // Find the Solana payment session in the cart
                     const solanaSession = updatedCart?.payment_collection?.payment_sessions?.find(
-                      (session: any) => session.id === paymentSession.id
+                      (session: any) => session.id === paymentSession?.id
                     );
                     
                     if (solanaSession && solanaSession.status !== "pending") {

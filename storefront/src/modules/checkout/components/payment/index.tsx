@@ -14,13 +14,6 @@ import PaymentContainer from "@modules/checkout/components/payment-container"
 import { isStripe as isStripeFunc, isSolana as isSolanaFunc, paymentInfoMap } from "@lib/constants"
 import { StripeContext } from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
-import dynamic from "next/dynamic"
-
-// Import SolanaPayment component with no SSR to avoid hydration issues
-const SolanaPayment = dynamic(
-  () => import("@modules/checkout/components/solana-payment"),
-  { ssr: false }
-)
 
 const Payment = ({
   cart,
@@ -32,7 +25,7 @@ const Payment = ({
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (paymentSession: any) => paymentSession.status === "pending"
   )
-
+console.log(cart);
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cardBrand, setCardBrand] = useState<string | null>(null)
@@ -200,11 +193,6 @@ const Payment = ({
                     }}
                   />
                 </div>
-              )}
-
-              {/* Display Solana payment component when Solana is selected - only on client side */}
-              {isMounted && isSolanaFunc(selectedPaymentMethod) && activeSession && (
-                <SolanaPayment paymentSession={activeSession} cart={cart} />
               )}
             </>
           )}
