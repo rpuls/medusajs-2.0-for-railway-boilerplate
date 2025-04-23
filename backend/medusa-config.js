@@ -133,7 +133,7 @@ const medusaConfig = {
             id: 'solana',
             options: {
               passPhrase: SOLANA_MNEMONIC,
-              rpcUrl: SOLANA_RPC_URL,
+              rpcUrl: SOLANA_RPC_URL || 'https://api.devnet.solana.com',
               currencyConverter: {
                 provider: 'coingecko',
                 apiKey: process.env.COINGECK_API_KEY
