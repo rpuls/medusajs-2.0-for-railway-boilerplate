@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { Text, Container, clx } from "@medusajs/ui"
+import { placeOrder } from "@lib/data/cart"
 import { sdk } from "@lib/config"
 import dynamic from "next/dynamic"
 
@@ -39,7 +40,6 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
 
   // Extract payment details from the payment session
   const paymentData = paymentSession?.data
-  console.log('paymentData', paymentData);
   const { sol_amount, solana_one_time_address } = paymentData || {}
 
   // Create a Solana payment URL for the QR code
@@ -56,10 +56,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
     if (paymentSession?.id && paymentStatus === "pending") {
       const checkPaymentStatus = async () => {
         try {
-          // console.log("Checking payment status for cart with session:", paymentSession.id);
-          
           const cartId = cart?.id;
-          
           if (!cartId) {
             console.error("No cart ID found");
             return;
@@ -67,8 +64,6 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
           
           // Use the SDK to retrieve the cart
           const { cart: updatedCart } = await sdk.store.cart.retrieve(cartId);
-          
-          // console.log("Cart response:", updatedCart);
           
           // Find the Solana payment session in the cart
           const solanaSession = updatedCart?.payment_collection?.payment_sessions?.find(
@@ -80,8 +75,8 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
             
             // If payment is authorized or captured, refresh the cart
             if (solanaSession.status === "authorized" || solanaSession.status === "captured") {
-              // Refresh cart or redirect to confirmation page
-              window.location.reload();
+              console.log('should place order');
+              await placeOrder()
             }
           }
         } catch (error) {
@@ -149,10 +144,7 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
               <button
                 onClick={async () => {
                   try {
-                    console.log("Manually checking payment status for cart with session:", paymentSession?.id);
-                    
                     const cartId = cart?.id;
-                    
                     if (!cartId) {
                       console.error("No cart ID found");
                       return;

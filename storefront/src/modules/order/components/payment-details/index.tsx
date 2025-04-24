@@ -1,6 +1,6 @@
 import { Container, Heading, Text } from "@medusajs/ui"
 
-import { isStripe, paymentInfoMap } from "@lib/constants"
+import { isSolana, isStripe, paymentInfoMap } from "@lib/constants"
 import Divider from "@modules/common/components/divider"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
@@ -11,6 +11,18 @@ type PaymentDetailsProps = {
 
 const PaymentDetails = ({ order }: PaymentDetailsProps) => {
   const payment = order.payment_collections?.[0].payments?.[0]
+
+  const formatPaymentAmount = (p: any) => {
+    if (isSolana(p.provider_id) && p.data?.sol_amount) {
+      return `SOL ${p.data.sol_amount} paid at ${new Date( p.created_at ?? "").toLocaleString()}`
+    }
+
+    if (isStripe(p.provider_id) && p.data?.card_last4) {
+      return `**** **** **** ${p.data.card_last4}`
+    }
+
+    return `${convertToLocale({ amount: p.amount, currency_code: order.currency_code, })} paid at ${new Date( p.created_at ?? "").toLocaleString()}`
+  }
 
   return (
     <div>
@@ -40,14 +52,7 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
                   {paymentInfoMap[payment.provider_id].icon}
                 </Container>
                 <Text data-testid="payment-amount">
-                  {isStripe(payment.provider_id) && payment.data?.card_last4
-                    ? `**** **** **** ${payment.data.card_last4}`
-                    : `${convertToLocale({
-                        amount: payment.amount,
-                        currency_code: order.currency_code,
-                      })} paid at ${new Date(
-                        payment.created_at ?? ""
-                      ).toLocaleString()}`}
+                  {formatPaymentAmount(payment)}
                 </Text>
               </div>
             </div>
