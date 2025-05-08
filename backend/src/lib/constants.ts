@@ -95,6 +95,7 @@ export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
  */
 export const SOLANA_MNEMONIC = process.env.SOLANA_MNEMONIC;
 export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL;
+export const SOLANA_COLD_STORAGE_WALLET = process.env.SOLANA_COLD_STORAGE_WALLET;
 
 /**
  * Worker mode
