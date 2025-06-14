@@ -1,36 +1,26 @@
 import { Metadata } from "next"
-
-import FeaturedProducts from "@modules/home/components/featured-products"
-import Hero from "@modules/home/components/hero"
-import { getCollectionsWithProducts } from "@lib/data/collections"
-import { getRegion } from "@lib/data/regions"
+import { getProductsList } from "@/lib/data/products"
+import { getRegion } from "@/lib/data/regions"
+import CloudPawsClient from "./cloud-paws-client"
 
 export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
-  description:
-    "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
+  title: "CloudPaws - Where Exceptional Cats Rest",
+  description: "Handcrafted luxury blankets for the modern feline",
 }
 
-export default async function Home({
+export default async function HomePage({
   params: { countryCode },
 }: {
   params: { countryCode: string }
 }) {
-  const collections = await getCollectionsWithProducts(countryCode)
+  // Fetch real products from your Medusa backend
+  const { products } = await getProductsList({
+    pageParam: 0,
+    queryParams: { limit: 3 },
+    countryCode,
+  })
+  
   const region = await getRegion(countryCode)
 
-  if (!collections || !region) {
-    return null
-  }
-
-  return (
-    <>
-      <Hero />
-      <div className="py-12">
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
-      </div>
-    </>
-  )
+  return <CloudPawsClient products={products} region={region} />
 }
