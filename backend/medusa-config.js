@@ -117,7 +117,7 @@ const medusaConfig = {
         ]
       }
     }] : []),
-    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
+    ...(STRIPE_API_KEY ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
       options: {
@@ -127,7 +127,7 @@ const medusaConfig = {
             id: 'stripe',
             options: {
               apiKey: STRIPE_API_KEY,
-              webhookSecret: STRIPE_WEBHOOK_SECRET,
+              ...(STRIPE_WEBHOOK_SECRET && { webhookSecret: STRIPE_WEBHOOK_SECRET }),
             },
           },
         ],
