@@ -70,13 +70,13 @@ export const MINIO_BUCKET = process.env.MINIO_BUCKET; // Optional, if not set bu
  * (optional) Resend API Key and from Email - do not set if using SendGrid
  */
 export const RESEND_API_KEY = process.env.RESEND_API_KEY;
-export const RESEND_FROM_EMAIL = process.env.RESEND_FROM;
+export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM;
 
 /**
  * (optionl) SendGrid API Key and from Email - do not set if using Resend
  */
 export const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
+export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || process.env.SENDGRID_FROM;
 
 /**
  * (optional) Stripe API key and webhook secret

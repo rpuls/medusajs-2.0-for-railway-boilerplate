@@ -37,7 +37,7 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 ## About this boilerplate
 This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application. It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
-Updated: to `version 2.6.1` 🥳
+Updated: to `version 2.8.4` 🥳
 
 ## Preconfigured 3rd party integrations
 
