@@ -1,0 +1,297 @@
+{
+  "name": "React Component Generator with AI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-component",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-component",
+      "name": "Component Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract component specifications\nconst { \n  componentName, \n  componentType, \n  props = [], \n  styling = 'tailwind',\n  typescript = true,\n  includeTests = false\n} = $input.item.json;\n\n// Build AI prompt for component generation\nconst prompt = `Generate a modern React ${typescript ? 'TypeScript' : 'JavaScript'} component with the following specifications:\n\nComponent Name: ${componentName}\nType: ${componentType} (e.g., presentational, container, form, etc.)\nStyling: ${styling}\nProps: ${JSON.stringify(props)}\n\nRequirements:\n1. Use functional component with hooks if needed\n2. Include proper TypeScript types/interfaces\n3. Use ${styling === 'tailwind' ? 'Tailwind CSS classes' : styling} for styling\n4. Make it reusable and well-documented with JSDoc comments\n5. Follow React best practices and conventions\n6. If it's a form component, use proper form handling\n7. Include accessibility attributes (aria-labels, roles, etc.)\n\nGenerate ONLY the component code, no explanations.`;\n\nreturn {\n  prompt,\n  componentName,\n  componentType,\n  props,\n  styling,\n  typescript,\n  includeTests\n};"
+      },
+      "id": "prepare-prompt",
+      "name": "Prepare Component Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://ollama.railway.internal:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "codellama"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json[\"prompt\"]}}"
+            },
+            {
+              "name": "stream",
+              "value": "={{false}}"
+            },
+            {
+              "name": "temperature",
+              "value": "0.3"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "generate-component",
+      "name": "Generate with CodeLlama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json[\"includeTests\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-tests",
+      "name": "Include Tests?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://ollama.railway.internal:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "codellama"
+            },
+            {
+              "name": "prompt",
+              "value": "=Generate comprehensive unit tests for this React component using Jest and React Testing Library:\n\n{{$node[\"Generate with CodeLlama\"].json[\"response\"]}}\n\nInclude tests for:\n1. Component rendering\n2. Props validation\n3. User interactions\n4. Edge cases\n5. Accessibility\n\nGenerate ONLY the test code."
+            },
+            {
+              "name": "stream",
+              "value": "={{false}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "generate-tests",
+      "name": "Generate Tests",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format the generated code\nconst componentCode = $node[\"Generate with CodeLlama\"].json.response;\nconst componentName = $node[\"Prepare Component Prompt\"].json.componentName;\nconst includeTests = $node[\"Prepare Component Prompt\"].json.includeTests;\nlet testCode = '';\n\nif (includeTests && $node[\"Generate Tests\"]?.json?.response) {\n  testCode = $node[\"Generate Tests\"].json.response;\n}\n\n// Clean up the code (remove markdown if present)\nconst cleanCode = (code) => {\n  return code\n    .replace(/```(typescript|javascript|tsx|jsx)?\\n?/g, '')\n    .replace(/```/g, '')\n    .trim();\n};\n\nconst cleanedComponent = cleanCode(componentCode);\nconst cleanedTests = testCode ? cleanCode(testCode) : '';\n\n// Generate file paths\nconst componentPath = `src/components/${componentName}/${componentName}.tsx`;\nconst testPath = `src/components/${componentName}/${componentName}.test.tsx`;\nconst indexPath = `src/components/${componentName}/index.ts`;\n\n// Create index file content\nconst indexContent = `export { default as ${componentName} } from './${componentName}';\nexport * from './${componentName}';`;\n\nreturn {\n  files: [\n    {\n      path: componentPath,\n      content: cleanedComponent\n    },\n    {\n      path: indexPath,\n      content: indexContent\n    },\n    ...(includeTests && cleanedTests ? [{\n      path: testPath,\n      content: cleanedTests\n    }] : [])\n  ],\n  componentName,\n  message: `Successfully generated ${componentName} component${includeTests ? ' with tests' : ''}`\n};"
+      },
+      "id": "format-files",
+      "name": "Format Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/{{$env[\"GITHUB_OWNER\"]}}/{{$env[\"GITHUB_REPO\"]}}/contents/{{$json[\"files\"][0][\"path\"]}}",
+        "method": "PUT",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"GITHUB_TOKEN\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=feat: Add {{$json[\"componentName\"]}} component via AI generation"
+            },
+            {
+              "name": "content",
+              "value": "={{Buffer.from($json[\"files\"][0][\"content\"]).toString('base64')}}"
+            },
+            {
+              "name": "branch",
+              "value": "feature/ai-components"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "push-to-github",
+      "name": "Push to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "mode": "responseNode"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"N8N_WEBHOOK_URL\"]}}/webhook/component-generated",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "componentName",
+              "value": "={{$json[\"componentName\"]}}"
+            },
+            {
+              "name": "files",
+              "value": "={{$json[\"files\"]}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{new Date().toISOString()}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-completion",
+      "name": "Notify Completion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1450, 500]
+    }
+  ],
+  "connections": {
+    "Component Request": {
+      "main": [
+        [
+          {
+            "node": "Prepare Component Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Component Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate with CodeLlama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate with CodeLlama": {
+      "main": [
+        [
+          {
+            "node": "Include Tests?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Include Tests?": {
+      "main": [
+        [
+          {
+            "node": "Generate Tests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Tests": {
+      "main": [
+        [
+          {
+            "node": "Format Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Files": {
+      "main": [
+        [
+          {
+            "node": "Push to GitHub",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push to GitHub": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Generate React components automatically using AI. Supports TypeScript, Tailwind CSS, and automatic test generation."
+  }
+}
