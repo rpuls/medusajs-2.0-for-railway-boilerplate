@@ -1,0 +1,131 @@
+{
+  "name": "AI Chatbot Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/webhook/chat/message",
+        "responseMode": "responseNode",
+        "responsePropertyName": "response"
+      },
+      "id": "chat-webhook",
+      "name": "Chat Message Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/store/products",
+        "options": {
+          "qs": {
+            "q": "={{$json[\"message\"]}}"
+          }
+        }
+      },
+      "id": "search-products",
+      "name": "Search Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 200]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Você é um assistente de vendas para a loja Volaron. Use as informações do contexto para responder de forma útil e amigável:\\n\\nMensagem do cliente: {{$json[\"message\"]}}\\nProdutos encontrados: {{$json[\"products\"]}}\\nHistórico do cliente: {{$json[\"customer_history\"]}}\\n\\nResponda em português brasileiro de forma natural e sugira produtos relevantes.",
+        "modelId": "llama3.1"
+      },
+      "id": "ai-response",
+      "name": "Generate AI Response",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\\n  \"response\": \"{{$json[\"output\"]}}\",\\n  \"products\": {{$json[\"suggested_products\"]}},\\n  \"session_id\": \"{{$json[\"session_id\"]}}\"\\n}"
+      },
+      "id": "webhook-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/analytics/chat",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "session_id",
+              "value": "={{$json[\"session_id\"]}}"
+            },
+            {
+              "name": "message",
+              "value": "={{$json[\"message\"]}}"
+            },
+            {
+              "name": "response",
+              "value": "={{$json[\"response\"]}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now}}"
+            }
+          ]
+        }
+      },
+      "id": "log-conversation",
+      "name": "Log Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [920, 400]
+    }
+  ],
+  "connections": {
+    "chat-webhook": {
+      "main": [
+        [
+          {
+            "node": "search-products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search-products": {
+      "main": [
+        [
+          {
+            "node": "ai-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai-response": {
+      "main": [
+        [
+          {
+            "node": "webhook-response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "log-conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
