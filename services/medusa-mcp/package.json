@@ -1,0 +1,36 @@
+{
+  "name": "@volaron/medusa-mcp",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "inspector": "mcp-inspector m",
+    "dev:inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "keywords": ["medusa", "mcp", "ai", "integration"],
+  "author": {
+    "name": "Volaron Team",
+    "email": "dev@volaron.com.br"
+  },
+  "license": "MIT",
+  "description": "Model Context Protocol server for Volaron Medusa backend",
+  "dependencies": {
+    "@medusajs/js-sdk": "2.6.0",
+    "@modelcontextprotocol/sdk": "^1.8.0",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@typescript-eslint/eslint-plugin": "^5.33.1",
+    "@typescript-eslint/parser": "^5.33.1",
+    "eslint": "^8.22.0",
+    "prettier": "^2.7.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.7.3"
+  }
+}
