@@ -1,0 +1,13 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Medusa Admin API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://backend-production-c461d.up.railway.app"
+    }
+  ],
+  "paths": {}
+}
