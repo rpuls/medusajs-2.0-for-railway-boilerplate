@@ -1,27 +1,54 @@
 {
-  "name": "@volaron/medusa-mcp",
+  "name": "@sgftech/medusa-mcp",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "index.js",
+  "private": "false",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "node dist/index.js"
+    "dev": "ts-node src/index.ts",
+    "inspector": "mcp-inspector m",
+    "dev:inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
   },
-  "keywords": ["medusa", "mcp", "ai", "integration"],
+  "keywords": [],
   "author": {
-    "name": "Volaron Team",
-    "email": "dev@volaron.com.br"
+    "name": "govind diwakar",
+    "email": "sgf@sourcegoodfood.com"
   },
-  "license": "MIT",
-  "description": "Model Context Protocol server for Volaron Medusa backend",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SGFGOV/medusa-mcp.git"
+  },
+  "license": "ISC",
+  "description": "",
   "dependencies": {
+    "@medusajs/js-sdk": "2.8.6",
     "@modelcontextprotocol/sdk": "^1.8.0",
     "dotenv": "^16.4.7",
-    "express": "^4.18.2"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "^18.19.0",
-    "@types/express": "^4.17.21",
-    "typescript": "^5.7.3"
+    "@mikro-orm/core": "^6.4.11",
+    "@types/node": "^22.14.0",
+    "@typescript-eslint/eslint-plugin": "^5.33.1",
+    "@typescript-eslint/parser": "^5.33.1",
+    "awilix": "^12.0.5",
+    "eslint": "^8.22.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-typescript": "^3.0.0",
+    "eslint-plugin-file-progress": "^1.5.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.22.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
+    "ioredis": "^5.6.0",
+    "mcp-inspector": "^1.0.0",
+    "prettier": "^2.7.1",
+    "typescript": "5.8.3",
+    "vite": "^6.2.5"
   }
 }

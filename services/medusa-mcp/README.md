@@ -1,132 +1,180 @@
-# Volaron Medusa MCP Server
 
-This is a Model Context Protocol (MCP) server that enables AI assistants to interact with the Medusa backend.
+# `medusa-mcp`
 
-## 🚀 Features
+## Overview
 
-- **Product Management**: List, create, update, and delete products
-- **Order Management**: View orders, update status, process returns
-- **Customer Management**: List customers, view purchase history
-- **Analytics**: Sales statistics, product analysis, customer trends
-- **Health Check**: Production-ready health endpoint
+`medusa-mcp` is a **Model Context Protocol (MCP) server** designed for integration with the Medusa JavaScript SDK. It provides a scalable backend layer for managing and interacting with Medusa’s data models, enabling automation, orchestration, and intelligent service extensions.
 
-## 📋 Prerequisites
+---
 
-- Node.js v18 or higher
-- Access to Medusa Backend
-- Medusa API Key
+## 🧩 What is an MCP Server?
 
-## 🔧 Local Development
+An **MCP server** is a modular, extensible backend that:
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+- Enables **real-time service orchestration**
+- Supports **standardized, high-throughput communication**
+- Acts as a **bridge between AI/automation tools and real-world systems**
 
-2. **Create `.env` file:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your values
-   ```
+These servers are used in areas like AI, IoT, and enterprise software to connect various services and automate tasks using standardized protocols like JSON-RPC.
 
-3. **Build the project:**
-   ```bash
-   npm run build
-   ```
+### 🔑 Key Features
 
-4. **Start the server:**
-   ```bash
-   npm start
-   ```
+- **Modular Architecture** – Composable services for flexibility  
+- **High Efficiency** – Optimized for speed and scale  
+- **Extensible Design** – Add new capabilities easily  
+- **Cross-Environment Deployment** – Cloud, on-prem, or hybrid  
+- **AI-Ready Interfaces** – Integrate LLMs and tools seamlessly  
 
-5. **Development mode:**
-   ```bash
-   npm run dev
-   ```
+### 🧠 Role in AI Systems
 
-## 🐳 Docker
+MCP servers allow AI agents to:
+
+- Access real-time data from APIs, files, or databases  
+- Automate business processes (e.g., order fulfillment, pricing updates)  
+- Interact with external services in a secure and controlled way  
+
+---
+
+
+
+
+
+
+---
+
+## 🚀 Medusa JS + MCP
+
+Using `medusa-mcp`, Medusa JS can:
+
+- Automate workflows (e.g., inventory or pricing adjustments)
+- Connect with external tools (email, analytics, etc.)
+- Use AI agents to analyze trends and trigger actions  
+- Enable scalable, modular architecture for commerce platforms
+
+---
+
+## ✨ Features
+
+- ✅ **Model Context Protocol (MCP)** support  
+- 📈 **Scalable** infrastructure  
+- 🧱 **Extensible** plugin architecture  
+- 🔗 **Integrated** with Medusa JS SDK  
+
+---
+
+## 🛠️ Installation
+
+Clone the repository and install dependencies:
 
 ```bash
-# Build image
-docker build -t volaron-mcp .
-
-# Run container
-docker run -p 3000:3000 \
-  -e MEDUSA_BACKEND_URL=https://your-backend.com \
-  -e MEDUSA_API_KEY=your-key \
-  volaron-mcp
+npm install
 ```
 
-## 🚀 Railway Deployment
+Build the project:
 
-This service is configured to deploy on Railway automatically:
-
-1. Environment variables are set in Railway dashboard
-2. Health check endpoint: `/health`
-3. Automatic restarts on failure
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MEDUSA_BACKEND_URL` | Medusa backend URL | Required |
-| `MEDUSA_API_KEY` | API key for authentication | Required |
-| `MCP_PORT` | Server port | 3000 |
-| `MCP_HOST` | Server host | 0.0.0.0 |
-| `MCP_SECRET_KEY` | Secret for MCP auth | Required |
-| `NODE_ENV` | Environment | development |
-
-## 🔌 Claude Desktop Integration
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "volaron-medusa": {
-      "command": "node",
-      "args": ["/path/to/dist/index.js"],
-      "env": {
-        "MEDUSA_BACKEND_URL": "your-url",
-        "MEDUSA_API_KEY": "your-key"
-      }
-    }
-  }
-}
+```bash
+npm run build
 ```
 
-## 📝 Available Commands
+---
 
-- `list products` - Show all products
-- `create product [name]` - Create new product
-- `update stock [product-id] [quantity]` - Update inventory
-- `show orders` - List recent orders
-- `customer info [email]` - Get customer details
+## ▶️ Usage
 
-## 🛠️ Development
+Start the server:
 
-### Project Structure
+```bash
+npm start
+```
+
+Test using the MCP Inspector:
+
+```bash
+npx @modelcontextprotocol/inspector ./dist/index.js
+```
+
+> **Note:** Restart the Inspector and your browser after each rebuild.
+
+---
+
+## 🌍 Environment Variables
+
+| Variable              | Description                          |
+|-----------------------|--------------------------------------|
+| `MEDUSA_BACKEND_URL`  | Your Medusa backend URL              |
+| `PUBLISHABLE_KEY`     | Your Medusa publishable API key      |
+| `MEDUSA_USERNAME`     | Medusa admin username (for admin)    |
+| `MEDUSA_PASSWORD`     | Medusa admin password (for admin)    |
+
+Server runs at: [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🧠 Architecture Diagram
+
+Here's how the `medusa-mcp` server fits into a typical setup with Medusa JS and external systems:
 
 ```
-services/medusa-mcp/
-├── src/
-│   ├── index.ts           # Main entry point
-│   ├── services/          # Service implementations
-│   └── types/             # TypeScript types
-├── config/                # Configuration files
-├── dist/                  # Compiled output
-└── package.json
+
+       +-------------------------+
+       |     AI Assistant /      |
+       |     LLM / Automation    |
+       +-----------+-------------+
+                   |
+                   v
+    +--------------+--------------+
+    |     MCP Server (medusa-mcp) |
+    |-----------------------------|
+    | - JSON-RPC Communication    |
+    | - AI-Ready Interface        |
+    | - Plugin Support            |
+    +------+----------------------+
+                   |                             
+                   +
+                   |                                                         
+                   v                                                         
+         +-------------------+
+         | Medusa Backend    |
+         | (Products, Orders)|
+         +-------------------+
+                   |
+                   |
+                   v
+           +--------------+
+           | Medusa Store |
+           | Frontend     |
+           +--------------+
+                   |
+                   |
+                   v
+      +-------------------------+
+      | External Services / API |
+      | (e.g., Payments, Email) |
+      +-------------------------+
 ```
+
+
+## 🧪 Customization
+
+To tailor the server to your Medusa setup:
+
+> Replace `admin.json` and `store.json` with your own OAS definitions for fine-grained control.
+
+- Replace the OpenAPI schemas in the `oas/` folder:
+  - `admin.json` – Admin endpoints
+  - `store.json` – Storefront endpoints
+
+Use the [`@medusajs/medusa-oas-cli`](https://www.npmjs.com/package/@medusajs/medusa-oas-cli) to regenerate these files.
+
+You can also **fork this project** to build your own custom MCP-powered Medusa integration.
+
+---
 
 ## 🤝 Contributing
 
-1. Create feature branch
-2. Make changes
-3. Test locally
-4. Submit PR
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) guide.
+
+---
 
 ## 📄 License
 
-MIT
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

@@ -1,44 +1,54 @@
-import express from "express";
-import * as dotenv from "dotenv";
-
-// Load environment variables
-dotenv.config();
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import MedusaStoreService from "./services/medusa-store";
+import MedusaAdminService from "./services/medusa-admin";
 
 async function main(): Promise<void> {
-    console.log("Starting Volaron Medusa MCP Server...");
-    console.log(`Connecting to: ${process.env.MEDUSA_BACKEND_URL}`);
-    
-    // Health check endpoint for Railway
-    const app = express();
-    
-    app.get('/health', (req, res) => {
-        res.status(200).json({ 
-            status: 'healthy',
-            service: 'medusa-mcp-server',
-            timestamp: new Date().toISOString(),
-            environment: {
-                medusa_url: process.env.MEDUSA_BACKEND_URL,
-                has_publishable_key: !!process.env.PUBLISHABLE_KEY,
-                has_username: !!process.env.MEDUSA_USERNAME
+    console.error("Starting Medusa Store MCP Server...");
+    const medusaStoreService = new MedusaStoreService();
+    const medusaAdminService = new MedusaAdminService();
+    let tools = [];
+    try {
+        await medusaAdminService.init();
+
+        tools = [
+            ...medusaStoreService.defineTools(),
+            ...medusaAdminService.defineTools()
+        ];
+    } catch (error) {
+        console.error("Error initializing Medusa Admin Services:", error);
+        tools = [...medusaStoreService.defineTools()];
+    }
+
+    const server = new McpServer(
+        {
+            name: "Medusa Store MCP Server",
+            version: "1.0.0"
+        },
+        {
+            capabilities: {
+                tools: {}
             }
-        });
+        }
+    );
+
+    tools.forEach((tool) => {
+        server.tool(
+            tool.name,
+            tool.description,
+            tool.inputSchema,
+            tool.handler
+        );
     });
-    
-    app.get('/', (req, res) => {
-        res.json({ 
-            message: 'Volaron Medusa MCP Server',
-            status: 'running',
-            version: '1.0.0'
-        });
-    });
-    
-    const port = parseInt(process.env.PORT || '3000', 10);
-    app.listen(port, '0.0.0.0', () => {
-        console.log(`Server running on port ${port}`);
-    });
+
+    const transport = new StdioServerTransport();
+    console.error("Connecting server to transport...");
+    await server.connect(transport);
+
+    console.error("Medusajs MCP Server running on stdio");
 }
 
 main().catch((error) => {
-    console.error("Failed to start server:", error);
+    console.error("Fatal error in main():", error);
     process.exit(1);
 });
