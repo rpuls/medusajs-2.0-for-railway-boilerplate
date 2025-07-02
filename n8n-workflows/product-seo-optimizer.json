@@ -1,0 +1,166 @@
+{
+  "name": "Product SEO Optimizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/products",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "qs": {
+            "limit": 10,
+            "fields": "id,title,description,handle,metadata"
+          }
+        }
+      },
+      "id": "get-products",
+      "name": "Get Products Without SEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "mode": "independently"
+      },
+      "id": "split-batch",
+      "name": "Process Each Product",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Gerar metadados SEO otimizados para este produto de e-commerce:\\n\\nTítulo: {{$json[\"title\"]}}\\nDescrição: {{$json[\"description\"]}}\\n\\nGerar em formato JSON:\\n{\\n  \"meta_title\": \"título SEO otimizado (max 60 chars)\",\\n  \"meta_description\": \"descrição SEO otimizada (max 160 chars)\",\\n  \"keywords\": [\"palavra1\", \"palavra2\", \"palavra3\"],\\n  \"seo_description\": \"descrição longa otimizada para SEO\"\\n}",
+        "modelId": "llama3.1"
+      },
+      "id": "generate-seo",
+      "name": "Generate SEO Content",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/products/{{$json[\"id\"]}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "metadata",
+              "value": "{{$json[\"seo_metadata\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "update-product",
+      "name": "Update Product SEO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meilisearch-production-010d.up.railway.app/indexes/products/documents",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env[\"MEILISEARCH_API_KEY\"]}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "",
+              "value": "={{$json}}"
+            }
+          ]
+        }
+      },
+      "id": "update-search",
+      "name": "Update Search Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 400]
+    }
+  ],
+  "connections": {
+    "schedule-trigger": {
+      "main": [
+        [
+          {
+            "node": "get-products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get-products": {
+      "main": [
+        [
+          {
+            "node": "split-batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split-batch": {
+      "main": [
+        [
+          {
+            "node": "generate-seo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-seo": {
+      "main": [
+        [
+          {
+            "node": "update-product",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "update-search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
