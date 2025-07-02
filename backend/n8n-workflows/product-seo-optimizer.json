@@ -1,0 +1,359 @@
+{
+  "name": "Product AI Enhancement & SEO",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/products",
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "medusaAdminApi",
+        "qs": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "expand",
+              "value": "variants,images,tags"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-products",
+      "name": "Fetch All Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter products that need optimization\nconst products = $input.item.json.products || [];\n\nconst needsOptimization = products.filter(product => {\n  // Check if description is missing or too short\n  const descriptionLength = product.description?.length || 0;\n  const hasShortDescription = descriptionLength < 100;\n  \n  // Check if missing important metadata\n  const missingMetadata = !product.metadata?.seo_optimized;\n  \n  // Check if missing images\n  const hasNoImages = !product.images || product.images.length === 0;\n  \n  return hasShortDescription || missingMetadata || hasNoImages;\n});\n\nreturn needsOptimization.map(product => ({\n  json: product\n}));"
+      },
+      "id": "filter-products",
+      "name": "Filter Products Needing SEO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batch",
+      "name": "Process One at Time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://ollama.railway.internal:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3.1"
+            },
+            {
+              "name": "prompt",
+              "value": "=Generate an SEO-optimized product description for an e-commerce store:\n\nProduct: {{$json[\"title\"]}}\nCategory: {{$json[\"type\"][\"value\"] || \"General\"}}\nTags: {{$json[\"tags\"]?.map(t => t.value).join(\", \") || \"None\"}}\nCurrent Description: {{$json[\"description\"] || \"None\"}}\n\nRequirements:\n1. 150-300 words\n2. Include key benefits and features\n3. Use persuasive language\n4. Include relevant keywords naturally\n5. Add a compelling call-to-action\n6. Make it scannable with short paragraphs\n7. Focus on customer value proposition\n\nGenerate ONLY the description, no additional text."
+            },
+            {
+              "name": "stream",
+              "value": "={{false}}"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "generate-description",
+      "name": "Generate SEO Description",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://ollama.railway.internal:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3.1"
+            },
+            {
+              "name": "prompt",
+              "value": "=Generate SEO metadata for this product:\n\nProduct: {{$json[\"title\"]}}\nDescription: {{$node[\"Generate SEO Description\"].json[\"response\"]}}\n\nGenerate:\n1. Meta title (50-60 characters)\n2. Meta description (150-160 characters)\n3. 5 focus keywords\n4. 3 long-tail keywords\n5. OpenGraph title\n6. OpenGraph description\n\nFormat as JSON:\n{\n  \"meta_title\": \"\",\n  \"meta_description\": \"\",\n  \"focus_keywords\": [],\n  \"long_tail_keywords\": [],\n  \"og_title\": \"\",\n  \"og_description\": \"\"\n}"
+            },
+            {
+              "name": "stream",
+              "value": "={{false}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "generate-seo-meta",
+      "name": "Generate SEO Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI responses and prepare update\nconst product = $node[\"Split Batch\"].json;\nconst newDescription = $node[\"Generate SEO Description\"].json.response;\nlet seoMetadata = {};\n\ntry {\n  // Try to parse SEO metadata\n  const seoResponse = $node[\"Generate SEO Metadata\"].json.response;\n  seoMetadata = JSON.parse(seoResponse.replace(/```json\\n?|```/g, ''));\n} catch (error) {\n  console.error('Failed to parse SEO metadata:', error);\n  seoMetadata = {\n    meta_title: product.title,\n    meta_description: newDescription.substring(0, 160)\n  };\n}\n\n// Prepare update payload\nconst updatePayload = {\n  id: product.id,\n  description: newDescription,\n  metadata: {\n    ...product.metadata,\n    seo_optimized: true,\n    seo_optimized_at: new Date().toISOString(),\n    ...seoMetadata\n  }\n};\n\nreturn {\n  productId: product.id,\n  updatePayload,\n  oldDescription: product.description,\n  newDescription,\n  seoMetadata\n};"
+      },
+      "id": "prepare-update",
+      "name": "Prepare Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/products/{{$json[\"productId\"]}}",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "medusaAdminApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "description",
+              "value": "={{$json[\"updatePayload\"][\"description\"]}}"
+            },
+            {
+              "name": "metadata",
+              "value": "={{JSON.stringify($json[\"updatePayload\"][\"metadata\"])}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-product",
+      "name": "Update Product",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"N8N_WEBHOOK_URL\"]}}/webhook/product-seo-updated",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "productId",
+              "value": "={{$json[\"productId\"]}}"
+            },
+            {
+              "name": "improvements",
+              "value": "={{JSON.stringify({oldLength: $json[\"oldDescription\"]?.length || 0, newLength: $json[\"newDescription\"].length, seoScore: \"optimized\"})}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{new Date().toISOString()}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-update",
+      "name": "Log SEO Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "unit": "seconds",
+        "value": 5
+      },
+      "id": "wait",
+      "name": "Wait 5s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1850, 300],
+      "webhookId": "8a7e41f5-66de-4c5a-8427-8cc2383f9e15"
+    },
+    {
+      "parameters": {
+        "content": "## SEO Optimization Report\n\n**Products Optimized:** {{$node[\"Filter Products Needing SEO\"].json.length}}\n\n**Last Updated:** {{new Date().toLocaleString()}}\n\n### Improvements Made:\n- Enhanced product descriptions\n- Added SEO metadata\n- Optimized for search engines\n- Improved conversion potential",
+        "respondWith": "text",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/markdown"
+              }
+            ]
+          }
+        }
+      },
+      "id": "report",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All Products": {
+      "main": [
+        [
+          {
+            "node": "Filter Products Needing SEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Products Needing SEO": {
+      "main": [
+        [
+          {
+            "node": "Process One at Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process One at Time": {
+      "main": [
+        [
+          {
+            "node": "Generate SEO Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate SEO Description": {
+      "main": [
+        [
+          {
+            "node": "Generate SEO Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate SEO Metadata": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update": {
+      "main": [
+        [
+          {
+            "node": "Update Product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Product": {
+      "main": [
+        [
+          {
+            "node": "Log SEO Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log SEO Update": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5s": {
+      "main": [
+        [
+          {
+            "node": "Process One at Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Split Batch": {
+      "batches": 0,
+      "currentBatch": 0
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Automatically optimize product descriptions and SEO metadata using AI. Runs every 6 hours to ensure all products are optimized for search engines."
+  }
+}
