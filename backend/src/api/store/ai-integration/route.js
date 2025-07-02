@@ -1,5 +1,5 @@
 import axios from "axios";
-import { OLLAMA_API_URL, AI_MODEL, N8N_WEBHOOK_URL, N8N_API_KEY } from "../../../lib/n8n-constants.js";
+import { N8N_CONFIG, OLLAMA_API_URL, AI_MODEL, N8N_WEBHOOK_URL, N8N_API_KEY } from "../../../lib/n8n-constants.js";
 
 export default async function handler(req, res) {
   const corsHeaders = {
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
             await productService.update(product.id, { description });
             
             // Notify N8N
-            await axios.post(`${N8N_WEBHOOK_URL}/webhook/ai-description-generated`, {
+            await axios.post(`${N8N_CONFIG.WEBHOOK_URL}/webhook/ai-description-generated`, {
               productId: product.id,
               description,
             });
@@ -118,7 +118,7 @@ export default async function handler(req, res) {
             });
             
             // Trigger N8N workflow for content approval
-            await axios.post(`${N8N_WEBHOOK_URL}/webhook/content-generated`, {
+            await axios.post(`${N8N_CONFIG.WEBHOOK_URL}/webhook/content-generated`, {
               type,
               content: contentResponse.data.response,
               context,
@@ -159,7 +159,7 @@ export default async function handler(req, res) {
           .then(() => true)
           .catch(() => false);
           
-        const n8nHealthy = N8N_WEBHOOK_URL ? true : false;
+        const n8nHealthy = N8N_CONFIG.WEBHOOK_URL ? true : false;
         
         return res.status(200).json({
           status: "healthy",
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
             },
             n8n: {
               enabled: n8nHealthy,
-              url: N8N_WEBHOOK_URL,
+              url: N8N_CONFIG.WEBHOOK_URL,
             },
           },
         });
