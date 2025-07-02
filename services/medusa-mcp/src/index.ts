@@ -27,7 +27,7 @@ async function main(): Promise<void> {
     if (process.env.NODE_ENV === 'production') {
         const app = express();
         
-        app.get('/health', (req, res) => {
+        app.get('/health', (_req, res) => {
             res.status(200).json({ 
                 status: 'healthy',
                 service: 'medusa-mcp-server',
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
             });
         });
         
-        const port = process.env.PORT || 3000;
+        const port = parseInt(process.env.PORT || '3000', 10);
         app.listen(port, '0.0.0.0', () => {
             console.error(`Health check server running on port ${port}`);
         });
