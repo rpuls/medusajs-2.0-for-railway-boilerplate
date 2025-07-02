@@ -1,0 +1,178 @@
+{
+  "name": "Medusa Order Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/webhook/medusa/order-created",
+        "responseMode": "onReceived",
+        "responseData": "{ \"status\": \"received\" }"
+      },
+      "id": "webhook-receiver",
+      "name": "Order Created Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json[\"order\"][\"total\"]}}",
+              "operation": "largerEqualOrEqual",
+              "value2": 5000
+            }
+          ]
+        }
+      },
+      "id": "vip-check",
+      "name": "Check if VIP Order",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Analisar este pedido e gerar uma descrição personalizada de agradecimento VIP em português brasileiro:\\n\\nPedido: {{$json[\"order\"]}}\\n\\nGerar mensagem de agradecimento VIP calorosa e personalizada.",
+        "modelId": "llama3.1"
+      },
+      "id": "ai-vip-message",
+      "name": "Generate VIP Message",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/notifications",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-medusa-access-token",
+              "value": "={{$credentials.medusaApi.apiKey}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{$json[\"order\"][\"email\"]}}"
+            },
+            {
+              "name": "channel",
+              "value": "email"
+            },
+            {
+              "name": "template",
+              "value": "order-vip-notification"
+            },
+            {
+              "name": "data",
+              "value": "={{$json}}"
+            }
+          ]
+        }
+      },
+      "id": "send-vip-email",
+      "name": "Send VIP Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [920, 200]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Analisar os padrões de compra deste cliente e sugerir produtos que podem interessar:\\n\\nHistórico: {{$json}}\\n\\nGerar lista de 3-5 recomendações personalizadas.",
+        "modelId": "llama3.1"
+      },
+      "id": "ai-recommendations",
+      "name": "Generate Recommendations",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/customers/{{$json[\"order\"][\"customer_id\"]}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "metadata",
+              "value": "{\\n  \"ai_recommendations\": {{$json[\"recommendations\"]}},\\n  \"last_order_value\": {{$json[\"order\"][\"total\"]}},\\n  \"vip_status\": {{$json[\"is_vip\"]}}\\n}"
+            }
+          ]
+        }
+      },
+      "id": "update-customer",
+      "name": "Update Customer Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [920, 400]
+    }
+  ],
+  "connections": {
+    "webhook-receiver": {
+      "main": [
+        [
+          {
+            "node": "vip-check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "vip-check": {
+      "main": [
+        [
+          {
+            "node": "ai-vip-message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ai-recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai-vip-message": {
+      "main": [
+        [
+          {
+            "node": "send-vip-email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai-recommendations": {
+      "main": [
+        [
+          {
+            "node": "update-customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
