@@ -1,0 +1,160 @@
+{
+  "name": "React Component Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/webhook/generate/component",
+        "responseMode": "responseNode",
+        "responsePropertyName": "component"
+      },
+      "id": "component-webhook",
+      "name": "Component Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Gerar um componente React completo baseado na seguinte descrição:\\n\\nDescrição: {{$json[\"description\"]}}\\nTipo: {{$json[\"component_type\"]}}\\nEstilo: {{$json[\"style_framework\"]}}\\n\\nGerar código completo e funcional do componente React com TypeScript, incluindo:\\n- Imports necessários\\n- Interface de props\\n- Componente funcional\\n- Estilos ({{$json[\"style_framework\"]}})\\n- Exports\\n\\nO código deve ser production-ready e seguir as melhores práticas.",
+        "modelId": "llama3.1"
+      },
+      "id": "generate-component",
+      "name": "Generate Component Code",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Gerar testes unitários para o seguinte componente React:\\n\\n{{$json[\"component_code\"]}}\\n\\nGerar testes usando Jest e React Testing Library que cubram:\\n- Renderização\\n- Props\\n- Interações\\n- Estados",
+        "modelId": "llama3.1"
+      },
+      "id": "generate-tests",
+      "name": "Generate Component Tests",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "resource": "prompt",
+        "prompt": "Gerar um storybook story para o componente:\\n\\n{{$json[\"component_code\"]}}\\n\\nGerar story completo com:\\n- Imports\\n- Meta configuration\\n- Multiple story variations\\n- Args e argTypes",
+        "modelId": "llama3.1"
+      },
+      "id": "generate-story",
+      "name": "Generate Storybook Story",
+      "type": "@n8n/n8n-nodes-ollama.ollama",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "component_name",
+              "value": "={{$json[\"component_name\"]}}"
+            },
+            {
+              "name": "component_code",
+              "value": "={{$json[\"component_code\"]}}"
+            },
+            {
+              "name": "test_code",
+              "value": "={{$json[\"test_code\"]}}"
+            },
+            {
+              "name": "story_code",
+              "value": "={{$json[\"story_code\"]}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now}}"
+            }
+          ]
+        }
+      },
+      "id": "merge-results",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.1,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\\n  \"success\": true,\\n  \"component\": {\\n    \"name\": \"{{$json[\"component_name\"]}}\",\\n    \"code\": \"{{$json[\"component_code\"]}}\",\\n    \"test\": \"{{$json[\"test_code\"]}}\",\\n    \"story\": \"{{$json[\"story_code\"]}}\"\\n  },\\n  \"generated_at\": \"{{$json[\"timestamp\"]}}\"\\n}"
+      },
+      "id": "send-response",
+      "name": "Send Component Package",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1140, 300]
+    }
+  ],
+  "connections": {
+    "component-webhook": {
+      "main": [
+        [
+          {
+            "node": "generate-component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-component": {
+      "main": [
+        [
+          {
+            "node": "generate-tests",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "generate-story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-tests": {
+      "main": [
+        [
+          {
+            "node": "merge-results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-story": {
+      "main": [
+        [
+          {
+            "node": "merge-results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "merge-results": {
+      "main": [
+        [
+          {
+            "node": "send-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
