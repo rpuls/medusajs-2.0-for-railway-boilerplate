@@ -157,6 +157,10 @@ const medusaConfig = {
         }
       }
     }] : [])
+  ],
+  // N8N Webhook Subscriber
+  subscribers: [
+    './src/subscribers/n8n-webhooks.js'
   ]
 };
 
