@@ -1,10 +1,8 @@
 [build]
-builder = "dockerfile"
-dockerfilePath = "./Dockerfile"
-buildCommand = "npm ci && npm run build"
+builder = "nixpacks"
 
 [deploy]
-startCommand = "node dist/index.js"
+startCommand = "npm start"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
