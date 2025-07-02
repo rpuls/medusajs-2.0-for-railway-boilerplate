@@ -1,0 +1,307 @@
+{
+  "name": "Order Processing Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-placed",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-order",
+      "name": "Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"order\"][\"total\"]}}",
+              "operation": "larger",
+              "value2": 50000
+            }
+          ]
+        }
+      },
+      "id": "check-fraud",
+      "name": "Check Fraud Risk",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://ollama.railway.internal:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3.1"
+            },
+            {
+              "name": "prompt",
+              "value": "=Analyze this order for fraud risk: {{JSON.stringify($json[\"order\"])}}"
+            },
+            {
+              "name": "stream",
+              "value": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ai-fraud-check",
+      "name": "AI Fraud Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/orders/{{$json[\"order\"][\"id\"]}}/capture",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "medusaApi",
+        "options": {}
+      },
+      "id": "capture-payment",
+      "name": "Capture Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env[\"RESEND_FROM_EMAIL\"]}}",
+        "toEmail": "={{$json[\"order\"][\"customer\"][\"email\"]}}",
+        "subject": "Pedido Confirmado - #{{$json[\"order\"][\"display_id\"]}}",
+        "html": "<h1>Obrigado pelo seu pedido!</h1><p>Seu pedido #{{$json[\"order\"][\"display_id\"]}} foi confirmado.</p><p>Total: R$ {{($json[\"order\"][\"total\"]/100).toFixed(2)}}</p><h2>Itens:</h2><ul>{{$json[\"order\"][\"items\"].map(item => `<li>${item.title} - Qtd: ${item.quantity}</li>`).join('')}}</ul><p>Em breve você receberá um email com o código de rastreamento.</p>",
+        "options": {}
+      },
+      "id": "send-confirmation",
+      "name": "Send Confirmation Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"MEDUSA_BACKEND_URL\"]}}/admin/inventory-items",
+        "method": "GET",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "medusaApi",
+        "qs": {
+          "parameters": [
+            {
+              "name": "sku",
+              "value": "={{$json[\"order\"][\"items\"][0][\"variant\"][\"sku\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-inventory",
+      "name": "Check Inventory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"inventory_levels\"][0][\"stocked_quantity\"]}}",
+              "operation": "smaller",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "id": "low-stock-check",
+      "name": "Low Stock Alert",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"N8N_WEBHOOK_URL\"]}}/webhook/low-stock-alert",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "product",
+              "value": "={{$json[\"order\"][\"items\"][0][\"title\"]}}"
+            },
+            {
+              "name": "sku",
+              "value": "={{$json[\"order\"][\"items\"][0][\"variant\"][\"sku\"]}}"
+            },
+            {
+              "name": "current_stock",
+              "value": "={{$json[\"inventory_levels\"][0][\"stocked_quantity\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-restock",
+      "name": "Trigger Restock",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://ollama.railway.internal:11434/api/generate",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3.1"
+            },
+            {
+              "name": "prompt",
+              "value": "=Based on this customer's purchase history: {{JSON.stringify($json[\"order\"][\"customer\"])}}, suggest 3 complementary products they might like."
+            },
+            {
+              "name": "stream",
+              "value": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ai-recommendations",
+      "name": "Generate Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env[\"RESEND_FROM_EMAIL\"]}}",
+        "toEmail": "={{$json[\"order\"][\"customer\"][\"email\"]}}",
+        "subject": "Produtos Recomendados para Você",
+        "html": "<h1>Baseado no seu pedido recente</h1><p>Achamos que você também pode gostar destes produtos:</p>{{$json[\"response\"]}}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-recommendations",
+      "name": "Send Recommendations",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1450, 500],
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Fraud Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Fraud Risk": {
+      "main": [
+        [
+          {
+            "node": "AI Fraud Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Capture Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture Payment": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Check Inventory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Inventory": {
+      "main": [
+        [
+          {
+            "node": "Low Stock Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Low Stock Alert": {
+      "main": [
+        [
+          {
+            "node": "Trigger Restock",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Generate Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Send Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
