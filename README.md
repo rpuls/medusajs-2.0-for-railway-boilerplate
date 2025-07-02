@@ -46,6 +46,23 @@ Updated: to `version 2.8.4` 🥳
 - Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
 - Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
 
+## AI & Automation Services
+
+### Medusa MCP Server
+Located in `/services/medusa-mcp`, this is a Model Context Protocol server that enables AI assistants (like Claude) to interact with the Medusa backend. Features include:
+- **Product Management**: AI can list, create, update products
+- **Order Processing**: Automate order management via AI
+- **Customer Insights**: AI-powered customer analytics
+- **Local development**: `cd services/medusa-mcp && npm run dev`
+- **Railway deployment**: Deployed as a separate service with health checks
+
+### N8N Workflows
+Pre-configured automation workflows in `/n8n-workflows/`:
+- **Order Automation**: Intelligent order processing with VIP detection
+- **AI Chatbot**: 24/7 customer support
+- **SEO Optimizer**: Automatic product SEO enhancement
+- **Component Generator**: AI-powered React component creation
+
 # /backend
 
 ### local setup
