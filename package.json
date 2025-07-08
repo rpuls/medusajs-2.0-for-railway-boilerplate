@@ -39,7 +39,6 @@
     "verify:config": "bash scripts/verify-railway-config.sh"
   },
   "dependencies": {
-    "@google-cloud/aiplatform": "latest",
     "@google/generative-ai": "latest",
     "@medusajs/admin": "^7.1.0",
     "@medusajs/cache-redis": "^1.8.0",
@@ -56,7 +55,6 @@
     "dotenv": "^16.3.1",
     "express": "latest",
     "fs": "latest",
-    "google-auth-library": "latest",
     "helmet": "^7.1.0",
     "http": "latest",
     "https": "latest",
@@ -73,6 +71,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "typeorm": "^0.3.17",
+    "url": "latest",
     "util": "latest",
     "uuid": "^9.0.0",
     "winston": "^3.11.0",

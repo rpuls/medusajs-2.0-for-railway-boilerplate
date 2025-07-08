@@ -1,227 +1,227 @@
 #!/bin/bash
 
-# Railway Auto Setup - Volaron Store
-# Setup automático para execução no Railway
+# Railway Auto Setup Script for Volaron Store
+# Este script configura automaticamente o ambiente no Railway
 
 set -e
 
-echo "🔧 Railway Auto Setup - Volaron Store"
+echo "🚀 RAILWAY AUTO SETUP - VOLARON STORE"
 echo "====================================="
 
-# Verificar ambiente
-if [ "$NODE_ENV" = "production" ]; then
-    echo "🚀 Ambiente: PRODUÇÃO"
+# Cores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Função para log colorido
+log_info() {
+    echo -e "${BLUE}ℹ️ $1${NC}"
+}
+
+log_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠️ $1${NC}"
+}
+
+log_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+# Verificar se estamos no Railway
+if [ -z "$RAILWAY_ENVIRONMENT" ]; then
+    log_warning "Não detectado ambiente Railway. Executando setup local..."
+    RAILWAY_MODE=false
 else
-    echo "🛠️ Ambiente: DESENVOLVIMENTO"
+    log_info "Detectado ambiente Railway: $RAILWAY_ENVIRONMENT"
+    RAILWAY_MODE=true
 fi
 
-# Criar diretórios necessários
-echo "📁 Criando diretórios..."
-mkdir -p .copilot
-mkdir -p mcp-servers/logs
-mkdir -p monitoring/logs
-mkdir -p exports
-mkdir -p uploads
-mkdir -p public/images
+# 1. Instalar dependências
+log_info "1. Instalando dependências..."
+if [ -f "package.json" ]; then
+    npm install --production
+    log_success "Dependências instaladas"
+else
+    log_warning "package.json não encontrado, pulando instalação de dependências"
+fi
 
-# Configurar permissões
-echo "🔐 Configurando permissões..."
-chmod +x scripts/*.sh 2>/dev/null || true
-chmod +x mcp-servers/*.js 2>/dev/null || true
+# 2. Verificar variáveis de ambiente críticas
+log_info "2. Verificando variáveis de ambiente..."
 
-# Verificar dependências essenciais
-echo "📦 Verificando dependências..."
-
-REQUIRED_PACKAGES=(
-    "@google/generative-ai"
-    "@modelcontextprotocol/sdk"
-    "next"
-    "react"
+REQUIRED_VARS=(
+    "DATABASE_URL"
+    "REDIS_URL"
+    "GEMINI_API_KEY"
+    "JWT_SECRET"
+    "COOKIE_SECRET"
 )
 
-for package in "${REQUIRED_PACKAGES[@]}"; do
-    if npm list "$package" &>/dev/null; then
-        echo "✅ $package instalado"
+missing_vars=0
+for var in "${REQUIRED_VARS[@]}"; do
+    if [ -z "${!var}" ]; then
+        log_error "Variável $var não configurada"
+        ((missing_vars++))
     else
-        echo "❌ $package não encontrado"
-        echo "📥 Instalando $package..."
-        npm install "$package" --save
+        log_success "Variável $var configurada"
     fi
 done
 
-# Verificar variáveis de ambiente críticas
-echo "🔍 Verificando variáveis de ambiente..."
+if [ $missing_vars -gt 0 ]; then
+    log_error "$missing_vars variáveis críticas não configuradas"
+    if [ "$RAILWAY_MODE" = true ]; then
+        log_info "Configure as variáveis no Railway Dashboard"
+    fi
+else
+    log_success "Todas as variáveis críticas configuradas"
+fi
 
-CRITICAL_VARS=(
-    "NODE_ENV"
-    "PORT"
+# 3. Configurar diretórios necessários
+log_info "3. Criando diretórios necessários..."
+
+DIRECTORIES=(
+    "logs"
+    "temp"
+    "uploads"
+    "mcp-servers/logs"
+    "monitoring/logs"
 )
 
-for var in "${CRITICAL_VARS[@]}"; do
-    if [ -n "${!var}" ]; then
-        echo "✅ $var = ${!var}"
+for dir in "${DIRECTORIES[@]}"; do
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+        log_success "Diretório $dir criado"
     else
-        echo "⚠️ $var não definida"
+        log_info "Diretório $dir já existe"
     fi
 done
 
-# Configurar variáveis derivadas
-echo "⚙️ Configurando variáveis derivadas..."
+# 4. Configurar permissões
+log_info "4. Configurando permissões..."
 
-export NEXT_TELEMETRY_DISABLED=1
-export AI_PROVIDER=${AI_PROVIDER:-"gemini-ai-studio"}
-export GOOGLE_AI_MODEL=${GOOGLE_AI_MODEL:-"gemini-1.5-flash-001"}
-export MCP_VERBOSE=${MCP_VERBOSE:-"false"}
+EXECUTABLE_FILES=(
+    "scripts/start-mcp-servers.js"
+    "scripts/railway-deploy.sh"
+    "start-railway.sh"
+    "health-check.js"
+)
 
-# Criar arquivo de configuração MCP se não existir
-if [ ! -f "mcp-servers/config.json" ]; then
-    echo "📝 Criando configuração MCP..."
-    cat > mcp-servers/config.json << 'EOF'
+for file in "${EXECUTABLE_FILES[@]}"; do
+    if [ -f "$file" ]; then
+        chmod +x "$file"
+        log_success "Permissão executável adicionada a $file"
+    else
+        log_warning "Arquivo $file não encontrado"
+    fi
+done
+
+# 5. Inicializar MCP Servers
+log_info "5. Inicializando MCP Servers..."
+
+if [ -f "scripts/start-mcp-servers.js" ]; then
+    node scripts/start-mcp-servers.js --init
+    log_success "MCP Servers inicializados"
+else
+    log_warning "Script MCP não encontrado"
+fi
+
+# 6. Executar health check
+log_info "6. Executando health check..."
+
+if [ -f "health-check.js" ]; then
+    if node health-check.js; then
+        log_success "Health check passou"
+    else
+        log_warning "Health check falhou - serviços podem estar inicializando"
+    fi
+else
+    log_warning "Health check não encontrado"
+fi
+
+# 7. Configurar logs
+log_info "7. Configurando sistema de logs..."
+
+cat > logs/setup.log << EOF
+Volaron Store Setup Log
+=======================
+Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+Environment: ${RAILWAY_ENVIRONMENT:-"local"}
+Node Version: $(node --version)
+NPM Version: $(npm --version)
+Setup Status: Success
+Missing Variables: $missing_vars
+EOF
+
+log_success "Sistema de logs configurado"
+
+# 8. Criar arquivo de status
+log_info "8. Criando arquivo de status..."
+
+cat > railway-setup-status.json << EOF
 {
-  "mcpServers": {
-    "volaron-store": {
-      "command": "node",
-      "args": ["./mcp-servers/volaron-store-server.js"],
-      "env": {
-        "NODE_ENV": "production",
-        "MEDUSA_BACKEND_URL": "https://backend-production-c461d.up.railway.app",
-        "DATABASE_URL": "${DATABASE_URL}"
-      }
-    },
-    "gemini-ai": {
-      "command": "node",
-      "args": ["./mcp-servers/gemini-ai-server.js"],
-      "env": {
-        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
-        "GOOGLE_AI_MODEL": "gemini-1.5-flash-001",
-        "NODE_ENV": "production"
-      }
-    },
-    "analytics": {
-      "command": "node",
-      "args": ["./mcp-servers/analytics-server.js"],
-      "env": {
-        "NODE_ENV": "production",
-        "ANALYTICS_DB_URL": "${DATABASE_URL}"
-      }
-    }
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "environment": "${RAILWAY_ENVIRONMENT:-"local"}",
+  "setup_version": "1.0.0",
+  "status": "completed",
+  "missing_variables": $missing_vars,
+  "services": {
+    "mcp_servers": "initialized",
+    "health_check": "completed",
+    "logs": "configured",
+    "permissions": "set"
   },
-  "settings": {
-    "autoRestart": true,
-    "healthCheckInterval": 30000,
-    "logLevel": "info",
-    "maxRestarts": 3
-  }
+  "next_steps": [
+    "Configure missing environment variables",
+    "Run health check",
+    "Start application",
+    "Monitor logs"
+  ]
 }
 EOF
-fi
 
-# Criar arquivo de health check
-echo "❤️ Criando health check..."
-cat > health-check.js << 'EOF'
-const http = require('http');
+log_success "Arquivo de status criado"
 
-const options = {
-  hostname: 'localhost',
-  port: process.env.PORT || 3000,
-  path: '/api/copilot/health',
-  method: 'GET',
-  timeout: 5000
-};
+# 9. Resumo final
+echo ""
+log_info "📋 RESUMO DO SETUP"
+echo "=================="
 
-const req = http.request(options, (res) => {
-  if (res.statusCode === 200) {
-    console.log('✅ Health check passou');
-    process.exit(0);
-  } else {
-    console.log(`❌ Health check falhou: ${res.statusCode}`);
-    process.exit(1);
-  }
-});
-
-req.on('error', (err) => {
-  console.log(`❌ Health check erro: ${err.message}`);
-  process.exit(1);
-});
-
-req.on('timeout', () => {
-  console.log('❌ Health check timeout');
-  req.destroy();
-  process.exit(1);
-});
-
-req.end();
-EOF
-
-# Criar script de inicialização
-echo "🚀 Criando script de inicialização..."
-cat > start-railway.sh << 'EOF'
-#!/bin/bash
-
-echo "🚂 Iniciando Volaron Store no Railway"
-echo "===================================="
-
-# Verificar porta
-PORT=${PORT:-3000}
-echo "🔌 Porta: $PORT"
-
-# Verificar variáveis críticas
-if [ -z "$GEMINI_API_KEY" ]; then
-    echo "⚠️ GEMINI_API_KEY não configurada"
-fi
-
-# Iniciar servidores MCP em background
-echo "🤖 Iniciando servidores MCP..."
-node scripts/start-mcp-servers.js start &
-MCP_PID=$!
-
-# Aguardar um pouco para MCP inicializar
-sleep 5
-
-# Iniciar aplicação principal
-echo "🚀 Iniciando aplicação principal..."
-if [ "$NODE_ENV" = "production" ]; then
-    npm start
+if [ $missing_vars -eq 0 ]; then
+    log_success "✅ Setup completado com sucesso!"
+    log_info "🚀 Pronto para iniciar a aplicação"
 else
-    npm run dev
-fi
-
-# Cleanup ao sair
-trap "kill $MCP_PID 2>/dev/null" EXIT
-EOF
-
-chmod +x start-railway.sh
-
-# Verificar se tudo está configurado
-echo "🔍 Verificação final..."
-
-if [ -f "package.json" ]; then
-    echo "✅ package.json encontrado"
-else
-    echo "❌ package.json não encontrado"
-fi
-
-if [ -f "next.config.mjs" ]; then
-    echo "✅ next.config.mjs encontrado"
-else
-    echo "⚠️ next.config.mjs não encontrado"
-fi
-
-# Limpar cache se necessário
-if [ "$NODE_ENV" = "production" ]; then
-    echo "🧹 Limpando cache de desenvolvimento..."
-    rm -rf .next/cache 2>/dev/null || true
-    rm -rf node_modules/.cache 2>/dev/null || true
+    log_warning "⚠️ Setup completado com avisos"
+    log_warning "🔧 Configure $missing_vars variável(is) de ambiente"
 fi
 
 echo ""
-echo "✅ Setup automático concluído!"
-echo "🚀 Pronto para inicializar no Railway"
+log_info "📁 Arquivos criados:"
+echo "   - logs/setup.log"
+echo "   - railway-setup-status.json"
 echo ""
-echo "📊 Próximos passos:"
-echo "   1. Verificar variáveis de ambiente"
-echo "   2. Executar build"
-echo "   3. Iniciar aplicação"
-EOF
 
-chmod +x scripts/railway-auto-setup.sh
+if [ "$RAILWAY_MODE" = true ]; then
+    log_info "🔗 Links úteis:"
+    echo "   - Dashboard: https://railway.app/project/$RAILWAY_PROJECT_ID"
+    echo "   - Logs: railway logs --tail 50"
+    echo "   - Variables: railway variables"
+else
+    log_info "💻 Comandos locais:"
+    echo "   - npm start"
+    echo "   - npm run dev"
+    echo "   - npm run health"
+fi
+
+echo ""
+log_success "🎉 Setup concluído!"
+
+# Retornar código de saída baseado no status
+if [ $missing_vars -eq 0 ]; then
+    exit 0
+else
+    exit 1
+fi

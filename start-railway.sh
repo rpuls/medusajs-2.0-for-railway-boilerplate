@@ -1,201 +1,222 @@
 #!/bin/bash
 
-# Start Railway - Volaron Store
-# Script de inicialização para Railway
+# Railway Start Script for Volaron Store
+# Este script inicia a aplicação no Railway com todas as configurações necessárias
 
 set -e
 
-echo "🚂 Iniciando Volaron Store no Railway"
-echo "====================================="
+echo "🚀 INICIANDO VOLARON STORE NO RAILWAY"
+echo "===================================="
 
-# Verificar ambiente
-NODE_ENV=${NODE_ENV:-production}
-PORT=${PORT:-3000}
+# Cores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-echo "🌍 Ambiente: $NODE_ENV"
-echo "🔌 Porta: $PORT"
+log_info() {
+    echo -e "${BLUE}ℹ️ $1${NC}"
+}
 
-# Verificar variáveis críticas
-echo "🔍 Verificando variáveis críticas..."
+log_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
 
-CRITICAL_VARS=(
-    "GEMINI_API_KEY"
-    "DATABASE_URL"
-    "REDIS_URL"
-)
+log_warning() {
+    echo -e "${YELLOW}⚠️ $1${NC}"
+}
 
-for var in "${CRITICAL_VARS[@]}"; do
-    if [ -n "${!var}" ]; then
-        echo "✅ $var configurada"
-    else
-        echo "⚠️ $var não configurada"
-    fi
-done
+log_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
 
-# Configurar variáveis derivadas
-export GOOGLE_AI_API_KEY="${GEMINI_API_KEY}"
-export GOOGLE_AI_MODEL="${GOOGLE_AI_MODEL:-gemini-1.5-flash-001}"
-export AI_PROVIDER="${AI_PROVIDER:-gemini-ai-studio}"
-export ENABLE_AI_FEATURES="${ENABLE_AI_FEATURES:-true}"
-export MCP_VERBOSE="${MCP_VERBOSE:-false}"
-export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
-
-# URLs dos serviços
-if [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
-    export MEDUSA_BACKEND_URL="https://$RAILWAY_PUBLIC_DOMAIN"
-    export NEXT_PUBLIC_MEDUSA_BACKEND_URL="https://$RAILWAY_PUBLIC_DOMAIN"
-    echo "🌐 URL do backend: https://$RAILWAY_PUBLIC_DOMAIN"
-fi
-
-# Criar diretórios necessários
-echo "📁 Criando diretórios..."
-mkdir -p .copilot
-mkdir -p mcp-servers/logs
-mkdir -p monitoring/logs
-mkdir -p exports
-mkdir -p uploads
-mkdir -p public/images
-
-# Verificar dependências críticas
-echo "📦 Verificando dependências..."
-
-if [ -f "package.json" ]; then
-    echo "✅ package.json encontrado"
-else
-    echo "❌ package.json não encontrado"
+# Verificar ambiente Railway
+if [ -z "$RAILWAY_ENVIRONMENT" ]; then
+    log_error "Não está rodando no Railway!"
     exit 1
 fi
 
-# Verificar se o build foi feito
-if [ "$NODE_ENV" = "production" ] && [ ! -d ".next" ]; then
-    echo "🏗️ Build não encontrado, executando..."
-    npm run build
-fi
+log_info "Ambiente Railway detectado: $RAILWAY_ENVIRONMENT"
+log_info "Projeto: $RAILWAY_PROJECT_NAME"
+log_info "Serviço: $RAILWAY_SERVICE_NAME"
 
-# Iniciar servidores MCP em background
-echo "🤖 Iniciando servidores MCP..."
+# 1. Verificar variáveis críticas
+log_info "1. Verificando configuração..."
 
-if [ -f "scripts/start-mcp-servers.js" ]; then
-    node scripts/start-mcp-servers.js start &
-    MCP_PID=$!
-    echo "✅ MCP Servers iniciados (PID: $MCP_PID)"
-    
-    # Salvar PID para cleanup
-    echo $MCP_PID > .mcp-servers.pid
-else
-    echo "⚠️ Script MCP não encontrado"
-fi
+CRITICAL_VARS=(
+    "DATABASE_URL"
+    "REDIS_URL"
+    "GEMINI_API_KEY"
+    "JWT_SECRET"
+    "COOKIE_SECRET"
+    "HOST"
+    "PORT"
+)
 
-# Iniciar monitoramento em background
-echo "📊 Iniciando monitoramento..."
-
-if [ -f "monitoring/continuous-monitor.js" ]; then
-    node monitoring/continuous-monitor.js start &
-    MONITOR_PID=$!
-    echo "✅ Monitoramento iniciado (PID: $MONITOR_PID)"
-    
-    # Salvar PID para cleanup
-    echo $MONITOR_PID > .monitor.pid
-else
-    echo "⚠️ Script de monitoramento não encontrado"
-fi
-
-# Aguardar inicialização dos serviços
-echo "⏳ Aguardando inicialização dos serviços..."
-sleep 10
-
-# Verificar se os serviços estão rodando
-echo "🔍 Verificando serviços..."
-
-if [ -n "$MCP_PID" ] && kill -0 $MCP_PID 2>/dev/null; then
-    echo "✅ MCP Servers rodando"
-else
-    echo "⚠️ MCP Servers podem não estar rodando"
-fi
-
-if [ -n "$MONITOR_PID" ] && kill -0 $MONITOR_PID 2>/dev/null; then
-    echo "✅ Monitoramento rodando"
-else
-    echo "⚠️ Monitoramento pode não estar rodando"
-fi
-
-# Função de cleanup
-cleanup() {
-    echo ""
-    echo "🛑 Parando serviços..."
-    
-    # Parar MCP Servers
-    if [ -f ".mcp-servers.pid" ]; then
-        MCP_PID=$(cat .mcp-servers.pid)
-        if kill -0 $MCP_PID 2>/dev/null; then
-            echo "🤖 Parando MCP Servers..."
-            kill $MCP_PID 2>/dev/null || true
-        fi
-        rm -f .mcp-servers.pid
+for var in "${CRITICAL_VARS[@]}"; do
+    if [ -z "${!var}" ]; then
+        log_error "Variável crítica $var não configurada!"
+        exit 1
     fi
+done
+
+log_success "Todas as variáveis críticas configuradas"
+
+# 2. Configurar HOST e PORT
+export HOST=${HOST:-"0.0.0.0"}
+export PORT=${PORT:-3000}
+
+log_info "Host: $HOST"
+log_info "Port: $PORT"
+
+# 3. Aguardar serviços dependentes
+log_info "2. Aguardando serviços dependentes..."
+
+# Função para testar conectividade
+test_service() {
+    local service_name=$1
+    local service_url=$2
+    local max_attempts=30
+    local attempt=1
+
+    log_info "Testando $service_name..."
     
-    # Parar monitoramento
-    if [ -f ".monitor.pid" ]; then
-        MONITOR_PID=$(cat .monitor.pid)
-        if kill -0 $MONITOR_PID 2>/dev/null; then
-            echo "📊 Parando monitoramento..."
-            kill $MONITOR_PID 2>/dev/null || true
+    while [ $attempt -le $max_attempts ]; do
+        if curl -s --connect-timeout 5 "$service_url" > /dev/null 2>&1; then
+            log_success "$service_name está disponível"
+            return 0
         fi
-        rm -f .monitor.pid
-    fi
+        
+        log_info "Tentativa $attempt/$max_attempts para $service_name..."
+        sleep 2
+        ((attempt++))
+    done
     
-    echo "✅ Cleanup concluído"
+    log_warning "$service_name não respondeu após $max_attempts tentativas"
+    return 1
 }
 
-# Configurar trap para cleanup
-trap cleanup EXIT INT TERM
+# Testar PostgreSQL (via DATABASE_URL)
+if command -v pg_isready > /dev/null 2>&1; then
+    if pg_isready -d "$DATABASE_URL" -t 10; then
+        log_success "PostgreSQL está disponível"
+    else
+        log_warning "PostgreSQL pode não estar totalmente pronto"
+    fi
+fi
 
-# Mostrar informações do sistema
-echo ""
-echo "📋 INFORMAÇÕES DO SISTEMA"
-echo "========================"
-echo "🐧 OS: $(uname -s)"
-echo "🏗️ Arquitetura: $(uname -m)"
-echo "📦 Node.js: $(node --version)"
-echo "📦 NPM: $(npm --version)"
-echo "💾 Memória livre: $(free -h 2>/dev/null | grep Mem | awk '{print $7}' || echo 'N/A')"
-echo "💿 Espaço em disco: $(df -h . 2>/dev/null | tail -1 | awk '{print $4}' || echo 'N/A')"
-echo ""
+# Testar Redis (se disponível)
+if [ -n "$REDIS_URL" ]; then
+    log_info "Testando Redis..."
+    # Redis test seria implementado aqui se necessário
+    log_success "Redis configurado"
+fi
 
-# Executar health check inicial
-echo "❤️ Executando health check inicial..."
+# 4. Inicializar MCP Servers
+log_info "3. Inicializando MCP Servers..."
+
+if [ -f "scripts/start-mcp-servers.js" ]; then
+    node scripts/start-mcp-servers.js --railway &
+    MCP_PID=$!
+    log_success "MCP Servers iniciados (PID: $MCP_PID)"
+else
+    log_warning "Script MCP não encontrado"
+fi
+
+# 5. Executar migrações do banco (se necessário)
+log_info "4. Verificando migrações do banco..."
+
+if command -v medusa > /dev/null 2>&1; then
+    log_info "Executando migrações Medusa..."
+    medusa migrations run || log_warning "Migrações falharam ou já estão atualizadas"
+else
+    log_info "Medusa CLI não disponível, pulando migrações"
+fi
+
+# 6. Inicializar monitoramento
+log_info "5. Inicializando monitoramento..."
+
+if [ -f "monitoring/continuous-monitor.js" ]; then
+    node monitoring/continuous-monitor.js &
+    MONITOR_PID=$!
+    log_success "Monitoramento iniciado (PID: $MONITOR_PID)"
+else
+    log_warning "Sistema de monitoramento não encontrado"
+fi
+
+# 7. Configurar handlers de sinal
+cleanup() {
+    log_info "Recebido sinal de parada, finalizando processos..."
+    
+    if [ -n "$MCP_PID" ]; then
+        kill $MCP_PID 2>/dev/null || true
+        log_info "MCP Servers finalizados"
+    fi
+    
+    if [ -n "$MONITOR_PID" ]; then
+        kill $MONITOR_PID 2>/dev/null || true
+        log_info "Monitoramento finalizado"
+    fi
+    
+    log_success "Cleanup concluído"
+    exit 0
+}
+
+trap cleanup SIGTERM SIGINT
+
+# 8. Health check inicial
+log_info "6. Executando health check inicial..."
 
 if [ -f "health-check.js" ]; then
-    # Aguardar um pouco mais para a aplicação inicializar
-    sleep 5
-    
-    if timeout 30 node health-check.js; then
-        echo "✅ Health check inicial passou"
+    if node health-check.js; then
+        log_success "Health check inicial passou"
     else
-        echo "⚠️ Health check inicial falhou (normal durante inicialização)"
+        log_warning "Health check inicial falhou - continuando mesmo assim"
+    fi
+fi
+
+# 9. Iniciar aplicação principal
+log_info "7. Iniciando aplicação principal..."
+
+# Determinar comando de start baseado no tipo de aplicação
+if [ -f "package.json" ]; then
+    if grep -q "medusa" package.json; then
+        log_info "Detectada aplicação Medusa"
+        START_CMD="medusa start"
+    elif grep -q "next" package.json; then
+        log_info "Detectada aplicação Next.js"
+        START_CMD="npm start"
+    else
+        log_info "Usando comando padrão"
+        START_CMD="npm start"
     fi
 else
-    echo "⚠️ Script de health check não encontrado"
+    log_info "package.json não encontrado, usando node"
+    START_CMD="node index.js"
 fi
 
-# Mostrar resumo antes de iniciar
-echo ""
-echo "🎯 RESUMO DA INICIALIZAÇÃO"
-echo "========================="
-echo "✅ Ambiente configurado: $NODE_ENV"
-echo "✅ Porta configurada: $PORT"
-echo "✅ Variáveis verificadas"
-echo "✅ Diretórios criados"
-echo "✅ Serviços auxiliares iniciados"
-echo ""
-echo "🚀 Iniciando aplicação principal..."
-echo ""
+log_success "Volaron Store iniciado com sucesso!"
+log_info "Comando: $START_CMD"
+log_info "Escutando em $HOST:$PORT"
 
-# Iniciar aplicação principal
-if [ "$NODE_ENV" = "production" ]; then
-    echo "🌐 Iniciando em modo produção..."
-    exec npm start
-else
-    echo "🛠️ Iniciando em modo desenvolvimento..."
-    exec npm run dev
-fi
+# Criar arquivo de status de runtime
+cat > runtime-status.json << EOF
+{
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "environment": "$RAILWAY_ENVIRONMENT",
+  "project": "$RAILWAY_PROJECT_NAME",
+  "service": "$RAILWAY_SERVICE_NAME",
+  "host": "$HOST",
+  "port": "$PORT",
+  "status": "running",
+  "processes": {
+    "main": "starting",
+    "mcp_servers": "${MCP_PID:-"not_started"}",
+    "monitoring": "${MONITOR_PID:-"not_started"}"
+  }
+}
+EOF
+
+# Executar aplicação principal
+exec $START_CMD

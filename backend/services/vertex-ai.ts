@@ -1,236 +1,229 @@
-import { VertexAI } from "@google-cloud/aiplatform"
-import { GoogleAuth } from "google-auth-library"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
-// Configuração do cliente Vertex AI
-const projectId = process.env.VERTEX_PROJECT_ID || "volaron-store"
-const location = process.env.VERTEX_REGION || "us-central1"
+interface VertexAIConfig {
+  apiKey: string
+  model: string
+  temperature?: number
+  maxTokens?: number
+}
 
-// Inicialização do cliente com autenticação
-const auth = new GoogleAuth({
-  keyFilename: process.env.VERTEX_SERVICE_ACCOUNT_JSON ? undefined : "./vertex-credentials.json",
-  credentials: process.env.VERTEX_SERVICE_ACCOUNT_JSON
-    ? JSON.parse(process.env.VERTEX_SERVICE_ACCOUNT_JSON)
-    : undefined,
-  scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-})
+interface GenerateTextOptions {
+  prompt: string
+  systemPrompt?: string
+  temperature?: number
+  maxTokens?: number
+}
 
-const vertexAI = new VertexAI({
-  project: projectId,
-  location: location,
-  googleAuthOptions: {
-    authClient: auth,
-  },
-})
+interface AnalyzeCustomerOptions {
+  customerData: {
+    id: string
+    email: string
+    orders: any[]
+    preferences?: any
+  }
+  analysisType: "behavior" | "preferences" | "recommendations"
+}
 
-// Serviço principal de IA
 export class VertexAIService {
-  private model: string
+  private genAI: GoogleGenerativeAI
+  private model: any
+  private config: VertexAIConfig
 
-  constructor(model = "gemini-1.5-flash-001") {
-    this.model = model
+  constructor(config: VertexAIConfig) {
+    this.config = config
+    this.genAI = new GoogleGenerativeAI(config.apiKey)
+    this.model = this.genAI.getGenerativeModel({ model: config.model })
   }
 
-  // Geração de texto para descrições de produtos
-  async generateProductDescription(productData: {
-    name: string
-    category: string
-    features?: string[]
-    specifications?: Record<string, any>
-  }): Promise<string> {
-    const prompt = `
-      Crie uma descrição atrativa e otimizada para SEO para o produto:
-      Nome: ${productData.name}
-      Categoria: ${productData.category}
-      Características: ${productData.features?.join(", ") || "N/A"}
-      Especificações: ${JSON.stringify(productData.specifications || {})}
-      
-      A descrição deve ser:
-      - Persuasiva e comercial
-      - Otimizada para SEO
-      - Entre 150-300 palavras
-      - Em português brasileiro
-      - Destacar benefícios e diferenciais
-    `
-
-    return await this.generateText(prompt)
-  }
-
-  // Análise semântica de clientes
-  async analyzeCustomerBehavior(customerData: {
-    purchases: any[]
-    browsing_history?: any[]
-    demographics?: Record<string, any>
-  }): Promise<{
-    profile: string
-    recommendations: string[]
-    insights: string[]
-  }> {
-    const prompt = `
-      Analise o comportamento do cliente baseado nos dados:
-      Compras: ${JSON.stringify(customerData.purchases)}
-      Histórico de navegação: ${JSON.stringify(customerData.browsing_history || [])}
-      Demografia: ${JSON.stringify(customerData.demographics || {})}
-      
-      Forneça:
-      1. Perfil do cliente (1-2 frases)
-      2. 3-5 recomendações de produtos
-      3. 2-3 insights comportamentais
-      
-      Responda em formato JSON válido.
-    `
-
-    const response = await this.generateText(prompt)
+  async generateText(options: GenerateTextOptions): Promise<string> {
     try {
-      return JSON.parse(response)
-    } catch {
-      return {
-        profile: "Cliente com padrão de compra diversificado",
-        recommendations: ["Produtos relacionados às compras anteriores"],
-        insights: ["Necessita análise mais detalhada"],
+      const { prompt, systemPrompt, temperature = 0.7, maxTokens = 1000 } = options
+
+      let fullPrompt = prompt
+      if (systemPrompt) {
+        fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`
       }
-    }
-  }
 
-  // Otimização de SEO
-  async optimizeSEO(content: {
-    title: string
-    description: string
-    keywords?: string[]
-    category: string
-  }): Promise<{
-    optimized_title: string
-    meta_description: string
-    keywords: string[]
-    suggestions: string[]
-  }> {
-    const prompt = `
-      Otimize o SEO para:
-      Título: ${content.title}
-      Descrição: ${content.description}
-      Palavras-chave: ${content.keywords?.join(", ") || "N/A"}
-      Categoria: ${content.category}
-      
-      Forneça:
-      1. Título otimizado (máx 60 caracteres)
-      2. Meta descrição (máx 160 caracteres)
-      3. Lista de palavras-chave relevantes
-      4. Sugestões de melhoria
-      
-      Responda em JSON válido, focado no mercado brasileiro.
-    `
-
-    const response = await this.generateText(prompt)
-    try {
-      return JSON.parse(response)
-    } catch {
-      return {
-        optimized_title: content.title,
-        meta_description: content.description.substring(0, 160),
-        keywords: content.keywords || [],
-        suggestions: ["Revisar conteúdo para melhor otimização"],
-      }
-    }
-  }
-
-  // Chatbot conversacional
-  async generateChatResponse(
-    message: string,
-    context: {
-      user_id?: string
-      conversation_history?: Array<{ role: string; content: string }>
-      user_data?: Record<string, any>
-    },
-  ): Promise<string> {
-    const conversationContext =
-      context.conversation_history?.map((msg) => `${msg.role}: ${msg.content}`).join("\n") || ""
-
-    const prompt = `
-      Você é um assistente virtual da loja Volaron, especializada em produtos de qualidade.
-      
-      Contexto da conversa:
-      ${conversationContext}
-      
-      Dados do usuário: ${JSON.stringify(context.user_data || {})}
-      
-      Mensagem atual: ${message}
-      
-      Responda de forma:
-      - Amigável e profissional
-      - Focada em ajudar com produtos e pedidos
-      - Em português brasileiro
-      - Máximo 200 palavras
-      
-      Se não souber algo específico, seja honesto e ofereça alternativas.
-    `
-
-    return await this.generateText(prompt)
-  }
-
-  // Sugestões de melhorias para UX/Performance
-  async suggestImprovements(analyticsData: {
-    page_views: Record<string, number>
-    bounce_rate: number
-    conversion_rate: number
-    user_feedback?: string[]
-    performance_metrics?: Record<string, number>
-  }): Promise<{
-    ux_suggestions: string[]
-    performance_suggestions: string[]
-    priority_actions: string[]
-  }> {
-    const prompt = `
-      Analise os dados de analytics e sugira melhorias:
-      
-      Visualizações de página: ${JSON.stringify(analyticsData.page_views)}
-      Taxa de rejeição: ${analyticsData.bounce_rate}%
-      Taxa de conversão: ${analyticsData.conversion_rate}%
-      Feedback dos usuários: ${analyticsData.user_feedback?.join("; ") || "N/A"}
-      Métricas de performance: ${JSON.stringify(analyticsData.performance_metrics || {})}
-      
-      Forneça sugestões específicas e acionáveis em JSON:
-      - ux_suggestions: melhorias de experiência do usuário
-      - performance_suggestions: otimizações técnicas
-      - priority_actions: ações prioritárias (máx 3)
-    `
-
-    const response = await this.generateText(prompt)
-    try {
-      return JSON.parse(response)
-    } catch {
-      return {
-        ux_suggestions: ["Melhorar navegação principal", "Otimizar processo de checkout"],
-        performance_suggestions: ["Otimizar imagens", "Implementar cache"],
-        priority_actions: ["Reduzir taxa de rejeição", "Melhorar velocidade de carregamento"],
-      }
-    }
-  }
-
-  // Método base para geração de texto
-  private async generateText(prompt: string): Promise<string> {
-    try {
-      const request = {
-        endpoint: `projects/${projectId}/locations/${location}/publishers/google/models/${this.model}`,
-        instances: [
-          {
-            content: prompt,
-          },
-        ],
-        parameters: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-          topP: 0.8,
-          topK: 40,
+      const result = await this.model.generateContent({
+        contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
         },
+      })
+
+      const response = await result.response
+      return response.text()
+    } catch (error) {
+      console.error("Error generating text:", error)
+      throw new Error(`Vertex AI generation failed: ${error.message}`)
+    }
+  }
+
+  async analyzeCustomer(options: AnalyzeCustomerOptions): Promise<any> {
+    try {
+      const { customerData, analysisType } = options
+
+      const systemPrompt = `You are an AI assistant specialized in e-commerce customer analysis. 
+      Analyze the provided customer data and provide insights based on the analysis type requested.`
+
+      let prompt = ""
+
+      switch (analysisType) {
+        case "behavior":
+          prompt = `Analyze this customer's behavior patterns:
+          Customer ID: ${customerData.id}
+          Email: ${customerData.email}
+          Orders: ${JSON.stringify(customerData.orders, null, 2)}
+          
+          Provide insights about:
+          1. Purchase frequency
+          2. Average order value
+          3. Product preferences
+          4. Seasonal patterns
+          5. Customer lifetime value prediction`
+          break
+
+        case "preferences":
+          prompt = `Analyze this customer's preferences:
+          Customer Data: ${JSON.stringify(customerData, null, 2)}
+          
+          Identify:
+          1. Preferred product categories
+          2. Price sensitivity
+          3. Brand preferences
+          4. Shopping patterns
+          5. Communication preferences`
+          break
+
+        case "recommendations":
+          prompt = `Generate product recommendations for this customer:
+          Customer Data: ${JSON.stringify(customerData, null, 2)}
+          
+          Provide:
+          1. Top 5 recommended products
+          2. Reasoning for each recommendation
+          3. Cross-sell opportunities
+          4. Upsell suggestions
+          5. Personalized marketing messages`
+          break
       }
 
-      const [response] = await vertexAI.predict(request)
-      return response?.predictions?.[0]?.content || "Erro na geração de resposta"
+      const analysis = await this.generateText({
+        prompt,
+        systemPrompt,
+        temperature: 0.3,
+        maxTokens: 2000,
+      })
+
+      return {
+        customerId: customerData.id,
+        analysisType,
+        timestamp: new Date().toISOString(),
+        insights: analysis,
+        confidence: 0.85,
+      }
     } catch (error) {
-      console.error("Erro no Vertex AI:", error)
-      throw new Error("Falha na comunicação com Vertex AI")
+      console.error("Error analyzing customer:", error)
+      throw new Error(`Customer analysis failed: ${error.message}`)
+    }
+  }
+
+  async generateProductDescription(productData: any): Promise<string> {
+    try {
+      const prompt = `Generate a compelling product description for:
+      
+      Product Name: ${productData.name}
+      Category: ${productData.category}
+      Price: ${productData.price}
+      Features: ${JSON.stringify(productData.features || [])}
+      Specifications: ${JSON.stringify(productData.specifications || {})}
+      
+      Create a description that:
+      1. Highlights key benefits
+      2. Uses persuasive language
+      3. Includes SEO keywords
+      4. Appeals to the target audience
+      5. Maintains professional tone`
+
+      return await this.generateText({
+        prompt,
+        systemPrompt: "You are an expert copywriter specializing in e-commerce product descriptions.",
+        temperature: 0.6,
+        maxTokens: 800,
+      })
+    } catch (error) {
+      console.error("Error generating product description:", error)
+      throw new Error(`Product description generation failed: ${error.message}`)
+    }
+  }
+
+  async chatbotResponse(message: string, context?: any): Promise<string> {
+    try {
+      const systemPrompt = `You are a helpful customer service chatbot for Volaron Store, 
+      an e-commerce platform specializing in home utilities and garden products. 
+      Be friendly, helpful, and professional. Provide accurate information about products, 
+      orders, shipping, and general inquiries.`
+
+      let prompt = message
+      if (context) {
+        prompt = `Context: ${JSON.stringify(context)}\n\nCustomer message: ${message}`
+      }
+
+      return await this.generateText({
+        prompt,
+        systemPrompt,
+        temperature: 0.4,
+        maxTokens: 500,
+      })
+    } catch (error) {
+      console.error("Error generating chatbot response:", error)
+      throw new Error(`Chatbot response generation failed: ${error.message}`)
+    }
+  }
+
+  async healthCheck(): Promise<{ status: string; model: string; timestamp: string }> {
+    try {
+      const testResponse = await this.generateText({
+        prompt: 'Hello, this is a health check. Please respond with "OK".',
+        temperature: 0.1,
+        maxTokens: 10,
+      })
+
+      return {
+        status: testResponse.includes("OK") ? "healthy" : "warning",
+        model: this.config.model,
+        timestamp: new Date().toISOString(),
+      }
+    } catch (error) {
+      console.error("Health check failed:", error)
+      return {
+        status: "unhealthy",
+        model: this.config.model,
+        timestamp: new Date().toISOString(),
+      }
     }
   }
 }
 
-// Instância singleton
-export const vertexAIService = new VertexAIService()
+// Singleton instance
+let vertexAIInstance: VertexAIService | null = null
+
+export function getVertexAIService(): VertexAIService {
+  if (!vertexAIInstance) {
+    const config: VertexAIConfig = {
+      apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || "",
+      model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+      temperature: 0.7,
+      maxTokens: 1000,
+    }
+
+    if (!config.apiKey) {
+      throw new Error("Gemini API key not configured")
+    }
+
+    vertexAIInstance = new VertexAIService(config)
+  }
+
+  return vertexAIInstance
+}

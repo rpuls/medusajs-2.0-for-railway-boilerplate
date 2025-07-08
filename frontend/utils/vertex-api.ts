@@ -1,80 +1,121 @@
-// Utilitários para chamadas da API Vertex AI no frontend
-export class VertexAPIClient {
+interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+  details?: string
+}
+
+interface CustomerAnalysis {
+  customerId: string
+  analysisType: string
+  timestamp: string
+  insights: string
+  confidence: number
+}
+
+interface ChatbotResponse {
+  response: string
+  sessionId: string
+  timestamp: string
+}
+
+class VertexAPIClient {
   private baseUrl: string
 
-  constructor(baseUrl = "/api/ai") {
-    this.baseUrl = baseUrl
+  constructor() {
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
   }
 
-  async generateProductDescription(productData: {
-    name: string
-    category: string
-    features?: string[]
-    specifications?: Record<string, any>
-  }): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/generate-description`, {
+  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
+        ...options,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+      }
+
+      return data
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error)
+      return {
+        success: false,
+        error: error.message || "Unknown error occurred",
+      }
+    }
+  }
+
+  async analyzeCustomer(
+    customerData: any,
+    analysisType: "behavior" | "preferences" | "recommendations" = "behavior",
+  ): Promise<ApiResponse<CustomerAnalysis>> {
+    return this.makeRequest<CustomerAnalysis>("/api/ai/analyze-customer", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      body: JSON.stringify({ customerData, analysisType }),
+    })
+  }
+
+  async getCustomerAnalysis(
+    customerId: string,
+    analysisType: "behavior" | "preferences" | "recommendations" = "behavior",
+  ): Promise<ApiResponse<CustomerAnalysis>> {
+    return this.makeRequest<CustomerAnalysis>(`/api/ai/analyze-customer?customerId=${customerId}&type=${analysisType}`)
+  }
+
+  async sendChatMessage(message: string, context?: any, sessionId?: string): Promise<ApiResponse<ChatbotResponse>> {
+    return this.makeRequest<ChatbotResponse>("/api/ai/chatbot", {
+      method: "POST",
+      body: JSON.stringify({ message, context, sessionId }),
+    })
+  }
+
+  async getChatResponse(message: string): Promise<ApiResponse<ChatbotResponse>> {
+    return this.makeRequest<ChatbotResponse>(`/api/ai/chatbot?message=${encodeURIComponent(message)}`)
+  }
+
+  async generateProductDescription(productData: any): Promise<ApiResponse<string>> {
+    return this.makeRequest<string>("/api/ai/generate-description", {
+      method: "POST",
       body: JSON.stringify({ productData }),
     })
-
-    if (!response.ok) {
-      throw new Error("Falha na geração de descrição")
-    }
-
-    const data = await response.json()
-    return data.description
   }
 
-  async analyzeCustomer(customerData: {
-    purchases: any[]
-    browsing_history?: any[]
-    demographics?: Record<string, any>
-  }) {
-    const response = await fetch(`${this.baseUrl}/analyze-customer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ customerData }),
-    })
-
-    if (!response.ok) {
-      throw new Error("Falha na análise do cliente")
-    }
-
-    const data = await response.json()
-    return data.analysis
-  }
-
-  async sendChatMessage(message: string, context?: any): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/chatbot`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message, context }),
-    })
-
-    if (!response.ok) {
-      throw new Error("Falha na resposta do chatbot")
-    }
-
-    const data = await response.json()
-    return data.response
+  async healthCheck(): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>("/api/ai/health")
   }
 }
 
-// Instância singleton para uso no frontend
-export const vertexAPI = new VertexAPIClient()
+// Singleton instance
+let vertexAPIClient: VertexAPIClient | null = null
 
-// Hook para usar Vertex AI no React
-export function useVertexAI() {
-  return {
-    generateDescription: vertexAPI.generateProductDescription.bind(vertexAPI),
-    analyzeCustomer: vertexAPI.analyzeCustomer.bind(vertexAPI),
-    sendChatMessage: vertexAPI.sendChatMessage.bind(vertexAPI),
+export function getVertexAPIClient(): VertexAPIClient {
+  if (!vertexAPIClient) {
+    vertexAPIClient = new VertexAPIClient()
   }
+  return vertexAPIClient
+}
+
+// Convenience functions
+export const vertexAPI = {
+  analyzeCustomer: (customerData: any, analysisType?: "behavior" | "preferences" | "recommendations") =>
+    getVertexAPIClient().analyzeCustomer(customerData, analysisType),
+
+  getCustomerAnalysis: (customerId: string, analysisType?: "behavior" | "preferences" | "recommendations") =>
+    getVertexAPIClient().getCustomerAnalysis(customerId, analysisType),
+
+  sendChatMessage: (message: string, context?: any, sessionId?: string) =>
+    getVertexAPIClient().sendChatMessage(message, context, sessionId),
+
+  getChatResponse: (message: string) => getVertexAPIClient().getChatResponse(message),
+
+  generateProductDescription: (productData: any) => getVertexAPIClient().generateProductDescription(productData),
+
+  healthCheck: () => getVertexAPIClient().healthCheck(),
 }
