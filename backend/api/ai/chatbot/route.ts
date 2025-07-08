@@ -1,87 +1,118 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/backend/services/gemini-ai-studio"
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
 interface ChatSession {
-  id: string
-  user_id?: string
+  sessionId: string
+  userId?: string
   messages: Array<{
     role: "user" | "assistant"
     content: string
     timestamp: string
   }>
   context: {
-    current_page?: string
-    cart_items?: any[]
-    user_preferences?: Record<string, any>
-    session_start: string
+    customerProfile?: any
+    currentProducts?: any[]
+    cartItems?: any[]
+    orderHistory?: any[]
   }
-  last_activity: string
 }
 
-// Armazenamento em memória das sessões (em produção, usar Redis)
-const chatSessions = new Map<string, Array<{ role: string; content: string }>>()
+// Armazenamento temporário de sessões (em produção, usar Redis ou banco)
+const chatSessions = new Map<string, ChatSession>()
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, context } = await request.json()
+    const { message, sessionId, userId, context } = await request.json()
 
     if (!message || !sessionId) {
       return NextResponse.json({ error: "Message and session ID are required" }, { status: 400 })
     }
 
-    // Get or create chat session
-    let conversation = chatSessions.get(sessionId) || []
-
-    // Add user message to conversation
-    conversation.push({ role: "user", content: message })
-
-    // Build context-aware prompt
-    const systemPrompt = `
-      Você é um assistente virtual da Volaron, uma loja de utilidades domésticas brasileira.
-      
-      Informações da loja:
-      - Especializada em produtos para casa, jardim, cozinha e organização
-      - Entrega para todo o Brasil
-      - Parcelamento em até 12x sem juros
-      - Atendimento humanizado e personalizado
-      
-      Contexto adicional: ${context ? JSON.stringify(context) : "Nenhum contexto adicional"}
-      
-      Histórico da conversa:
-      ${conversation
-        .slice(-10)
-        .map((msg) => `${msg.role}: ${msg.content}`)
-        .join("\n")}
-      
-      Responda de forma amigável, útil e sempre relacionando com os produtos da Volaron quando apropriado.
-      Mantenha as respostas concisas mas informativas.
-    `
-
-    const response = await geminiAIService.generateContent(systemPrompt)
-
-    // Add assistant response to conversation
-    conversation.push({ role: "assistant", content: response })
-
-    // Keep only last 20 messages to manage memory
-    if (conversation.length > 20) {
-      conversation = conversation.slice(-20)
+    // Recuperar ou criar sessão
+    let session = chatSessions.get(sessionId)
+    if (!session) {
+      session = {
+        sessionId,
+        userId,
+        messages: [],
+        context: context || {},
+      }
     }
 
-    // Update session
-    chatSessions.set(sessionId, conversation)
+    // Adicionar mensagem do usuário
+    session.messages.push({
+      role: "user",
+      content: message,
+      timestamp: new Date().toISOString(),
+    })
+
+    // Preparar contexto para o Gemini AI
+    const conversationContext = {
+      businessType: "loja-utilidades-domesticas",
+      storeName: "Volaron",
+      categories: [
+        "moedores",
+        "escadas",
+        "jardinagem",
+        "raladores",
+        "trituradores",
+        "serras-de-fita",
+        "cilindros-de-massa",
+        "lavanderia",
+        "utilidades-domesticas",
+        "cozinha-buffet",
+      ],
+      customerContext: session.context,
+      conversationHistory: session.messages.slice(-10), // Últimas 10 mensagens
+    }
+
+    // Gerar resposta usando Gemini AI
+    const aiResponse = await geminiAIService.generateChatResponse({
+      userMessage: message,
+      context: conversationContext,
+      sessionId: sessionId,
+      responseStyle: "helpful-friendly-professional",
+    })
+
+    // Adicionar resposta do assistente
+    session.messages.push({
+      role: "assistant",
+      content: aiResponse.content,
+      timestamp: new Date().toISOString(),
+    })
+
+    // Salvar sessão atualizada
+    chatSessions.set(sessionId, session)
+
+    // Gerar sugestões de produtos se relevante
+    let productSuggestions = null
+    if (aiResponse.shouldSuggestProducts) {
+      productSuggestions = await geminiAIService.suggestProducts({
+        userQuery: message,
+        categories: conversationContext.categories,
+        maxSuggestions: 5,
+      })
+    }
 
     return NextResponse.json({
       success: true,
-      response,
-      sessionId,
-      messageCount: conversation.length,
-      timestamp: new Date().toISOString(),
+      data: {
+        response: aiResponse.content,
+        sessionId: sessionId,
+        suggestions: aiResponse.suggestions || [],
+        productSuggestions: productSuggestions,
+        metadata: {
+          confidence: aiResponse.confidence || 0.9,
+          responseTime: aiResponse.responseTime,
+          tokensUsed: aiResponse.tokensUsed,
+        },
+      },
     })
   } catch (error) {
-    console.error("Chatbot error:", error)
+    console.error("Error in chatbot:", error)
     return NextResponse.json(
       {
-        error: "Failed to process chat message",
+        error: "Failed to generate chat response",
         details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
@@ -90,55 +121,56 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const sessionId = searchParams.get("sessionId")
+  try {
+    const { searchParams } = new URL(request.url)
+    const sessionId = searchParams.get("sessionId")
 
-  if (!sessionId) {
-    return NextResponse.json({ error: "Session ID parameter is required" }, { status: 400 })
+    if (!sessionId) {
+      return NextResponse.json({ error: "Session ID parameter is required" }, { status: 400 })
+    }
+
+    const session = chatSessions.get(sessionId)
+
+    return NextResponse.json({
+      success: true,
+      data: session || null,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error("Error fetching chat session:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to fetch chat session",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
-
-  const conversation = chatSessions.get(sessionId) || []
-
-  return NextResponse.json({
-    success: true,
-    sessionId,
-    conversation,
-    messageCount: conversation.length,
-    timestamp: new Date().toISOString(),
-  })
 }
 
 export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const sessionId = searchParams.get("sessionId")
+  try {
+    const { searchParams } = new URL(request.url)
+    const sessionId = searchParams.get("sessionId")
 
-  if (!sessionId) {
-    return NextResponse.json({ error: "Session ID parameter is required" }, { status: 400 })
-  }
-
-  chatSessions.delete(sessionId)
-
-  return NextResponse.json({
-    success: true,
-    message: "Chat session cleared",
-    sessionId,
-    timestamp: new Date().toISOString(),
-  })
-}
-
-// Limpeza automática de sessões antigas (executar periodicamente)
-setInterval(
-  () => {
-    const now = Date.now()
-    const maxAge = 24 * 60 * 60 * 1000 // 24 horas
-
-    for (const [sessionId, conversation] of chatSessions.entries()) {
-      const lastMessage = conversation[conversation.length - 1]
-      const lastActivity = new Date(lastMessage.timestamp).getTime()
-      if (now - lastActivity > maxAge) {
-        chatSessions.delete(sessionId)
-      }
+    if (!sessionId) {
+      return NextResponse.json({ error: "Session ID parameter is required" }, { status: 400 })
     }
-  },
-  60 * 60 * 1000,
-) // Executar a cada hora
+
+    chatSessions.delete(sessionId)
+
+    return NextResponse.json({
+      success: true,
+      message: "Chat session deleted successfully",
+    })
+  } catch (error) {
+    console.error("Error deleting chat session:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to delete chat session",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
+}

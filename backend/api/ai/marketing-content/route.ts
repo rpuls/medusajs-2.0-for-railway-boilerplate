@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/backend/services/gemini-ai-studio"
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,110 +7,134 @@ export async function POST(request: NextRequest) {
       contentType,
       product,
       campaign,
-      audience,
+      targetAudience,
       platform,
-      tone = "engaging",
-      objective = "sales",
+      tone = "professional-friendly",
     } = await request.json()
 
     if (!contentType) {
       return NextResponse.json({ error: "Content type is required" }, { status: 400 })
     }
 
-    const contentTypes = {
-      email: "E-mail marketing",
-      social: "Post para redes sociais",
-      ad: "Anúncio publicitário",
-      blog: "Artigo de blog",
-      newsletter: "Newsletter",
-      sms: "SMS marketing",
+    const businessContext = {
+      storeName: "Volaron",
+      website: "volaron.com.br",
+      businessType: "utilidades-domesticas-jardinagem",
+      location: "Brasil",
+      phone: "(18) 3643-1990",
+      email: "contato@volaron.com.br",
+      workingHours: "Segunda à Sexta das 8h às 18h",
+      services: [
+        "Envio para todo Brasil",
+        "Descontos à vista",
+        "Entrega local no mesmo dia",
+        "Parcelamento em até 12x sem juros",
+      ],
     }
 
-    const objectives = {
-      sales: "aumentar vendas",
-      awareness: "aumentar conhecimento da marca",
-      engagement: "aumentar engajamento",
-      retention: "reter clientes",
-      acquisition: "adquirir novos clientes",
+    let content = {}
+
+    switch (contentType) {
+      case "email-marketing":
+        content = await geminiAIService.generateEmailMarketing({
+          product,
+          campaign,
+          targetAudience,
+          businessContext,
+          tone,
+        })
+        break
+
+      case "social-media":
+        content = await geminiAIService.generateSocialMediaContent({
+          product,
+          platform: platform || "instagram",
+          targetAudience,
+          businessContext,
+          tone,
+        })
+        break
+
+      case "blog-post":
+        content = await geminiAIService.generateBlogPost({
+          topic: product?.name || campaign?.topic,
+          category: product?.category,
+          targetAudience,
+          businessContext,
+          tone,
+        })
+        break
+
+      case "product-announcement":
+        content = await geminiAIService.generateProductAnnouncement({
+          product,
+          targetAudience,
+          businessContext,
+          tone,
+        })
+        break
+
+      case "newsletter":
+        content = await geminiAIService.generateNewsletter({
+          products: product ? [product] : [],
+          campaign,
+          targetAudience,
+          businessContext,
+          tone,
+        })
+        break
+
+      case "whatsapp-message":
+        content = await geminiAIService.generateWhatsAppMessage({
+          product,
+          targetAudience,
+          businessContext,
+          tone: "casual-friendly",
+        })
+        break
+
+      default:
+        return NextResponse.json({ error: "Unsupported content type" }, { status: 400 })
     }
 
-    const platforms = {
-      instagram: "Instagram (visual, hashtags, stories)",
-      facebook: "Facebook (engajamento, compartilhamento)",
-      whatsapp: "WhatsApp (pessoal, direto)",
-      email: "E-mail (formal, detalhado)",
-      sms: "SMS (conciso, urgente)",
-    }
+    // Gerar variações do conteúdo
+    const variations = await geminiAIService.generateContentVariations({
+      originalContent: content,
+      variationCount: 3,
+      contentType,
+      tone,
+    })
 
-    const prompt = `
-      Crie conteúdo de marketing para a Volaron (loja de utilidades domésticas) com estas especificações:
-      
-      Tipo de Conteúdo: ${contentTypes[contentType as keyof typeof contentTypes] || contentType}
-      Produto/Serviço: ${product || "Produtos gerais da loja"}
-      Campanha: ${campaign || "Campanha geral"}
-      Público-alvo: ${audience || "Donas de casa e pessoas que cuidam do lar"}
-      Plataforma: ${platforms[platform as keyof typeof platforms] || "Geral"}
-      Objetivo: ${objectives[objective as keyof typeof objectives] || "aumentar vendas"}
-      
-      Diretrizes da Volaron:
-      - Loja brasileira de utilidades domésticas
-      - Foco em praticidade e qualidade de vida
-      - Produtos para casa, jardim, cozinha, organização
-      - Entrega nacional, parcelamento facilitado
-      - Tom acolhedor e próximo ao cliente
-      
-      Instruções específicas:
-      - Use linguagem brasileira natural
-      - Inclua benefícios práticos dos produtos
-      - Destaque diferenciais da Volaron
-      - Inclua call-to-action apropriado
-      - Adapte o formato para a plataforma escolhida
-      - Tom: ${tone}
-      
-      Retorne em formato JSON:
-      {
-        "headline": "Título principal",
-        "content": "Conteúdo principal",
-        "callToAction": "Call-to-action",
-        "hashtags": ["#tag1", "#tag2"] (se aplicável),
-        "subject": "Assunto do e-mail" (se aplicável),
-        "variations": ["Variação 1", "Variação 2"]
-      }
-    `
-
-    const response = await geminiAIService.generateContent(prompt)
-
-    // Try to parse as JSON, fallback to structured response
-    let marketingContent
-    try {
-      marketingContent = JSON.parse(response)
-    } catch {
-      // If not valid JSON, create structured response
-      const lines = response.split("\n").filter((line) => line.trim())
-      marketingContent = {
-        headline: lines[0] || "Descubra a praticidade na Volaron!",
-        content: lines.slice(1, -2).join("\n"),
-        callToAction: lines[lines.length - 1] || "Visite nossa loja online!",
-        hashtags: contentType === "social" ? ["#volaron", "#utilidadesdomesticas", "#casa"] : [],
-        subject: contentType === "email" ? lines[0] : undefined,
-        variations: [lines[0], "Transforme sua casa com a Volaron"],
-      }
+    // Gerar hashtags se for para redes sociais
+    let hashtags = []
+    if (platform && ["instagram", "twitter", "facebook"].includes(platform)) {
+      hashtags = await geminiAIService.generateHashtags({
+        content: content.text || content.subject,
+        category: product?.category,
+        businessContext,
+        maxHashtags: 15,
+      })
     }
 
     return NextResponse.json({
       success: true,
-      content: marketingContent,
-      metadata: {
-        contentType,
-        platform,
-        objective,
-        tone,
-        generatedAt: new Date().toISOString(),
-        aiProvider: "gemini-1.5-flash",
+      data: {
+        content: content,
+        variations: variations,
+        hashtags: hashtags,
+        metadata: {
+          contentType,
+          platform,
+          tone,
+          targetAudience,
+          generatedAt: new Date().toISOString(),
+          estimatedReadTime: content.estimatedReadTime || null,
+          characterCount: (content.text || content.subject || "").length,
+        },
       },
     })
   } catch (error) {
-    console.error("Marketing content generation error:", error)
+    console.error("Error generating marketing content:", error)
     return NextResponse.json(
       {
         error: "Failed to generate marketing content",
@@ -121,20 +145,91 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    message: "Marketing Content Generator API",
-    endpoints: {
-      POST: "/api/ai/marketing-content",
-      parameters: {
-        required: ["contentType"],
-        optional: ["product", "campaign", "audience", "platform", "tone", "objective"],
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const contentType = searchParams.get("contentType")
+
+    const availableContentTypes = {
+      "email-marketing": {
+        description: "E-mails promocionais e informativos",
+        platforms: ["email"],
+        tones: ["professional", "friendly", "urgent", "casual"],
       },
-      contentTypes: ["email", "social", "ad", "blog", "newsletter", "sms"],
-      platforms: ["instagram", "facebook", "whatsapp", "email", "sms"],
-      objectives: ["sales", "awareness", "engagement", "retention", "acquisition"],
-      tones: ["engaging", "professional", "casual", "urgent", "friendly"],
-    },
-  })
+      "social-media": {
+        description: "Conteúdo para redes sociais",
+        platforms: ["instagram", "facebook", "twitter", "linkedin"],
+        tones: ["casual", "professional", "fun", "inspiring"],
+      },
+      "blog-post": {
+        description: "Artigos para blog",
+        platforms: ["website", "blog"],
+        tones: ["informative", "professional", "casual", "technical"],
+      },
+      "product-announcement": {
+        description: "Anúncios de produtos",
+        platforms: ["all"],
+        tones: ["exciting", "professional", "urgent", "informative"],
+      },
+      newsletter: {
+        description: "Boletins informativos",
+        platforms: ["email"],
+        tones: ["professional", "friendly", "informative"],
+      },
+      "whatsapp-message": {
+        description: "Mensagens para WhatsApp",
+        platforms: ["whatsapp"],
+        tones: ["casual", "friendly", "professional"],
+      },
+    }
+
+    if (contentType && !availableContentTypes[contentType]) {
+      return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        availableContentTypes: contentType
+          ? { [contentType]: availableContentTypes[contentType] }
+          : availableContentTypes,
+        supportedPlatforms: ["instagram", "facebook", "twitter", "linkedin", "email", "whatsapp", "website", "blog"],
+        availableTones: [
+          "professional",
+          "friendly",
+          "casual",
+          "urgent",
+          "exciting",
+          "informative",
+          "fun",
+          "inspiring",
+          "technical",
+        ],
+        businessInfo: {
+          storeName: "Volaron",
+          categories: [
+            "moedores",
+            "escadas",
+            "jardinagem",
+            "raladores",
+            "trituradores",
+            "serras-de-fita",
+            "cilindros-de-massa",
+            "lavanderia",
+            "utilidades-domesticas",
+            "cozinha-buffet",
+          ],
+        },
+      },
+    })
+  } catch (error) {
+    console.error("Error fetching marketing content info:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to fetch marketing content information",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
 }

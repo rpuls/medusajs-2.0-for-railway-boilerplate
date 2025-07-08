@@ -1,361 +1,322 @@
-#!/usr/bin/env node
-
-/**
- * Volaron Store - Health Check Script
- * Verifica a saúde de todos os serviços da aplicação
- */
-
 const http = require("http")
 const https = require("https")
-const { execSync } = require("child_process")
-const fs = require("fs")
-const path = require("path")
+const { performance } = require("perf_hooks")
 
-// Configurações
-const CONFIG = {
-  port: process.env.PORT || 3000,
-  host: process.env.HOST || "localhost",
-  timeout: 10000,
-  retries: 3,
-  services: {
-    app: {
-      name: "Aplicação Principal",
-      url: `http://localhost:${process.env.PORT || 3000}`,
-      healthPath: "/health",
-    },
-    medusa: {
-      name: "Medusa Backend",
-      url: process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL,
-      healthPath: "/health",
-    },
-    database: {
-      name: "Banco de Dados",
-      url: process.env.DATABASE_URL,
-    },
-  },
-}
+/**
+ * Health Check Script para Volaron Store
+ * Verifica a saúde de todos os serviços críticos
+ */
 
-// Cores para output
-const colors = {
-  green: "\x1b[32m",
-  red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-}
+class HealthChecker {
+  constructor() {
+    this.port = process.env.PORT || 3000
+    this.host = process.env.HOST || "localhost"
+    this.timeout = 10000 // 10 segundos
+    this.checks = []
+    this.results = {
+      overall: "unknown",
+      timestamp: new Date().toISOString(),
+      checks: {},
+      performance: {},
+      errors: [],
+    }
+  }
 
-// Função para log colorido
-function log(message, color = "reset") {
-  const timestamp = new Date().toISOString()
-  console.log(`${colors[color]}[${timestamp}] ${message}${colors.reset}`)
-}
+  // Adicionar verificação
+  addCheck(name, checkFunction) {
+    this.checks.push({ name, check: checkFunction })
+  }
 
-// Função para fazer requisição HTTP
-function makeRequest(url, timeout = 5000) {
-  return new Promise((resolve, reject) => {
-    const client = url.startsWith("https:") ? https : http
-    const req = client.get(url, { timeout }, (res) => {
-      let data = ""
-      res.on("data", (chunk) => (data += chunk))
-      res.on("end", () => {
-        resolve({
-          statusCode: res.statusCode,
-          data: data,
-          headers: res.headers,
+  // Verificar endpoint HTTP
+  async checkHttpEndpoint(url, expectedStatus = 200) {
+    const startTime = performance.now()
+
+    return new Promise((resolve) => {
+      const urlObj = new URL(url)
+      const client = urlObj.protocol === "https:" ? https : http
+
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || (urlObj.protocol === "https:" ? 443 : 80),
+        path: urlObj.pathname + urlObj.search,
+        method: "GET",
+        timeout: this.timeout,
+        headers: {
+          "User-Agent": "Volaron-HealthCheck/1.0",
+        },
+      }
+
+      const req = client.request(options, (res) => {
+        const endTime = performance.now()
+        const responseTime = Math.round(endTime - startTime)
+
+        let data = ""
+        res.on("data", (chunk) => (data += chunk))
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode === expectedStatus ? "healthy" : "unhealthy",
+            statusCode: res.statusCode,
+            responseTime: responseTime,
+            contentLength: data.length,
+            headers: res.headers,
+          })
         })
       })
+
+      req.on("error", (err) => {
+        const endTime = performance.now()
+        resolve({
+          status: "unhealthy",
+          error: err.message,
+          responseTime: Math.round(endTime - startTime),
+        })
+      })
+
+      req.on("timeout", () => {
+        req.destroy()
+        resolve({
+          status: "unhealthy",
+          error: "Request timeout",
+          responseTime: this.timeout,
+        })
+      })
+
+      req.end()
     })
-
-    req.on("timeout", () => {
-      req.destroy()
-      reject(new Error("Request timeout"))
-    })
-
-    req.on("error", reject)
-  })
-}
-
-// Verificar se um processo está rodando
-function isProcessRunning(processName) {
-  try {
-    execSync(`pgrep -f "${processName}"`, { stdio: "ignore" })
-    return true
-  } catch {
-    return false
-  }
-}
-
-// Verificar conexão com banco de dados
-async function checkDatabase() {
-  if (!CONFIG.services.database.url) {
-    return { status: "warning", message: "URL do banco não configurada" }
   }
 
-  try {
-    // Para PostgreSQL
-    if (CONFIG.services.database.url.includes("postgres")) {
-      const { Client } = require("pg")
-      const client = new Client({ connectionString: CONFIG.services.database.url })
-      await client.connect()
-      await client.query("SELECT 1")
-      await client.end()
-      return { status: "healthy", message: "Conexão PostgreSQL OK" }
+  // Verificar banco de dados
+  async checkDatabase() {
+    if (!process.env.DATABASE_URL) {
+      return { status: "skipped", reason: "DATABASE_URL not configured" }
     }
 
-    return { status: "unknown", message: "Tipo de banco não reconhecido" }
-  } catch (error) {
-    return { status: "unhealthy", message: error.message }
-  }
-}
-
-// Verificar serviço HTTP
-async function checkHttpService(service) {
-  if (!service.url) {
-    return { status: "warning", message: "URL não configurada" }
-  }
-
-  const fullUrl = service.url + (service.healthPath || "")
-
-  for (let attempt = 1; attempt <= CONFIG.retries; attempt++) {
     try {
-      const response = await makeRequest(fullUrl, CONFIG.timeout)
+      const { Client } = require("pg")
+      const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+        connectionTimeoutMillis: 5000,
+      })
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return {
-          status: "healthy",
-          message: `HTTP ${response.statusCode}`,
-          responseTime: Date.now(),
-        }
-      } else {
-        return {
-          status: "degraded",
-          message: `HTTP ${response.statusCode}`,
-        }
+      const startTime = performance.now()
+      await client.connect()
+
+      // Executar query simples
+      const result = await client.query("SELECT NOW() as current_time")
+      await client.end()
+
+      const endTime = performance.now()
+
+      return {
+        status: "healthy",
+        responseTime: Math.round(endTime - startTime),
+        currentTime: result.rows[0].current_time,
       }
     } catch (error) {
-      if (attempt === CONFIG.retries) {
-        return {
-          status: "unhealthy",
-          message: error.message,
-        }
+      return {
+        status: "unhealthy",
+        error: error.message,
       }
-
-      // Aguardar antes de tentar novamente
-      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
   }
-}
 
-// Verificar recursos do sistema
-function checkSystemResources() {
-  try {
-    const memInfo = fs.readFileSync("/proc/meminfo", "utf8")
-    const memTotal = Number.parseInt(memInfo.match(/MemTotal:\s+(\d+)/)[1]) * 1024
-    const memFree = Number.parseInt(memInfo.match(/MemAvailable:\s+(\d+)/)[1]) * 1024
-    const memUsed = memTotal - memFree
-    const memUsagePercent = (memUsed / memTotal) * 100
+  // Verificar Redis
+  async checkRedis() {
+    if (!process.env.REDIS_URL) {
+      return { status: "skipped", reason: "REDIS_URL not configured" }
+    }
 
-    const diskUsage = execSync("df -h /", { encoding: "utf8" })
-    const diskLine = diskUsage.split("\n")[1]
-    const diskUsagePercent = Number.parseInt(diskLine.split(/\s+/)[4])
+    try {
+      const redis = require("redis")
+      const client = redis.createClient({
+        url: process.env.REDIS_URL,
+        socket: { connectTimeout: 5000 },
+      })
+
+      const startTime = performance.now()
+      await client.connect()
+
+      // Executar comando PING
+      const pong = await client.ping()
+      await client.quit()
+
+      const endTime = performance.now()
+
+      return {
+        status: pong === "PONG" ? "healthy" : "unhealthy",
+        responseTime: Math.round(endTime - startTime),
+        response: pong,
+      }
+    } catch (error) {
+      return {
+        status: "unhealthy",
+        error: error.message,
+      }
+    }
+  }
+
+  // Verificar Google AI API
+  async checkGoogleAI() {
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      return { status: "skipped", reason: "GOOGLE_GENERATIVE_AI_API_KEY not configured" }
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`
+    return await this.checkHttpEndpoint(url, 200)
+  }
+
+  // Verificar uso de memória
+  checkMemoryUsage() {
+    const usage = process.memoryUsage()
+    const totalMB = Math.round(usage.rss / 1024 / 1024)
+    const heapUsedMB = Math.round(usage.heapUsed / 1024 / 1024)
+    const heapTotalMB = Math.round(usage.heapTotal / 1024 / 1024)
+
+    // Considerar unhealthy se usar mais de 1GB
+    const status = totalMB > 1024 ? "warning" : "healthy"
 
     return {
-      memory: {
-        total: Math.round(memTotal / 1024 / 1024),
-        used: Math.round(memUsed / 1024 / 1024),
-        percentage: Math.round(memUsagePercent),
-      },
-      disk: {
-        usage: diskUsagePercent,
-      },
-    }
-  } catch (error) {
-    return { error: error.message }
-  }
-}
-
-// Verificar variáveis de ambiente
-function checkEnvironment() {
-  const requiredVars = ["NODE_ENV", "PORT", "DATABASE_URL", "GEMINI_API_KEY", "NEXT_PUBLIC_MEDUSA_BACKEND_URL"]
-
-  const missing = []
-  const configured = []
-
-  requiredVars.forEach((varName) => {
-    if (process.env[varName]) {
-      configured.push(varName)
-    } else {
-      missing.push(varName)
-    }
-  })
-
-  return {
-    configured: configured.length,
-    missing: missing.length,
-    missingVars: missing,
-    total: requiredVars.length,
-  }
-}
-
-// Verificar serviços MCP
-function checkMCPServers() {
-  const mcpServers = ["volaron-store-server.js", "gemini-ai-server.js"]
-
-  const status = {}
-
-  mcpServers.forEach((server) => {
-    status[server] = {
-      running: isProcessRunning(server),
-      logFile: `mcp-servers/logs/${server.replace(".js", ".log")}`,
-    }
-
-    // Verificar se arquivo de log existe e tem conteúdo recente
-    const logPath = status[server].logFile
-    if (fs.existsSync(logPath)) {
-      const stats = fs.statSync(logPath)
-      const ageMinutes = (Date.now() - stats.mtime.getTime()) / 1000 / 60
-      status[server].logAge = Math.round(ageMinutes)
-      status[server].logSize = stats.size
-    }
-  })
-
-  return status
-}
-
-// Função principal de health check
-async function performHealthCheck() {
-  log("🏥 Iniciando Health Check da Volaron Store...", "blue")
-  log("", "reset")
-
-  const results = {
-    timestamp: new Date().toISOString(),
-    overall: "healthy",
-    checks: {},
-  }
-
-  // 1. Verificar ambiente
-  log("🔍 Verificando variáveis de ambiente...", "blue")
-  const envCheck = checkEnvironment()
-  results.checks.environment = envCheck
-
-  if (envCheck.missing > 0) {
-    log(`❌ ${envCheck.missing} variáveis faltando: ${envCheck.missingVars.join(", ")}`, "red")
-    results.overall = "degraded"
-  } else {
-    log(`✅ Todas as ${envCheck.configured} variáveis configuradas`, "green")
-  }
-
-  // 2. Verificar recursos do sistema
-  log("💻 Verificando recursos do sistema...", "blue")
-  const systemCheck = checkSystemResources()
-  results.checks.system = systemCheck
-
-  if (systemCheck.error) {
-    log(`⚠️  Erro ao verificar recursos: ${systemCheck.error}`, "yellow")
-  } else {
-    log(
-      `📊 Memória: ${systemCheck.memory.used}MB/${systemCheck.memory.total}MB (${systemCheck.memory.percentage}%)`,
-      "reset",
-    )
-    log(`💾 Disco: ${systemCheck.disk.usage}% usado`, "reset")
-
-    if (systemCheck.memory.percentage > 90 || systemCheck.disk.usage > 90) {
-      log("⚠️  Recursos do sistema em nível crítico", "yellow")
-      results.overall = "degraded"
+      status,
+      rss: `${totalMB}MB`,
+      heapUsed: `${heapUsedMB}MB`,
+      heapTotal: `${heapTotalMB}MB`,
+      external: `${Math.round(usage.external / 1024 / 1024)}MB`,
     }
   }
 
-  // 3. Verificar banco de dados
-  log("🗄️  Verificando banco de dados...", "blue")
-  try {
-    const dbCheck = await checkDatabase()
-    results.checks.database = dbCheck
+  // Verificar uptime
+  checkUptime() {
+    const uptimeSeconds = process.uptime()
+    const uptimeMinutes = Math.floor(uptimeSeconds / 60)
+    const uptimeHours = Math.floor(uptimeMinutes / 60)
 
-    if (dbCheck.status === "healthy") {
-      log(`✅ ${dbCheck.message}`, "green")
-    } else if (dbCheck.status === "warning") {
-      log(`⚠️  ${dbCheck.message}`, "yellow")
-    } else {
-      log(`❌ ${dbCheck.message}`, "red")
-      results.overall = "unhealthy"
+    return {
+      status: "healthy",
+      uptime: `${uptimeHours}h ${uptimeMinutes % 60}m ${Math.floor(uptimeSeconds % 60)}s`,
+      uptimeSeconds: Math.floor(uptimeSeconds),
     }
-  } catch (error) {
-    log(`❌ Erro na verificação do banco: ${error.message}`, "red")
-    results.checks.database = { status: "error", message: error.message }
-    results.overall = "unhealthy"
   }
 
-  // 4. Verificar serviços HTTP
-  log("🌐 Verificando serviços HTTP...", "blue")
-  for (const [serviceName, serviceConfig] of Object.entries(CONFIG.services)) {
-    if (serviceName === "database") continue // Já verificado acima
+  // Executar todas as verificações
+  async runAllChecks() {
+    console.log("🏥 Iniciando health check...")
 
-    try {
-      const serviceCheck = await checkHttpService(serviceConfig)
-      results.checks[serviceName] = serviceCheck
+    // Verificações básicas
+    this.addCheck("main-app", () => this.checkHttpEndpoint(`http://${this.host}:${this.port}/api/health`))
+    this.addCheck("database", () => this.checkDatabase())
+    this.addCheck("redis", () => this.checkRedis())
+    this.addCheck("google-ai", () => this.checkGoogleAI())
+    this.addCheck("memory", () => this.checkMemoryUsage())
+    this.addCheck("uptime", () => this.checkUptime())
 
-      if (serviceCheck.status === "healthy") {
-        log(`✅ ${serviceConfig.name}: ${serviceCheck.message}`, "green")
-      } else if (serviceCheck.status === "degraded") {
-        log(`⚠️  ${serviceConfig.name}: ${serviceCheck.message}`, "yellow")
-        if (results.overall === "healthy") results.overall = "degraded"
-      } else if (serviceCheck.status === "warning") {
-        log(`⚠️  ${serviceConfig.name}: ${serviceCheck.message}`, "yellow")
-      } else {
-        log(`❌ ${serviceConfig.name}: ${serviceCheck.message}`, "red")
-        results.overall = "unhealthy"
+    // Executar verificações em paralelo
+    const checkPromises = this.checks.map(async ({ name, check }) => {
+      try {
+        const startTime = performance.now()
+        const result = await check()
+        const endTime = performance.now()
+
+        this.results.checks[name] = {
+          ...result,
+          checkDuration: Math.round(endTime - startTime),
+        }
+
+        console.log(`✅ ${name}: ${result.status}`)
+      } catch (error) {
+        this.results.checks[name] = {
+          status: "error",
+          error: error.message,
+        }
+        this.results.errors.push(`${name}: ${error.message}`)
+        console.error(`❌ ${name}: ${error.message}`)
       }
-    } catch (error) {
-      log(`❌ Erro verificando ${serviceConfig.name}: ${error.message}`, "red")
-      results.checks[serviceName] = { status: "error", message: error.message }
-      results.overall = "unhealthy"
+    })
+
+    await Promise.all(checkPromises)
+
+    // Calcular status geral
+    const statuses = Object.values(this.results.checks).map((check) => check.status)
+    const hasUnhealthy = statuses.includes("unhealthy") || statuses.includes("error")
+    const hasWarning = statuses.includes("warning")
+
+    if (hasUnhealthy) {
+      this.results.overall = "unhealthy"
+    } else if (hasWarning) {
+      this.results.overall = "warning"
+    } else {
+      this.results.overall = "healthy"
     }
+
+    // Adicionar informações de performance
+    this.results.performance = {
+      nodeVersion: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      environment: process.env.NODE_ENV || "development",
+    }
+
+    return this.results
   }
 
-  // 5. Verificar servidores MCP
-  log("🤖 Verificando servidores MCP...", "blue")
-  const mcpCheck = checkMCPServers()
-  results.checks.mcp = mcpCheck
+  // Imprimir relatório
+  printReport() {
+    console.log("\n📊 Health Check Report")
+    console.log("=".repeat(50))
+    console.log(`Overall Status: ${this.getStatusEmoji(this.results.overall)} ${this.results.overall.toUpperCase()}`)
+    console.log(`Timestamp: ${this.results.timestamp}`)
+    console.log(`Environment: ${this.results.performance.environment}`)
+    console.log(`Node Version: ${this.results.performance.nodeVersion}`)
 
-  Object.entries(mcpCheck).forEach(([server, status]) => {
-    if (status.running) {
-      log(`✅ ${server}: Rodando`, "green")
-      if (status.logAge !== undefined) {
-        log(`   📝 Log atualizado há ${status.logAge} minutos (${status.logSize} bytes)`, "reset")
+    console.log("\n🔍 Service Checks:")
+    Object.entries(this.results.checks).forEach(([name, check]) => {
+      const emoji = this.getStatusEmoji(check.status)
+      const responseTime = check.responseTime ? ` (${check.responseTime}ms)` : ""
+      console.log(`  ${emoji} ${name}: ${check.status}${responseTime}`)
+
+      if (check.error) {
+        console.log(`    Error: ${check.error}`)
       }
-    } else {
-      log(`❌ ${server}: Não está rodando`, "red")
-      if (results.overall === "healthy") results.overall = "degraded"
+    })
+
+    if (this.results.errors.length > 0) {
+      console.log("\n❌ Errors:")
+      this.results.errors.forEach((error) => console.log(`  - ${error}`))
     }
-  })
 
-  // Resultado final
-  log("", "reset")
-  log("📋 Resumo do Health Check:", "bold")
+    console.log("=".repeat(50))
+  }
 
-  const statusColor = results.overall === "healthy" ? "green" : results.overall === "degraded" ? "yellow" : "red"
-  const statusIcon = results.overall === "healthy" ? "✅" : results.overall === "degraded" ? "⚠️" : "❌"
-
-  log(`${statusIcon} Status Geral: ${results.overall.toUpperCase()}`, statusColor)
-
-  // Salvar resultado em arquivo
-  const resultPath = path.join(__dirname, "health-check-result.json")
-  fs.writeFileSync(resultPath, JSON.stringify(results, null, 2))
-  log(`📄 Resultado salvo em: ${resultPath}`, "blue")
-
-  // Exit code baseado no status
-  const exitCode = results.overall === "unhealthy" ? 1 : 0
-  process.exit(exitCode)
+  // Obter emoji para status
+  getStatusEmoji(status) {
+    const emojis = {
+      healthy: "✅",
+      unhealthy: "❌",
+      warning: "⚠️",
+      error: "💥",
+      skipped: "⏭️",
+      unknown: "❓",
+    }
+    return emojis[status] || "❓"
+  }
 }
 
-// Executar se chamado diretamente
+// Executar health check se chamado diretamente
 if (require.main === module) {
-  performHealthCheck().catch((error) => {
-    log(`💥 Erro fatal no health check: ${error.message}`, "red")
-    console.error(error)
-    process.exit(1)
-  })
+  const checker = new HealthChecker()
+
+  checker
+    .runAllChecks()
+    .then((results) => {
+      checker.printReport()
+
+      // Exit code baseado no status
+      const exitCode = results.overall === "healthy" ? 0 : 1
+      process.exit(exitCode)
+    })
+    .catch((error) => {
+      console.error("💥 Health check failed:", error)
+      process.exit(1)
+    })
 }
 
-module.exports = { performHealthCheck, checkDatabase, checkHttpService }
+module.exports = HealthChecker

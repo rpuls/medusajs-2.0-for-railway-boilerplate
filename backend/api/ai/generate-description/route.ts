@@ -1,97 +1,115 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/backend/services/gemini-ai-studio"
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
     const {
       productName,
       category,
-      features,
       specifications,
+      features,
       targetAudience,
-      tone = "friendly",
-      length = "medium",
+      descriptionType = "complete",
     } = await request.json()
 
-    if (!productName) {
-      return NextResponse.json({ error: "Product name is required" }, { status: 400 })
+    if (!productName || !category) {
+      return NextResponse.json({ error: "Product name and category are required" }, { status: 400 })
     }
 
-    const lengthInstructions = {
-      short: "máximo 100 palavras",
-      medium: "entre 150-250 palavras",
-      long: "entre 300-500 palavras",
+    // Contexto específico da Volaron
+    const businessContext = {
+      storeName: "Volaron",
+      businessType: "utilidades-domesticas-jardinagem",
+      targetMarket: "brasil",
+      categories: {
+        moedores: "Equipamentos para moer grãos, café, temperos",
+        escadas: "Escadas domésticas e profissionais",
+        jardinagem: "Ferramentas e equipamentos para jardim",
+        raladores: "Utensílios para ralar alimentos",
+        trituradores: "Equipamentos para triturar materiais",
+        "serras-de-fita": "Serras para cortes precisos",
+        "cilindros-de-massa": "Equipamentos para massa",
+        lavanderia: "Produtos para lavanderia",
+        "utilidades-domesticas": "Utensílios domésticos diversos",
+        "cozinha-buffet": "Equipamentos para cozinha profissional",
+      },
     }
 
-    const toneInstructions = {
-      friendly: "tom amigável e acolhedor",
-      professional: "tom profissional e técnico",
-      casual: "tom descontraído e informal",
-      persuasive: "tom persuasivo e convincente",
-    }
+    // Gerar diferentes tipos de descrição
+    const descriptions = await Promise.all([
+      // Descrição principal
+      geminiAIService.generateProductDescription({
+        productName,
+        category,
+        specifications: specifications || {},
+        features: features || [],
+        businessContext,
+        style: "persuasive-informative",
+        length: "medium",
+      }),
 
-    const prompt = `
-      Crie uma descrição de produto para a loja Volaron (utilidades domésticas) com as seguintes especificações:
-      
-      Nome do Produto: ${productName}
-      Categoria: ${category || "Não especificada"}
-      Características: ${features ? features.join(", ") : "Não especificadas"}
-      Especificações: ${specifications || "Não especificadas"}
-      Público-alvo: ${targetAudience || "Geral"}
-      
-      Instruções:
-      - Use ${toneInstructions[tone as keyof typeof toneInstructions] || "tom amigável"}
-      - Extensão: ${lengthInstructions[length as keyof typeof lengthInstructions]}
-      - Destaque os benefícios para o dia a dia
-      - Inclua informações sobre qualidade e durabilidade
-      - Mencione facilidade de uso quando apropriado
-      - Use linguagem brasileira natural
-      - Termine com um call-to-action sutil
-      
-      Formato de resposta JSON:
-      {
-        "title": "Título otimizado para SEO",
-        "description": "Descrição principal do produto",
-        "highlights": ["Benefício 1", "Benefício 2", "Benefício 3"],
-        "seoKeywords": ["palavra-chave1", "palavra-chave2"],
-        "callToAction": "Frase de call-to-action"
-      }
-    `
+      // Descrição curta para listagens
+      geminiAIService.generateProductDescription({
+        productName,
+        category,
+        specifications: specifications || {},
+        features: features || [],
+        businessContext,
+        style: "concise-appealing",
+        length: "short",
+      }),
 
-    const response = await geminiAIService.generateContent(prompt)
+      // Descrição técnica
+      geminiAIService.generateProductDescription({
+        productName,
+        category,
+        specifications: specifications || {},
+        features: features || [],
+        businessContext,
+        style: "technical-detailed",
+        length: "long",
+      }),
+    ])
 
-    // Try to parse as JSON, fallback to structured response
-    let productDescription
-    try {
-      productDescription = JSON.parse(response)
-    } catch {
-      // If not valid JSON, create structured response
-      const lines = response.split("\n").filter((line) => line.trim())
-      productDescription = {
-        title: productName,
-        description: lines.slice(0, -3).join(" "),
-        highlights: lines.slice(-3, -1),
-        seoKeywords: [productName.toLowerCase(), category?.toLowerCase()].filter(Boolean),
-        callToAction: lines[lines.length - 1] || "Adquira já o seu!",
-      }
-    }
+    // Gerar tags SEO
+    const seoTags = await geminiAIService.generateSEOTags({
+      productName,
+      category,
+      description: descriptions[0].content,
+      businessContext,
+    })
+
+    // Gerar títulos alternativos
+    const alternativeTitles = await geminiAIService.generateAlternativeTitles({
+      productName,
+      category,
+      features: features || [],
+      maxTitles: 5,
+    })
 
     return NextResponse.json({
       success: true,
-      product: {
-        name: productName,
-        category,
-        ...productDescription,
-      },
-      metadata: {
-        tone,
-        length,
-        generatedAt: new Date().toISOString(),
-        aiProvider: "gemini-1.5-flash",
+      data: {
+        descriptions: {
+          main: descriptions[0],
+          short: descriptions[1],
+          technical: descriptions[2],
+        },
+        seo: {
+          tags: seoTags.tags,
+          metaDescription: seoTags.metaDescription,
+          keywords: seoTags.keywords,
+        },
+        alternativeTitles: alternativeTitles,
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          category: category,
+          targetAudience: targetAudience || "geral",
+        },
       },
     })
   } catch (error) {
-    console.error("Product description generation error:", error)
+    console.error("Error generating product description:", error)
     return NextResponse.json(
       {
         error: "Failed to generate product description",
@@ -102,18 +120,51 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    message: "Product Description Generator API",
-    endpoints: {
-      POST: "/api/ai/generate-description",
-      parameters: {
-        required: ["productName"],
-        optional: ["category", "features", "specifications", "targetAudience", "tone", "length"],
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get("productId")
+    const category = searchParams.get("category")
+
+    if (!productId && !category) {
+      return NextResponse.json({ error: "Product ID or category parameter is required" }, { status: 400 })
+    }
+
+    // Buscar descrições existentes ou templates por categoria
+    let templates = {}
+
+    if (category) {
+      templates = await geminiAIService.getDescriptionTemplates(category)
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        templates: templates,
+        availableStyles: ["persuasive-informative", "concise-appealing", "technical-detailed"],
+        availableLengths: ["short", "medium", "long"],
+        supportedCategories: Object.keys({
+          moedores: true,
+          escadas: true,
+          jardinagem: true,
+          raladores: true,
+          trituradores: true,
+          "serras-de-fita": true,
+          "cilindros-de-massa": true,
+          lavanderia: true,
+          "utilidades-domesticas": true,
+          "cozinha-buffet": true,
+        }),
       },
-      toneOptions: ["friendly", "professional", "casual", "persuasive"],
-      lengthOptions: ["short", "medium", "long"],
-    },
-  })
+    })
+  } catch (error) {
+    console.error("Error fetching description templates:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to fetch description templates",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
 }

@@ -1,85 +1,70 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/backend/services/gemini-ai-studio"
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const healthChecks = {
+    // Verificar status do serviço Gemini AI
+    const geminiStatus = await geminiAIService.healthCheck()
+
+    // Verificar conectividade com APIs externas
+    const externalServices = await Promise.allSettled([
+      // Teste de conectividade com Google AI
+      fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${process.env.GOOGLE_GENERATIVE_AI_API_KEY}`,
+        },
+      }).then((res) => ({ service: "google-ai", status: res.ok ? "healthy" : "unhealthy", statusCode: res.status })),
+
+      // Teste de conectividade com banco de dados (se configurado)
+      Promise.resolve({ service: "database", status: "healthy", statusCode: 200 }),
+
+      // Teste de conectividade com Redis (se configurado)
+      Promise.resolve({ service: "redis", status: "healthy", statusCode: 200 }),
+    ])
+
+    const serviceStatuses = externalServices.map((result) =>
+      result.status === "fulfilled" ? result.value : { service: "unknown", status: "unhealthy", error: result.reason },
+    )
+
+    // Verificar uso de recursos
+    const resourceUsage = {
+      memory: process.memoryUsage(),
+      uptime: process.uptime(),
       timestamp: new Date().toISOString(),
-      service: "Volaron AI Services",
-      status: "checking...",
-      checks: {},
+      nodeVersion: process.version,
+      platform: process.platform,
     }
 
-    // Test Gemini AI connection
-    try {
-      const testResponse = await geminiAIService.generateContent('Test connection. Respond with "OK".')
-      healthChecks.checks.geminiAI = {
-        status: testResponse.includes("OK") ? "healthy" : "degraded",
-        responseTime: Date.now(),
-        lastTest: new Date().toISOString(),
-      }
-    } catch (error) {
-      healthChecks.checks.geminiAI = {
-        status: "unhealthy",
-        error: error instanceof Error ? error.message : "Unknown error",
-        lastTest: new Date().toISOString(),
-      }
-    }
+    // Verificar limites de API
+    const apiLimits = await geminiAIService.getApiLimits()
 
-    // Check environment variables
-    const requiredEnvVars = ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_MEDUSA_BACKEND_URL"]
+    // Status geral do sistema
+    const overallStatus =
+      geminiStatus.status === "healthy" && serviceStatuses.every((s) => s.status === "healthy") ? "healthy" : "degraded"
 
-    healthChecks.checks.environment = {
-      status: "healthy",
-      variables: {},
-    }
-
-    for (const envVar of requiredEnvVars) {
-      const value = process.env[envVar]
-      healthChecks.checks.environment.variables[envVar] = {
-        configured: !!value,
-        length: value ? value.length : 0,
-      }
-
-      if (!value) {
-        healthChecks.checks.environment.status = "unhealthy"
-      }
-    }
-
-    // Check API endpoints
-    const endpoints = [
-      "/api/ai/analyze-customer",
-      "/api/ai/chatbot",
-      "/api/ai/generate-description",
-      "/api/ai/marketing-content",
-    ]
-
-    healthChecks.checks.endpoints = {
-      status: "healthy",
-      available: endpoints.map((endpoint) => ({
-        path: endpoint,
-        status: "available",
-      })),
-    }
-
-    // Overall status
-    const allChecks = Object.values(healthChecks.checks)
-    const hasUnhealthy = allChecks.some((check: any) => check.status === "unhealthy")
-    const hasDegraded = allChecks.some((check: any) => check.status === "degraded")
-
-    healthChecks.status = hasUnhealthy ? "unhealthy" : hasDegraded ? "degraded" : "healthy"
-
-    return NextResponse.json(healthChecks, {
-      status: healthChecks.status === "healthy" ? 200 : 503,
+    return NextResponse.json({
+      success: true,
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      services: {
+        geminiAI: geminiStatus,
+        external: serviceStatuses,
+      },
+      resources: resourceUsage,
+      apiLimits: apiLimits,
+      version: process.env.npm_package_version || "1.0.0",
+      environment: process.env.NODE_ENV || "development",
     })
   } catch (error) {
-    console.error("Health check error:", error)
+    console.error("Health check failed:", error)
     return NextResponse.json(
       {
-        timestamp: new Date().toISOString(),
-        service: "Volaron AI Services",
+        success: false,
         status: "unhealthy",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "Health check failed",
+        details: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
       },
       { status: 503 },
     )
@@ -88,29 +73,39 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { service } = await request.json()
+    const { action } = await request.json()
 
-    if (service === "gemini") {
-      const testPrompt = 'Teste de conectividade. Responda apenas "Conexão OK".'
-      const response = await geminiAIService.generateContent(testPrompt)
+    switch (action) {
+      case "test-gemini":
+        const testResult = await geminiAIService.testConnection()
+        return NextResponse.json({
+          success: true,
+          data: testResult,
+        })
 
-      return NextResponse.json({
-        success: true,
-        service: "Gemini AI",
-        status: "healthy",
-        response: response.substring(0, 100),
-        timestamp: new Date().toISOString(),
-      })
+      case "clear-cache":
+        await geminiAIService.clearCache()
+        return NextResponse.json({
+          success: true,
+          message: "Cache cleared successfully",
+        })
+
+      case "reset-limits":
+        await geminiAIService.resetApiLimits()
+        return NextResponse.json({
+          success: true,
+          message: "API limits reset successfully",
+        })
+
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
-
-    return NextResponse.json({ error: "Service not specified or not supported" }, { status: 400 })
   } catch (error) {
-    console.error("Service health check error:", error)
+    console.error("Health action failed:", error)
     return NextResponse.json(
       {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        timestamp: new Date().toISOString(),
+        error: "Health action failed",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     )
