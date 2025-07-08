@@ -1,83 +1,97 @@
+interface AnalysisResult {
+  summary: string
+  insights: string[]
+  recommendations: string[]
+  confidence: number
+}
+
+interface ChatResponse {
+  success: boolean
+  sessionId: string
+  response: string
+  suggestions: string[]
+  context: string
+  timestamp: string
+}
+
 interface ApiResponse<T> {
   success: boolean
   data?: T
   error?: string
-  details?: string
-}
-
-interface CustomerAnalysis {
-  customerId: string
-  analysisType: string
-  timestamp: string
-  insights: string
-  confidence: number
-}
-
-interface ChatbotResponse {
-  response: string
-  sessionId: string
-  timestamp: string
+  message?: string
 }
 
 class VertexAPIClient {
   private baseUrl: string
+  private headers: HeadersInit
 
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    this.headers = {
+      "Content-Type": "application/json",
+    }
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const url = `${this.baseUrl}${endpoint}`
+      const response = await fetch(url, {
+        ...options,
         headers: {
-          "Content-Type": "application/json",
+          ...this.headers,
           ...options.headers,
         },
-        ...options,
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+        return {
+          success: false,
+          error: data.error || `HTTP ${response.status}`,
+          message: data.message,
+        }
       }
 
-      return data
+      return {
+        success: true,
+        data,
+      }
     } catch (error) {
-      console.error(`API request failed for ${endpoint}:`, error)
+      console.error("API Request Error:", error)
       return {
         success: false,
-        error: error.message || "Unknown error occurred",
+        error: error instanceof Error ? error.message : "Erro de rede",
       }
     }
   }
 
-  async analyzeCustomer(
-    customerData: any,
-    analysisType: "behavior" | "preferences" | "recommendations" = "behavior",
-  ): Promise<ApiResponse<CustomerAnalysis>> {
-    return this.makeRequest<CustomerAnalysis>("/api/ai/analyze-customer", {
+  async analyzeCustomer(customerData: any): Promise<ApiResponse<AnalysisResult>> {
+    return this.makeRequest<AnalysisResult>("/api/ai/analyze-customer", {
       method: "POST",
-      body: JSON.stringify({ customerData, analysisType }),
+      body: JSON.stringify({ customerData }),
     })
   }
 
-  async getCustomerAnalysis(
-    customerId: string,
-    analysisType: "behavior" | "preferences" | "recommendations" = "behavior",
-  ): Promise<ApiResponse<CustomerAnalysis>> {
-    return this.makeRequest<CustomerAnalysis>(`/api/ai/analyze-customer?customerId=${customerId}&type=${analysisType}`)
+  async getCustomerAnalysis(customerId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/ai/analyze-customer?customerId=${customerId}`)
   }
 
-  async sendChatMessage(message: string, context?: any, sessionId?: string): Promise<ApiResponse<ChatbotResponse>> {
-    return this.makeRequest<ChatbotResponse>("/api/ai/chatbot", {
+  async sendChatMessage(message: string, sessionId?: string, context?: string): Promise<ApiResponse<ChatResponse>> {
+    return this.makeRequest<ChatResponse>("/api/ai/chatbot", {
       method: "POST",
-      body: JSON.stringify({ message, context, sessionId }),
+      body: JSON.stringify({ message, sessionId, context }),
     })
   }
 
-  async getChatResponse(message: string): Promise<ApiResponse<ChatbotResponse>> {
-    return this.makeRequest<ChatbotResponse>(`/api/ai/chatbot?message=${encodeURIComponent(message)}`)
+  async getChatSession(sessionId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/ai/chatbot?sessionId=${sessionId}`)
+  }
+
+  async deleteChatSession(sessionId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/ai/chatbot?sessionId=${sessionId}`, {
+      method: "DELETE",
+    })
   }
 
   async generateProductDescription(productData: any): Promise<ApiResponse<string>> {
@@ -87,35 +101,61 @@ class VertexAPIClient {
     })
   }
 
-  async healthCheck(): Promise<ApiResponse<any>> {
+  async generateMarketingContent(productData: any, type: "email" | "social" | "ad"): Promise<ApiResponse<string>> {
+    return this.makeRequest<string>("/api/ai/marketing-content", {
+      method: "POST",
+      body: JSON.stringify({ productData, type }),
+    })
+  }
+
+  async checkAIHealth(): Promise<ApiResponse<any>> {
     return this.makeRequest<any>("/api/ai/health")
   }
 }
 
-// Singleton instance
-let vertexAPIClient: VertexAPIClient | null = null
+// Instância singleton
+let apiClient: VertexAPIClient | null = null
 
 export function getVertexAPIClient(): VertexAPIClient {
-  if (!vertexAPIClient) {
-    vertexAPIClient = new VertexAPIClient()
+  if (!apiClient) {
+    apiClient = new VertexAPIClient()
   }
-  return vertexAPIClient
+  return apiClient
 }
 
-// Convenience functions
-export const vertexAPI = {
-  analyzeCustomer: (customerData: any, analysisType?: "behavior" | "preferences" | "recommendations") =>
-    getVertexAPIClient().analyzeCustomer(customerData, analysisType),
+// Hooks para React
+export function useVertexAPI() {
+  const client = getVertexAPIClient()
 
-  getCustomerAnalysis: (customerId: string, analysisType?: "behavior" | "preferences" | "recommendations") =>
-    getVertexAPIClient().getCustomerAnalysis(customerId, analysisType),
-
-  sendChatMessage: (message: string, context?: any, sessionId?: string) =>
-    getVertexAPIClient().sendChatMessage(message, context, sessionId),
-
-  getChatResponse: (message: string) => getVertexAPIClient().getChatResponse(message),
-
-  generateProductDescription: (productData: any) => getVertexAPIClient().generateProductDescription(productData),
-
-  healthCheck: () => getVertexAPIClient().healthCheck(),
+  return {
+    analyzeCustomer: client.analyzeCustomer.bind(client),
+    getCustomerAnalysis: client.getCustomerAnalysis.bind(client),
+    sendChatMessage: client.sendChatMessage.bind(client),
+    getChatSession: client.getChatSession.bind(client),
+    deleteChatSession: client.deleteChatSession.bind(client),
+    generateProductDescription: client.generateProductDescription.bind(client),
+    generateMarketingContent: client.generateMarketingContent.bind(client),
+    checkAIHealth: client.checkAIHealth.bind(client),
+  }
 }
+
+// Utilitários
+export function formatAnalysisResult(analysis: AnalysisResult): string {
+  return `
+**Resumo:** ${analysis.summary}
+
+**Insights:**
+${analysis.insights.map((insight) => `• ${insight}`).join("\n")}
+
+**Recomendações:**
+${analysis.recommendations.map((rec) => `• ${rec}`).join("\n")}
+
+**Confiança:** ${analysis.confidence}%
+  `.trim()
+}
+
+export function validateCustomerData(data: any): boolean {
+  return !!(data && (data.id || data.email || data.name))
+}
+
+export default VertexAPIClient

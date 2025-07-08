@@ -1,35 +1,75 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/services/gemini-ai-studio"
+import { getVertexAIService } from "../../../services/vertex-ai"
 
 export async function POST(request: NextRequest) {
   try {
-    const { productData } = await request.json()
+    const body = await request.json()
+    const { productData } = body
 
-    if (!productData?.name || !productData?.category) {
-      return NextResponse.json({ error: "Nome e categoria do produto são obrigatórios" }, { status: 400 })
+    if (!productData) {
+      return NextResponse.json({ error: "Dados do produto são obrigatórios" }, { status: 400 })
     }
 
-    const description = await geminiAIService.generateProductDescription(productData)
+    const vertexAI = getVertexAIService()
+    const description = await vertexAI.generateProductDescription(productData)
 
     return NextResponse.json({
       success: true,
       description,
-      generated_at: new Date().toISOString(),
-      api_version: "gemini-ai-studio",
+      productData,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Erro na geração de descrição:", error)
+    console.error("Erro ao gerar descrição:", error)
 
-    // Tratamento específico de erros do Gemini AI Studio
-    if (error.message?.includes("Limite de requisições")) {
-      return NextResponse.json(
-        {
-          error: "Muitas requisições. Tente novamente em alguns minutos.",
-        },
-        { status: 429 },
-      )
+    return NextResponse.json(
+      {
+        error: "Erro interno do servidor",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get("productId")
+
+    if (!productId) {
+      return NextResponse.json({ error: "ID do produto é obrigatório" }, { status: 400 })
     }
 
-    return NextResponse.json({ error: "Falha na geração de descrição" }, { status: 500 })
+    // Mock product data - em produção, buscar do banco
+    const mockProductData = {
+      id: productId,
+      name: "Jogo de Panelas Antiaderente",
+      category: "Cozinha",
+      features: ["Antiaderente", "5 peças", "Cabo ergonômico", "Compatível com fogão a gás e elétrico"],
+      price: "R$ 299,90",
+      brand: "Volaron Home",
+    }
+
+    const vertexAI = getVertexAIService()
+    const description = await vertexAI.generateProductDescription(mockProductData)
+
+    return NextResponse.json({
+      success: true,
+      productId,
+      productData: mockProductData,
+      description,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error("Erro ao gerar descrição:", error)
+
+    return NextResponse.json(
+      {
+        error: "Erro interno do servidor",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
+      },
+      { status: 500 },
+    )
   }
 }

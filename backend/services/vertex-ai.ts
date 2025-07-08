@@ -7,21 +7,17 @@ interface VertexAIConfig {
   maxTokens?: number
 }
 
-interface GenerateTextOptions {
-  prompt: string
-  systemPrompt?: string
-  temperature?: number
-  maxTokens?: number
+interface AnalysisResult {
+  summary: string
+  insights: string[]
+  recommendations: string[]
+  confidence: number
 }
 
-interface AnalyzeCustomerOptions {
-  customerData: {
-    id: string
-    email: string
-    orders: any[]
-    preferences?: any
-  }
-  analysisType: "behavior" | "preferences" | "recommendations"
+interface ChatResponse {
+  message: string
+  context: string
+  suggestions: string[]
 }
 
 export class VertexAIService {
@@ -30,173 +26,194 @@ export class VertexAIService {
   private config: VertexAIConfig
 
   constructor(config: VertexAIConfig) {
-    this.config = config
-    this.genAI = new GoogleGenerativeAI(config.apiKey)
-    this.model = this.genAI.getGenerativeModel({ model: config.model })
-  }
-
-  async generateText(options: GenerateTextOptions): Promise<string> {
-    try {
-      const { prompt, systemPrompt, temperature = 0.7, maxTokens = 1000 } = options
-
-      let fullPrompt = prompt
-      if (systemPrompt) {
-        fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`
-      }
-
-      const result = await this.model.generateContent({
-        contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
-        generationConfig: {
-          temperature,
-          maxOutputTokens: maxTokens,
-        },
-      })
-
-      const response = await result.response
-      return response.text()
-    } catch (error) {
-      console.error("Error generating text:", error)
-      throw new Error(`Vertex AI generation failed: ${error.message}`)
+    this.config = {
+      temperature: 0.7,
+      maxTokens: 1000,
+      ...config,
     }
+
+    this.genAI = new GoogleGenerativeAI(this.config.apiKey)
+    this.model = this.genAI.getGenerativeModel({
+      model: this.config.model,
+      generationConfig: {
+        temperature: this.config.temperature,
+        maxOutputTokens: this.config.maxTokens,
+      },
+    })
   }
 
-  async analyzeCustomer(options: AnalyzeCustomerOptions): Promise<any> {
+  async analyzeCustomerBehavior(customerData: any): Promise<AnalysisResult> {
     try {
-      const { customerData, analysisType } = options
+      const prompt = `
+        Analise os dados do cliente e forneça insights sobre comportamento de compra:
+        
+        Dados do Cliente:
+        ${JSON.stringify(customerData, null, 2)}
+        
+        Por favor, forneça:
+        1. Resumo do perfil do cliente
+        2. Insights sobre padrões de compra
+        3. Recomendações para melhorar engajamento
+        4. Nível de confiança da análise (0-100)
+        
+        Responda em formato JSON com as chaves: summary, insights, recommendations, confidence
+      `
 
-      const systemPrompt = `You are an AI assistant specialized in e-commerce customer analysis. 
-      Analyze the provided customer data and provide insights based on the analysis type requested.`
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text()
 
-      let prompt = ""
-
-      switch (analysisType) {
-        case "behavior":
-          prompt = `Analyze this customer's behavior patterns:
-          Customer ID: ${customerData.id}
-          Email: ${customerData.email}
-          Orders: ${JSON.stringify(customerData.orders, null, 2)}
-          
-          Provide insights about:
-          1. Purchase frequency
-          2. Average order value
-          3. Product preferences
-          4. Seasonal patterns
-          5. Customer lifetime value prediction`
-          break
-
-        case "preferences":
-          prompt = `Analyze this customer's preferences:
-          Customer Data: ${JSON.stringify(customerData, null, 2)}
-          
-          Identify:
-          1. Preferred product categories
-          2. Price sensitivity
-          3. Brand preferences
-          4. Shopping patterns
-          5. Communication preferences`
-          break
-
-        case "recommendations":
-          prompt = `Generate product recommendations for this customer:
-          Customer Data: ${JSON.stringify(customerData, null, 2)}
-          
-          Provide:
-          1. Top 5 recommended products
-          2. Reasoning for each recommendation
-          3. Cross-sell opportunities
-          4. Upsell suggestions
-          5. Personalized marketing messages`
-          break
-      }
-
-      const analysis = await this.generateText({
-        prompt,
-        systemPrompt,
-        temperature: 0.3,
-        maxTokens: 2000,
-      })
-
-      return {
-        customerId: customerData.id,
-        analysisType,
-        timestamp: new Date().toISOString(),
-        insights: analysis,
-        confidence: 0.85,
+      // Tentar parsear JSON, se falhar, criar estrutura padrão
+      try {
+        return JSON.parse(text)
+      } catch {
+        return {
+          summary: text.substring(0, 200),
+          insights: [text],
+          recommendations: ["Análise detalhada disponível no resumo"],
+          confidence: 75,
+        }
       }
     } catch (error) {
-      console.error("Error analyzing customer:", error)
-      throw new Error(`Customer analysis failed: ${error.message}`)
+      console.error("Erro na análise do cliente:", error)
+      throw new Error("Falha ao analisar dados do cliente")
     }
   }
 
   async generateProductDescription(productData: any): Promise<string> {
     try {
-      const prompt = `Generate a compelling product description for:
-      
-      Product Name: ${productData.name}
-      Category: ${productData.category}
-      Price: ${productData.price}
-      Features: ${JSON.stringify(productData.features || [])}
-      Specifications: ${JSON.stringify(productData.specifications || {})}
-      
-      Create a description that:
-      1. Highlights key benefits
-      2. Uses persuasive language
-      3. Includes SEO keywords
-      4. Appeals to the target audience
-      5. Maintains professional tone`
+      const prompt = `
+        Crie uma descrição atrativa para este produto da loja Volaron:
+        
+        Produto: ${productData.name || "Produto"}
+        Categoria: ${productData.category || "Geral"}
+        Características: ${JSON.stringify(productData.features || [])}
+        Preço: ${productData.price || "Consulte"}
+        
+        A descrição deve ser:
+        - Atrativa e persuasiva
+        - Focada nos benefícios
+        - Otimizada para SEO
+        - Entre 100-200 palavras
+        - Adequada para e-commerce
+      `
 
-      return await this.generateText({
-        prompt,
-        systemPrompt: "You are an expert copywriter specializing in e-commerce product descriptions.",
-        temperature: 0.6,
-        maxTokens: 800,
-      })
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text()
     } catch (error) {
-      console.error("Error generating product description:", error)
-      throw new Error(`Product description generation failed: ${error.message}`)
+      console.error("Erro ao gerar descrição:", error)
+      throw new Error("Falha ao gerar descrição do produto")
     }
   }
 
-  async chatbotResponse(message: string, context?: any): Promise<string> {
+  async chatWithCustomer(message: string, context?: string): Promise<ChatResponse> {
     try {
-      const systemPrompt = `You are a helpful customer service chatbot for Volaron Store, 
-      an e-commerce platform specializing in home utilities and garden products. 
-      Be friendly, helpful, and professional. Provide accurate information about products, 
-      orders, shipping, and general inquiries.`
+      const prompt = `
+        Você é um assistente da loja Volaron, especializada em utilidades domésticas.
+        
+        Contexto anterior: ${context || "Primeira interação"}
+        Mensagem do cliente: ${message}
+        
+        Responda de forma:
+        - Amigável e profissional
+        - Focada em ajudar o cliente
+        - Com sugestões de produtos quando apropriado
+        - Máximo 150 palavras
+        
+        Forneça também 2-3 sugestões de perguntas que o cliente pode fazer.
+        
+        Responda em formato JSON com: message, context, suggestions
+      `
 
-      let prompt = message
-      if (context) {
-        prompt = `Context: ${JSON.stringify(context)}\n\nCustomer message: ${message}`
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text()
+
+      try {
+        return JSON.parse(text)
+      } catch {
+        return {
+          message: text,
+          context: `Cliente perguntou: ${message}`,
+          suggestions: ["Como posso ver mais produtos?", "Qual o prazo de entrega?", "Vocês têm desconto?"],
+        }
+      }
+    } catch (error) {
+      console.error("Erro no chat:", error)
+      throw new Error("Falha na comunicação com o cliente")
+    }
+  }
+
+  async optimizeSEO(content: string, keywords: string[]): Promise<string> {
+    try {
+      const prompt = `
+        Otimize este conteúdo para SEO:
+        
+        Conteúdo original: ${content}
+        Palavras-chave: ${keywords.join(", ")}
+        
+        Melhore o conteúdo para:
+        - Incluir palavras-chave naturalmente
+        - Melhorar legibilidade
+        - Aumentar relevância para buscadores
+        - Manter tom natural e atrativo
+        
+        Retorne apenas o conteúdo otimizado.
+      `
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text()
+    } catch (error) {
+      console.error("Erro na otimização SEO:", error)
+      throw new Error("Falha ao otimizar conteúdo para SEO")
+    }
+  }
+
+  async generateMarketingContent(productData: any, type: "email" | "social" | "ad"): Promise<string> {
+    try {
+      const prompts = {
+        email: "Crie um email marketing atrativo",
+        social: "Crie um post para redes sociais",
+        ad: "Crie um anúncio publicitário",
       }
 
-      return await this.generateText({
-        prompt,
-        systemPrompt,
-        temperature: 0.4,
-        maxTokens: 500,
-      })
+      const prompt = `
+        ${prompts[type]} para este produto da Volaron:
+        
+        Produto: ${JSON.stringify(productData, null, 2)}
+        
+        O conteúdo deve ser:
+        - Persuasivo e envolvente
+        - Adequado para o canal ${type}
+        - Com call-to-action claro
+        - Focado nos benefícios
+        - Máximo 200 palavras
+      `
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text()
     } catch (error) {
-      console.error("Error generating chatbot response:", error)
-      throw new Error(`Chatbot response generation failed: ${error.message}`)
+      console.error("Erro ao gerar conteúdo de marketing:", error)
+      throw new Error("Falha ao gerar conteúdo de marketing")
     }
   }
 
   async healthCheck(): Promise<{ status: string; model: string; timestamp: string }> {
     try {
-      const testResponse = await this.generateText({
-        prompt: 'Hello, this is a health check. Please respond with "OK".',
-        temperature: 0.1,
-        maxTokens: 10,
-      })
+      const testPrompt = "Responda apenas 'OK' se você está funcionando corretamente."
+      const result = await this.model.generateContent(testPrompt)
+      const response = await result.response
+      const text = response.text()
 
       return {
-        status: testResponse.includes("OK") ? "healthy" : "warning",
+        status: text.includes("OK") ? "healthy" : "degraded",
         model: this.config.model,
         timestamp: new Date().toISOString(),
       }
     } catch (error) {
-      console.error("Health check failed:", error)
       return {
         status: "unhealthy",
         model: this.config.model,
@@ -206,20 +223,20 @@ export class VertexAIService {
   }
 }
 
-// Singleton instance
+// Instância singleton
 let vertexAIInstance: VertexAIService | null = null
 
 export function getVertexAIService(): VertexAIService {
   if (!vertexAIInstance) {
     const config: VertexAIConfig = {
       apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || "",
-      model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+      model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash-001",
       temperature: 0.7,
       maxTokens: 1000,
     }
 
     if (!config.apiKey) {
-      throw new Error("Gemini API key not configured")
+      throw new Error("GEMINI_API_KEY ou GOOGLE_AI_API_KEY não configurada")
     }
 
     vertexAIInstance = new VertexAIService(config)

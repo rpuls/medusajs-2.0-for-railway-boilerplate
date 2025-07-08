@@ -1,29 +1,87 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/services/gemini-ai-studio"
+import { getVertexAIService } from "../../../services/vertex-ai"
 
 export async function POST(request: NextRequest) {
   try {
-    const { contentType, data } = await request.json()
+    const body = await request.json()
+    const { productData, type } = body
 
-    if (!contentType || !["email", "social", "blog"].includes(contentType)) {
-      return NextResponse.json(
-        {
-          error: "Tipo de conteúdo deve ser: email, social ou blog",
-        },
-        { status: 400 },
-      )
+    if (!productData) {
+      return NextResponse.json({ error: "Dados do produto são obrigatórios" }, { status: 400 })
     }
 
-    const content = await geminiAIService.generateMarketingContent(contentType, data || {})
+    if (!type || !["email", "social", "ad"].includes(type)) {
+      return NextResponse.json({ error: "Tipo deve ser: email, social ou ad" }, { status: 400 })
+    }
+
+    const vertexAI = getVertexAIService()
+    const content = await vertexAI.generateMarketingContent(productData, type)
 
     return NextResponse.json({
       success: true,
       content,
-      content_type: contentType,
-      generated_at: new Date().toISOString(),
+      type,
+      productData,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Erro na geração de conteúdo:", error)
-    return NextResponse.json({ error: "Falha na geração de conteúdo" }, { status: 500 })
+    console.error("Erro ao gerar conteúdo de marketing:", error)
+
+    return NextResponse.json(
+      {
+        error: "Erro interno do servidor",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get("productId")
+    const type = searchParams.get("type") as "email" | "social" | "ad"
+
+    if (!productId) {
+      return NextResponse.json({ error: "ID do produto é obrigatório" }, { status: 400 })
+    }
+
+    if (!type || !["email", "social", "ad"].includes(type)) {
+      return NextResponse.json({ error: "Tipo deve ser: email, social ou ad" }, { status: 400 })
+    }
+
+    // Mock product data
+    const mockProductData = {
+      id: productId,
+      name: "Aspirador de Pó Portátil",
+      category: "Limpeza",
+      features: ["Sem fio", "Bateria de longa duração", "Filtro HEPA", "Múltiplos acessórios"],
+      price: "R$ 199,90",
+      discount: "20%",
+      brand: "Volaron Clean",
+    }
+
+    const vertexAI = getVertexAIService()
+    const content = await vertexAI.generateMarketingContent(mockProductData, type)
+
+    return NextResponse.json({
+      success: true,
+      productId,
+      productData: mockProductData,
+      type,
+      content,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error("Erro ao gerar conteúdo de marketing:", error)
+
+    return NextResponse.json(
+      {
+        error: "Erro interno do servidor",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
+      },
+      { status: 500 },
+    )
   }
 }
