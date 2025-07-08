@@ -28,6 +28,7 @@ export HOST=${HOST:-0.0.0.0}
 export PORT=${PORT:-3000}
 export ENABLE_GEMINI_AI=${ENABLE_GEMINI_AI:-true}
 export MCP_VERBOSE=${MCP_VERBOSE:-false}
+export GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
 
 # Informações do ambiente
 log_info "Ambiente: $NODE_ENV"
@@ -77,6 +78,7 @@ check_environment() {
         "GEMINI_API_KEY"
         "JWT_SECRET"
         "COOKIE_SECRET"
+        "GOOGLE_GENERATIVE_AI_API_KEY"
     )
     
     local missing_vars=()
@@ -109,6 +111,7 @@ prepare_environment() {
         "uploads"
         "mcp-servers/logs"
         "monitoring/logs"
+        ".copilot"
     )
     
     for dir in "${dirs[@]}"; do
@@ -121,6 +124,7 @@ prepare_environment() {
     # Configurar permissões
     chmod +x scripts/*.sh 2>/dev/null || true
     chmod +x scripts/*.js 2>/dev/null || true
+    chmod +x mcp-servers/*.js 2>/dev/null || true
     
     log_success "Ambiente preparado"
 }

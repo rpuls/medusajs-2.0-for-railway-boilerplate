@@ -1,175 +1,210 @@
 "use client"
 
-interface APIResponse<T = any> {
-  success: boolean
-  data?: T
-  error?: string
+interface ProductData {
+  name: string
+  category: string
+  features?: string[]
+  specifications?: Record<string, any>
 }
 
-interface ChatMessage {
-  sessionId: string
-  response: string
-  suggestions: string[]
-  context: string
-  timestamp: string
+interface CustomerData {
+  purchases: any[]
+  browsing_history?: any[]
+  demographics?: Record<string, any>
 }
 
-interface CustomerAnalysis {
-  customerId: string
-  analysisType: string
-  analysis: {
-    summary: string
-    insights: string[]
-    recommendations: string[]
-    confidence: number
-  }
-  timestamp: string
+interface SEOContent {
+  title: string
+  description: string
+  keywords?: string[]
+  category: string
 }
 
-interface HealthStatus {
-  status: string
-  services: Record<string, any>
-  uptime: number
-  memory: any
-  version: string
+interface ChatContext {
+  user_id?: string
+  conversation_history?: Array<{ role: string; content: string }>
+  user_data?: Record<string, any>
 }
 
 class VertexAPIClient {
-  private baseURL: string
+  private baseUrl: string
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || "/api"
+    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000"
   }
 
-  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<APIResponse<T>> {
+  async generateProductDescription(productData: ProductData): Promise<string> {
     try {
-      const url = `${this.baseURL}${endpoint}`
-      const response = await fetch(url, {
+      const response = await fetch(`${this.baseUrl}/api/ai/generate-description`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...options.headers,
         },
-        ...options,
+        body: JSON.stringify({ productData }),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      return data
+      const data = await response.json()
+      return data.description
     } catch (error) {
-      console.error(`API Error (${endpoint}):`, error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      }
+      console.error("Erro ao gerar descrição:", error)
+      throw error
     }
   }
 
-  async sendChatMessage(message: string, sessionId?: string, context?: string): Promise<APIResponse<ChatMessage>> {
-    return this.makeRequest<ChatMessage>("/ai/chatbot", {
-      method: "POST",
-      body: JSON.stringify({
-        message,
-        sessionId,
-        context,
-      }),
-    })
+  async analyzeCustomer(customerData: CustomerData) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/analyze-customer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ customerData }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return data.analysis
+    } catch (error) {
+      console.error("Erro ao analisar cliente:", error)
+      throw error
+    }
   }
 
-  async getChatSession(sessionId: string): Promise<APIResponse<any>> {
-    return this.makeRequest(`/ai/chatbot?sessionId=${sessionId}`)
+  async optimizeSEO(content: SEOContent) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/optimize-seo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return data.optimization
+    } catch (error) {
+      console.error("Erro ao otimizar SEO:", error)
+      throw error
+    }
   }
 
-  async deleteChatSession(sessionId: string): Promise<APIResponse<any>> {
-    return this.makeRequest(`/ai/chatbot?sessionId=${sessionId}`, {
-      method: "DELETE",
-    })
-  }
+  async sendChatMessage(message: string, context: ChatContext = {}) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/chatbot`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message, context }),
+      })
 
-  async analyzeCustomer(customerData: any, analysisType = "behavior"): Promise<APIResponse<CustomerAnalysis>> {
-    return this.makeRequest<CustomerAnalysis>("/ai/analyze-customer", {
-      method: "POST",
-      body: JSON.stringify({
-        customerData,
-        analysisType,
-      }),
-    })
-  }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-  async getCustomerAnalysis(customerId: string): Promise<APIResponse<CustomerAnalysis>> {
-    return this.makeRequest<CustomerAnalysis>(`/ai/analyze-customer?customerId=${customerId}`)
-  }
-
-  async generateProductDescription(productData: any): Promise<APIResponse<{ description: string }>> {
-    return this.makeRequest<{ description: string }>("/ai/generate-description", {
-      method: "POST",
-      body: JSON.stringify({ productData }),
-    })
+      const data = await response.json()
+      return data.response
+    } catch (error) {
+      console.error("Erro no chat:", error)
+      throw error
+    }
   }
 
   async generateMarketingContent(
-    productData: any,
-    type: "email" | "social" | "ad",
-  ): Promise<APIResponse<{ content: string }>> {
-    return this.makeRequest<{ content: string }>("/ai/marketing-content", {
-      method: "POST",
-      body: JSON.stringify({
-        productData,
-        type,
-      }),
-    })
+    contentType: "email" | "social" | "blog",
+    data: {
+      product?: any
+      campaign?: string
+      target_audience?: string
+      tone?: "formal" | "casual" | "promotional"
+    },
+  ) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/marketing-content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ contentType, data }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      return result.content
+    } catch (error) {
+      console.error("Erro ao gerar conteúdo de marketing:", error)
+      throw error
+    }
   }
 
-  async optimizeSEO(content: string, keywords: string[]): Promise<APIResponse<{ optimizedContent: string }>> {
-    return this.makeRequest<{ optimizedContent: string }>("/ai/optimize-seo", {
-      method: "POST",
-      body: JSON.stringify({
-        content,
-        keywords,
-      }),
-    })
-  }
+  async checkHealth() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ai/health`)
 
-  async checkAIHealth(): Promise<APIResponse<HealthStatus>> {
-    return this.makeRequest<HealthStatus>("/ai/health")
-  }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-  async getAIStats(): Promise<APIResponse<any>> {
-    return this.makeRequest("/ai/stats")
+      return await response.json()
+    } catch (error) {
+      console.error("Erro no health check:", error)
+      throw error
+    }
   }
 }
 
 // Hook React para usar a API
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 export function useVertexAPI() {
   const [client] = useState(() => new VertexAPIClient())
-  const [isOnline, setIsOnline] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await client.checkAIHealth()
-        setIsOnline(response.success)
-      } catch (error) {
-        setIsOnline(false)
-      }
+  const executeWithLoading = async <T,>(operation: () => Promise<T>): Promise<T | null> => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await operation()
+      return result
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido"
+      setError(errorMessage)
+      return null
+    } finally {
+      setIsLoading(false)
     }
-
-    checkHealth()
-    const interval = setInterval(checkHealth, 60000) // Check every minute
-
-    return () => clearInterval(interval)
-  }, [client])
+  }
 
   return {
-    ...client,
-    isOnline,
+    client,
+    isLoading,
+    error,
+    generateProductDescription: (productData: ProductData) =>
+      executeWithLoading(() => client.generateProductDescription(productData)),
+    analyzeCustomer: (customerData: CustomerData) => executeWithLoading(() => client.analyzeCustomer(customerData)),
+    optimizeSEO: (content: SEOContent) => executeWithLoading(() => client.optimizeSEO(content)),
+    sendChatMessage: (message: string, context?: ChatContext) =>
+      executeWithLoading(() => client.sendChatMessage(message, context)),
+    generateMarketingContent: (contentType: "email" | "social" | "blog", data: any) =>
+      executeWithLoading(() => client.generateMarketingContent(contentType, data)),
+    checkHealth: () => executeWithLoading(() => client.checkHealth()),
   }
 }
 
-// Instância singleton para uso direto
-export const vertexAPI = new VertexAPIClient()
+export default VertexAPIClient

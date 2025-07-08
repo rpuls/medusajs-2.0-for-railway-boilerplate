@@ -1,78 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getVertexAIService } from "../../../services/vertex-ai"
+import { geminiAIService } from "../../../services"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { productData, type, customPrompt } = body
+    const { contentType, data } = body
 
-    if (!productData) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Dados do produto são obrigatórios",
-        },
-        { status: 400 },
-      )
+    if (!contentType || !["email", "social", "blog"].includes(contentType)) {
+      return NextResponse.json({ error: "Tipo de conteúdo inválido. Use: email, social ou blog" }, { status: 400 })
     }
 
-    if (!type || !["email", "social", "ad"].includes(type)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Tipo de conteúdo deve ser: email, social ou ad",
-        },
-        { status: 400 },
-      )
-    }
-
-    const vertexAI = getVertexAIService()
-    let content: string
-
-    if (customPrompt) {
-      // Usar prompt customizado
-      content = await vertexAI.generateText({
-        prompt: customPrompt,
-        systemPrompt: `Você é um especialista em marketing para a loja Volaron. 
-        Crie conteúdo ${type} para o produto: ${JSON.stringify(productData)}`,
-        temperature: 0.8,
-        maxTokens: 500,
-      })
-    } else {
-      // Usar método específico para marketing
-      content = await vertexAI.generateMarketingContent(productData, type)
-    }
-
-    // Análise do conteúdo gerado
-    const analysis = {
-      wordCount: content.split(" ").length,
-      characterCount: content.length,
-      estimatedReadTime: Math.ceil(content.split(" ").length / 200), // palavras por minuto
-      tone: detectTone(content),
-      hasCallToAction: detectCallToAction(content),
-    }
+    const content = await geminiAIService.generateMarketingContent(contentType, data || {})
 
     return NextResponse.json({
       success: true,
-      data: {
-        productId: productData.id || null,
-        productName: productData.name || productData.title,
-        contentType: type,
-        content,
-        analysis,
-        generatedAt: new Date().toISOString(),
-      },
+      content,
+      contentType,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     console.error("Erro ao gerar conteúdo de marketing:", error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Erro interno do servidor",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
 
@@ -166,29 +114,6 @@ Clique agora e comece sua transformação hoje mesmo!`,
   }
 }
 
-function detectTone(content: string): string {
-  const enthusiasticWords = ["incrível", "fantástico", "maravilhoso", "perfeito", "!"]
-  const professionalWords = ["qualidade", "profissional", "garantia", "especializado"]
-  const casualWords = ["oi", "olá", "que tal", "vamos", "😊"]
-
-  const enthusiasticCount = enthusiasticWords.filter((word) => content.toLowerCase().includes(word)).length
-  const professionalCount = professionalWords.filter((word) => content.toLowerCase().includes(word)).length
-  const casualCount = casualWords.filter((word) => content.toLowerCase().includes(word)).length
-
-  if (enthusiasticCount > professionalCount && enthusiasticCount > casualCount) {
-    return "enthusiastic"
-  } else if (professionalCount > casualCount) {
-    return "professional"
-  } else {
-    return "casual"
-  }
-}
-
-function detectCallToAction(content: string): boolean {
-  const ctaWords = ["clique", "compre", "visite", "acesse", "aproveite", "garanta", "descubra", "experimente"]
-  return ctaWords.some((word) => content.toLowerCase().includes(word))
-}
-
 function getMarketingTips(type: string): string[] {
   const tips = {
     email: [
@@ -208,6 +133,12 @@ function getMarketingTips(type: string): string[] {
       "Use urgência e escassez",
       "Teste diferentes headlines",
       "Inclua prova social",
+    ],
+    blog: [
+      "Use um título atraente",
+      "Inclua imagens relevantes",
+      "Estruture seu conteúdo com subtítulos",
+      "Inclua call-to-action no final",
     ],
   }
 
@@ -229,6 +160,12 @@ function getBestPractices(type: string): string[] {
       "Analise insights regularmente",
     ],
     ad: ["Teste A/B constantemente", "Otimize para conversão", "Use targeting preciso", "Monitore ROI"],
+    blog: [
+      "Use meta descrições atraentes",
+      "Inclua links internos",
+      "Optimize para SEO",
+      "Promova seu conteúdo nas redes sociais",
+    ],
   }
 
   return practices[type as keyof typeof practices] || []

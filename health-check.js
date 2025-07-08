@@ -1,6 +1,7 @@
 const http = require("http")
 const https = require("https")
 const { URL } = require("url")
+const fs = require("fs")
 
 // Configuração do health check
 const CONFIG = {
@@ -234,7 +235,7 @@ async function runHealthCheck() {
   }
 
   try {
-    require("fs").writeFileSync("health-check-report.json", JSON.stringify(report, null, 2))
+    fs.writeFileSync("health-check-report.json", JSON.stringify(report, null, 2))
     log("📄 Report saved to health-check-report.json", "blue")
   } catch (error) {
     log(`Failed to save report: ${error.message}`, "red")
@@ -259,3 +260,40 @@ if (require.main === module) {
 }
 
 module.exports = { runHealthCheck, testEndpoint, makeRequest }
+
+// Função para fazer requisição HTTP/HTTPS simplificada
+function simpleMakeRequest() {
+  const options = {
+    hostname: "localhost",
+    port: process.env.PORT || 3000,
+    path: "/health",
+    method: "GET",
+    timeout: 5000,
+  }
+
+  const req = http.request(options, (res) => {
+    if (res.statusCode === 200) {
+      console.log("✅ Health check passed")
+      process.exit(0)
+    } else {
+      console.log(`❌ Health check failed with status: ${res.statusCode}`)
+      process.exit(1)
+    }
+  })
+
+  req.on("error", (err) => {
+    console.log(`❌ Health check failed: ${err.message}`)
+    process.exit(1)
+  })
+
+  req.on("timeout", () => {
+    console.log("❌ Health check timeout")
+    req.destroy()
+    process.exit(1)
+  })
+
+  req.end()
+}
+
+// Exportar a função simplificada
+module.exports.simpleMakeRequest = simpleMakeRequest
