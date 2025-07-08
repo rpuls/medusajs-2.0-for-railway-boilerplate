@@ -1,298 +1,412 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-
-interface MarketingContentRequest {
-  productData: any
-  type: "email" | "social" | "ad" | "blog" | "newsletter"
-  target?: string
-  tone?: "professional" | "casual" | "urgent" | "friendly"
-  length?: "short" | "medium" | "long"
-}
-
-interface MarketingContent {
-  type: string
-  title: string
-  content: string
-  callToAction: string
-  hashtags?: string[]
-  subject?: string
-  preview?: string
-  variations?: string[]
-}
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
-    const {
-      productData,
-      type,
-      target = "geral",
-      tone = "friendly",
-      length = "medium",
-    }: MarketingContentRequest = await request.json()
+    const body = await request.json()
+    const { contentType, data = {}, options = {} } = body
 
-    if (!productData || !type) {
-      return NextResponse.json({ success: false, error: "Dados do produto e tipo são obrigatórios" }, { status: 400 })
+    if (!contentType) {
+      return NextResponse.json({ error: "Tipo de conteúdo é obrigatório" }, { status: 400 })
     }
 
-    // Verificar configuração da IA
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: "IA não configurada" }, { status: 500 })
+    const supportedTypes = ["email", "social", "blog", "ad", "newsletter", "sms"]
+    if (!supportedTypes.includes(contentType)) {
+      return NextResponse.json({ error: `Tipo não suportado. Use: ${supportedTypes.join(", ")}` }, { status: 400 })
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash-001",
-    })
+    // Configurações padrão
+    const defaultOptions = {
+      tone: "casual",
+      target_audience: "clientes da volaron",
+      include_cta: true,
+      brand_voice: "amigável e confiável",
+    }
 
-    // Construir prompt específico para o tipo de conteúdo
-    const prompt = buildMarketingPrompt(productData, type, target, tone, length)
+    const finalOptions = { ...defaultOptions, ...options }
 
-    // Gerar conteúdo
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const generatedText = response.text()
+    // Enriquecer dados com contexto da Volaron
+    const enrichedData = {
+      ...data,
+      brand_context: {
+        name: "Volaron",
+        tagline: "Qualidade para seu lar",
+        values: ["Qualidade", "Confiança", "Praticidade", "Atendimento"],
+        benefits: [
+          "Entrega para todo o Brasil",
+          "Parcelamento em até 12x sem juros",
+          "Entrega local no mesmo dia",
+          "Descontos à vista",
+          "Atendimento especializado",
+        ],
+        contact: {
+          phone: "(18) 3643-1990",
+          email: "contato@volaron.com.br",
+          hours: "Segunda à Sexta das 8h às 18h",
+        },
+      },
+    }
 
-    // Processar resposta
-    const content = parseMarketingResponse(generatedText, type, productData)
+    // Gerar conteúdo usando Gemini AI
+    const content = await geminiAIService.generateMarketingContent(
+      contentType as "email" | "social" | "blog",
+      enrichedData,
+    )
+
+    // Processar conteúdo baseado no tipo
+    const processedContent = await processMarketingContent(content, contentType, finalOptions)
+
+    // Gerar variações
+    const variations = await generateContentVariations(contentType, enrichedData, finalOptions)
+
+    // Calcular métricas estimadas
+    const metrics = calculateContentMetrics(processedContent, contentType)
 
     return NextResponse.json({
       success: true,
-      data: content,
+      content: processedContent,
+      variations,
+      metrics,
+      metadata: {
+        content_type: contentType,
+        word_count: processedContent.split(" ").length,
+        character_count: processedContent.length,
+        estimated_reading_time: Math.ceil(processedContent.split(" ").length / 200),
+        tone: finalOptions.tone,
+        generated_at: new Date().toISOString(),
+      },
     })
   } catch (error) {
     console.error("Erro na geração de conteúdo de marketing:", error)
+
     return NextResponse.json(
       {
-        success: false,
-        error: "Erro interno na geração",
-        details: error instanceof Error ? error.message : "Erro desconhecido",
+        error: "Erro interno do servidor",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
       },
       { status: 500 },
     )
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const contentType = searchParams.get("type")
-    const productId = searchParams.get("productId")
+async function processMarketingContent(content: string, contentType: string, options: any): Promise<string> {
+  let processed = content.trim()
 
-    if (!contentType) {
-      return NextResponse.json({ success: false, error: "Tipo de conteúdo é obrigatório" }, { status: 400 })
+  switch (contentType) {
+    case "email":
+      processed = processEmailContent(processed, options)
+      break
+    case "social":
+      processed = processSocialContent(processed, options)
+      break
+    case "blog":
+      processed = processBlogContent(processed, options)
+      break
+    case "ad":
+      processed = processAdContent(processed, options)
+      break
+    case "newsletter":
+      processed = processNewsletterContent(processed, options)
+      break
+    case "sms":
+      processed = processSMSContent(processed, options)
+      break
+  }
+
+  return processed
+}
+
+function processEmailContent(content: string, options: any): string {
+  let processed = content
+
+  // Adicionar estrutura de email se não existir
+  if (!processed.includes("Assunto:")) {
+    const lines = processed.split("\n")
+    const subject = generateEmailSubject(processed)
+    processed = `Assunto: ${subject}\n\n${processed}`
+  }
+
+  // Adicionar assinatura
+  if (!processed.includes("Atenciosamente")) {
+    processed += `\n\nAtenciosamente,\nEquipe Volaron\n\n📞 (18) 3643-1990\n📧 contato@volaron.com.br\n🌐 volaron.com.br`
+  }
+
+  return processed
+}
+
+function processSocialContent(content: string, options: any): string {
+  let processed = content
+
+  // Limitar caracteres para redes sociais
+  if (processed.length > 280) {
+    processed = processed.substring(0, 270) + "..."
+  }
+
+  // Adicionar hashtags se não existirem
+  if (!processed.includes("#")) {
+    const hashtags = generateHashtags(processed)
+    processed += `\n\n${hashtags.join(" ")}`
+  }
+
+  // Adicionar emoji se apropriado
+  if (options.tone === "casual" && !hasEmoji(processed)) {
+    processed = addRelevantEmoji(processed)
+  }
+
+  return processed
+}
+
+function processBlogContent(content: string, options: any): string {
+  let processed = content
+
+  // Adicionar estrutura de blog se necessário
+  if (!processed.includes("##") && !processed.includes("#")) {
+    const lines = processed.split("\n")
+    const title = lines[0] || "Artigo Volaron"
+    processed = `# ${title}\n\n${processed}`
+  }
+
+  // Adicionar call-to-action no final
+  if (options.include_cta && !processed.toLowerCase().includes("visite")) {
+    processed += `\n\n---\n\n**Visite nossa loja online em volaron.com.br e descubra nossa linha completa de produtos para seu lar!**`
+  }
+
+  return processed
+}
+
+function processAdContent(content: string, options: any): string {
+  let processed = content
+
+  // Manter anúncios concisos
+  if (processed.length > 150) {
+    processed = processed.substring(0, 140) + "..."
+  }
+
+  // Adicionar CTA forte
+  if (options.include_cta) {
+    processed += "\n\n🛒 COMPRE AGORA!"
+  }
+
+  return processed
+}
+
+function processNewsletterContent(content: string, options: any): string {
+  let processed = content
+
+  // Adicionar cabeçalho de newsletter
+  if (!processed.includes("Newsletter")) {
+    processed = `📧 Newsletter Volaron\n${new Date().toLocaleDateString("pt-BR")}\n\n${processed}`
+  }
+
+  // Adicionar rodapé
+  processed += `\n\n---\n\nVocê está recebendo este email porque se inscreveu em nossa newsletter.\nPara cancelar, responda este email com "CANCELAR".`
+
+  return processed
+}
+
+function processSMSContent(content: string, options: any): string {
+  let processed = content
+
+  // Limitar a 160 caracteres
+  if (processed.length > 160) {
+    processed = processed.substring(0, 150) + "..."
+  }
+
+  // Adicionar identificação da Volaron
+  if (!processed.toLowerCase().includes("volaron")) {
+    processed = `Volaron: ${processed}`
+  }
+
+  return processed
+}
+
+function generateEmailSubject(content: string): string {
+  const subjects = [
+    "Oferta especial Volaron para você!",
+    "Novidades em utilidades domésticas",
+    "Desconto exclusivo - Volaron",
+    "Produtos selecionados para seu lar",
+    "Promoção imperdível - Volaron Store",
+  ]
+
+  return subjects[Math.floor(Math.random() * subjects.length)]
+}
+
+function generateHashtags(content: string): string[] {
+  const baseHashtags = ["#Volaron", "#UtilidadesDomesticas", "#QualidadeParaSeuLar"]
+
+  // Adicionar hashtags baseadas no conteúdo
+  if (content.toLowerCase().includes("cozinha")) baseHashtags.push("#Cozinha")
+  if (content.toLowerCase().includes("limpeza")) baseHashtags.push("#Limpeza")
+  if (content.toLowerCase().includes("jardim")) baseHashtags.push("#Jardinagem")
+  if (content.toLowerCase().includes("promoção")) baseHashtags.push("#Promocao")
+
+  return baseHashtags.slice(0, 5) // Máximo 5 hashtags
+}
+
+function hasEmoji(text: string): boolean {
+  const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u
+  return emojiRegex.test(text)
+}
+
+function addRelevantEmoji(content: string): string {
+  const lowerContent = content.toLowerCase()
+
+  if (lowerContent.includes("casa") || lowerContent.includes("lar")) {
+    return "🏠 " + content
+  }
+  if (lowerContent.includes("cozinha")) {
+    return "👨‍🍳 " + content
+  }
+  if (lowerContent.includes("limpeza")) {
+    return "🧽 " + content
+  }
+  if (lowerContent.includes("jardim")) {
+    return "🌱 " + content
+  }
+  if (lowerContent.includes("oferta") || lowerContent.includes("promoção")) {
+    return "🔥 " + content
+  }
+
+  return "✨ " + content
+}
+
+async function generateContentVariations(contentType: string, data: any, options: any): Promise<any[]> {
+  const variations = []
+
+  try {
+    // Variação com tom diferente
+    const alternativeTones = ["formal", "casual", "promotional"]
+    const currentTone = options.tone
+
+    for (const tone of alternativeTones) {
+      if (tone !== currentTone) {
+        const variantOptions = { ...options, tone }
+        const variant = await geminiAIService.generateMarketingContent(contentType as "email" | "social" | "blog", {
+          ...data,
+          tone,
+        })
+
+        variations.push({
+          type: `${tone}_tone`,
+          content: variant.substring(0, 200) + "...",
+          full_content: variant,
+        })
+
+        break // Apenas uma variação para não sobrecarregar
+      }
     }
 
-    // Retornar exemplo de conteúdo baseado no tipo
-    const mockContent = generateMockContent(contentType, productId)
-
-    return NextResponse.json({
-      success: true,
-      data: mockContent,
-    })
-  } catch (error) {
-    console.error("Erro ao buscar conteúdo:", error)
-    return NextResponse.json({ success: false, error: "Erro ao buscar conteúdo" }, { status: 500 })
-  }
-}
-
-function buildMarketingPrompt(productData: any, type: string, target: string, tone: string, length: string): string {
-  const baseContext = `
-Você é um especialista em marketing digital para e-commerce brasileiro.
-Crie conteúdo de marketing para a Volaron Store, especializada em utilidades domésticas.
-
-PRODUTO:
-${JSON.stringify(productData, null, 2)}
-
-TIPO DE CONTEÚDO: ${type}
-PÚBLICO-ALVO: ${target}
-TOM: ${tone}
-TAMANHO: ${length}
-
-CONTEXTO DA MARCA:
-- Volaron Store: líder em utilidades domésticas
-- Valores: qualidade, praticidade, bom preço
-- Público: famílias brasileiras, classe média
-- Diferencial: atendimento personalizado e produtos selecionados
-`
-
-  let specificInstructions = ""
-
-  switch (type) {
-    case "email":
-      specificInstructions = `
-INSTRUÇÕES PARA EMAIL MARKETING:
-1. Crie um assunto atrativo (máx 50 chars)
-2. Texto de preview envolvente
-3. Conteúdo persuasivo mas não invasivo
-4. Call-to-action claro e direto
-5. Personalização quando possível
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "type": "email",
-  "subject": "Assunto do email",
-  "preview": "Texto de preview",
-  "title": "Título principal",
-  "content": "Conteúdo completo do email",
-  "callToAction": "Texto do botão CTA",
-  "variations": ["variação 1 do assunto", "variação 2"]
-}
-`
-      break
-
-    case "social":
-      specificInstructions = `
-INSTRUÇÕES PARA REDES SOCIAIS:
-1. Conteúdo engajante e visual
-2. Hashtags relevantes (#volaron #casa #utilidades)
-3. Call-to-action natural
-4. Linguagem adequada à plataforma
-5. Máximo 280 caracteres para Twitter, mais livre para Instagram/Facebook
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "type": "social",
-  "title": "Título/Headline",
-  "content": "Texto da postagem",
-  "callToAction": "CTA da postagem",
-  "hashtags": ["#hashtag1", "#hashtag2"],
-  "variations": ["variação 1", "variação 2"]
-}
-`
-      break
-
-    case "ad":
-      specificInstructions = `
-INSTRUÇÕES PARA ANÚNCIO:
-1. Headline impactante
-2. Descrição persuasiva
-3. Benefícios claros
-4. Urgência quando apropriado
-5. CTA forte e direto
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "type": "ad",
-  "title": "Headline do anúncio",
-  "content": "Texto do anúncio",
-  "callToAction": "Botão de ação",
-  "variations": ["headline alternativo 1", "headline alternativo 2"]
-}
-`
-      break
-
-    default:
-      specificInstructions = `
-INSTRUÇÕES GERAIS:
-1. Conteúdo atrativo e relevante
-2. Linguagem clara e objetiva
-3. Foco nos benefícios do produto
-4. Call-to-action apropriado
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "type": "${type}",
-  "title": "Título do conteúdo",
-  "content": "Conteúdo principal",
-  "callToAction": "Ação desejada"
-}
-`
-  }
-
-  return `${baseContext}\n${specificInstructions}\n\nResponda APENAS com o JSON, sem explicações adicionais.`
-}
-
-function parseMarketingResponse(generatedText: string, type: string, productData: any): MarketingContent {
-  try {
-    // Tentar extrair JSON da resposta
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      return {
-        type: parsed.type || type,
-        title: parsed.title || `${productData.name} - Volaron Store`,
-        content: parsed.content || "Conteúdo não disponível",
-        callToAction: parsed.callToAction || "Compre Agora",
-        hashtags: parsed.hashtags || [],
-        subject: parsed.subject,
-        preview: parsed.preview,
-        variations: parsed.variations || [],
-      }
+    // Variação curta
+    if (contentType !== "sms") {
+      variations.push({
+        type: "short_version",
+        content: await generateShortVersion(data, contentType),
+        full_content: await generateShortVersion(data, contentType),
+      })
     }
   } catch (error) {
-    console.error("Erro ao processar resposta da IA:", error)
+    console.error("Erro ao gerar variações:", error)
   }
 
-  // Fallback para conteúdo básico
-  return generateFallbackContent(type, productData)
+  return variations
 }
 
-function generateFallbackContent(type: string, productData: any): MarketingContent {
-  const productName = productData.name || "Produto"
-
-  switch (type) {
-    case "email":
-      return {
-        type: "email",
-        title: `Oferta Especial: ${productName}`,
-        content: `
-Olá!
-
-Temos uma oferta especial para você na Volaron Store!
-
-O ${productName} está com condições imperdíveis. Não perca esta oportunidade de levar qualidade para sua casa com o melhor preço.
-
-✅ Qualidade garantida
-✅ Entrega rápida
-✅ Atendimento especializado
-
-Aproveite enquanto durarem os estoques!
-        `.trim(),
-        callToAction: "Ver Oferta",
-        subject: `🏠 Oferta Especial: ${productName}`,
-        preview: "Não perca esta oportunidade imperdível!",
-      }
-
-    case "social":
-      return {
-        type: "social",
-        title: `${productName} na Volaron! 🏠`,
-        content: `
-🌟 ${productName} chegou na Volaron Store!
-
-Qualidade que você já conhece, preço que você vai amar. 
-
-#VolaronStore #Casa #Qualidade #Oferta
-        `.trim(),
-        callToAction: "Compre Agora",
-        hashtags: ["#VolaronStore", "#Casa", "#Qualidade", "#Oferta"],
-      }
-
-    case "ad":
-      return {
-        type: "ad",
-        title: `${productName} - Qualidade Volaron`,
-        content: `
-Descubra o ${productName} na Volaron Store. 
-Qualidade garantida, preço justo e entrega rápida.
-Sua casa merece o melhor!
-        `.trim(),
-        callToAction: "Comprar Agora",
-      }
-
-    default:
-      return {
-        type,
-        title: `${productName} - Volaron Store`,
-        content: `Conheça o ${productName} na Volaron Store. Qualidade e praticidade para sua casa.`,
-        callToAction: "Saiba Mais",
-      }
+async function generateShortVersion(data: any, contentType: string): Promise<string> {
+  const shortPrompts = {
+    email: "Crie um email curto e direto para a Volaron",
+    social: "Crie um post conciso para redes sociais da Volaron",
+    blog: "Crie um resumo executivo para blog da Volaron",
+    ad: "Crie um anúncio de 50 palavras para a Volaron",
+    newsletter: "Crie uma newsletter resumida da Volaron",
+    sms: "Crie um SMS promocional da Volaron",
   }
+
+  return `Versão resumida: ${data.product?.name || "Produtos Volaron"} - Qualidade garantida, entrega rápida, parcelamento sem juros. Visite volaron.com.br`
 }
 
-function generateMockContent(contentType: string, productId?: string | null): MarketingContent {
-  const productName = productId ? `Produto ${productId}` : "Produto Exemplo"
+function calculateContentMetrics(content: string, contentType: string) {
+  const wordCount = content.split(" ").length
+  const charCount = content.length
 
-  return generateFallbackContent(contentType, { name: productName })
+  const metrics = {
+    word_count: wordCount,
+    character_count: charCount,
+    estimated_reading_time: Math.ceil(wordCount / 200),
+    engagement_score: calculateEngagementScore(content, contentType),
+    seo_score: calculateSEOScore(content),
+    readability_score: calculateReadabilityScore(content),
+  }
+
+  return metrics
+}
+
+function calculateEngagementScore(content: string, contentType: string): number {
+  let score = 50 // Base score
+
+  // Pontos por elementos de engajamento
+  if (content.includes("!")) score += 10
+  if (content.includes("?")) score += 5
+  if (hasEmoji(content)) score += 15
+  if (content.toLowerCase().includes("você")) score += 10
+  if (content.toLowerCase().includes("grátis") || content.toLowerCase().includes("desconto")) score += 20
+
+  // Ajustes por tipo de conteúdo
+  if (contentType === "social" && content.includes("#")) score += 10
+  if (contentType === "email" && content.includes("Assunto:")) score += 5
+
+  return Math.min(score, 100)
+}
+
+function calculateSEOScore(content: string): number {
+  let score = 30 // Base score
+
+  if (content.toLowerCase().includes("volaron")) score += 20
+  if (content.toLowerCase().includes("utilidades domésticas")) score += 15
+  if (content.toLowerCase().includes("qualidade")) score += 10
+  if (content.length > 300) score += 15
+  if (content.length < 2000) score += 10
+
+  return Math.min(score, 100)
+}
+
+function calculateReadabilityScore(content: string): number {
+  const sentences = content.split(/[.!?]+/).length
+  const words = content.split(" ").length
+  const avgWordsPerSentence = words / sentences
+
+  let score = 100
+
+  // Penalizar frases muito longas
+  if (avgWordsPerSentence > 20) score -= 20
+  if (avgWordsPerSentence > 30) score -= 30
+
+  // Bonificar frases bem estruturadas
+  if (avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20) score += 10
+
+  return Math.max(score, 0)
+}
+
+export async function GET() {
+  return NextResponse.json({
+    endpoint: "Marketing Content Generator API",
+    description: "Gera conteúdo de marketing otimizado usando IA",
+    methods: ["POST"],
+    supported_types: ["email", "social", "blog", "ad", "newsletter", "sms"],
+    required_fields: ["contentType"],
+    optional_fields: ["data", "options"],
+    supported_options: {
+      tone: ["casual", "formal", "promotional"],
+      target_audience: "string",
+      include_cta: "boolean",
+      brand_voice: "string",
+    },
+    features: [
+      "Geração de múltiplos tipos de conteúdo",
+      "Otimização automática por tipo",
+      "Variações de tom e estilo",
+      "Métricas de engajamento estimadas",
+      "Integração com marca Volaron",
+    ],
+  })
 }

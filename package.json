@@ -71,9 +71,8 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "typeorm": "^0.3.17",
-    "url": "latest",
     "util": "latest",
-    "uuid": "latest",
+    "uuid": "^9.0.0",
     "winston": "^3.11.0",
     "ws": "^8.14.0"
   },

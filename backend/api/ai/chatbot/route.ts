@@ -1,269 +1,206 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-import { v4 as uuidv4 } from "uuid"
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
 interface ChatSession {
-  sessionId: string
-  messages: ChatMessage[]
-  context: string
-  createdAt: string
-  lastActivity: string
-}
-
-interface ChatMessage {
   id: string
-  role: "user" | "assistant" | "system"
-  content: string
-  timestamp: string
-  metadata?: any
+  user_id?: string
+  messages: Array<{
+    role: "user" | "assistant"
+    content: string
+    timestamp: string
+  }>
+  context: {
+    current_page?: string
+    cart_items?: any[]
+    user_preferences?: Record<string, any>
+    session_start: string
+  }
+  last_activity: string
 }
 
-interface ChatResponse {
-  sessionId: string
-  response: string
-  suggestions: string[]
-  context: string
-  timestamp: string
-}
-
-// Armazenamento em memória das sessões (em produção, usar Redis ou banco)
+// Armazenamento em memória das sessões (em produção, usar Redis)
 const chatSessions = new Map<string, ChatSession>()
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, context } = await request.json()
+    const body = await request.json()
+    const { message, sessionId, userId, context = {} } = body
 
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ success: false, error: "Mensagem é obrigatória" }, { status: 400 })
+    if (!message?.trim()) {
+      return NextResponse.json({ error: "Mensagem é obrigatória" }, { status: 400 })
     }
-
-    // Verificar configuração da IA
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: "IA não configurada" }, { status: 500 })
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash-001",
-    })
 
     // Obter ou criar sessão
-    const session = getOrCreateSession(sessionId, context)
+    const session = chatSessions.get(sessionId) || createNewSession(sessionId, userId, context)
 
-    // Adicionar mensagem do usuário
-    const userMessage: ChatMessage = {
-      id: uuidv4(),
+    // Atualizar contexto da sessão
+    session.context = { ...session.context, ...context }
+    session.last_activity = new Date().toISOString()
+
+    // Adicionar mensagem do usuário ao histórico
+    session.messages.push({
       role: "user",
       content: message,
       timestamp: new Date().toISOString(),
-    }
-    session.messages.push(userMessage)
+    })
 
-    // Construir prompt com contexto da conversa
-    const prompt = buildChatPrompt(session, message)
-
-    // Gerar resposta
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const aiResponse = response.text()
-
-    // Processar resposta
-    const processedResponse = processAIResponse(aiResponse)
-
-    // Adicionar resposta do assistente
-    const assistantMessage: ChatMessage = {
-      id: uuidv4(),
-      role: "assistant",
-      content: processedResponse.response,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        suggestions: processedResponse.suggestions,
+    // Preparar contexto para o chatbot
+    const chatContext = {
+      user_id: userId,
+      conversation_history: session.messages.slice(-10), // Últimas 10 mensagens
+      user_data: {
+        current_page: session.context.current_page,
+        cart_items: session.context.cart_items || [],
+        preferences: session.context.user_preferences || {},
+        session_duration: calculateSessionDuration(session.context.session_start),
       },
     }
-    session.messages.push(assistantMessage)
 
-    // Atualizar sessão
-    session.lastActivity = new Date().toISOString()
-    chatSessions.set(session.sessionId, session)
+    // Gerar resposta usando Gemini AI
+    const response = await geminiAIService.generateChatResponse(message, chatContext)
 
-    // Limpar sessões antigas (manter apenas últimas 100 mensagens)
-    if (session.messages.length > 100) {
-      session.messages = session.messages.slice(-100)
-    }
-
-    const chatResponse: ChatResponse = {
-      sessionId: session.sessionId,
-      response: processedResponse.response,
-      suggestions: processedResponse.suggestions,
-      context: session.context,
+    // Adicionar resposta do assistente ao histórico
+    session.messages.push({
+      role: "assistant",
+      content: response,
       timestamp: new Date().toISOString(),
-    }
+    })
+
+    // Salvar sessão atualizada
+    chatSessions.set(sessionId, session)
+
+    // Detectar intenções especiais
+    const intent = detectIntent(message)
+    const suggestions = generateSuggestions(intent, session.context)
 
     return NextResponse.json({
       success: true,
-      data: chatResponse,
+      response,
+      session_id: sessionId,
+      intent,
+      suggestions,
+      metadata: {
+        message_count: session.messages.length,
+        session_duration: calculateSessionDuration(session.context.session_start),
+        ai_model: "gemini-1.5-flash",
+      },
     })
   } catch (error) {
     console.error("Erro no chatbot:", error)
+
     return NextResponse.json(
       {
-        success: false,
-        error: "Erro interno do chatbot",
-        details: error instanceof Error ? error.message : "Erro desconhecido",
+        error: "Erro interno do servidor",
+        message: "Desculpe, ocorreu um erro. Tente novamente.",
       },
       { status: 500 },
     )
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const sessionId = searchParams.get("sessionId")
-
-    if (!sessionId) {
-      return NextResponse.json({ success: false, error: "ID da sessão é obrigatório" }, { status: 400 })
-    }
-
-    const session = chatSessions.get(sessionId)
-    if (!session) {
-      return NextResponse.json({ success: false, error: "Sessão não encontrada" }, { status: 404 })
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        sessionId: session.sessionId,
-        messages: session.messages,
-        context: session.context,
-        createdAt: session.createdAt,
-        lastActivity: session.lastActivity,
-      },
-    })
-  } catch (error) {
-    console.error("Erro ao buscar sessão:", error)
-    return NextResponse.json({ success: false, error: "Erro ao buscar sessão" }, { status: 500 })
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const sessionId = searchParams.get("sessionId")
-
-    if (!sessionId) {
-      return NextResponse.json({ success: false, error: "ID da sessão é obrigatório" }, { status: 400 })
-    }
-
-    const deleted = chatSessions.delete(sessionId)
-
-    if (!deleted) {
-      return NextResponse.json({ success: false, error: "Sessão não encontrada" }, { status: 404 })
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Sessão deletada com sucesso",
-    })
-  } catch (error) {
-    console.error("Erro ao deletar sessão:", error)
-    return NextResponse.json({ success: false, error: "Erro ao deletar sessão" }, { status: 500 })
-  }
-}
-
-function getOrCreateSession(sessionId?: string, context?: string): ChatSession {
-  if (sessionId && chatSessions.has(sessionId)) {
-    return chatSessions.get(sessionId)!
-  }
-
-  const newSessionId = sessionId || uuidv4()
-  const newSession: ChatSession = {
-    sessionId: newSessionId,
+function createNewSession(sessionId: string, userId?: string, context: any = {}): ChatSession {
+  const session: ChatSession = {
+    id: sessionId,
+    user_id: userId,
     messages: [],
-    context: context || "Volaron Store - Assistente de Atendimento",
-    createdAt: new Date().toISOString(),
-    lastActivity: new Date().toISOString(),
+    context: {
+      ...context,
+      session_start: new Date().toISOString(),
+    },
+    last_activity: new Date().toISOString(),
   }
 
-  // Adicionar mensagem de sistema inicial
-  const systemMessage: ChatMessage = {
-    id: uuidv4(),
-    role: "system",
-    content: "Olá! Sou o assistente virtual da Volaron Store. Como posso ajudá-lo hoje?",
+  // Mensagem de boas-vindas
+  session.messages.push({
+    role: "assistant",
+    content: "Olá! Sou o assistente virtual da Volaron. Como posso ajudá-lo hoje? 😊",
     timestamp: new Date().toISOString(),
+  })
+
+  return session
+}
+
+function calculateSessionDuration(sessionStart: string): number {
+  return Math.floor((Date.now() - new Date(sessionStart).getTime()) / 1000)
+}
+
+function detectIntent(message: string): string {
+  const lowerMessage = message.toLowerCase()
+
+  if (lowerMessage.includes("preço") || lowerMessage.includes("valor") || lowerMessage.includes("custa")) {
+    return "price_inquiry"
   }
-  newSession.messages.push(systemMessage)
 
-  chatSessions.set(newSessionId, newSession)
-  return newSession
+  if (lowerMessage.includes("entrega") || lowerMessage.includes("frete") || lowerMessage.includes("envio")) {
+    return "shipping_inquiry"
+  }
+
+  if (lowerMessage.includes("produto") || lowerMessage.includes("item")) {
+    return "product_inquiry"
+  }
+
+  if (lowerMessage.includes("pedido") || lowerMessage.includes("compra") || lowerMessage.includes("order")) {
+    return "order_inquiry"
+  }
+
+  if (lowerMessage.includes("problema") || lowerMessage.includes("erro") || lowerMessage.includes("ajuda")) {
+    return "support_request"
+  }
+
+  return "general_inquiry"
 }
 
-function buildChatPrompt(session: ChatSession, currentMessage: string): string {
-  const recentMessages = session.messages.slice(-10) // Últimas 10 mensagens
+function generateSuggestions(intent: string, context: any): string[] {
+  const suggestions = []
 
-  const conversationHistory = recentMessages.map((msg) => `${msg.role}: ${msg.content}`).join("\n")
+  switch (intent) {
+    case "price_inquiry":
+      suggestions.push("Ver produtos em promoção", "Calcular frete", "Formas de pagamento")
+      break
+    case "shipping_inquiry":
+      suggestions.push("Calcular frete para meu CEP", "Prazos de entrega", "Política de devolução")
+      break
+    case "product_inquiry":
+      suggestions.push("Ver categorias", "Produtos mais vendidos", "Lançamentos")
+      break
+    case "order_inquiry":
+      suggestions.push("Rastrear pedido", "Histórico de compras", "Cancelar pedido")
+      break
+    case "support_request":
+      suggestions.push("Falar com atendente", "FAQ", "Política de troca")
+      break
+    default:
+      suggestions.push("Ver produtos", "Ofertas do dia", "Falar com atendente", "Sobre a Volaron")
+  }
 
-  const prompt = `
-Você é um assistente virtual especializado da Volaron Store, uma loja de utilidades domésticas brasileira.
-
-CONTEXTO DA LOJA:
-- Especializada em produtos para casa e jardim
-- Categorias: Jardinagem, Cozinha, Limpeza, Organização, Ferramentas, etc.
-- Atendimento em português brasileiro
-- Foco em qualidade e bom atendimento
-
-INSTRUÇÕES:
-1. Seja prestativo, educado e profissional
-2. Use linguagem natural e amigável
-3. Forneça informações precisas sobre produtos
-4. Sugira produtos relacionados quando apropriado
-5. Ajude com dúvidas sobre pedidos, entrega e políticas
-6. Se não souber algo, seja honesto e ofereça alternativas
-
-HISTÓRICO DA CONVERSA:
-${conversationHistory}
-
-MENSAGEM ATUAL DO USUÁRIO:
-${currentMessage}
-
-FORMATO DE RESPOSTA:
-Responda de forma natural e útil. Se apropriado, inclua sugestões de produtos ou ações.
-
-RESPOSTA:
-`
-
-  return prompt.trim()
+  return suggestions
 }
 
-function processAIResponse(aiResponse: string) {
-  // Extrair sugestões se houver
-  const suggestions: string[] = []
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const sessionId = searchParams.get("sessionId")
 
-  // Procurar por padrões de sugestões na resposta
-  const suggestionPatterns = [
-    /Posso sugerir:?\s*(.+)/i,
-    /Recomendo:?\s*(.+)/i,
-    /Você pode:?\s*(.+)/i,
-    /Que tal:?\s*(.+)/i,
-  ]
-
-  for (const pattern of suggestionPatterns) {
-    const match = aiResponse.match(pattern)
-    if (match) {
-      suggestions.push(match[1].trim())
+  if (sessionId) {
+    const session = chatSessions.get(sessionId)
+    if (session) {
+      return NextResponse.json({
+        session_id: sessionId,
+        message_count: session.messages.length,
+        last_activity: session.last_activity,
+        session_duration: calculateSessionDuration(session.context.session_start),
+      })
+    } else {
+      return NextResponse.json({ error: "Sessão não encontrada" }, { status: 404 })
     }
   }
 
-  // Sugestões padrão se não houver específicas
-  if (suggestions.length === 0) {
-    suggestions.push("Ver produtos em promoção", "Falar com atendente humano", "Consultar status do pedido")
-  }
-
-  return {
-    response: aiResponse.trim(),
-    suggestions: suggestions.slice(0, 3), // Máximo 3 sugestões
-  }
+  return NextResponse.json({
+    endpoint: "Chatbot API",
+    description: "Sistema de chat inteligente para a Volaron Store",
+    active_sessions: chatSessions.size,
+    methods: ["POST", "GET"],
+    features: ["Detecção de intenções", "Sugestões contextuais", "Histórico de conversas"],
+  })
 }
 
 // Limpeza automática de sessões antigas (executar periodicamente)
@@ -273,7 +210,7 @@ setInterval(
     const maxAge = 24 * 60 * 60 * 1000 // 24 horas
 
     for (const [sessionId, session] of chatSessions.entries()) {
-      const lastActivity = new Date(session.lastActivity).getTime()
+      const lastActivity = new Date(session.last_activity).getTime()
       if (now - lastActivity > maxAge) {
         chatSessions.delete(sessionId)
       }

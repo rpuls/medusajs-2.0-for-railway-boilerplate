@@ -13,7 +13,7 @@ importers:
         version: 0.24.1
       '@medusajs/admin':
         specifier: ^7.1.0
-        version: 7.1.0(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(eslint@8.54.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(tailwindcss@3.4.17)(typescript@5.0.2)
+        version: 7.1.0(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(eslint@8.54.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(tailwindcss@3.4.17)(typescript@5.0.2)
       '@medusajs/cache-redis':
         specifier: ^1.8.0
         version: 1.8.0(pg@8.11.0)(redis@4.6.0)
@@ -25,7 +25,7 @@ importers:
         version: 1.0.1(medusa-interfaces@1.3.10)
       '@medusajs/medusa':
         specifier: ^1.20.0
-        version: 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
+        version: 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
       '@medusajs/medusa-cli':
         specifier: ^1.3.0
         version: 1.3.0
@@ -104,15 +104,12 @@ importers:
       typeorm:
         specifier: ^0.3.17
         version: 0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)
-      url:
-        specifier: latest
-        version: 0.11.4
       util:
         specifier: latest
         version: 0.12.5
       uuid:
-        specifier: latest
-        version: 11.1.0
+        specifier: ^9.0.0
+        version: 9.0.0
       winston:
         specifier: ^3.11.0
         version: 3.11.0
@@ -8351,10 +8348,6 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
-  uuid@11.1.0:
-    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
-    hasBin: true
-
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     hasBin: true
@@ -10223,7 +10216,7 @@ snapshots:
     dependencies:
       '@lukeed/csprng': 1.1.0
 
-  '@medusajs/admin-ui@2.1.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(esbuild@0.17.18)(eslint@8.54.0)(typescript@5.0.2)':
+  '@medusajs/admin-ui@2.1.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(esbuild@0.17.18)(eslint@8.54.0)(typescript@5.0.2)':
     dependencies:
       '@babel/parser': 7.22.5
       '@babel/traverse': 7.22.5
@@ -10264,7 +10257,7 @@ snapshots:
       i18next-browser-languagedetector: 7.2.2
       i18next-http-backend: 2.7.3(encoding@0.1.13)
       md5: 2.3.0
-      medusa-react: 9.0.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@tanstack/react-query@4.22.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      medusa-react: 9.0.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@tanstack/react-query@4.22.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       mini-css-extract-plugin: 2.9.2(webpack@5.99.9(@swc/core@1.12.11(@swc/helpers@0.5.17))(esbuild@0.17.18))
       moment: 2.30.1
       path-browserify: 1.0.1
@@ -10335,10 +10328,10 @@ snapshots:
       - webpack-hot-middleware
       - webpack-plugin-serve
 
-  '@medusajs/admin@7.1.0(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(eslint@8.54.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(tailwindcss@3.4.17)(typescript@5.0.2)':
+  '@medusajs/admin@7.1.0(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(eslint@8.54.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(tailwindcss@3.4.17)(typescript@5.0.2)':
     dependencies:
-      '@medusajs/admin-ui': 2.1.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(esbuild@0.17.18)(eslint@8.54.0)(typescript@5.0.2)
-      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
+      '@medusajs/admin-ui': 2.1.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@swc/helpers@0.5.17)(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(csstype@3.1.3)(encoding@0.1.13)(esbuild@0.17.18)(eslint@8.54.0)(typescript@5.0.2)
+      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
       '@medusajs/ui': 1.0.0(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@medusajs/ui-preset': 1.1.4(tailwindcss@3.4.17)
       '@rollup/plugin-alias': 5.0.0(rollup@3.20.7)
@@ -10477,7 +10470,7 @@ snapshots:
     dependencies:
       react: 19.0.0
 
-  '@medusajs/link-modules@0.2.12(@mikro-orm/migrations@5.9.7)(@types/node@22.0.0)(pg@8.16.3)':
+  '@medusajs/link-modules@0.2.12(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/node@22.0.0)(pg@8.16.3)':
     dependencies:
       '@medusajs/modules-sdk': 1.12.12(@types/node@22.0.0)
       '@medusajs/types': 1.11.17
@@ -10593,9 +10586,9 @@ snapshots:
       - supports-color
       - tedious
 
-  '@medusajs/medusa-js@6.1.10(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))':
+  '@medusajs/medusa-js@6.1.10(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))':
     dependencies:
-      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
+      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
       axios: 0.24.0
       cross-env: 5.2.1
       qs: 6.14.0
@@ -10604,10 +10597,10 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))':
+  '@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))':
     dependencies:
       '@medusajs/core-flows': 0.0.4(@types/node@22.0.0)(pg@8.16.3)
-      '@medusajs/link-modules': 0.2.12(@mikro-orm/migrations@5.9.7)(@types/node@22.0.0)(pg@8.16.3)
+      '@medusajs/link-modules': 0.2.12(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/node@22.0.0)(pg@8.16.3)
       '@medusajs/medusa-cli': 1.3.23(@types/node@22.0.0)
       '@medusajs/modules-sdk': 1.12.12(@types/node@22.0.0)
       '@medusajs/orchestration': 0.5.8(@types/node@22.0.0)(pg@8.16.3)
@@ -10639,7 +10632,7 @@ snapshots:
       medusa-core-utils: 1.2.3
       medusa-interfaces: 1.3.10
       medusa-telemetry: 0.0.17
-      medusa-test-utils: 1.1.45(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@medusajs/modules-sdk@1.12.12(@types/node@22.0.0))(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(axios@1.10.0)(express@4.21.2)(pg-god@1.0.12)(pg@8.16.3)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
+      medusa-test-utils: 1.1.45(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@medusajs/modules-sdk@1.12.12(@types/node@22.0.0))(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(axios@1.10.0)(express@4.21.2)(pg-god@1.0.12)(pg@8.16.3)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
       morgan: 1.10.0
       multer: 1.4.5-lts.2
       node-schedule: 2.1.1
@@ -16850,10 +16843,10 @@ snapshots:
 
   medusa-interfaces@1.3.10: {}
 
-  medusa-react@9.0.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@tanstack/react-query@4.22.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  medusa-react@9.0.18(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@tanstack/react-query@4.22.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
-      '@medusajs/medusa-js': 6.1.10(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))
+      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
+      '@medusajs/medusa-js': 6.1.10(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))
       '@tanstack/react-query': 4.22.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -16918,16 +16911,16 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  medusa-test-utils@1.1.45(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@medusajs/modules-sdk@1.12.12(@types/node@22.0.0))(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(axios@1.10.0)(express@4.21.2)(pg-god@1.0.12)(pg@8.16.3)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)):
+  medusa-test-utils@1.1.45(@medusajs/medusa@1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)))(@medusajs/modules-sdk@1.12.12(@types/node@22.0.0))(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(axios@1.10.0)(express@4.21.2)(pg-god@1.0.12)(pg@8.16.3)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0)):
     dependencies:
       '@medusajs/modules-sdk': 1.12.12(@types/node@22.0.0)
       '@medusajs/utils': 1.11.11(@types/node@22.0.0)(pg@8.16.3)
-      '@mikro-orm/migrations': 5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3)
+      '@mikro-orm/migrations': 5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.11.0)
       '@mikro-orm/postgresql': 5.9.7(@mikro-orm/core@5.9.7)(@mikro-orm/migrations@5.9.7)
       medusa-core-utils: 1.2.3
       randomatic: 3.1.1
     optionalDependencies:
-      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7)(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
+      '@medusajs/medusa': 1.20.0(@mikro-orm/core@5.9.7(@mikro-orm/migrations@5.9.7)(@mikro-orm/postgresql@5.9.7))(@mikro-orm/migrations@5.9.7(@mikro-orm/core@5.9.7)(@types/node@22.0.0)(pg@8.16.3))(@types/ioredis-mock@8.2.6(ioredis@5.6.1))(@types/node@22.0.0)(axios@1.10.0)(medusa-interfaces@1.3.10)(pg-god@1.0.12)(typeorm@0.3.17(ioredis@5.6.1)(pg@8.11.0)(redis@4.6.0))
       axios: 1.10.0
       express: 4.21.2
       pg-god: 1.0.12
@@ -19181,8 +19174,6 @@ snapshots:
   utila@0.4.0: {}
 
   utils-merge@1.0.1: {}
-
-  uuid@11.1.0: {}
 
   uuid@8.3.2: {}
 

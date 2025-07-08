@@ -1,214 +1,222 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-
-interface ProductData {
-  name: string
-  category?: string
-  features?: string[]
-  specifications?: any
-  price?: number
-  brand?: string
-  images?: string[]
-  keywords?: string[]
-}
-
-interface GeneratedDescription {
-  title: string
-  shortDescription: string
-  fullDescription: string
-  features: string[]
-  seoTitle: string
-  seoDescription: string
-  keywords: string[]
-  specifications: string[]
-}
+import { geminiAIService } from "@/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
-    const { productData, style = "professional", length = "medium" } = await request.json()
+    const body = await request.json()
+    const { productData, options = {} } = body
 
-    if (!productData || !productData.name) {
-      return NextResponse.json({ success: false, error: "Dados do produto são obrigatórios" }, { status: 400 })
+    if (!productData?.name) {
+      return NextResponse.json({ error: "Nome do produto é obrigatório" }, { status: 400 })
     }
 
-    // Verificar configuração da IA
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: "IA não configurada" }, { status: 500 })
+    // Configurações padrão
+    const defaultOptions = {
+      length: "medium", // short, medium, long
+      tone: "commercial", // commercial, technical, casual
+      include_seo: true,
+      include_benefits: true,
+      target_audience: "geral",
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash-001",
-    })
+    const finalOptions = { ...defaultOptions, ...options }
 
-    // Construir prompt para geração de descrição
-    const prompt = buildDescriptionPrompt(productData, style, length)
+    // Enriquecer dados do produto com informações da Volaron
+    const enrichedProductData = {
+      ...productData,
+      store_context: {
+        name: "Volaron",
+        specialty: "Utilidades domésticas de qualidade",
+        benefits: [
+          "Entrega para todo o Brasil",
+          "Parcelamento em até 12x sem juros",
+          "Entrega local no mesmo dia",
+          "Descontos à vista",
+        ],
+      },
+    }
 
-    // Gerar descrição
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const generatedText = response.text()
+    // Gerar descrição usando Gemini AI
+    const description = await geminiAIService.generateProductDescription(enrichedProductData)
 
-    // Processar resposta
-    const description = parseDescriptionResponse(generatedText, productData)
+    // Processar e otimizar a descrição
+    const processedDescription = processDescription(description, finalOptions)
+
+    // Gerar metadados SEO se solicitado
+    let seoData = null
+    if (finalOptions.include_seo) {
+      seoData = await generateSEOMetadata(productData, description)
+    }
+
+    // Gerar variações da descrição
+    const variations = await generateDescriptionVariations(productData, finalOptions)
 
     return NextResponse.json({
       success: true,
-      data: description,
+      description: processedDescription,
+      seo: seoData,
+      variations,
+      metadata: {
+        word_count: processedDescription.split(" ").length,
+        reading_time: Math.ceil(processedDescription.split(" ").length / 200),
+        tone: finalOptions.tone,
+        length: finalOptions.length,
+        generated_at: new Date().toISOString(),
+      },
     })
   } catch (error) {
     console.error("Erro na geração de descrição:", error)
+
     return NextResponse.json(
       {
-        success: false,
-        error: "Erro interno na geração",
-        details: error instanceof Error ? error.message : "Erro desconhecido",
+        error: "Erro interno do servidor",
+        message: error instanceof Error ? error.message : "Erro desconhecido",
       },
       { status: 500 },
     )
   }
 }
 
-export async function GET(request: NextRequest) {
+function processDescription(description: string, options: any): string {
+  let processed = description.trim()
+
+  // Ajustar comprimento
+  if (options.length === "short" && processed.length > 300) {
+    const sentences = processed.split(". ")
+    processed = sentences.slice(0, 2).join(". ") + "."
+  } else if (options.length === "long" && processed.length < 500) {
+    processed +=
+      "\n\nEste produto da Volaron combina qualidade e praticidade, sendo ideal para uso doméstico. Aproveite nossas condições especiais de pagamento e entrega."
+  }
+
+  // Adicionar call-to-action baseado no tom
+  if (options.tone === "commercial") {
+    processed += "\n\n🛒 Compre agora e aproveite nossas condições especiais!"
+  }
+
+  return processed
+}
+
+async function generateSEOMetadata(productData: any, description: string) {
   try {
-    const { searchParams } = new URL(request.url)
-    const productId = searchParams.get("productId")
-
-    if (!productId) {
-      return NextResponse.json({ success: false, error: "ID do produto é obrigatório" }, { status: 400 })
+    const seoContent = {
+      title: productData.name,
+      description: description.substring(0, 160),
+      keywords: extractKeywords(productData, description),
+      category: productData.category || "Utilidades Domésticas",
     }
 
-    // Em um cenário real, buscaríamos do banco de dados
-    // Por enquanto, retornamos uma descrição de exemplo
-    const mockDescription: GeneratedDescription = {
-      title: "Produto de Exemplo - Volaron Store",
-      shortDescription: "Produto de alta qualidade para uso doméstico",
-      fullDescription: `
-Este produto foi cuidadosamente selecionado pela equipe da Volaron Store para oferecer 
-a melhor experiência aos nossos clientes. Fabricado com materiais de primeira qualidade, 
-combina funcionalidade e durabilidade em um design moderno e elegante.
+    const optimizedSEO = await geminiAIService.optimizeSEO(seoContent)
 
-Ideal para uso doméstico, este produto atende às mais altas exigências de qualidade e 
-performance. Sua construção robusta garante longa vida útil, enquanto seu design 
-intuitivo facilita o uso no dia a dia.
-      `.trim(),
-      features: [
-        "Material de alta qualidade",
-        "Design moderno e funcional",
-        "Fácil de usar e manter",
-        "Durabilidade comprovada",
-      ],
-      seoTitle: "Produto de Exemplo | Volaron Store - Qualidade Garantida",
-      seoDescription:
-        "Descubra o Produto de Exemplo da Volaron Store. Alta qualidade, design moderno e preço justo. Compre agora com entrega rápida!",
-      keywords: ["produto", "qualidade", "casa", "volaron", "utilidades"],
-      specifications: [
-        "Dimensões: Conforme especificação",
-        "Material: Alta qualidade",
-        "Garantia: 12 meses",
-        "Origem: Nacional",
-      ],
+    return {
+      title: optimizedSEO.optimized_title,
+      meta_description: optimizedSEO.meta_description,
+      keywords: optimizedSEO.keywords,
+      schema_markup: generateSchemaMarkup(productData, optimizedSEO),
+    }
+  } catch (error) {
+    console.error("Erro ao gerar SEO:", error)
+    return null
+  }
+}
+
+function extractKeywords(productData: any, description: string): string[] {
+  const keywords = []
+
+  // Adicionar nome do produto
+  if (productData.name) {
+    keywords.push(productData.name.toLowerCase())
+  }
+
+  // Adicionar categoria
+  if (productData.category) {
+    keywords.push(productData.category.toLowerCase())
+  }
+
+  // Adicionar características
+  if (productData.features) {
+    keywords.push(...productData.features.map((f: string) => f.toLowerCase()))
+  }
+
+  // Palavras-chave da Volaron
+  keywords.push("volaron", "utilidades domésticas", "qualidade", "entrega rápida")
+
+  return [...new Set(keywords)] // Remover duplicatas
+}
+
+function generateSchemaMarkup(productData: any, seoData: any) {
+  return {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: productData.name,
+    description: seoData.meta_description,
+    category: productData.category,
+    brand: {
+      "@type": "Brand",
+      name: "Volaron",
+    },
+    offers: {
+      "@type": "Offer",
+      availability: "https://schema.org/InStock",
+      price: productData.price || "0",
+      priceCurrency: "BRL",
+      seller: {
+        "@type": "Organization",
+        name: "Volaron",
+      },
+    },
+  }
+}
+
+async function generateDescriptionVariations(productData: any, options: any): Promise<string[]> {
+  const variations = []
+
+  try {
+    // Variação técnica
+    if (options.tone !== "technical") {
+      const technicalData = { ...productData }
+      const technicalDesc = await geminiAIService.generateProductDescription(technicalData)
+      variations.push({
+        type: "technical",
+        description: technicalDesc.substring(0, 200) + "...",
+      })
     }
 
-    return NextResponse.json({
-      success: true,
-      data: mockDescription,
+    // Variação casual
+    if (options.tone !== "casual") {
+      const casualData = { ...productData }
+      const casualDesc = await geminiAIService.generateProductDescription(casualData)
+      variations.push({
+        type: "casual",
+        description: casualDesc.substring(0, 200) + "...",
+      })
+    }
+
+    // Variação focada em benefícios
+    variations.push({
+      type: "benefits_focused",
+      description: `${productData.name} - Ideal para sua casa! ✨ Qualidade garantida, entrega rápida e parcelamento sem juros. A Volaron oferece os melhores produtos para seu lar.`,
     })
   } catch (error) {
-    console.error("Erro ao buscar descrição:", error)
-    return NextResponse.json({ success: false, error: "Erro ao buscar descrição" }, { status: 500 })
-  }
-}
-
-function buildDescriptionPrompt(productData: ProductData, style: string, length: string): string {
-  const prompt = `
-Você é um especialista em copywriting para e-commerce, especializado em produtos para casa e jardim.
-Crie uma descrição completa e atrativa para o produto da Volaron Store.
-
-DADOS DO PRODUTO:
-Nome: ${productData.name}
-Categoria: ${productData.category || "Não especificada"}
-Características: ${productData.features?.join(", ") || "Não especificadas"}
-Preço: ${productData.price ? `R$ ${productData.price.toFixed(2)}` : "Não informado"}
-Marca: ${productData.brand || "Não especificada"}
-Palavras-chave: ${productData.keywords?.join(", ") || "Não especificadas"}
-
-ESTILO: ${style} (professional, casual, técnico)
-TAMANHO: ${length} (short, medium, long)
-
-INSTRUÇÕES:
-1. Crie um título atrativo e otimizado para SEO
-2. Escreva uma descrição curta (1-2 frases) para listagens
-3. Desenvolva uma descrição completa e persuasiva
-4. Liste características principais em tópicos
-5. Crie título e descrição SEO otimizados
-6. Sugira palavras-chave relevantes
-7. Inclua especificações técnicas quando aplicável
-
-CONTEXTO DA LOJA:
-- Volaron Store: especializada em utilidades domésticas
-- Público: famílias brasileiras, classe média
-- Foco: qualidade, praticidade e bom preço
-- Tom: profissional mas acessível
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "title": "Título do produto",
-  "shortDescription": "Descrição curta para listagens",
-  "fullDescription": "Descrição completa e detalhada",
-  "features": ["característica 1", "característica 2"],
-  "seoTitle": "Título otimizado para SEO (máx 60 chars)",
-  "seoDescription": "Meta descrição SEO (máx 160 chars)",
-  "keywords": ["palavra-chave 1", "palavra-chave 2"],
-  "specifications": ["especificação 1", "especificação 2"]
-}
-
-Responda APENAS com o JSON, sem explicações adicionais.
-`
-
-  return prompt.trim()
-}
-
-function parseDescriptionResponse(generatedText: string, productData: ProductData): GeneratedDescription {
-  try {
-    // Tentar extrair JSON da resposta
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      return {
-        title: parsed.title || productData.name,
-        shortDescription: parsed.shortDescription || "Produto de qualidade da Volaron Store",
-        fullDescription: parsed.fullDescription || "Descrição não disponível",
-        features: parsed.features || [],
-        seoTitle: parsed.seoTitle || `${productData.name} | Volaron Store`,
-        seoDescription: parsed.seoDescription || `Compre ${productData.name} na Volaron Store com qualidade garantida`,
-        keywords: parsed.keywords || [],
-        specifications: parsed.specifications || [],
-      }
-    }
-  } catch (error) {
-    console.error("Erro ao processar resposta da IA:", error)
+    console.error("Erro ao gerar variações:", error)
   }
 
-  // Fallback para descrição básica
-  return {
-    title: productData.name,
-    shortDescription: `${productData.name} - Produto de qualidade da Volaron Store`,
-    fullDescription: `
-O ${productData.name} é um produto cuidadosamente selecionado pela Volaron Store 
-para oferecer a melhor experiência aos nossos clientes. 
+  return variations
+}
 
-${productData.category ? `Categoria: ${productData.category}` : ""}
-${productData.features ? `Características: ${productData.features.join(", ")}` : ""}
-
-Fabricado com materiais de qualidade, este produto combina funcionalidade e 
-durabilidade, sendo ideal para uso doméstico.
-    `.trim(),
-    features: productData.features || ["Qualidade garantida", "Uso doméstico", "Durabilidade"],
-    seoTitle: `${productData.name} | Volaron Store`,
-    seoDescription: `Compre ${productData.name} na Volaron Store. Qualidade garantida e entrega rápida!`,
-    keywords: [productData.name.toLowerCase(), "volaron", "casa", "qualidade"],
-    specifications: ["Material: Conforme especificação", "Garantia: 12 meses"],
-  }
+export async function GET() {
+  return NextResponse.json({
+    endpoint: "Product Description Generator API",
+    description: "Gera descrições otimizadas para produtos usando IA",
+    methods: ["POST"],
+    required_fields: ["productData.name"],
+    optional_fields: ["productData.category", "productData.features", "options"],
+    supported_options: {
+      length: ["short", "medium", "long"],
+      tone: ["commercial", "technical", "casual"],
+      include_seo: "boolean",
+      include_benefits: "boolean",
+      target_audience: "string",
+    },
+  })
 }
