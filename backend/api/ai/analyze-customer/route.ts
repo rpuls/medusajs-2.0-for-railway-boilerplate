@@ -3,81 +3,99 @@ import { geminiAIService } from "@/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, orderHistory, preferences } = await request.json()
+    const body = await request.json()
+    const { customerData } = body
 
-    if (!customerId) {
-      return NextResponse.json({ error: "Customer ID is required" }, { status: 400 })
+    if (!customerData) {
+      return NextResponse.json({ error: "Dados do cliente são obrigatórios" }, { status: 400 })
     }
 
-    // Análise comportamental do cliente usando Gemini AI
+    // Validar estrutura dos dados
+    if (!customerData.purchases || !Array.isArray(customerData.purchases)) {
+      return NextResponse.json({ error: "Histórico de compras é obrigatório" }, { status: 400 })
+    }
+
+    // Análise comportamental do cliente
     const analysis = await geminiAIService.analyzeCustomerBehavior({
-      customerId,
-      orderHistory: orderHistory || [],
-      preferences: preferences || {},
-      context: "volaron-store-ecommerce",
+      purchases: customerData.purchases,
+      browsing_history: customerData.browsing_history || [],
+      demographics: customerData.demographics || {},
+      preferences: customerData.preferences || {},
+      location: customerData.location || "Brasil",
     })
 
-    // Gerar insights personalizados
-    const insights = await geminiAIService.generateInsights({
-      customerData: { customerId, orderHistory, preferences },
-      analysisType: "behavioral-pattern",
-      businessContext: "utilidades-domesticas-jardinagem",
-    })
-
-    // Sugestões de produtos baseadas na análise
-    const productSuggestions = await geminiAIService.suggestProducts({
-      customerProfile: analysis.profile,
-      categories: ["moedores", "escadas", "jardinagem", "raladores", "trituradores"],
-      maxSuggestions: 10,
-    })
+    // Log para monitoramento
+    console.log(`[AI] Análise de cliente concluída - ID: ${customerData.customer_id || "anônimo"}`)
 
     return NextResponse.json({
       success: true,
-      data: {
-        customerAnalysis: analysis,
-        insights: insights,
-        productSuggestions: productSuggestions,
-        timestamp: new Date().toISOString(),
-        confidence: analysis.confidence || 0.85,
+      analysis: {
+        customer_profile: analysis.customer_profile,
+        purchase_patterns: analysis.purchase_patterns,
+        recommendations: analysis.recommendations,
+        risk_assessment: analysis.risk_assessment,
+        lifetime_value_prediction: analysis.lifetime_value_prediction,
+        next_purchase_probability: analysis.next_purchase_probability,
+        preferred_categories: analysis.preferred_categories,
+        seasonal_trends: analysis.seasonal_trends,
+      },
+      metadata: {
+        analysis_date: new Date().toISOString(),
+        model_used: "gemini-1.5-flash-001",
+        confidence_score: analysis.confidence_score || 0.85,
       },
     })
   } catch (error) {
-    console.error("Error analyzing customer:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to analyze customer behavior",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro na análise do cliente:", error)
+
+    if (error.message?.includes("quota")) {
+      return NextResponse.json(
+        { error: "Limite de requisições excedido. Tente novamente em alguns minutos." },
+        { status: 429 },
+      )
+    }
+
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const customerId = searchParams.get("customerId")
+    const customerId = searchParams.get("customer_id")
 
     if (!customerId) {
-      return NextResponse.json({ error: "Customer ID parameter is required" }, { status: 400 })
+      return NextResponse.json({ error: "ID do cliente é obrigatório" }, { status: 400 })
     }
 
-    // Buscar análise existente do cliente
-    const existingAnalysis = await geminiAIService.getCustomerAnalysis(customerId)
+    // Buscar dados do cliente no banco (simulado)
+    const customerData = {
+      customer_id: customerId,
+      purchases: [
+        {
+          product_id: "moedor-carne-22",
+          category: "Moedores",
+          price: 89.9,
+          date: "2024-01-15",
+          rating: 5,
+        },
+      ],
+      demographics: {
+        age_range: "35-45",
+        location: "Birigui, SP",
+        gender: "M",
+      },
+    }
+
+    const analysis = await geminiAIService.analyzeCustomerBehavior(customerData)
 
     return NextResponse.json({
       success: true,
-      data: existingAnalysis || null,
-      timestamp: new Date().toISOString(),
+      customer_id: customerId,
+      analysis,
     })
   } catch (error) {
-    console.error("Error fetching customer analysis:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to fetch customer analysis",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro ao buscar análise do cliente:", error)
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }

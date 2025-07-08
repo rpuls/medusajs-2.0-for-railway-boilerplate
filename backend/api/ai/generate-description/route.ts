@@ -3,168 +3,100 @@ import { geminiAIService } from "@/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
-    const {
-      productName,
-      category,
-      specifications,
-      features,
-      targetAudience,
-      descriptionType = "complete",
-    } = await request.json()
+    const body = await request.json()
+    const { productData } = body
 
-    if (!productName || !category) {
-      return NextResponse.json({ error: "Product name and category are required" }, { status: 400 })
+    if (!productData || !productData.name) {
+      return NextResponse.json({ error: "Dados do produto são obrigatórios (nome mínimo)" }, { status: 400 })
     }
 
-    // Contexto específico da Volaron
-    const businessContext = {
-      storeName: "Volaron",
-      businessType: "utilidades-domesticas-jardinagem",
-      targetMarket: "brasil",
-      categories: {
-        moedores: "Equipamentos para moer grãos, café, temperos",
-        escadas: "Escadas domésticas e profissionais",
-        jardinagem: "Ferramentas e equipamentos para jardim",
-        raladores: "Utensílios para ralar alimentos",
-        trituradores: "Equipamentos para triturar materiais",
-        "serras-de-fita": "Serras para cortes precisos",
-        "cilindros-de-massa": "Equipamentos para massa",
-        lavanderia: "Produtos para lavanderia",
-        "utilidades-domesticas": "Utensílios domésticos diversos",
-        "cozinha-buffet": "Equipamentos para cozinha profissional",
+    // Enriquecer dados do produto com contexto da Volaron
+    const enrichedProductData = {
+      ...productData,
+      store_context: {
+        brand: "Volaron",
+        location: "Birigui, SP",
+        expertise: "Especialista em utilidades domésticas desde 1995",
+        target_audience: "Donas de casa, profissionais da cozinha, jardineiros",
       },
     }
 
-    // Gerar diferentes tipos de descrição
-    const descriptions = await Promise.all([
-      // Descrição principal
-      geminiAIService.generateProductDescription({
-        productName,
-        category,
-        specifications: specifications || {},
-        features: features || [],
-        businessContext,
-        style: "persuasive-informative",
-        length: "medium",
-      }),
+    // Gerar descrição otimizada
+    const description = await geminiAIService.generateProductDescription(enrichedProductData)
 
-      // Descrição curta para listagens
-      geminiAIService.generateProductDescription({
-        productName,
-        category,
-        specifications: specifications || {},
-        features: features || [],
-        businessContext,
-        style: "concise-appealing",
-        length: "short",
-      }),
-
-      // Descrição técnica
-      geminiAIService.generateProductDescription({
-        productName,
-        category,
-        specifications: specifications || {},
-        features: features || [],
-        businessContext,
-        style: "technical-detailed",
-        length: "long",
-      }),
-    ])
-
-    // Gerar tags SEO
-    const seoTags = await geminiAIService.generateSEOTags({
-      productName,
-      category,
-      description: descriptions[0].content,
-      businessContext,
+    // Gerar também SEO metadata
+    const seoData = await geminiAIService.optimizeSEO({
+      title: productData.name,
+      description: description,
+      category: productData.category || "Utilidades Domésticas",
+      keywords: productData.keywords || [],
     })
 
-    // Gerar títulos alternativos
-    const alternativeTitles = await geminiAIService.generateAlternativeTitles({
-      productName,
-      category,
-      features: features || [],
-      maxTitles: 5,
-    })
+    // Log para monitoramento
+    console.log(`[AI] Descrição gerada para produto: ${productData.name}`)
 
     return NextResponse.json({
       success: true,
-      data: {
-        descriptions: {
-          main: descriptions[0],
-          short: descriptions[1],
-          technical: descriptions[2],
-        },
-        seo: {
-          tags: seoTags.tags,
-          metaDescription: seoTags.metaDescription,
-          keywords: seoTags.keywords,
-        },
-        alternativeTitles: alternativeTitles,
-        metadata: {
-          generatedAt: new Date().toISOString(),
-          category: category,
-          targetAudience: targetAudience || "geral",
-        },
+      description,
+      seo: {
+        title: seoData.optimized_title,
+        meta_description: seoData.meta_description,
+        keywords: seoData.keywords,
+        structured_data: seoData.structured_data,
+      },
+      metadata: {
+        generated_at: new Date().toISOString(),
+        model_used: "gemini-1.5-flash-001",
+        word_count: description.split(" ").length,
+        reading_time: Math.ceil(description.split(" ").length / 200), // minutos
       },
     })
   } catch (error) {
-    console.error("Error generating product description:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to generate product description",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro na geração de descrição:", error)
+
+    if (error.message?.includes("quota")) {
+      return NextResponse.json(
+        { error: "Limite de requisições excedido. Tente novamente em alguns minutos." },
+        { status: 429 },
+      )
+    }
+
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const productId = searchParams.get("productId")
-    const category = searchParams.get("category")
+    const productId = searchParams.get("product_id")
 
-    if (!productId && !category) {
-      return NextResponse.json({ error: "Product ID or category parameter is required" }, { status: 400 })
+    if (!productId) {
+      return NextResponse.json({ error: "ID do produto é obrigatório" }, { status: 400 })
     }
 
-    // Buscar descrições existentes ou templates por categoria
-    let templates = {}
-
-    if (category) {
-      templates = await geminiAIService.getDescriptionTemplates(category)
+    // Buscar produto no banco (simulado)
+    const productData = {
+      id: productId,
+      name: "Moedor de Carne Elétrico 22",
+      category: "Moedores",
+      features: ["Motor potente", "Fácil limpeza", "Compacto"],
+      specifications: {
+        power: "500W",
+        material: "Aço inoxidável",
+        capacity: "2kg/min",
+      },
     }
+
+    const description = await geminiAIService.generateProductDescription(productData)
 
     return NextResponse.json({
       success: true,
-      data: {
-        templates: templates,
-        availableStyles: ["persuasive-informative", "concise-appealing", "technical-detailed"],
-        availableLengths: ["short", "medium", "long"],
-        supportedCategories: Object.keys({
-          moedores: true,
-          escadas: true,
-          jardinagem: true,
-          raladores: true,
-          trituradores: true,
-          "serras-de-fita": true,
-          "cilindros-de-massa": true,
-          lavanderia: true,
-          "utilidades-domesticas": true,
-          "cozinha-buffet": true,
-        }),
-      },
+      product_id: productId,
+      description,
+      product_data: productData,
     })
   } catch (error) {
-    console.error("Error fetching description templates:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to fetch description templates",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro ao buscar descrição do produto:", error)
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }

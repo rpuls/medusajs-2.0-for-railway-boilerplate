@@ -62,7 +62,6 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "path": "latest",
-    "perf_hooks": "latest",
     "pg": "^8.11.0",
     "rate-limiter-flexible": "^3.0.0",
     "react": "^19",

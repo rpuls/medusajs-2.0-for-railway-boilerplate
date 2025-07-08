@@ -1,176 +1,130 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { geminiAIService } from "@/services/gemini-ai-studio"
 
-interface ChatSession {
-  sessionId: string
-  userId?: string
-  messages: Array<{
-    role: "user" | "assistant"
-    content: string
-    timestamp: string
-  }>
-  context: {
-    customerProfile?: any
-    currentProducts?: any[]
-    cartItems?: any[]
-    orderHistory?: any[]
-  }
-}
-
-// Armazenamento temporário de sessões (em produção, usar Redis ou banco)
-const chatSessions = new Map<string, ChatSession>()
+// Armazenamento em memória para sessões (em produção, usar Redis)
+const chatSessions = new Map<string, any[]>()
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, userId, context } = await request.json()
+    const body = await request.json()
+    const { message, context, session_id } = body
 
-    if (!message || !sessionId) {
-      return NextResponse.json({ error: "Message and session ID are required" }, { status: 400 })
+    if (!message || typeof message !== "string") {
+      return NextResponse.json({ error: "Mensagem é obrigatória" }, { status: 400 })
     }
 
-    // Recuperar ou criar sessão
-    let session = chatSessions.get(sessionId)
-    if (!session) {
-      session = {
-        sessionId,
-        userId,
-        messages: [],
-        context: context || {},
-      }
+    // Gerar ID de sessão se não fornecido
+    const sessionId = session_id || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Recuperar histórico da sessão
+    const sessionHistory = chatSessions.get(sessionId) || []
+
+    // Contexto específico da Volaron
+    const volaronContext = {
+      store_name: "Volaron",
+      location: "Birigui, SP",
+      specialties: ["Moedores", "Escadas", "Jardinagem", "Utilidades Domésticas"],
+      contact: {
+        phone: "(18) 3643-1990",
+        email: "contato@volaron.com.br",
+        hours: "Segunda à Sexta, 8h às 18h",
+      },
+      policies: {
+        shipping: "Entrega para todo Brasil",
+        warranty: "Garantia de 1 ano em todos os produtos",
+        return: "Troca em até 30 dias",
+      },
+      ...context,
     }
 
-    // Adicionar mensagem do usuário
-    session.messages.push({
-      role: "user",
-      content: message,
-      timestamp: new Date().toISOString(),
+    // Gerar resposta do chatbot
+    const response = await geminiAIService.generateChatResponse(message, {
+      session_history: sessionHistory,
+      user_data: volaronContext,
+      conversation_type: "customer_support",
+      language: "pt-BR",
     })
 
-    // Preparar contexto para o Gemini AI
-    const conversationContext = {
-      businessType: "loja-utilidades-domesticas",
-      storeName: "Volaron",
-      categories: [
-        "moedores",
-        "escadas",
-        "jardinagem",
-        "raladores",
-        "trituradores",
-        "serras-de-fita",
-        "cilindros-de-massa",
-        "lavanderia",
-        "utilidades-domesticas",
-        "cozinha-buffet",
-      ],
-      customerContext: session.context,
-      conversationHistory: session.messages.slice(-10), // Últimas 10 mensagens
+    // Atualizar histórico da sessão
+    sessionHistory.push(
+      { role: "user", content: message, timestamp: new Date().toISOString() },
+      { role: "assistant", content: response, timestamp: new Date().toISOString() },
+    )
+
+    // Manter apenas últimas 20 mensagens
+    if (sessionHistory.length > 20) {
+      sessionHistory.splice(0, sessionHistory.length - 20)
     }
 
-    // Gerar resposta usando Gemini AI
-    const aiResponse = await geminiAIService.generateChatResponse({
-      userMessage: message,
-      context: conversationContext,
-      sessionId: sessionId,
-      responseStyle: "helpful-friendly-professional",
-    })
+    chatSessions.set(sessionId, sessionHistory)
 
-    // Adicionar resposta do assistente
-    session.messages.push({
-      role: "assistant",
-      content: aiResponse.content,
-      timestamp: new Date().toISOString(),
-    })
-
-    // Salvar sessão atualizada
-    chatSessions.set(sessionId, session)
-
-    // Gerar sugestões de produtos se relevante
-    let productSuggestions = null
-    if (aiResponse.shouldSuggestProducts) {
-      productSuggestions = await geminiAIService.suggestProducts({
-        userQuery: message,
-        categories: conversationContext.categories,
-        maxSuggestions: 5,
-      })
-    }
+    // Log para monitoramento
+    console.log(`[Chatbot] Resposta gerada - Sessão: ${sessionId}`)
 
     return NextResponse.json({
       success: true,
-      data: {
-        response: aiResponse.content,
-        sessionId: sessionId,
-        suggestions: aiResponse.suggestions || [],
-        productSuggestions: productSuggestions,
-        metadata: {
-          confidence: aiResponse.confidence || 0.9,
-          responseTime: aiResponse.responseTime,
-          tokensUsed: aiResponse.tokensUsed,
-        },
+      response,
+      session_id: sessionId,
+      metadata: {
+        response_time: new Date().toISOString(),
+        model_used: "gemini-1.5-flash-001",
+        session_length: sessionHistory.length / 2,
       },
     })
   } catch (error) {
-    console.error("Error in chatbot:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to generate chat response",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro no chatbot:", error)
+
+    if (error.message?.includes("quota")) {
+      return NextResponse.json(
+        { error: "Muitas mensagens. Aguarde alguns minutos e tente novamente." },
+        { status: 429 },
+      )
+    }
+
+    return NextResponse.json({ error: "Erro interno do servidor. Tente novamente." }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const sessionId = searchParams.get("sessionId")
+    const sessionId = searchParams.get("session_id")
 
     if (!sessionId) {
-      return NextResponse.json({ error: "Session ID parameter is required" }, { status: 400 })
+      return NextResponse.json({ error: "ID da sessão é obrigatório" }, { status: 400 })
     }
 
-    const session = chatSessions.get(sessionId)
+    const sessionHistory = chatSessions.get(sessionId) || []
 
     return NextResponse.json({
       success: true,
-      data: session || null,
-      timestamp: new Date().toISOString(),
+      session_id: sessionId,
+      history: sessionHistory,
+      message_count: sessionHistory.length,
     })
   } catch (error) {
-    console.error("Error fetching chat session:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to fetch chat session",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro ao buscar histórico:", error)
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const sessionId = searchParams.get("sessionId")
+    const sessionId = searchParams.get("session_id")
 
     if (!sessionId) {
-      return NextResponse.json({ error: "Session ID parameter is required" }, { status: 400 })
+      return NextResponse.json({ error: "ID da sessão é obrigatório" }, { status: 400 })
     }
 
     chatSessions.delete(sessionId)
 
     return NextResponse.json({
       success: true,
-      message: "Chat session deleted successfully",
+      message: "Sessão removida com sucesso",
     })
   } catch (error) {
-    console.error("Error deleting chat session:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to delete chat session",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Erro ao remover sessão:", error)
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }

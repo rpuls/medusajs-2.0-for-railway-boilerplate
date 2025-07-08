@@ -77,9 +77,6 @@ importers:
       path:
         specifier: latest
         version: 0.12.7
-      perf_hooks:
-        specifier: latest
-        version: 0.0.1
       pg:
         specifier: ^8.11.0
         version: 8.11.0
@@ -6724,9 +6721,6 @@ packages:
 
   pause@0.0.1:
     resolution: {integrity: sha512-KG8UEiEVkR3wGEb4m5yZkVCzigAD+cVEJck2CzYZO37ZGJfctvVptVO192MwrtPhzONn6go8ylnOdMhKqi4nfg==}
-
-  perf_hooks@0.0.1:
-    resolution: {integrity: sha512-qG/D9iA4KDme+KF4vCObJy6Bouu3BlQnmJ8jPydVPm32NJBD9ZK1ZNgXSYaZKHkVC1sKSqUiLgFvAZPUiIEnBw==}
 
   pg-cloudflare@1.2.7:
     resolution: {integrity: sha512-YgCtzMH0ptvZJslLM1ffsY4EuGaU0cx4XSdXLRFae8bPP4dS5xL1tNB3k2o/N64cHJpwU7dxKli/nZ2lUa5fLg==}
@@ -17390,8 +17384,6 @@ snapshots:
       util: 0.10.4
 
   pause@0.0.1: {}
-
-  perf_hooks@0.0.1: {}
 
   pg-cloudflare@1.2.7:
     optional: true
