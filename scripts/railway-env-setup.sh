@@ -5,7 +5,7 @@
 
 set -e
 
-echo "⚙️ Configurando variáveis de ambiente no Railway"
+echo "🔧 RAILWAY ENVIRONMENT SETUP"
 echo "============================"
 
 # Cores
@@ -36,20 +36,27 @@ fi
 
 log_info "Configurando variáveis de ambiente para Volaron Store..."
 
-# Função para definir variável
-set_var() {
-    local key=$1
-    local value=$2
-    echo "Setting $key..."
-    railway variables set "$key=$value"
+# Função para definir variável se não existir
+set_var_if_not_exists() {
+    local var_name="$1"
+    local var_value="$2"
+    local description="$3"
+    
+    if railway variables | grep -q "^$var_name"; then
+        log_info "$var_name já configurada"
+    else
+        log_info "Configurando $var_name: $description"
+        echo "$var_value" | railway variables set "$var_name"
+        log_success "$var_name configurada"
+    fi
 }
 
 # Variáveis essenciais do sistema
 log_info "1. Configurando variáveis do sistema..."
 
-set_var "NODE_ENV" "production"
-set_var "HOST" "0.0.0.0"
-set_var "PORT" "3000"
+set_var_if_not_exists "NODE_ENV" "production" "Ambiente de execução"
+set_var_if_not_exists "HOST" "0.0.0.0" "Host da aplicação"
+set_var_if_not_exists "PORT" "3000" "Porta da aplicação"
 
 # Variáveis de segurança
 log_info "2. Configurando variáveis de segurança..."
@@ -73,41 +80,108 @@ fi
 # Variáveis de IA
 log_info "3. Configurando variáveis de IA..."
 
-set_var "GOOGLE_GENERATIVE_AI_API_KEY" "AIzaSyAM7Z6gEhkIRVxzvVI1c_1JbQhlZ9iPwKc"
-set_var "GEMINI_MODEL" "gemini-1.5-flash-001"
-set_var "ENABLE_GEMINI_AI" "true"
-set_var "AI_PROVIDER" "gemini-ai-studio"
+set_var_if_not_exists "ENABLE_GEMINI_AI" "true" "Habilitar Gemini AI"
+set_var_if_not_exists "AI_PROVIDER" "gemini-ai-studio" "Provedor de IA"
+set_var_if_not_exists "GOOGLE_AI_MODEL" "gemini-1.5-flash-001" "Modelo do Gemini"
+set_var_if_not_exists "ENABLE_AI_FEATURES" "true" "Habilitar recursos de IA"
+
+# Variáveis de MCP
+log_info "4. Configurando variáveis de MCP..."
+
+set_var_if_not_exists "MCP_VERBOSE" "false" "Logs verbosos do MCP"
+set_var_if_not_exists "MCP_AUTO_RESTART" "true" "Auto-restart dos servidores MCP"
+set_var_if_not_exists "MCP_HEALTH_CHECK_INTERVAL" "30000" "Intervalo de health check MCP"
+set_var_if_not_exists "MCP_MAX_RESTARTS" "3" "Máximo de restarts MCP"
+set_var_if_not_exists "MCP_LOG_LEVEL" "info" "Nível de log MCP"
+
+# Variáveis de monitoramento
+log_info "5. Configurando variáveis de monitoramento..."
+
+set_var_if_not_exists "MONITOR_ENABLED" "true" "Habilitar monitoramento"
+set_var_if_not_exists "MONITOR_INTERVAL" "60000" "Intervalo de monitoramento"
+set_var_if_not_exists "HEALTH_CHECK_TIMEOUT" "10000" "Timeout do health check"
+
+# Variáveis de performance
+log_info "6. Configurando variáveis de performance..."
+
+set_var_if_not_exists "NEXT_TELEMETRY_DISABLED" "1" "Desabilitar telemetria Next.js"
+set_var_if_not_exists "RAILWAY_HEALTHCHECK_TIMEOUT_SEC" "300" "Timeout do health check Railway"
 
 # URLs dos serviços (baseadas no padrão Railway)
-log_info "4. Configurando URLs dos serviços..."
+log_info "7. Configurando URLs dos serviços..."
 
-set_var "MEDUSA_BACKEND_URL" "https://backend-production-c461d.up.railway.app"
-set_var "STOREFRONT_URL" "https://storefront-production-bd8d.up.railway.app"
-set_var "MEILISEARCH_HOST" "https://meilisearch-production-010d.up.railway.app"
-set_var "MINIO_ENDPOINT" "https://bucket-production-5a5e.up.railway.app"
-set_var "N8N_URL" "https://n8n-automation-production-6e02.up.railway.app"
+set_var_if_not_exists "MEDUSA_BACKEND_URL" "https://backend-production-c461d.up.railway.app" "URL do backend Medusa"
+set_var_if_not_exists "STOREFRONT_URL" "https://storefront-production-bd8d.up.railway.app" "URL do storefront"
+set_var_if_not_exists "MEILISEARCH_HOST" "https://meilisearch-production-010d.up.railway.app" "URL do MeiliSearch"
+set_var_if_not_exists "MINIO_ENDPOINT" "https://bucket-production-5a5e.up.railway.app" "URL do MinIO"
+set_var_if_not_exists "N8N_URL" "https://n8n-automation-production-6e02.up.railway.app" "URL do n8n"
 
-# Volaron específico
-log_info "5. Configurando variáveis específicas do Volaron..."
+# CORS configurações
+log_info "8. Configurando CORS..."
 
-set_var "VOLARON_STORE_NAME" "Volaron"
-set_var "VOLARON_PRIMARY_COLOR" "#1a4d2e"
-set_var "VOLARON_SECONDARY_COLOR" "#ff6b35"
+ADMIN_CORS="https://storefront-production-bd8d.up.railway.app,http://localhost:7001"
+STORE_CORS="https://storefront-production-bd8d.up.railway.app,http://localhost:8000"
+AUTH_CORS="https://backend-production-c461d.up.railway.app,https://backend.railway.internal"
 
-# MCP e Monitoramento
-log_info "6. Configurando variáveis de MCP e Monitoramento..."
+set_var_if_not_exists "ADMIN_CORS" "$ADMIN_CORS" "CORS para admin"
+set_var_if_not_exists "STORE_CORS" "$STORE_CORS" "CORS para store"
+set_var_if_not_exists "AUTH_CORS" "$AUTH_CORS" "CORS para auth"
 
-set_var "MCP_AUTO_RESTART" "true"
-set_var "MCP_HEALTH_CHECK_INTERVAL" "30000"
-set_var "MCP_MAX_RESTARTS" "3"
-set_var "MCP_LOG_LEVEL" "info"
-set_var "MONITOR_ENABLED" "true"
-set_var "MONITOR_INTERVAL" "60000"
+# Verificar variáveis críticas que precisam ser configuradas manualmente
+log_info "9. Verificando variáveis críticas..."
 
-# Performance
-log_info "7. Configurando variáveis de performance..."
+CRITICAL_VARS=(
+    "GEMINI_API_KEY:Chave da API do Gemini AI"
+    "DATABASE_URL:URL do banco PostgreSQL"
+    "REDIS_URL:URL do Redis"
+    "MEILISEARCH_API_KEY:Chave da API do MeiliSearch"
+    "MINIO_ACCESS_KEY:Chave de acesso do MinIO"
+    "MINIO_SECRET_KEY:Chave secreta do MinIO"
+)
 
-set_var "HEALTH_CHECK_TIMEOUT" "10000"
-set_var "NEXT_TELEMETRY_DISABLED" "1"
+missing_critical=0
+for var_info in "${CRITICAL_VARS[@]}"; do
+    var_name="${var_info%%:*}"
+    var_desc="${var_info##*:}"
+    
+    if railway variables | grep -q "^$var_name"; then
+        log_success "$var_name configurada"
+    else
+        log_error "$var_name NÃO configurada - $var_desc"
+        ((missing_critical++))
+    fi
+done
 
-echo "✅ Variáveis de ambiente configuradas!"
+echo ""
+log_info "📊 RESUMO DA CONFIGURAÇÃO"
+echo "========================"
+
+if [ $missing_critical -eq 0 ]; then
+    log_success "✅ Todas as variáveis críticas estão configuradas!"
+    log_info "🚀 Pronto para fazer deploy"
+else
+    log_warning "⚠️ $missing_critical variável(is) crítica(s) precisam ser configuradas manualmente"
+    log_info "Configure as variáveis em falta no Railway Dashboard:"
+    log_info "https://railway.app/dashboard"
+fi
+
+echo ""
+log_info "🔍 Para verificar todas as variáveis:"
+log_info "railway variables"
+echo ""
+log_info "🚀 Para fazer deploy:"
+log_info "railway deploy"
+
+# Salvar configuração atual
+log_info "💾 Salvando configuração atual..."
+railway variables > "railway-variables-$(date +%Y%m%d-%H%M%S).txt"
+log_success "Configuração salva"
+
+echo ""
+if [ $missing_critical -eq 0 ]; then
+    log_success "🎉 Configuração concluída com sucesso!"
+    exit 0
+else
+    log_warning "⚠️ Configuração parcialmente concluída"
+    exit 1
+fi

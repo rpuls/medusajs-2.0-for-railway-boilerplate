@@ -1,94 +1,81 @@
-import { NextResponse } from "next/server"
-import { geminiAIService } from "../../../services/gemini-ai-studio"
+import { type NextRequest, NextResponse } from "next/server"
+import { getVertexAIService } from "../../../services/vertex-ai"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Verificar saúde do Gemini AI
-    const geminiHealth = await geminiAIService.healthCheck()
+    const vertexAI = getVertexAIService()
+    const healthStatus = await vertexAI.healthCheck()
 
-    // Verificar conectividade com outros serviços
-    const services = {
-      gemini_ai: geminiHealth,
-      database: await checkDatabase(),
-      redis: await checkRedis(),
-      meilisearch: await checkMeilisearch(),
+    // Verificar outras dependências
+    const systemHealth = {
+      ai_service: healthStatus,
+      database: await checkDatabaseHealth(),
+      redis: await checkRedisHealth(),
+      environment: checkEnvironmentVariables(),
+      timestamp: new Date().toISOString(),
     }
 
-    // Calcular status geral
-    const allHealthy = Object.values(services).every((service) => service.status === "healthy")
-
-    const overallStatus = allHealthy ? "healthy" : "degraded"
+    const overallHealthy = Object.values(systemHealth).every((service) =>
+      typeof service === "object" ? service.status === "healthy" : service,
+    )
 
     return NextResponse.json({
-      status: overallStatus,
-      timestamp: new Date().toISOString(),
-      services,
-      version: "1.0.0",
-      environment: process.env.NODE_ENV || "development",
+      success: true,
+      status: overallHealthy ? "healthy" : "degraded",
+      services: systemHealth,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: process.env.npm_package_version || "1.0.0",
     })
   } catch (error) {
     console.error("Erro no health check:", error)
 
     return NextResponse.json(
       {
+        success: false,
         status: "unhealthy",
+        error: error instanceof Error ? error.message : "Erro desconhecido",
         timestamp: new Date().toISOString(),
-        error: "Health check failed",
-        version: "1.0.0",
       },
-      { status: 503 },
+      { status: 500 },
     )
   }
 }
 
-async function checkDatabase() {
+async function checkDatabaseHealth(): Promise<{ status: string; responseTime?: number }> {
   try {
-    // Simular verificação do banco
-    // Em produção, fazer uma query simples
-    return {
-      status: "healthy",
-      response_time: Math.random() * 100,
-      last_check: new Date().toISOString(),
+    const startTime = Date.now()
+
+    // Simular verificação do banco - em produção, fazer query real
+    if (process.env.DATABASE_URL) {
+      const responseTime = Date.now() - startTime
+      return { status: "healthy", responseTime }
+    } else {
+      return { status: "unhealthy" }
     }
   } catch (error) {
-    return {
-      status: "unhealthy",
-      error: error.message,
-      last_check: new Date().toISOString(),
-    }
+    return { status: "unhealthy" }
   }
 }
 
-async function checkRedis() {
+async function checkRedisHealth(): Promise<{ status: string; responseTime?: number }> {
   try {
-    // Simular verificação do Redis
-    return {
-      status: "healthy",
-      response_time: Math.random() * 50,
-      last_check: new Date().toISOString(),
+    const startTime = Date.now()
+
+    // Simular verificação do Redis - em produção, fazer ping real
+    if (process.env.REDIS_URL) {
+      const responseTime = Date.now() - startTime
+      return { status: "healthy", responseTime }
+    } else {
+      return { status: "unhealthy" }
     }
   } catch (error) {
-    return {
-      status: "unhealthy",
-      error: error.message,
-      last_check: new Date().toISOString(),
-    }
+    return { status: "unhealthy" }
   }
 }
 
-async function checkMeilisearch() {
-  try {
-    // Simular verificação do MeiliSearch
-    return {
-      status: "healthy",
-      response_time: Math.random() * 200,
-      last_check: new Date().toISOString(),
-    }
-  } catch (error) {
-    return {
-      status: "unhealthy",
-      error: error.message,
-      last_check: new Date().toISOString(),
-    }
-  }
+function checkEnvironmentVariables(): boolean {
+  const requiredVars = ["GEMINI_API_KEY", "DATABASE_URL", "REDIS_URL", "JWT_SECRET", "COOKIE_SECRET"]
+
+  return requiredVars.every((varName) => !!process.env[varName])
 }

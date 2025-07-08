@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚂 Iniciando deploy no Railway - Volaron Store"
+echo "🚀 RAILWAY DEPLOY - VOLARON STORE"
 echo "================================="
 
 # Cores para output
@@ -335,17 +335,16 @@ main() {
     log_info "Todas as verificações passaram. Iniciando deploy..."
     echo ""
     
-    # Configurar variáveis de ambiente
-    log_step "Configurando variáveis de ambiente..."
-    bash scripts/railway-env-setup.sh
-    
     # Deploy
-    log_step "Fazendo deploy..."
-    railway up --detach
+    if ! execute_deploy; then
+        log_error "Falha no deploy"
+        exit 1
+    fi
     
-    # Aguardar deploy
-    log_step "Aguardando deploy..."
-    sleep 60
+    if ! monitor_deploy; then
+        log_error "Falha no monitoramento do deploy"
+        exit 1
+    fi
     
     # Verificações pós-deploy
     echo ""

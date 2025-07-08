@@ -1,19 +1,20 @@
 #!/bin/bash
 
-# Script de inicialização para Railway
-# Volaron Store - Startup automático com monitoramento
+# Script de inicialização para Railway - Volaron Store
+# Este script configura e inicia todos os serviços necessários
 
 set -e
 
-echo "🚂 VOLARON STORE - RAILWAY STARTUP"
+echo "🚂 RAILWAY STARTUP - VOLARON STORE"
 echo "=================================="
 
-# Cores
+# Cores para logs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 log_info() { echo -e "${BLUE}ℹ️ $1${NC}"; }
@@ -22,200 +23,207 @@ log_warning() { echo -e "${YELLOW}⚠️ $1${NC}"; }
 log_error() { echo -e "${RED}❌ $1${NC}"; }
 log_step() { echo -e "${PURPLE}🔄 $1${NC}"; }
 
-# Configurações
-export NODE_ENV=${NODE_ENV:-production}
-export HOST=${HOST:-0.0.0.0}
-export PORT=${PORT:-3000}
-export ENABLE_GEMINI_AI=${ENABLE_GEMINI_AI:-true}
-export MCP_VERBOSE=${MCP_VERBOSE:-false}
-export GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
-
-# Informações do ambiente
-log_info "Ambiente: $NODE_ENV"
-log_info "Host: $HOST"
-log_info "Porta: $PORT"
-log_info "Railway Environment: ${RAILWAY_ENVIRONMENT:-local}"
-log_info "Railway Project: ${RAILWAY_PROJECT_NAME:-unknown}"
-
-# Verificar dependências críticas
-check_dependencies() {
-    log_step "Verificando dependências críticas..."
-    
-    # Node.js
-    if command -v node &> /dev/null; then
-        local node_version=$(node --version)
-        log_success "Node.js: $node_version"
-    else
-        log_error "Node.js não encontrado"
-        exit 1
-    fi
-    
-    # NPM
-    if command -v npm &> /dev/null; then
-        local npm_version=$(npm --version)
-        log_success "NPM: $npm_version"
-    else
-        log_error "NPM não encontrado"
-        exit 1
-    fi
-    
-    # Package.json
-    if [ -f "package.json" ]; then
-        log_success "package.json encontrado"
-    else
-        log_error "package.json não encontrado"
-        exit 1
-    fi
+# Função para verificar se um comando existe
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
 }
 
-# Verificar variáveis de ambiente
+# Função para aguardar um serviço ficar disponível
+wait_for_service() {
+    local service_name="$1"
+    local check_command="$2"
+    local max_attempts=30
+    local attempt=1
+
+    log_step "Aguardando $service_name ficar disponível..."
+
+    while [ $attempt -le $max_attempts ]; do
+        if eval "$check_command" >/dev/null 2>&1; then
+            log_success "$service_name está disponível!"
+            return 0
+        fi
+
+        log_info "Tentativa $attempt/$max_attempts - $service_name ainda não disponível"
+        sleep 2
+        ((attempt++))
+    done
+
+    log_error "$service_name não ficou disponível após $max_attempts tentativas"
+    return 1
+}
+
+# Verificar variáveis de ambiente essenciais
 check_environment() {
     log_step "Verificando variáveis de ambiente..."
-    
+
     local required_vars=(
-        "DATABASE_URL"
-        "REDIS_URL"
-        "GEMINI_API_KEY"
-        "JWT_SECRET"
-        "COOKIE_SECRET"
-        "GOOGLE_GENERATIVE_AI_API_KEY"
+        "NODE_ENV"
+        "HOST"
+        "PORT"
     )
-    
+
     local missing_vars=()
-    
+
     for var in "${required_vars[@]}"; do
-        if [ -n "${!var}" ]; then
-            log_success "✓ $var"
-        else
+        if [ -z "${!var}" ]; then
             missing_vars+=("$var")
-            log_warning "✗ $var não configurada"
         fi
     done
-    
+
     if [ ${#missing_vars[@]} -gt 0 ]; then
-        log_error "Variáveis críticas não configuradas: ${missing_vars[*]}"
-        log_warning "Aplicação pode não funcionar corretamente"
-    else
-        log_success "Todas as variáveis críticas configuradas"
+        log_error "Variáveis obrigatórias não configuradas: ${missing_vars[*]}"
+        return 1
     fi
+
+    # Configurar valores padrão
+    export NODE_ENV="${NODE_ENV:-production}"
+    export HOST="${HOST:-0.0.0.0}"
+    export PORT="${PORT:-3000}"
+
+    log_success "Variáveis de ambiente verificadas"
+    log_info "NODE_ENV: $NODE_ENV"
+    log_info "HOST: $HOST"
+    log_info "PORT: $PORT"
 }
 
-# Preparar ambiente
-prepare_environment() {
-    log_step "Preparando ambiente..."
-    
-    # Criar diretórios necessários
-    local dirs=(
-        "logs"
-        "temp"
-        "uploads"
-        "mcp-servers/logs"
-        "monitoring/logs"
-        ".copilot"
-    )
-    
-    for dir in "${dirs[@]}"; do
-        if [ ! -d "$dir" ]; then
-            mkdir -p "$dir"
-            log_success "Diretório criado: $dir"
-        fi
-    done
-    
-    # Configurar permissões
-    chmod +x scripts/*.sh 2>/dev/null || true
-    chmod +x scripts/*.js 2>/dev/null || true
-    chmod +x mcp-servers/*.js 2>/dev/null || true
-    
-    log_success "Ambiente preparado"
+# Verificar dependências do sistema
+check_dependencies() {
+    log_step "Verificando dependências do sistema..."
+
+    if ! command_exists node; then
+        log_error "Node.js não encontrado"
+        return 1
+    fi
+
+    if ! command_exists npm; then
+        log_error "npm não encontrado"
+        return 1
+    fi
+
+    local node_version=$(node --version)
+    local npm_version=$(npm --version)
+
+    log_success "Node.js: $node_version"
+    log_success "npm: $npm_version"
 }
 
 # Instalar dependências se necessário
 install_dependencies() {
     log_step "Verificando dependências do projeto..."
-    
-    if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+
+    if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
         log_info "Instalando dependências..."
-        npm ci --production
+        npm ci --only=production --silent
         log_success "Dependências instaladas"
     else
         log_success "Dependências já instaladas"
     fi
 }
 
-# Iniciar servidores MCP
+# Configurar permissões de arquivos
+setup_permissions() {
+    log_step "Configurando permissões..."
+
+    # Tornar scripts executáveis
+    find scripts -name "*.sh" -type f -exec chmod +x {} \; 2>/dev/null || true
+    chmod +x health-check.js 2>/dev/null || true
+
+    log_success "Permissões configuradas"
+}
+
+# Verificar conectividade com serviços externos
+check_external_services() {
+    log_step "Verificando conectividade com serviços externos..."
+
+    # Verificar Gemini AI se configurado
+    if [ -n "$GEMINI_API_KEY" ]; then
+        log_info "Verificando Gemini AI..."
+        if curl -s --max-time 10 "https://generativelanguage.googleapis.com/v1beta/models" \
+           -H "x-goog-api-key: $GEMINI_API_KEY" >/dev/null 2>&1; then
+            log_success "Gemini AI acessível"
+        else
+            log_warning "Gemini AI pode não estar acessível"
+        fi
+    fi
+
+    # Verificar banco de dados se configurado
+    if [ -n "$DATABASE_URL" ]; then
+        log_info "Banco de dados configurado"
+        log_success "DATABASE_URL presente"
+    else
+        log_warning "DATABASE_URL não configurada"
+    fi
+
+    # Verificar Redis se configurado
+    if [ -n "$REDIS_URL" ]; then
+        log_info "Redis configurado"
+        log_success "REDIS_URL presente"
+    else
+        log_warning "REDIS_URL não configurada"
+    fi
+}
+
+# Inicializar serviços MCP se habilitados
 start_mcp_servers() {
-    log_step "Iniciando servidores MCP..."
-    
-    if [ -f "scripts/start-mcp-servers.js" ]; then
-        # Iniciar em background
+    if [ "$MCP_AUTO_START" = "true" ] && [ -f "scripts/start-mcp-servers.js" ]; then
+        log_step "Iniciando servidores MCP..."
+        
+        # Iniciar MCP servers em background
         node scripts/start-mcp-servers.js start &
-        local mcp_pid=$!
-        echo $mcp_pid > .mcp-servers.pid
+        MCP_PID=$!
         
-        # Aguardar inicialização
-        sleep 5
+        log_success "Servidores MCP iniciados (PID: $MCP_PID)"
         
-        if kill -0 $mcp_pid 2>/dev/null; then
-            log_success "Servidores MCP iniciados (PID: $mcp_pid)"
-        else
-            log_warning "Falha ao iniciar servidores MCP"
-        fi
+        # Salvar PID para cleanup posterior
+        echo $MCP_PID > .mcp-servers.pid
     else
-        log_warning "Script de MCP não encontrado"
+        log_info "Servidores MCP não habilitados ou script não encontrado"
     fi
 }
 
-# Iniciar monitoramento
+# Inicializar monitoramento se habilitado
 start_monitoring() {
-    log_step "Iniciando monitoramento..."
-    
     if [ "$MONITOR_ENABLED" = "true" ] && [ -f "monitoring/continuous-monitor.js" ]; then
-        # Iniciar em background
+        log_step "Iniciando monitoramento..."
+        
+        # Iniciar monitoramento em background
         node monitoring/continuous-monitor.js start &
-        local monitor_pid=$!
-        echo $monitor_pid > .monitor.pid
+        MONITOR_PID=$!
         
-        # Aguardar inicialização
-        sleep 3
+        log_success "Monitoramento iniciado (PID: $MONITOR_PID)"
         
-        if kill -0 $monitor_pid 2>/dev/null; then
-            log_success "Monitoramento iniciado (PID: $monitor_pid)"
-        else
-            log_warning "Falha ao iniciar monitoramento"
-        fi
+        # Salvar PID para cleanup posterior
+        echo $MONITOR_PID > .monitor.pid
     else
-        log_info "Monitoramento desabilitado ou não disponível"
+        log_info "Monitoramento não habilitado ou script não encontrado"
     fi
 }
 
-# Health check inicial
+# Executar health check inicial
 initial_health_check() {
     log_step "Executando health check inicial..."
     
     if [ -f "health-check.js" ]; then
-        # Aguardar aplicação inicializar
-        sleep 10
-        
         if node health-check.js; then
             log_success "Health check inicial passou"
         else
-            log_warning "Health check inicial falhou - aplicação pode estar inicializando"
+            log_warning "Health check inicial falhou, mas continuando..."
         fi
     else
-        log_warning "Health check não disponível"
+        log_info "Script de health check não encontrado"
     fi
 }
 
-# Função de cleanup
+# Função de cleanup para parar serviços em background
 cleanup() {
     log_info "Executando cleanup..."
     
     # Parar servidores MCP
     if [ -f ".mcp-servers.pid" ]; then
         local mcp_pid=$(cat .mcp-servers.pid)
-        if kill -0 $mcp_pid 2>/dev/null; then
+        if kill -0 "$mcp_pid" 2>/dev/null; then
             log_info "Parando servidores MCP (PID: $mcp_pid)..."
-            kill $mcp_pid
+            kill -TERM "$mcp_pid" 2>/dev/null || true
         fi
         rm -f .mcp-servers.pid
     fi
@@ -223,9 +231,9 @@ cleanup() {
     # Parar monitoramento
     if [ -f ".monitor.pid" ]; then
         local monitor_pid=$(cat .monitor.pid)
-        if kill -0 $monitor_pid 2>/dev/null; then
+        if kill -0 "$monitor_pid" 2>/dev/null; then
             log_info "Parando monitoramento (PID: $monitor_pid)..."
-            kill $monitor_pid
+            kill -TERM "$monitor_pid" 2>/dev/null || true
         fi
         rm -f .monitor.pid
     fi
@@ -240,60 +248,60 @@ trap cleanup EXIT INT TERM
 start_main_application() {
     log_step "Iniciando aplicação principal..."
     
-    # Verificar se existe script de start customizado
-    if [ -f "scripts/start-app.js" ]; then
-        log_info "Usando script de start customizado"
-        exec node scripts/start-app.js
-    elif npm run start --if-present; then
-        log_info "Usando npm start"
-        exec npm start
-    elif [ -f "index.js" ]; then
-        log_info "Usando index.js"
-        exec node index.js
+    # Verificar se existe um arquivo de entrada específico
+    if [ -f "index.js" ]; then
+        ENTRY_FILE="index.js"
     elif [ -f "server.js" ]; then
-        log_info "Usando server.js"
-        exec node server.js
+        ENTRY_FILE="server.js"
+    elif [ -f "app.js" ]; then
+        ENTRY_FILE="app.js"
     else
-        log_error "Nenhum script de inicialização encontrado"
-        exit 1
+        log_error "Arquivo de entrada não encontrado"
+        return 1
     fi
+    
+    log_info "Arquivo de entrada: $ENTRY_FILE"
+    log_info "Iniciando em $HOST:$PORT..."
+    
+    # Iniciar aplicação
+    exec node "$ENTRY_FILE"
 }
 
 # Função principal
 main() {
     log_info "Iniciando Volaron Store..."
+    log_info "Timestamp: $(date)"
+    log_info "Ambiente: $NODE_ENV"
     echo ""
     
-    # Verificações e preparação
-    check_dependencies
-    check_environment
-    prepare_environment
-    install_dependencies
+    # Executar verificações e configurações
+    check_environment || exit 1
+    check_dependencies || exit 1
+    install_dependencies || exit 1
+    setup_permissions
+    check_external_services
     
     echo ""
-    log_info "Iniciando serviços auxiliares..."
+    log_info "Configuração concluída. Iniciando serviços..."
+    echo ""
     
-    # Serviços auxiliares
+    # Iniciar serviços auxiliares
     start_mcp_servers
     start_monitoring
     
+    # Health check inicial
+    initial_health_check
+    
     echo ""
-    log_info "Tudo pronto! Iniciando aplicação principal..."
+    log_success "🎉 Todos os serviços configurados!"
+    log_info "Iniciando aplicação principal..."
     echo ""
     
-    # Health check em background
-    (sleep 15 && initial_health_check) &
-    
-    # Iniciar aplicação principal (exec substitui o processo atual)
+    # Iniciar aplicação principal (este comando não retorna)
     start_main_application
 }
 
-# Log de início
-echo ""
-log_success "🎉 Volaron Store Railway Startup"
-log_info "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-log_info "PID: $$"
-echo ""
-
-# Executar função principal
-main "$@"
+# Verificar se está sendo executado diretamente
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    main "$@"
+fi

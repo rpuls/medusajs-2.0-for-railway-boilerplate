@@ -73,7 +73,7 @@
     "typeorm": "^0.3.17",
     "url": "latest",
     "util": "latest",
-    "uuid": "^9.0.0",
+    "uuid": "latest",
     "winston": "^3.11.0",
     "ws": "^8.14.0"
   },
