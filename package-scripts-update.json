@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "migrate:deps": "node scripts/migrate-dependencies.js",
+    "migrate:env": "node scripts/update-env-vars.js",
+    "migrate:verify": "node scripts/verify-migration.js",
+    "migrate:full": "npm run migrate:deps && npm run migrate:env && npm run migrate:verify",
+    "migrate:quick": "npm uninstall @google-cloud/aiplatform google-auth-library && npm install @google/generative-ai",
+    "migrate:test": "node -e \"try { require('@google/generative-ai'); console.log('✅ OK'); } catch(e) { console.log('❌', e.message); }\"",
+    "migrate:backup": "cp package.json package.json.backup && cp .env .env.backup 2>/dev/null || true",
+    "migrate:restore": "cp package.json.backup package.json && cp .env.backup .env && npm install",
+    "migrate:clean": "rm -f *.backup .env.gemini-template && npm cache clean --force"
+  }
+}

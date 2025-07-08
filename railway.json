@@ -1,0 +1,47 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && chmod +x scripts/railway-auto-setup.sh && ./scripts/railway-auto-setup.sh",
+    "watchPatterns": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json", "**/*.md"]
+  },
+  "deploy": {
+    "startCommand": "chmod +x start-railway.sh && ./start-railway.sh",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "HOST": "0.0.0.0",
+        "PORT": "3000",
+        "ENABLE_GEMINI_AI": "true",
+        "AI_PROVIDER": "gemini-ai-studio",
+        "MCP_VERBOSE": "false",
+        "RAILWAY_HEALTHCHECK_TIMEOUT_SEC": "300"
+      }
+    },
+    "development": {
+      "variables": {
+        "NODE_ENV": "development",
+        "HOST": "0.0.0.0",
+        "PORT": "3000",
+        "ENABLE_GEMINI_AI": "true",
+        "AI_PROVIDER": "gemini-ai-studio",
+        "MCP_VERBOSE": "true"
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "backend",
+      "source": {
+        "repo": "exzosdigital/volaron-project",
+        "branch": "railway-automation"
+      }
+    }
+  ]
+}
