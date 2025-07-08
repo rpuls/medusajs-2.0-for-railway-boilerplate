@@ -1,101 +1,92 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { geminiAIService } from "@/services/gemini-ai-studio"
+import { geminiAIService } from "@/backend/services/gemini-ai-studio"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { customerId, customerData } = body
+    const { customerId, orderHistory, preferences } = await request.json()
 
-    if (!customerData) {
-      return NextResponse.json({ error: "Dados do cliente são obrigatórios" }, { status: 400 })
+    if (!customerId) {
+      return NextResponse.json({ error: "Customer ID is required" }, { status: 400 })
     }
 
-    // Validar estrutura dos dados
-    const requiredFields = ["purchases"]
-    for (const field of requiredFields) {
-      if (!customerData[field]) {
-        return NextResponse.json({ error: `Campo obrigatório: ${field}` }, { status: 400 })
+    const analysisPrompt = `
+      Analyze this customer profile and provide insights:
+      
+      Customer ID: ${customerId}
+      Order History: ${JSON.stringify(orderHistory)}
+      Preferences: ${JSON.stringify(preferences)}
+      
+      Please provide:
+      1. Customer behavior patterns
+      2. Purchase recommendations
+      3. Risk assessment (churn probability)
+      4. Personalization suggestions
+      5. Marketing campaign recommendations
+      
+      Format the response as JSON with clear categories.
+    `
+
+    const analysis = await geminiAIService.generateContent(analysisPrompt)
+
+    // Parse the AI response
+    let parsedAnalysis
+    try {
+      parsedAnalysis = JSON.parse(analysis)
+    } catch {
+      // If not valid JSON, structure the response
+      parsedAnalysis = {
+        behaviorPatterns: analysis.split("\n").slice(0, 3),
+        recommendations: analysis.split("\n").slice(3, 6),
+        riskAssessment: "Low",
+        personalization: analysis.split("\n").slice(6, 9),
+        marketingCampaigns: analysis.split("\n").slice(9, 12),
       }
-    }
-
-    // Analisar comportamento do cliente usando Gemini AI
-    const analysis = await geminiAIService.analyzeCustomerBehavior({
-      purchases: customerData.purchases,
-      browsing_history: customerData.browsing_history || [],
-      demographics: customerData.demographics || {},
-    })
-
-    // Enriquecer análise com dados do MedusaJS
-    const enrichedAnalysis = {
-      ...analysis,
-      customer_id: customerId,
-      analysis_date: new Date().toISOString(),
-      recommendations_count: analysis.recommendations?.length || 0,
-      insights_count: analysis.insights?.length || 0,
-      confidence_score: calculateConfidenceScore(customerData),
-      next_actions: generateNextActions(analysis, customerData),
     }
 
     return NextResponse.json({
       success: true,
-      analysis: enrichedAnalysis,
-      metadata: {
-        processing_time: Date.now(),
-        ai_model: "gemini-1.5-flash",
-        version: "1.0.0",
-      },
+      customerId,
+      analysis: parsedAnalysis,
+      timestamp: new Date().toISOString(),
+      aiProvider: "gemini-1.5-flash",
     })
   } catch (error) {
-    console.error("Erro na análise do cliente:", error)
-
+    console.error("Customer analysis error:", error)
     return NextResponse.json(
       {
-        error: "Erro interno do servidor",
-        message: error instanceof Error ? error.message : "Erro desconhecido",
+        error: "Failed to analyze customer",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     )
   }
 }
 
-function calculateConfidenceScore(customerData: any): number {
-  let score = 0
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const customerId = searchParams.get("customerId")
 
-  // Pontuação baseada na quantidade de dados disponíveis
-  if (customerData.purchases?.length > 0) score += 40
-  if (customerData.browsing_history?.length > 0) score += 30
-  if (customerData.demographics && Object.keys(customerData.demographics).length > 0) score += 20
-  if (customerData.purchases?.length > 5) score += 10 // Histórico robusto
-
-  return Math.min(score, 100)
-}
-
-function generateNextActions(analysis: any, customerData: any): string[] {
-  const actions = []
-
-  if (analysis.recommendations?.length > 0) {
-    actions.push("Enviar recomendações personalizadas por email")
+  if (!customerId) {
+    return NextResponse.json({ error: "Customer ID parameter is required" }, { status: 400 })
   }
 
-  if (customerData.purchases?.length === 0) {
-    actions.push("Oferecer desconto para primeira compra")
+  try {
+    // Here you would typically fetch from your database
+    // For now, return a sample analysis
+    return NextResponse.json({
+      success: true,
+      customerId,
+      lastAnalysis: {
+        behaviorPatterns: ["Frequent buyer", "Price-sensitive", "Mobile-first shopper"],
+        recommendations: ["Home & Garden products", "Seasonal items", "Bundle deals"],
+        riskAssessment: "Low",
+        personalization: ["Email campaigns", "Product recommendations", "Loyalty program"],
+        marketingCampaigns: ["Seasonal promotions", "Cross-sell campaigns", "Retention offers"],
+      },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error("Error fetching customer analysis:", error)
+    return NextResponse.json({ error: "Failed to fetch customer analysis" }, { status: 500 })
   }
-
-  if (customerData.purchases?.length > 3) {
-    actions.push("Convidar para programa de fidelidade")
-  }
-
-  actions.push("Agendar follow-up em 7 dias")
-
-  return actions
-}
-
-export async function GET() {
-  return NextResponse.json({
-    endpoint: "Customer Analysis API",
-    description: "Analisa comportamento de clientes usando IA",
-    methods: ["POST"],
-    required_fields: ["customerData.purchases"],
-    optional_fields: ["customerData.browsing_history", "customerData.demographics"],
-  })
 }
