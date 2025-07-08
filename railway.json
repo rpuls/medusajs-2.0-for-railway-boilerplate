@@ -1,0 +1,33 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && chmod +x scripts/railway-auto-setup.sh && ./scripts/railway-auto-setup.sh",
+    "watchPatterns": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.json"]
+  },
+  "deploy": {
+    "startCommand": "./start-railway.sh",
+    "healthcheckPath": "/api/copilot/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "ENABLE_GEMINI_AI": "true",
+        "AI_PROVIDER": "gemini-ai-studio",
+        "MCP_VERBOSE": "false"
+      }
+    },
+    "development": {
+      "variables": {
+        "NODE_ENV": "development",
+        "ENABLE_GEMINI_AI": "true",
+        "AI_PROVIDER": "gemini-ai-studio",
+        "MCP_VERBOSE": "true"
+      }
+    }
+  }
+}

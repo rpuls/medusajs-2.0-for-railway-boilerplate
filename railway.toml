@@ -1,0 +1,19 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "./start-railway.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[environments.production]
+variables = { NODE_ENV = "production", ENABLE_GEMINI_AI = "true", AI_PROVIDER = "gemini-ai-studio", MCP_VERBOSE = "false", HOST = "0.0.0.0", PORT = "3000", MEDUSA_BACKEND_URL = "https://backend-production-c461d.up.railway.app", STOREFRONT_URL = "https://storefront-production-bd8d.up.railway.app", MEILISEARCH_HOST = "https://meilisearch-production-010d.up.railway.app", MINIO_ENDPOINT = "https://bucket-production-5a5e.up.railway.app", N8N_URL = "https://n8n-automation-production-6e02.up.railway.app", GOOGLE_AI_MODEL = "gemini-1.5-flash-001", ENABLE_AI_FEATURES = "true", MCP_AUTO_RESTART = "true", MCP_HEALTH_CHECK_INTERVAL = "30000", MCP_MAX_RESTARTS = "3", MCP_LOG_LEVEL = "info", MONITOR_ENABLED = "true", MONITOR_INTERVAL = "60000", HEALTH_CHECK_TIMEOUT = "10000", NEXT_TELEMETRY_DISABLED = "1" }
+
+[environments.development]
+variables = { NODE_ENV = "development", ENABLE_GEMINI_AI = "true", AI_PROVIDER = "gemini-ai-studio", MCP_VERBOSE = "true" }
+
+[networking]
+serviceName = "backend"

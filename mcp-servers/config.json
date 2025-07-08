@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "volaron-store": {
+      "command": "node",
+      "args": ["./mcp-servers/volaron-store-server.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "MEDUSA_BACKEND_URL": "https://backend-production-c461d.up.railway.app",
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    },
+    "gemini-ai": {
+      "command": "node",
+      "args": ["./mcp-servers/gemini-ai-server.js"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "GOOGLE_AI_MODEL": "gemini-1.5-flash-001",
+        "NODE_ENV": "production"
+      }
+    },
+    "analytics": {
+      "command": "node",
+      "args": ["./mcp-servers/analytics-server.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "ANALYTICS_DB_URL": "${DATABASE_URL}"
+      }
+    }
+  },
+  "settings": {
+    "autoRestart": true,
+    "healthCheckInterval": 30000,
+    "logLevel": "info",
+    "maxRestarts": 3
+  }
+}
