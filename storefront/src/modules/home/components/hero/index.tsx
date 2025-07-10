@@ -16,7 +16,7 @@ const Hero = () => {
             level="h2"
             className="text-3xl leading-10 text-ui-fg-subtle font-normal"
           >
-            Twój sklep z najlepszymi akcesoriami do kawy
+            Twój sklep z najlepszymi akcesoriami do kawy i nie tylko
           </Heading>
         </span>
       </div>
