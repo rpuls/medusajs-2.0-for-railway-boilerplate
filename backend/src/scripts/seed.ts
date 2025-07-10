@@ -89,7 +89,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
   await createTaxRegionsWorkflow(container).run({
     input: countries.map((country_code) => ({
       country_code,
-      provider_id: "tp_system"
+      provider_id: "tp_system",
     })),
   });
   logger.info("Finished seeding tax regions.");
@@ -122,24 +122,39 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
 
+  // Link InPost fulfillment provider if configured
+  const inpostApiKey = process.env.INPOST_API_KEY;
+  const inpostOrgId = process.env.INPOST_ORGANIZATION_ID;
+
+  if (inpostApiKey && inpostOrgId) {
+    await link.create({
+      [Modules.STOCK_LOCATION]: {
+        stock_location_id: stockLocation.id,
+      },
+      [Modules.FULFILLMENT]: {
+        fulfillment_provider_id: "inpost_inpost",
+      },
+    });
+  }
+
   logger.info("Seeding fulfillment data...");
   const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({
-    type: "default"
-  })
-  let shippingProfile = shippingProfiles.length ? shippingProfiles[0] : null
+    type: "default",
+  });
+  let shippingProfile = shippingProfiles.length ? shippingProfiles[0] : null;
 
   if (!shippingProfile) {
     const { result: shippingProfileResult } =
-    await createShippingProfilesWorkflow(container).run({
-      input: {
-        data: [
-          {
-            name: "Default Shipping Profile",
-            type: "default",
-          },
-        ],
-      },
-    });
+      await createShippingProfilesWorkflow(container).run({
+        input: {
+          data: [
+            {
+              name: "Default Shipping Profile",
+              type: "default",
+            },
+          ],
+        },
+      });
     shippingProfile = shippingProfileResult[0];
   }
 
@@ -178,6 +193,10 @@ export default async function seedDemoData({ container }: ExecArgs) {
             country_code: "it",
             type: "country",
           },
+          {
+            country_code: "pl",
+            type: "country",
+          },
         ],
       },
     ],
@@ -192,85 +211,161 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
 
+  const shippingOptions = [
+    {
+      name: "Standard Shipping",
+      price_type: "flat",
+      provider_id: "manual_manual",
+      service_zone_id: fulfillmentSet.service_zones[0].id,
+      shipping_profile_id: shippingProfile.id,
+      type: {
+        label: "Standard",
+        description: "Ship in 2-3 days.",
+        code: "standard",
+      },
+      prices: [
+        {
+          currency_code: "usd",
+          amount: 10,
+        },
+        {
+          currency_code: "eur",
+          amount: 10,
+        },
+        {
+          region_id: region.id,
+          amount: 10,
+        },
+      ],
+      rules: [
+        {
+          attribute: "enabled_in_store",
+          value: "true",
+          operator: "eq",
+        },
+        {
+          attribute: "is_return",
+          value: "false",
+          operator: "eq",
+        },
+      ],
+    },
+    {
+      name: "Express Shipping",
+      price_type: "flat",
+      provider_id: "manual_manual",
+      service_zone_id: fulfillmentSet.service_zones[0].id,
+      shipping_profile_id: shippingProfile.id,
+      type: {
+        label: "Express",
+        description: "Ship in 24 hours.",
+        code: "express",
+      },
+      prices: [
+        {
+          currency_code: "usd",
+          amount: 10,
+        },
+        {
+          currency_code: "eur",
+          amount: 10,
+        },
+        {
+          region_id: region.id,
+          amount: 10,
+        },
+      ],
+      rules: [
+        {
+          attribute: "enabled_in_store",
+          value: "true",
+          operator: "eq",
+        },
+        {
+          attribute: "is_return",
+          value: "false",
+          operator: "eq",
+        },
+      ],
+    },
+  ];
+
+  // Add InPost shipping options if configured
+  if (inpostApiKey && inpostOrgId) {
+    shippingOptions.push(
+      {
+        name: "InPost Locker",
+        price_type: "calculated",
+        provider_id: "inpost_inpost",
+        service_zone_id: fulfillmentSet.service_zones[0].id,
+        shipping_profile_id: shippingProfile.id,
+        type: {
+          label: "InPost Locker",
+          description: "Delivery to InPost parcel locker.",
+          code: "inpost-locker",
+        },
+        prices: [
+          {
+            currency_code: "eur",
+            amount: 999, // 9.99 EUR in cents (will be calculated)
+          },
+          {
+            region_id: region.id,
+            amount: 999,
+          },
+        ],
+        rules: [
+          {
+            attribute: "enabled_in_store",
+            value: "true",
+            operator: "eq",
+          },
+          {
+            attribute: "is_return",
+            value: "false",
+            operator: "eq",
+          },
+        ],
+      },
+      {
+        name: "InPost Courier",
+        price_type: "calculated",
+        provider_id: "inpost_inpost",
+        service_zone_id: fulfillmentSet.service_zones[0].id,
+        shipping_profile_id: shippingProfile.id,
+        type: {
+          label: "InPost Courier",
+          description: "InPost courier delivery to your address.",
+          code: "inpost-courier",
+        },
+        prices: [
+          {
+            currency_code: "eur",
+            amount: 1999, // 19.99 EUR in cents (will be calculated)
+          },
+          {
+            region_id: region.id,
+            amount: 1999,
+          },
+        ],
+        rules: [
+          {
+            attribute: "enabled_in_store",
+            value: "true",
+            operator: "eq",
+          },
+          {
+            attribute: "is_return",
+            value: "false",
+            operator: "eq",
+          },
+        ],
+      }
+    );
+  }
+
   await createShippingOptionsWorkflow(container).run({
-    input: [
-      {
-        name: "Standard Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Standard",
-          description: "Ship in 2-3 days.",
-          code: "standard",
-        },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
-      },
-      {
-        name: "Express Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Express",
-          description: "Ship in 24 hours.",
-          code: "express",
-        },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
-      },
-    ],
+    input: shippingOptions,
   });
   logger.info("Finished seeding fulfillment data.");
 
