@@ -72,12 +72,19 @@ const SolanaPayment: React.FC<SolanaPaymentProps> = ({ cart }) => {
 
   // Create a Solana payment URL for the QR code
   useEffect(() => {
-    if (solana_one_time_address && remainingAmount > 0) {
-      const paymentUrl = `solana:${solana_one_time_address}?amount=${remainingAmount.toFixed(9)}`
-      setQrCodeUrl(paymentUrl)
+    if (solana_one_time_address && remainingAmount > 0 && paymentSession?.id) {
+      // NOTE: Parameterized payment URL, does no longer seem to be supported by the majority of Solana wallets. Using naked wallet address instead.
+      // const reference = paymentSession.id
+      // const formattedAmount = parseFloat(remainingAmount.toFixed(9)).toString()
+      // const message = `Order for ${cart.total} ${cart.currency_code}`
+      // let paymentUrl = `solana:${solana_one_time_address}?amount=${formattedAmount}`
+      // paymentUrl += `&reference=${reference}`
+      // paymentUrl += `&message=${encodeURIComponent(message)}`
+      
+      setQrCodeUrl(solana_one_time_address)
     }
     setIsLoading(false)
-  }, [solana_one_time_address, remainingAmount])
+  }, [solana_one_time_address, remainingAmount, paymentSession?.id, cart.total, cart.currency_code])
 
   // Calculate and update countdown timer
   useEffect(() => {
