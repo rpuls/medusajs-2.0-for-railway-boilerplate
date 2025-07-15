@@ -24,13 +24,12 @@
     "@medusajs/admin-sdk": "latest",
     "@medusajs/cli": "latest",
     "@medusajs/core-flows": "latest",
-    "@medusajs/dashboard": "latest",
     "@medusajs/framework": "latest",
     "@medusajs/medusa": "latest",
+    "@medusajs/dashboard": "latest",
     "@medusajs/notification-sendgrid": "latest",
     "@medusajs/payment-stripe": "latest",
     "@medusajs/workflow-engine-redis": "latest",
-    "@medusajs/workflows-sdk": "^2.8.7",
     "@mikro-orm/core": "6.4.3",
     "@mikro-orm/knex": "6.4.3",
     "@mikro-orm/migrations": "6.4.3",
@@ -42,8 +41,7 @@
     "minio": "^8.0.3",
     "pg": "^8.13.1",
     "resend": "4.0.1",
-    "ulid": "^2.3.0",
-    "zod": "^3.25.76"
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@medusajs/test-utils": "latest",
