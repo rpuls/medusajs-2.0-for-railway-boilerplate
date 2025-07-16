@@ -1,8 +1,8 @@
-import checkPaymentsJob from '../modules/medusa-payment-solana/src/jobs/check-payment'
+import { checkPaymentsJob } from 'medusa-payment-solana';
 
-export default checkPaymentsJob
+export default checkPaymentsJob;
 
 export const config = {
   name: 'check-solana-payments',
   schedule: '*/1 * * * *', // Runs every 1 minutes
-}
+};
