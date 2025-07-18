@@ -37,7 +37,7 @@
     "@react-email/components": "^0.0.26",
     "@rokmohar/medusa-plugin-meilisearch": "^1.1.4",
     "awilix": "^8.0.1",
-    "medusa-payment-solana": "^0.2.3",
+    "medusa-payment-solana": "^0.2.4",
     "medusajs-launch-utils": "^0.0.16",
     "minio": "^8.0.3",
     "pg": "^8.13.1",

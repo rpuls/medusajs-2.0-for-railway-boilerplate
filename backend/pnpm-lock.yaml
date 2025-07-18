@@ -57,8 +57,8 @@ importers:
         specifier: ^8.0.1
         version: 8.0.1
       medusa-payment-solana:
-        specifier: ^0.2.3
-        version: 0.2.3(@medusajs/framework@2.8.4(@medusajs/cli@2.8.4(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@mikro-orm/cli@6.4.3(pg@8.16.0))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@medusajs/medusa@2.8.4(cpjksnrtp7n5r5tk63ubbmpnli))(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
+        specifier: ^0.2.4
+        version: 0.2.4(@medusajs/framework@2.8.4(@medusajs/cli@2.8.4(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@mikro-orm/cli@6.4.3(pg@8.16.0))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@medusajs/medusa@2.8.4(cpjksnrtp7n5r5tk63ubbmpnli))(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
       medusajs-launch-utils:
         specifier: ^0.0.16
         version: 0.0.16
@@ -5903,8 +5903,8 @@ packages:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
     engines: {node: '>= 0.6'}
 
-  medusa-payment-solana@0.2.3:
-    resolution: {integrity: sha512-V43BtcOza/GIDASZdEopt0wfYVwdMRtgk+vC9ugf0AGQEYfac9OGTiJt9bY+NEaefl+4PeF4wzaAIu2DajtjTg==}
+  medusa-payment-solana@0.2.4:
+    resolution: {integrity: sha512-2vBKfg3MGHzVvUNrSyFkqN/Yfof8GjKCG4xhJHz0wVz0k5TB0+uuKs8Oyri+x11g65IaqpvQ9iZkooQXMgWiow==}
     peerDependencies:
       '@medusajs/framework': ^2.8.4
       '@medusajs/medusa': ^2.8.4
@@ -14943,7 +14943,7 @@ snapshots:
 
   media-typer@0.3.0: {}
 
-  medusa-payment-solana@0.2.3(@medusajs/framework@2.8.4(@medusajs/cli@2.8.4(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@mikro-orm/cli@6.4.3(pg@8.16.0))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@medusajs/medusa@2.8.4(cpjksnrtp7n5r5tk63ubbmpnli))(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10):
+  medusa-payment-solana@0.2.4(@medusajs/framework@2.8.4(@medusajs/cli@2.8.4(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@mikro-orm/cli@6.4.3(pg@8.16.0))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@medusajs/medusa@2.8.4(cpjksnrtp7n5r5tk63ubbmpnli))(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10):
     dependencies:
       '@medusajs/framework': 2.8.4(@medusajs/cli@2.8.4(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0)))(@mikro-orm/cli@6.4.3(pg@8.16.0))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.0))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.0)(pg@8.16.0))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.6.1)(pg@8.16.0)(vite@5.4.19(@types/node@20.19.0))
       '@medusajs/medusa': 2.8.4(cpjksnrtp7n5r5tk63ubbmpnli)

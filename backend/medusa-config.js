@@ -134,7 +134,6 @@ const medusaConfig = {
             },
           }] : []),
           ...(SOLANA_MNEMONIC && SOLANA_COLD_STORAGE_WALLET ? [{
-            // resolve: 'medusa-payment-solana',
             resolve: 'medusa-payment-solana',
             id: 'solana',
             options: {
