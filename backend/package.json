@@ -21,15 +21,15 @@
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
   },
   "dependencies": {
-    "@medusajs/admin-sdk": "latest",
-    "@medusajs/cli": "latest",
-    "@medusajs/core-flows": "latest",
-    "@medusajs/dashboard": "latest",
-    "@medusajs/framework": "latest",
-    "@medusajs/medusa": "latest",
-    "@medusajs/notification-sendgrid": "latest",
-    "@medusajs/payment-stripe": "latest",
-    "@medusajs/workflow-engine-redis": "latest",
+    "@medusajs/admin-sdk": "2.8.4",
+    "@medusajs/cli": "2.8.4",
+    "@medusajs/core-flows": "2.8.4",
+    "@medusajs/dashboard": "2.8.4",
+    "@medusajs/framework": "2.8.4",
+    "@medusajs/medusa": "2.8.4",
+    "@medusajs/notification-sendgrid": "2.8.4",
+    "@medusajs/payment-stripe": "2.8.4",
+    "@medusajs/workflow-engine-redis": "2.8.4",
     "@mikro-orm/core": "6.4.3",
     "@mikro-orm/knex": "6.4.3",
     "@mikro-orm/migrations": "6.4.3",
@@ -37,7 +37,7 @@
     "@react-email/components": "^0.0.26",
     "@rokmohar/medusa-plugin-meilisearch": "^1.1.4",
     "awilix": "^8.0.1",
-    "medusa-payment-solana": "^0.2.5",
+    "medusa-payment-solana": "0.2.6-beta.0",
     "medusajs-launch-utils": "^0.0.16",
     "minio": "^8.0.3",
     "pg": "^8.13.1",
@@ -45,7 +45,7 @@
     "ulid": "^2.3.0"
   },
   "devDependencies": {
-    "@medusajs/test-utils": "latest",
+    "@medusajs/test-utils": "2.8.4",
     "@mikro-orm/cli": "6.4.3",
     "@swc/core": "1.5.7",
     "@swc/jest": "^0.2.37",
@@ -63,6 +63,9 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
+  },
+  "resolutions": {
+    "zod": "^3.25.0"
   },
   "packageManager": "yarn@1.22.22",
   "engines": {
