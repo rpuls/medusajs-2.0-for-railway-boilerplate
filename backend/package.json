@@ -13,7 +13,7 @@
     "medusa"
   ],
   "scripts": {
-    "build": "medusa build && node src/scripts/postBuild.js",
+    "build": "medusa build && node src/scripts/postBuildLF.js",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "ib": "init-backend",
     "start": "init-backend && cd .medusa/server && medusa start --verbose",
