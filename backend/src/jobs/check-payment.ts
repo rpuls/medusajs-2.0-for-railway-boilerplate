@@ -1,8 +1,8 @@
-// import { checkPaymentsJob } from 'medusa-payment-solana';
-const checkPaymentsJob = ()=> {
-  // This function is a placeholder for the actual job logic.
-  console.log('Checking Solana payments...');
-};
+import { checkPaymentsJob } from 'medusa-payment-solana';
+// const checkPaymentsJob = ()=> {
+//   // This function is a placeholder for the actual job logic.
+//   console.log('Checking Solana payments...');
+// };
 
 export default checkPaymentsJob;
 
