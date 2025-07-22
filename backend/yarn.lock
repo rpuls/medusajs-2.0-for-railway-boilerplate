@@ -9712,10 +9712,10 @@ media-typer@0.3.0:
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==
 
-medusa-payment-solana@0.2.6:
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/medusa-payment-solana/-/medusa-payment-solana-0.2.6.tgz#62d4dc81df3a7feb40a9901bf12ef489f0f12fac"
-  integrity sha512-fRtKGt5BGQBzX74x6BAPiSoDxRqLZN/8xCIlA8CfvkJfUzA1Ew/ZVXmysyaaAf9oz7BbCosoDHtxJKff37nM/w==
+medusa-payment-solana@0.2.7-beta.0:
+  version "0.2.7-beta.0"
+  resolved "https://registry.yarnpkg.com/medusa-payment-solana/-/medusa-payment-solana-0.2.7-beta.0.tgz#f833f7b47978ad7c7126437c152645bd20ed8f44"
+  integrity sha512-jtPUD6bOBsS/VxKybE5qkNM1/HxihFm+G7TNbksCGh+FtOmiaLrwnpBTTesd0DuqEq6icNo8HUQRAdiq9+Mg4g==
   dependencies:
     "@medusajs/framework" "2.8.4"
     "@solana/web3.js" "^1.98.2"
