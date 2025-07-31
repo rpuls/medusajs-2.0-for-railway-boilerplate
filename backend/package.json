@@ -25,6 +25,7 @@
     "@medusajs/cli": "2.8.8",
     "@medusajs/framework": "2.8.8",
     "@medusajs/medusa": "2.8.8",
+    "@medusajs/dashboard": "2.8.8",
     "@medusajs/notification-sendgrid": "2.8.8",
     "@medusajs/payment-stripe": "2.8.8",
     "@medusajs/workflow-engine-redis": "2.8.8",
