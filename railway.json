@@ -21,7 +21,12 @@
         "ENABLE_GEMINI_AI": "true",
         "AI_PROVIDER": "gemini-ai-studio",
         "MCP_VERBOSE": "false",
-        "RAILWAY_HEALTHCHECK_TIMEOUT_SEC": "300"
+        "RAILWAY_HEALTHCHECK_TIMEOUT_SEC": "300",
+        "MEDUSA_ADMIN_ONBOARDING_TYPE": "default",
+        "STORE_CORS": "https://storefront-production-bd8d.up.railway.app,https://www.volaron.com.br,http://localhost:8000",
+        "ADMIN_CORS": "https://backend-production-c461d.up.railway.app,https://admin.volaron.com.br",
+        "AUTH_CORS": "https://backend-production-c461d.up.railway.app,https://www.volaron.com.br",
+        "GEMINI_API_KEY": "AIzaSyAM7Z6gEhkIRVxzvVI1c_1JbQhlZ9iPwKc"
       }
     },
     "development": {
@@ -40,7 +45,14 @@
       "name": "backend",
       "source": {
         "repo": "exzosdigital/volaron-project",
-        "branch": "railway-automation"
+        "branch": "volaron-store"
+      }
+    },
+    {
+      "name": "storefront",
+      "source": {
+        "repo": "exzosdigital/volaron-project",
+        "branch": "volaron-store"
       }
     }
   ]
