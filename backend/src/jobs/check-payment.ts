@@ -1,12 +1,10 @@
-import { checkPaymentsJob } from 'medusa-payment-solana';
-// const checkPaymentsJob = ()=> {
-//   // This function is a placeholder for the actual job logic.
-//   console.log('Checking Solana payments...');
-// };
+import { checkPaymentsJob } from 'medusa-payment-solana/job';
 
+// Export the job function
 export default checkPaymentsJob;
 
+// Configure the job schedule (Recommended, every minute)
 export const config = {
-  name: 'check-solana-payments',
-  schedule: '*/1 * * * *', // Runs every 1 minutes
+  name: "check-solana-payments",
+  schedule: "*/1 * * * *",
 };
