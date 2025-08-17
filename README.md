@@ -46,12 +46,12 @@ Updated: to `version 2.8.8` 🥳
 - Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
 - Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
 
-# /backend
+# Backend
 
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-- `cd /backend`
+- `cd backend/`
 - `pnpm install` or `npm i`
 - Rename `.env.template` ->  `.env`
 - To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
@@ -71,13 +71,14 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 `npm run dev` or `pnpm dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
 `pnpm build && pnpm start` will compile the project and run from compiled source. This can be useful for reproducing issues on your cloud instance.
 
-# /storefront
+# Storefront
 
 ### local setup
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-Install dependencies `npm i` of `pnpm i`
-Rename `.env.local.template` ->  `.env.local`
+- `cd storefront/
+- Install dependencies `npm i` or `pnpm i`
+- Rename `.env.local.template` ->  `.env.local`
 
 ### requirements
 - A running backend on port 9000 is required to fetch product data and other information needed to build Next.js pages.
