@@ -54,8 +54,8 @@ importers:
         specifier: ^8.0.1
         version: 8.0.1
       medusajs-launch-utils:
-        specifier: 0.0.18-beta.0
-        version: 0.0.18-beta.0
+        specifier: 0.0.18
+        version: 0.0.18
       minio:
         specifier: ^8.0.3
         version: 8.0.5
@@ -5775,8 +5775,8 @@ packages:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
     engines: {node: '>= 0.6'}
 
-  medusajs-launch-utils@0.0.18-beta.0:
-    resolution: {integrity: sha512-PPZK2V2ik4H9hvx6ldwBMVpEfAHVhK0kk88eEbAXTx7Glib6+HdQVPxgpywZ/hXgHRTOtS6Y/vBEBT9vNpEC3g==}
+  medusajs-launch-utils@0.0.18:
+    resolution: {integrity: sha512-ReJT1qpYMnoIvkFls5Mzn1bzacLtxZQpsit+bTwt5LzrnqDODzWDzRiUYaV66n359La1VfK3prMghoM3k/kFxA==}
     hasBin: true
 
   meilisearch@0.51.0:
@@ -14608,7 +14608,7 @@ snapshots:
 
   media-typer@0.3.0: {}
 
-  medusajs-launch-utils@0.0.18-beta.0:
+  medusajs-launch-utils@0.0.18:
     dependencies:
       axios: 1.11.0
       dotenv: 10.0.0
