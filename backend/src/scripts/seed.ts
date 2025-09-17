@@ -113,6 +113,15 @@ export default async function seedDemoData({ container }: ExecArgs) {
   });
   const stockLocation = stockLocationResult[0];
 
+  await updateStoresWorkflow(container).run({
+    input: {
+      selector: { id: store.id },
+      update: {
+        default_location_id: stockLocation.id,
+      },
+    },
+  });
+
   await link.create({
     [Modules.STOCK_LOCATION]: {
       stock_location_id: stockLocation.id,
