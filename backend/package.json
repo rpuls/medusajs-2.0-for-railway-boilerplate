@@ -23,9 +23,10 @@
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.2",
     "@medusajs/cli": "2.10.2",
+    "@medusajs/dashboard": "2.10.2",
+    "@medusajs/draft-order": "^2.10.2",
     "@medusajs/framework": "2.10.2",
     "@medusajs/medusa": "2.10.2",
-    "@medusajs/dashboard": "2.10.2",
     "@medusajs/notification-sendgrid": "2.10.2",
     "@medusajs/payment-stripe": "2.10.2",
     "@medusajs/workflow-engine-redis": "2.10.2",
