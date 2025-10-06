@@ -21,8 +21,10 @@ type ProductActionsProps = {
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string>, varopt: any) => {
-    acc[varopt.option.title] = varopt.value
+  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
+    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
+      acc[varopt.option.title] = varopt.value
+    }
     return acc
   }, {})
 }
@@ -71,18 +73,17 @@ export default function ProductActions({
     }
 
     // If we allow back orders on the variant, we can add to cart
-    if (selectedVariant && selectedVariant.allow_backorder) {
+    if (selectedVariant?.allow_backorder) {
       return true
     }
 
-    // TODO: Add inventory checks with the new v2 setup
-    // // If there is inventory available, we can add to cart
-    // if (
-    //   selectedVariant?.inventory_quantity &&
-    //   selectedVariant.inventory_quantity > 0
-    // ) {
-    //   return true
-    // }
+    // If there is inventory available, we can add to cart
+    if (
+      selectedVariant?.manage_inventory &&
+      (selectedVariant?.inventory_quantity || 0) > 0
+    ) {
+      return true
+    }
 
     // Otherwise, we can't add to cart
     return false

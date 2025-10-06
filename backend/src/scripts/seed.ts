@@ -1,5 +1,12 @@
+import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/framework/types";
+import {
+  ContainerRegistrationKeys,
+  Modules,
+  ProductStatus,
+} from "@medusajs/framework/utils";
 import {
   createApiKeysWorkflow,
+  createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
   createRegionsWorkflow,
@@ -11,35 +18,15 @@ import {
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
   updateStoresWorkflow,
-} from "@medusajs/core-flows";
-import { Logger } from "@medusajs/medusa";
-import { RemoteLink } from "@medusajs/modules-sdk";
-import {
-  ExecArgs,
-  IFulfillmentModuleService,
-  ISalesChannelModuleService,
-  IStoreModuleService,
-} from "@medusajs/types";
-import {
-  ContainerRegistrationKeys,
-  Modules,
-  ProductStatus,
-  ModuleRegistrationName
-} from "@medusajs/utils";
+} from "@medusajs/medusa/core-flows";
 
 export default async function seedDemoData({ container }: ExecArgs) {
-  const logger: Logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const remoteLink: RemoteLink = container.resolve(
-    ContainerRegistrationKeys.REMOTE_LINK
-  );
-  const fulfillmentModuleService: IFulfillmentModuleService = container.resolve(
-    ModuleRegistrationName.FULFILLMENT
-  );
-  const salesChannelModuleService: ISalesChannelModuleService =
-    container.resolve(ModuleRegistrationName.SALES_CHANNEL);
-  const storeModuleService: IStoreModuleService = container.resolve(
-    ModuleRegistrationName.STORE
-  );
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
+  const link = container.resolve(ContainerRegistrationKeys.LINK);
+  const query = container.resolve(ContainerRegistrationKeys.QUERY);
+  const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
+  const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
+  const storeModuleService = container.resolve(Modules.STORE);
 
   const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
 
@@ -102,27 +89,72 @@ export default async function seedDemoData({ container }: ExecArgs) {
   await createTaxRegionsWorkflow(container).run({
     input: countries.map((country_code) => ({
       country_code,
+      provider_id: "tp_system"
     })),
   });
   logger.info("Finished seeding tax regions.");
 
+  logger.info("Seeding stock location data...");
+  const { result: stockLocationResult } = await createStockLocationsWorkflow(
+    container
+  ).run({
+    input: {
+      locations: [
+        {
+          name: "European Warehouse",
+          address: {
+            city: "Copenhagen",
+            country_code: "DK",
+            address_1: "",
+          },
+        },
+      ],
+    },
+  });
+  const stockLocation = stockLocationResult[0];
+
+  await updateStoresWorkflow(container).run({
+    input: {
+      selector: { id: store.id },
+      update: {
+        default_location_id: stockLocation.id,
+      },
+    },
+  });
+
+  await link.create({
+    [Modules.STOCK_LOCATION]: {
+      stock_location_id: stockLocation.id,
+    },
+    [Modules.FULFILLMENT]: {
+      fulfillment_provider_id: "manual_manual",
+    },
+  });
+
   logger.info("Seeding fulfillment data...");
-  const { result: shippingProfileResult } =
+  const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({
+    type: "default"
+  })
+  let shippingProfile = shippingProfiles.length ? shippingProfiles[0] : null
+
+  if (!shippingProfile) {
+    const { result: shippingProfileResult } =
     await createShippingProfilesWorkflow(container).run({
       input: {
         data: [
           {
-            name: "Default",
+            name: "Default Shipping Profile",
             type: "default",
           },
         ],
       },
     });
-  const shippingProfile = shippingProfileResult[0];
+    shippingProfile = shippingProfileResult[0];
+  }
 
   const fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
     name: "European Warehouse delivery",
-    type: "delivery",
+    type: "shipping",
     service_zones: [
       {
         name: "Europe",
@@ -160,6 +192,15 @@ export default async function seedDemoData({ container }: ExecArgs) {
     ],
   });
 
+  await link.create({
+    [Modules.STOCK_LOCATION]: {
+      stock_location_id: stockLocation.id,
+    },
+    [Modules.FULFILLMENT]: {
+      fulfillment_set_id: fulfillmentSet.id,
+    },
+  });
+
   await createShippingOptionsWorkflow(container).run({
     input: [
       {
@@ -190,7 +231,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         rules: [
           {
             attribute: "enabled_in_store",
-            value: '"true"',
+            value: "true",
             operator: "eq",
           },
           {
@@ -228,7 +269,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
         rules: [
           {
             attribute: "enabled_in_store",
-            value: '"true"',
+            value: "true",
             operator: "eq",
           },
           {
@@ -242,38 +283,10 @@ export default async function seedDemoData({ container }: ExecArgs) {
   });
   logger.info("Finished seeding fulfillment data.");
 
-  logger.info("Seeding stock location data...");
-  const { result: stockLocationResult } = await createStockLocationsWorkflow(
-    container
-  ).run({
-    input: {
-      locations: [
-        {
-          name: "European Warehouse",
-          address: {
-            city: "Copenhagen",
-            country_code: "DK",
-            address_1: "",
-          },
-        },
-      ],
-    },
-  });
-  const stockLocation = stockLocationResult[0];
-
   await linkSalesChannelsToStockLocationWorkflow(container).run({
     input: {
       id: stockLocation.id,
       add: [defaultSalesChannel[0].id],
-    },
-  });
-
-  await remoteLink.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_set_id: fulfillmentSet.id,
     },
   });
   logger.info("Finished seeding stock location data.");
@@ -335,13 +348,14 @@ export default async function seedDemoData({ container }: ExecArgs) {
         {
           title: "Medusa T-Shirt",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Shirts").id,
+            categoryResult.find((cat) => cat.name === "Shirts")!.id,
           ],
           description:
             "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
           handle: "t-shirt",
           weight: 400,
           status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
           images: [
             {
               url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
@@ -374,7 +388,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "S",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -393,7 +406,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "S",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -412,7 +424,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "M",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -431,7 +442,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "M",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -450,7 +460,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "L",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -469,7 +478,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "L",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -488,7 +496,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "XL",
                 Color: "Black",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -507,7 +514,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
                 Size: "XL",
                 Color: "White",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -526,22 +532,17 @@ export default async function seedDemoData({ container }: ExecArgs) {
             },
           ],
         },
-      ],
-    },
-  });
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
         {
           title: "Medusa Sweatshirt",
           category_ids: [
-            categoryResult.find((cat) => cat.name === "Sweatshirts").id,
+            categoryResult.find((cat) => cat.name === "Sweatshirts")!.id,
           ],
           description:
             "Reimagine the feeling of a classic sweatshirt. With our cotton sweatshirt, everyday essentials no longer have to be ordinary.",
           handle: "sweatshirt",
           weight: 400,
           status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
           images: [
             {
               url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
@@ -563,7 +564,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -581,7 +581,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -599,7 +598,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -617,7 +615,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -636,20 +633,17 @@ export default async function seedDemoData({ container }: ExecArgs) {
             },
           ],
         },
-      ],
-    },
-  });
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
         {
           title: "Medusa Sweatpants",
-          category_ids: [categoryResult.find((cat) => cat.name === "Pants").id],
+          category_ids: [
+            categoryResult.find((cat) => cat.name === "Pants")!.id,
+          ],
           description:
             "Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.",
           handle: "sweatpants",
           weight: 400,
           status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
           images: [
             {
               url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
@@ -671,7 +665,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -689,7 +682,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -707,7 +699,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -725,7 +716,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -744,20 +734,17 @@ export default async function seedDemoData({ container }: ExecArgs) {
             },
           ],
         },
-      ],
-    },
-  });
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
         {
           title: "Medusa Shorts",
-          category_ids: [categoryResult.find((cat) => cat.name === "Merch").id],
+          category_ids: [
+            categoryResult.find((cat) => cat.name === "Merch")!.id,
+          ],
           description:
             "Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.",
           handle: "shorts",
           weight: 400,
           status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
           images: [
             {
               url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
@@ -779,7 +766,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "S",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -797,7 +783,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "M",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -815,7 +800,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "L",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -833,7 +817,6 @@ export default async function seedDemoData({ container }: ExecArgs) {
               options: {
                 Size: "XL",
               },
-              manage_inventory: false,
               prices: [
                 {
                   amount: 10,
@@ -856,4 +839,29 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
   logger.info("Finished seeding product data.");
+
+  logger.info("Seeding inventory levels.");
+
+  const { data: inventoryItems } = await query.graph({
+    entity: "inventory_item",
+    fields: ["id"],
+  });
+
+  const inventoryLevels: CreateInventoryLevelInput[] = [];
+  for (const inventoryItem of inventoryItems) {
+    const inventoryLevel = {
+      location_id: stockLocation.id,
+      stocked_quantity: 1000000,
+      inventory_item_id: inventoryItem.id,
+    };
+    inventoryLevels.push(inventoryLevel);
+  }
+
+  await createInventoryLevelsWorkflow(container).run({
+    input: {
+      inventory_levels: inventoryLevels,
+    },
+  });
+
+  logger.info("Finished seeding inventory levels data.");
 }

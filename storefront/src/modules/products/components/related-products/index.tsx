@@ -8,6 +8,14 @@ type RelatedProductsProps = {
   countryCode: string
 }
 
+type StoreProductParamsWithTags = HttpTypes.StoreProductParams & {
+  tags?: string[]
+}
+
+type StoreProductWithTags = HttpTypes.StoreProduct & {
+  tags?: { value: string }[]
+}
+
 export default async function RelatedProducts({
   product,
   countryCode,
@@ -15,21 +23,22 @@ export default async function RelatedProducts({
   const region = await getRegion(countryCode)
 
   if (!region) {
-    return null
+  const queryParams: StoreProductParamsWithTags = {}
   }
 
   // edit this function to define your related products logic
-  const queryParams: HttpTypes.StoreProductParams = {}
+  const queryParams: StoreProductParamsWithTags = {}
   if (region?.id) {
     queryParams.region_id = region.id
   }
   if (product.collection_id) {
     queryParams.collection_id = [product.collection_id]
   }
-  if (product.tags) {
-    queryParams.tags = {
-      value: product.tags.map((t) => t.value).filter(Boolean) as string[],
-    }
+  const productWithTags = product as StoreProductWithTags
+  if (productWithTags.tags) {
+    queryParams.tags = productWithTags.tags
+      .map((t) => t.value)
+      .filter(Boolean) as string[]
   }
   queryParams.is_giftcard = false
 
@@ -60,7 +69,7 @@ export default async function RelatedProducts({
       <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
         {products.map((product) => (
           <li key={product.id}>
-            <Product region={region} product={product} />
+            {region && <Product region={region} product={product} />}
           </li>
         ))}
       </ul>
