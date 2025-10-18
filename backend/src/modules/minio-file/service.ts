@@ -10,6 +10,7 @@ import {
 import { Client } from 'minio';
 import path from 'path';
 import { ulid } from 'ulid';
+import { Readable } from 'stream';
 
 type InjectedDependencies = {
   logger: Logger
@@ -274,6 +275,56 @@ class MinioFileProviderService extends AbstractFileProviderService {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
         `Failed to generate presigned upload URL: ${error.message}`
+      )
+    }
+  }
+
+  async getAsBuffer(fileData: ProviderGetFileDTO): Promise<Buffer> {
+    if (!fileData?.fileKey) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        'No file key provided'
+      )
+    }
+
+    try {
+      const stream = await this.client.getObject(this.bucket, fileData.fileKey)
+      const buffer = await new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = []
+
+        stream.on('data', (chunk: Buffer) => chunks.push(chunk))
+        stream.on('end', () => resolve(Buffer.concat(chunks)))
+        stream.on('error', reject)
+      })
+
+      this.logger_.info(`Retrieved buffer for file ${fileData.fileKey}`)
+      return buffer
+    } catch (error) {
+      this.logger_.error(`Failed to get buffer: ${error.message}`)
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        `Failed to get buffer: ${error.message}`
+      )
+    }
+  }
+
+  async getDownloadStream(fileData: ProviderGetFileDTO): Promise<Readable> {
+    if (!fileData?.fileKey) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        'No file key provided'
+      )
+    }
+
+    try {
+      const stream = await this.client.getObject(this.bucket, fileData.fileKey)
+      this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
+      return stream
+    } catch (error) {
+      this.logger_.error(`Failed to get download stream: ${error.message}`)
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        `Failed to get download stream: ${error.message}`
       )
     }
   }
