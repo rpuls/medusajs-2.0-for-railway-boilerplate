@@ -248,8 +248,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
   async getPresignedUploadUrl(
     fileData: ProviderGetPresignedUploadUrlDTO
   ): Promise<ProviderFileResultDTO> {
-    this.logger_.info(`[DEBUG] getPresignedUploadUrl input filename: ${fileData?.filename}`)
-
     if (!fileData?.filename) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -260,7 +258,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
     try {
       // Use the filename directly as the key (matches S3 provider behavior for presigned uploads)
       const fileKey = fileData.filename
-      this.logger_.info(`[DEBUG] Using presigned fileKey: ${fileKey}`)
 
       // Generate presigned PUT URL that expires in 15 minutes
       const url = await this.client.presignedPutObject(
@@ -268,9 +265,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
         fileKey,
         15 * 60 // URL expires in 15 minutes
       )
-
-      this.logger_.info(`Generated presigned upload URL for file ${fileKey}`)
-      this.logger_.info(`[DEBUG] Presigned URL path should match fileKey in upload`)
 
       return {
         url,
