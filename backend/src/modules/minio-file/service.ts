@@ -253,9 +253,8 @@ class MinioFileProviderService extends AbstractFileProviderService {
     }
 
     try {
-      // Generate a unique file key similar to the upload method
-      const parsedFilename = path.parse(fileData.filename)
-      const fileKey = `${parsedFilename.name}-${ulid()}${parsedFilename.ext}`
+      // Use the filename directly (preserve original filename for consistency)
+      const fileKey = fileData.filename
 
       // Generate presigned PUT URL that expires in 15 minutes
       const url = await this.client.presignedPutObject(
