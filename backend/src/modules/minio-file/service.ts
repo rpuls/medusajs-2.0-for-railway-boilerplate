@@ -197,21 +197,24 @@ class MinioFileProviderService extends AbstractFileProviderService {
   }
 
   async delete(
-    fileData: ProviderDeleteFileDTO
+    fileData: ProviderDeleteFileDTO | ProviderDeleteFileDTO[]
   ): Promise<void> {
-    if (!fileData?.fileKey) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        'No file key provided'
-      )
-    }
+    const files = Array.isArray(fileData) ? fileData : [fileData];
 
-    try {
-      await this.client.removeObject(this.bucket, fileData.fileKey)
-      this.logger_.info(`Successfully deleted file ${fileData.fileKey} from MinIO bucket ${this.bucket}`)
-    } catch (error) {
-      // Log error but don't throw if file doesn't exist
-      this.logger_.warn(`Failed to delete file ${fileData.fileKey}: ${error.message}`)
+    for (const file of files) {
+      if (!file?.fileKey) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          'No file key provided'
+        );
+      }
+
+      try {
+        await this.client.removeObject(this.bucket, file.fileKey);
+        this.logger_.info(`Successfully deleted file ${file.fileKey} from MinIO bucket ${this.bucket}`);
+      } catch (error) {
+        this.logger_.warn(`Failed to delete file ${file.fileKey}: ${error.message}`);
+      }
     }
   }
 
