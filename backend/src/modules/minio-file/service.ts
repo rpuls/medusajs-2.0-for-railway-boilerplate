@@ -318,7 +318,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
 
   async getDownloadStream(fileData: ProviderGetFileDTO): Promise<Readable> {
     this.logger_.info(`[DEBUG] getDownloadStream called with: ${JSON.stringify(fileData)}`)
-    this.logger_.info(`[DEBUG] getDownloadStream fileData.fileKey: ${fileData.fileKey}`)
 
     if (!fileData?.fileKey) {
       throw new MedusaError(
@@ -327,12 +326,22 @@ class MinioFileProviderService extends AbstractFileProviderService {
       )
     }
 
+    this.logger_.info(`[DEBUG] getDownloadStream fileData.fileKey: ${fileData.fileKey}`)
+
     try {
       this.logger_.info(`[DEBUG] About to call client.getObject for bucket: ${this.bucket}, fileKey: ${fileData.fileKey}`)
-      const stream = await this.client.getObject(this.bucket, fileData.fileKey)
-      this.logger_.info(`[DEBUG] client.getObject returned stream type: ${typeof stream}`)
-      this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
-      return stream
+      // Create a stream that behaves more like AWS SDK streams for better compatibility
+      const dataStream = await this.client.getObject(this.bucket, fileData.fileKey)
+
+      // Ensure we return a proper Readable stream
+      this.logger_.info(`[DEBUG] dataStream type: ${typeof dataStream}`)
+      if (dataStream && typeof dataStream.pipe === 'function') {
+        this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
+        return dataStream
+      } else {
+        // Fallback: create a proper readable stream
+        throw new Error('Stream is not a valid Readable stream')
+      }
     } catch (error) {
       this.logger_.error(`[DEBUG] getDownloadStream failed with error:`, error)
       this.logger_.error(`Failed to get download stream: ${error.message}`)
