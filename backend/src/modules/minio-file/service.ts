@@ -245,6 +245,8 @@ class MinioFileProviderService extends AbstractFileProviderService {
   async getPresignedUploadUrl(
     fileData: ProviderGetPresignedUploadUrlDTO
   ): Promise<ProviderFileResultDTO> {
+    this.logger_.info(`[DEBUG] getPresignedUploadUrl called with: ${JSON.stringify(fileData)}`)
+
     if (!fileData?.filename) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -255,6 +257,7 @@ class MinioFileProviderService extends AbstractFileProviderService {
     try {
       // Use the filename directly (preserve original filename for consistency)
       const fileKey = fileData.filename
+      this.logger_.info(`[DEBUG] Using fileKey: ${fileKey}`)
 
       // Generate presigned PUT URL that expires in 15 minutes
       const url = await this.client.presignedPutObject(
@@ -263,12 +266,14 @@ class MinioFileProviderService extends AbstractFileProviderService {
         15 * 60 // URL expires in 15 minutes
       )
 
-      this.logger_.info(`Generated presigned upload URL for file ${fileKey}`)
+      this.logger_.info(`Generated presigned upload URL for file ${fileKey} with URL: ${url}`)
 
-      return {
+      const result = {
         url,
         key: fileKey
       }
+      this.logger_.info(`[DEBUG] getPresignedUploadUrl returning: ${JSON.stringify(result)}`)
+      return result
     } catch (error) {
       this.logger_.error(`Failed to generate presigned upload URL: ${error.message}`)
       throw new MedusaError(
@@ -308,6 +313,8 @@ class MinioFileProviderService extends AbstractFileProviderService {
   }
 
   async getDownloadStream(fileData: ProviderGetFileDTO): Promise<Readable> {
+    this.logger_.info(`[DEBUG] getDownloadStream called with: ${JSON.stringify(fileData)}`)
+
     if (!fileData?.fileKey) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
