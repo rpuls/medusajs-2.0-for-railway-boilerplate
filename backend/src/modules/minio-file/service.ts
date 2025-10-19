@@ -320,16 +320,11 @@ class MinioFileProviderService extends AbstractFileProviderService {
     }
 
     try {
-      // Create a stream wrapper that mimics AWS SDK response.Body behavior
+      // Get the MinIO stream directly
       const minioStream = await this.client.getObject(this.bucket, fileData.fileKey)
 
-      // Create a response-like object with Body property (similar to AWS SDK)
-      const responseWrapper = {
-        Body: minioStream
-      }
-
       this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
-      return responseWrapper.Body
+      return minioStream
     } catch (error) {
       this.logger_.error(`Failed to get download stream: ${error.message}`)
       throw new MedusaError(
