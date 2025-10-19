@@ -146,8 +146,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
   async upload(
     file: ProviderUploadFileDTO
   ): Promise<ProviderFileResultDTO> {
-    this.logger_.info(`[DEBUG] upload called with file.filename: ${file?.filename}, mimeType: ${file?.mimeType}`)
-
     if (!file) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -165,7 +163,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
     try {
       const parsedFilename = path.parse(file.filename)
       const fileKey = `${parsedFilename.name}-${ulid()}${parsedFilename.ext}`
-      this.logger_.info(`[DEBUG] upload generated fileKey: ${fileKey}`)
       const content = Buffer.from(file.content, 'binary')
 
       // Upload file with public-read access
@@ -185,12 +182,11 @@ class MinioFileProviderService extends AbstractFileProviderService {
       const url = `https://${this.config_.endPoint}/${this.bucket}/${fileKey}`
 
       this.logger_.info(`Successfully uploaded file ${fileKey} to MinIO bucket ${this.bucket}`)
-      const result = {
+
+      return {
         url,
         key: fileKey
       }
-      this.logger_.info(`[DEBUG] upload returning: ${JSON.stringify(result)}`)
-      return result
     } catch (error) {
       this.logger_.error(`Failed to upload file: ${error.message}`)
       throw new MedusaError(
@@ -249,7 +245,7 @@ class MinioFileProviderService extends AbstractFileProviderService {
   async getPresignedUploadUrl(
     fileData: ProviderGetPresignedUploadUrlDTO
   ): Promise<ProviderFileResultDTO> {
-    this.logger_.info(`[DEBUG] getPresignedUploadUrl called with: ${JSON.stringify(fileData)}`)
+    this.logger_.info(`[DEBUG] getPresignedUploadUrl input filename: ${fileData?.filename}`)
 
     if (!fileData?.filename) {
       throw new MedusaError(
@@ -259,9 +255,9 @@ class MinioFileProviderService extends AbstractFileProviderService {
     }
 
     try {
-      // Use the filename directly (preserve original filename for consistency)
+      // Use the filename directly as the key (matches S3 provider behavior for presigned uploads)
       const fileKey = fileData.filename
-      this.logger_.info(`[DEBUG] Using fileKey: ${fileKey}`)
+      this.logger_.info(`[DEBUG] Using presigned fileKey: ${fileKey}`)
 
       // Generate presigned PUT URL that expires in 15 minutes
       const url = await this.client.presignedPutObject(
@@ -270,14 +266,13 @@ class MinioFileProviderService extends AbstractFileProviderService {
         15 * 60 // URL expires in 15 minutes
       )
 
-      this.logger_.info(`Generated presigned upload URL for file ${fileKey} with URL: ${url}`)
+      this.logger_.info(`Generated presigned upload URL for file ${fileKey}`)
+      this.logger_.info(`[DEBUG] Presigned URL path should match fileKey in upload`)
 
-      const result = {
+      return {
         url,
         key: fileKey
       }
-      this.logger_.info(`[DEBUG] getPresignedUploadUrl returning: ${JSON.stringify(result)}`)
-      return result
     } catch (error) {
       this.logger_.error(`Failed to generate presigned upload URL: ${error.message}`)
       throw new MedusaError(
@@ -317,8 +312,6 @@ class MinioFileProviderService extends AbstractFileProviderService {
   }
 
   async getDownloadStream(fileData: ProviderGetFileDTO): Promise<Readable> {
-    this.logger_.info(`[DEBUG] getDownloadStream called with: ${JSON.stringify(fileData)}`)
-
     if (!fileData?.fileKey) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -326,24 +319,18 @@ class MinioFileProviderService extends AbstractFileProviderService {
       )
     }
 
-    this.logger_.info(`[DEBUG] getDownloadStream fileData.fileKey: ${fileData.fileKey}`)
-
     try {
-      this.logger_.info(`[DEBUG] About to call client.getObject for bucket: ${this.bucket}, fileKey: ${fileData.fileKey}`)
-      // Create a stream that behaves more like AWS SDK streams for better compatibility
-      const dataStream = await this.client.getObject(this.bucket, fileData.fileKey)
+      // Create a stream wrapper that mimics AWS SDK response.Body behavior
+      const minioStream = await this.client.getObject(this.bucket, fileData.fileKey)
 
-      // Ensure we return a proper Readable stream
-      this.logger_.info(`[DEBUG] dataStream type: ${typeof dataStream}`)
-      if (dataStream && typeof dataStream.pipe === 'function') {
-        this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
-        return dataStream
-      } else {
-        // Fallback: create a proper readable stream
-        throw new Error('Stream is not a valid Readable stream')
+      // Create a response-like object with Body property (similar to AWS SDK)
+      const responseWrapper = {
+        Body: minioStream
       }
+
+      this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
+      return responseWrapper.Body
     } catch (error) {
-      this.logger_.error(`[DEBUG] getDownloadStream failed with error:`, error)
       this.logger_.error(`Failed to get download stream: ${error.message}`)
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
