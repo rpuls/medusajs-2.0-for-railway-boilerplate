@@ -146,6 +146,8 @@ class MinioFileProviderService extends AbstractFileProviderService {
   async upload(
     file: ProviderUploadFileDTO
   ): Promise<ProviderFileResultDTO> {
+    this.logger_.info(`[DEBUG] upload called with file.filename: ${file?.filename}, mimeType: ${file?.mimeType}`)
+
     if (!file) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -163,6 +165,7 @@ class MinioFileProviderService extends AbstractFileProviderService {
     try {
       const parsedFilename = path.parse(file.filename)
       const fileKey = `${parsedFilename.name}-${ulid()}${parsedFilename.ext}`
+      this.logger_.info(`[DEBUG] upload generated fileKey: ${fileKey}`)
       const content = Buffer.from(file.content, 'binary')
 
       // Upload file with public-read access
@@ -182,11 +185,12 @@ class MinioFileProviderService extends AbstractFileProviderService {
       const url = `https://${this.config_.endPoint}/${this.bucket}/${fileKey}`
 
       this.logger_.info(`Successfully uploaded file ${fileKey} to MinIO bucket ${this.bucket}`)
-
-      return {
+      const result = {
         url,
         key: fileKey
       }
+      this.logger_.info(`[DEBUG] upload returning: ${JSON.stringify(result)}`)
+      return result
     } catch (error) {
       this.logger_.error(`Failed to upload file: ${error.message}`)
       throw new MedusaError(
@@ -314,6 +318,7 @@ class MinioFileProviderService extends AbstractFileProviderService {
 
   async getDownloadStream(fileData: ProviderGetFileDTO): Promise<Readable> {
     this.logger_.info(`[DEBUG] getDownloadStream called with: ${JSON.stringify(fileData)}`)
+    this.logger_.info(`[DEBUG] getDownloadStream fileData.fileKey: ${fileData.fileKey}`)
 
     if (!fileData?.fileKey) {
       throw new MedusaError(
@@ -323,10 +328,13 @@ class MinioFileProviderService extends AbstractFileProviderService {
     }
 
     try {
+      this.logger_.info(`[DEBUG] About to call client.getObject for bucket: ${this.bucket}, fileKey: ${fileData.fileKey}`)
       const stream = await this.client.getObject(this.bucket, fileData.fileKey)
+      this.logger_.info(`[DEBUG] client.getObject returned stream type: ${typeof stream}`)
       this.logger_.info(`Retrieved download stream for file ${fileData.fileKey}`)
       return stream
     } catch (error) {
+      this.logger_.error(`[DEBUG] getDownloadStream failed with error:`, error)
       this.logger_.error(`Failed to get download stream: ${error.message}`)
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
