@@ -21,23 +21,29 @@
 <h4 align="center">
   Backend + Storefront + postgres + redis + MinIO + MeiliSearch
 </h4>
-
-<h2 align="center">
-  <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">one-click deploy on railway!</a>
-</h2>
-
-<h1 align="center">
-  Need help?<br>
-  <a href="https://funkyton.com/medusajs-2-0-is-finally-here/">Step by step deploy guide, and video instructions</a>
-</h1>
-
 <p align="center">
 Combine Medusa's modules for your commerce backend with the newest Next.js 14 features for a performant storefront.</p>
+
+<h2 align="center">
+  Need help?<br>
+  <a href="https://funkyton.com/medusajs-2-0-is-finally-here/">Step by step deploy guide, and video instructions</a>
+</h2>
+
+<h3 align="center">
+  NEW! Looking for medusa B2B? <br>
+  <a href="https://github.com/rpuls/medusa-b2b-for-railway/">Checkout the new B2B quickstart for Railway repository</a>
+</h3>
+
+
 
 ## About this boilerplate
 This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application. It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
 Updated: to `version 2.10.2` 🥳
+
+## Deploy with no manual setup in minutes
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/gkU-27?referralCode=-Yg50p)
+
 
 ## Preconfigured 3rd party integrations
 
@@ -46,9 +52,9 @@ Updated: to `version 2.10.2` 🥳
 - Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
 - Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
 
-# Backend
+# local setup
 
-### local setup
+## Backend
 Video instructions: https://youtu.be/PPxenu7IjGM
 
 - `cd backend/`
@@ -71,9 +77,7 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 `npm run dev` or `pnpm dev` will start the backend (and admin dashboard frontend on `localhost:9000/app`) in development mode.
 `pnpm build && pnpm start` will compile the project and run from compiled source. This can be useful for reproducing issues on your cloud instance.
 
-# Storefront
-
-### local setup
+## Storefront
 Video instructions: https://youtu.be/PPxenu7IjGM
 
 - `cd storefront/
