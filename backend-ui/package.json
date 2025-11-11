@@ -1,6 +1,9 @@
 {
   "name": "@medusajs/dashboard",
   "version": "2.10.2",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "generate:static": "node ./scripts/generate-currencies.js && prettier --write ./src/lib/currencies.ts",
     "dev": "vite",
@@ -79,7 +82,6 @@
     "react-jwt": "^1.2.0",
     "react-router-dom": "6.20.1",
     "serve": "^14.2.1",
-    "http-server": "^14.1.1",
     "yarn": "^1.22.22",
     "zod": "3.25.76"
   },
