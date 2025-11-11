@@ -35,6 +35,7 @@ export default defineConfig(({ mode }) => {
   const sources = MEDUSA_PROJECT ? [MEDUSA_PROJECT] : []
 
   return {
+    base: BASE,
     plugins: [
       inspect(),
       react(),
