@@ -7,7 +7,7 @@
     "build": "tsup && node ./scripts/generate-types.js",
     "build:production": "vite build --mode production",
     "build:preview": "vite build --mode production",
-    "start": "serve -s -c serve.json --listen tcp://0.0.0.0:$PORT",
+    "start": "serve -s dist --listen tcp://0.0.0.0:$PORT",
     "serve": "serve dist --single --listen tcp://0.0.0.0:$PORT",
     "preview": "vite preview",
     "test": "vitest --run",
