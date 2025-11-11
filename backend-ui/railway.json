@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm install && npm run build:preview",
-  "startCommand": "npm run preview",
+  "startCommand": "npm run serve",
   "outputDirectory": "dist",
   "rootDirectory": "backend-ui"
 }

@@ -5,7 +5,8 @@
     "generate:static": "node ./scripts/generate-currencies.js && prettier --write ./src/lib/currencies.ts",
     "dev": "vite",
     "build": "tsup && node ./scripts/generate-types.js",
-    "build:preview": "vite build",
+    "build:preview": "vite build --mode production",
+    "serve": "serve -s dist -l $PORT",
     "preview": "vite preview",
     "test": "vitest --run",
     "i18n:validate": "node ./scripts/i18n/validate-translation.js",
@@ -75,6 +76,7 @@
     "react-i18next": "13.5.0",
     "react-jwt": "^1.2.0",
     "react-router-dom": "6.20.1",
+    "serve": "^14.2.1",
     "yarn": "^1.22.22",
     "zod": "3.25.76"
   },

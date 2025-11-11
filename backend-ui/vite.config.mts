@@ -5,6 +5,7 @@ import inspect from "vite-plugin-inspect"
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  // Load env vars - Railway environment variables are automatically available
   const env = loadEnv(mode, process.cwd())
 
   const BASE = env.VITE_MEDUSA_BASE || "/"
@@ -33,6 +34,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       open: true,
+    },
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
     },
   }
 })
