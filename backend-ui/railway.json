@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm install && npm run build:preview",
-  "startCommand": "npm run serve",
+  "buildCommand": "npm install && npm run build:production",
+  "startCommand": "npm run start",
   "outputDirectory": "dist",
   "rootDirectory": "backend-ui"
 }

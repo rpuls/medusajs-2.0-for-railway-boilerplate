@@ -1,0 +1,7 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm run start"
+buildCommand = "npm install && npm run build:production"
+
