@@ -1,0 +1,7 @@
+{
+  "buildCommand": "yarn install && yarn build:preview",
+  "startCommand": "yarn preview",
+  "outputDirectory": "dist",
+  "rootDirectory": "backend-ui"
+}
+
