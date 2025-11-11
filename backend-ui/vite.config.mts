@@ -5,13 +5,25 @@ import inspect from "vite-plugin-inspect"
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Load env vars - Railway environment variables are automatically available
-  const env = loadEnv(mode, process.cwd())
+  // Load env vars - Railway sets them in process.env, loadEnv reads from .env files
+  // Merge both sources to ensure Railway env vars are available during build
+  const env = {
+    ...process.env,
+    ...loadEnv(mode, process.cwd())
+  }
 
   const BASE = env.VITE_MEDUSA_BASE || "/"
   const BACKEND_URL = env.VITE_MEDUSA_BACKEND_URL || "http://localhost:9000"
   const STOREFRONT_URL =
     env.VITE_MEDUSA_STOREFRONT_URL || "http://localhost:8000"
+
+  // Log for debugging (will show in Railway build logs)
+  console.log('Vite build config:', {
+    mode,
+    BACKEND_URL,
+    STOREFRONT_URL,
+    hasBackendUrl: !!env.VITE_MEDUSA_BACKEND_URL
+  })
 
   /**
    * Add this to your .env file to specify the project to load admin extensions from.
