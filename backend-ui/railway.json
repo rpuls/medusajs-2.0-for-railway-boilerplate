@@ -1,6 +1,6 @@
 {
-  "buildCommand": "yarn install && yarn build:preview",
-  "startCommand": "yarn preview",
+  "buildCommand": "npm install && npm run build:preview",
+  "startCommand": "npm run preview",
   "outputDirectory": "dist",
   "rootDirectory": "backend-ui"
 }
