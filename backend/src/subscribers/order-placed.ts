@@ -2,6 +2,7 @@ import { Modules } from '@medusajs/framework/utils'
 import { INotificationModuleService, IOrderModuleService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
+import { PLACEHOLDER_TEMPLATE_ID } from '../lib/notification-templates'
 
 export default async function orderPlacedHandler({
   event: { data },
@@ -17,8 +18,9 @@ export default async function orderPlacedHandler({
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: 'email',
-      template: EmailTemplates.ORDER_PLACED,
+      template: PLACEHOLDER_TEMPLATE_ID, // Placeholder GUID - actual template handled in custom provider
       data: {
+        template: EmailTemplates.ORDER_PLACED,
         emailOptions: {
           replyTo: 'info@example.com',
           subject: 'Your order has been placed'

@@ -97,7 +97,7 @@ const medusaConfig = {
       options: {
         providers: [
           ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL ? [{
-            resolve: '@medusajs/notification-sendgrid',
+            resolve: './src/modules/email-notifications',
             id: 'sendgrid',
             options: {
               channels: ['email'],

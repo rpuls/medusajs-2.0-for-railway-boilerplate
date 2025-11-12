@@ -3,6 +3,7 @@ import { Modules } from '@medusajs/framework/utils'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/framework'
 import { BACKEND_URL } from '../lib/constants'
 import { EmailTemplates } from '../modules/email-notifications/templates'
+import { PLACEHOLDER_TEMPLATE_ID } from '../lib/notification-templates'
 
 export default async function userInviteHandler({
     event: { data },
@@ -19,8 +20,9 @@ export default async function userInviteHandler({
     await notificationModuleService.createNotifications({
       to: invite.email,
       channel: 'email',
-      template: EmailTemplates.INVITE_USER,
+      template: PLACEHOLDER_TEMPLATE_ID, // Placeholder GUID - actual template handled in custom provider
       data: {
+        template: EmailTemplates.INVITE_USER,
         emailOptions: {
           replyTo: 'info@example.com',
           subject: "You've been invited to Medusa!"

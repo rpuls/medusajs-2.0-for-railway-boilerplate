@@ -1,45 +1,51 @@
 import { Logger, NotificationTypes } from '@medusajs/framework/types'
 import { AbstractNotificationProviderService, MedusaError } from '@medusajs/framework/utils'
-import { Resend, CreateEmailOptions } from 'resend'
 import { ReactNode } from 'react'
+import { render } from '@react-email/render'
+import sgMail from '@sendgrid/mail'
 import { generateEmailTemplate } from '../templates'
 
 type InjectedDependencies = {
   logger: Logger
 }
 
-interface ResendServiceConfig {
+interface SendGridServiceConfig {
   apiKey: string
   from: string
 }
 
-export interface ResendNotificationServiceOptions {
+export interface SendGridNotificationServiceOptions {
   api_key: string
   from: string
 }
 
-type NotificationEmailOptions = Omit<
-  CreateEmailOptions,
-  'to' | 'from' | 'react' | 'html' | 'attachments'
->
+type NotificationEmailOptions = {
+  replyTo?: string
+  subject?: string
+  headers?: Record<string, string>
+  cc?: string[]
+  bcc?: string[]
+  tags?: string[]
+  text?: string
+}
 
 /**
- * Service to handle email notifications using the Resend API.
+ * Service to handle email notifications using SendGrid API.
+ * Renders React email templates to HTML and sends via SendGrid.
  */
-export class ResendNotificationService extends AbstractNotificationProviderService {
-  static identifier = "resend"
-  protected config_: ResendServiceConfig // Configuration for Resend API
-  protected logger_: Logger // Logger for error and event logging
-  protected resend: Resend // Instance of the Resend API client
+export class SendGridNotificationService extends AbstractNotificationProviderService {
+  static identifier = "sendgrid"
+  protected config_: SendGridServiceConfig
+  protected logger_: Logger
 
-  constructor({ logger }: InjectedDependencies, options: ResendNotificationServiceOptions) {
+  constructor({ logger }: InjectedDependencies, options: SendGridNotificationServiceOptions) {
     super()
     this.config_ = {
       apiKey: options.api_key,
       from: options.from
     }
     this.logger_ = logger
-    this.resend = new Resend(this.config_.apiKey)
+    sgMail.setApiKey(this.config_.apiKey)
   }
 
   async send(
@@ -60,7 +66,7 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       emailContent = generateEmailTemplate(templateKey, notification.data)
     } catch (error) {
       if (error instanceof MedusaError) {
-        throw error // Re-throw MedusaError for invalid template data
+        throw error
       }
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
@@ -68,46 +74,51 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       )
     }
 
-    const emailOptions = notification.data.emailOptions as NotificationEmailOptions
+    // Render React component to HTML
+    const html = await render(emailContent)
+    
+    // Generate plain text version (optional, but recommended)
+    const text = await render(emailContent, { plainText: true })
 
-    // Compose the message body to send via API to Resend
-    const message: CreateEmailOptions = {
+    const emailOptions = notification.data?.emailOptions as NotificationEmailOptions
+
+    // Compose the message for SendGrid
+    const msg = {
       to: notification.to,
       from: notification.from?.trim() ?? this.config_.from,
-      react: emailContent,
-      subject: emailOptions.subject ?? 'You have a new notification',
-      headers: emailOptions.headers,
-      replyTo: emailOptions.replyTo,
-      cc: emailOptions.cc,
-      bcc: emailOptions.bcc,
-      tags: emailOptions.tags,
-      text: emailOptions.text,
+      subject: emailOptions?.subject ?? 'You have a new notification',
+      html,
+      text,
+      replyTo: emailOptions?.replyTo,
+      headers: emailOptions?.headers,
+      cc: emailOptions?.cc,
+      bcc: emailOptions?.bcc,
+      categories: emailOptions?.tags,
       attachments: Array.isArray(notification.attachments)
         ? notification.attachments.map((attachment) => ({
             content: attachment.content,
             filename: attachment.filename,
-            content_type: attachment.content_type,
+            type: attachment.content_type,
             disposition: attachment.disposition ?? 'attachment',
-            id: attachment.id ?? undefined
+            contentId: attachment.id ?? undefined
           }))
         : undefined,
-      scheduledAt: emailOptions.scheduledAt
     }
 
-    // Send the email via Resend
+    // Send the email via SendGrid
     try {
-      await this.resend.emails.send(message)
+      await sgMail.send(msg)
       this.logger_.log(
-        `Successfully sent "${templateKey}" email to ${notification.to} via Resend`
+        `Successfully sent "${templateKey}" email to ${notification.to} via SendGrid`
       )
-      return {} // Return an empty object on success
-    } catch (error) {
-      const errorCode = error.code
-      const responseError = error.response?.body?.errors?.[0]
+      return {}
+    } catch (error: any) {
+      const errorMessage = error.response?.body?.errors?.[0]?.message ?? error.message ?? 'unknown error'
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Failed to send "${templateKey}" email to ${notification.to} via Resend: ${errorCode} - ${responseError?.message ?? 'unknown error'}`
+        `Failed to send "${templateKey}" email to ${notification.to} via SendGrid: ${errorMessage}`
       )
     }
   }
 }
+

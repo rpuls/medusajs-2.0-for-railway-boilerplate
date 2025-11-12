@@ -53,6 +53,9 @@ importers:
       '@rokmohar/medusa-plugin-meilisearch':
         specifier: 1.3.5
         version: 1.3.5(5nviss6uz7spsl32zdkp7wuibq)
+      '@sendgrid/mail':
+        specifier: ^8.1.6
+        version: 8.1.6
       awilix:
         specifier: ^8.0.1
         version: 8.0.1
@@ -3564,8 +3567,8 @@ packages:
     resolution: {integrity: sha512-Ze7WuW2Xzy5GT5WRx+yEv89fsg/pgy3T1E3FS0QEx0/VvRmigMZ5qyVGhJz4SxomegDkzXv/i0aFPpHKN8qdAA==}
     engines: {node: '>= 12.0.0'}
 
-  '@sendgrid/mail@8.1.5':
-    resolution: {integrity: sha512-W+YuMnkVs4+HA/bgfto4VHKcPKLc7NiZ50/NH2pzO6UHCCFuq8/GNB98YJlLEr/ESDyzAaDr7lVE7hoBwFTT3Q==}
+  '@sendgrid/mail@8.1.6':
+    resolution: {integrity: sha512-/ZqxUvKeEztU9drOoPC/8opEPOk+jLlB2q4+xpx6HVLq6aFu3pMpalkTpAQz8XfRfpLp8O25bh6pGPcHDCYpqg==}
     engines: {node: '>=12.*'}
 
   '@sinclair/typebox@0.27.8':
@@ -9431,7 +9434,7 @@ snapshots:
   '@medusajs/notification-sendgrid@2.10.2(@medusajs/framework@2.10.2(@medusajs/cli@2.10.2(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.3))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.9)(pg@8.16.3))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.7.0)(pg@8.16.3)(vite@5.4.19(@types/node@20.19.9)))(@mikro-orm/cli@6.4.3(pg@8.16.3))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.3))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.9)(pg@8.16.3))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.7.0)(pg@8.16.3)(vite@5.4.19(@types/node@20.19.9)))':
     dependencies:
       '@medusajs/framework': 2.10.2(@medusajs/cli@2.10.2(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.3))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.9)(pg@8.16.3))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.7.0)(pg@8.16.3)(vite@5.4.19(@types/node@20.19.9)))(@mikro-orm/cli@6.4.3(pg@8.16.3))(@mikro-orm/core@6.4.3)(@mikro-orm/knex@6.4.3(@mikro-orm/core@6.4.3)(pg@8.16.3))(@mikro-orm/migrations@6.4.3(@mikro-orm/core@6.4.3)(@types/node@20.19.9)(pg@8.16.3))(@mikro-orm/postgresql@6.4.3(@mikro-orm/core@6.4.3))(awilix@8.0.1)(ioredis@5.7.0)(pg@8.16.3)(vite@5.4.19(@types/node@20.19.9))
-      '@sendgrid/mail': 8.1.5
+      '@sendgrid/mail': 8.1.6
     transitivePeerDependencies:
       - debug
 
@@ -12042,7 +12045,7 @@ snapshots:
     dependencies:
       deepmerge: 4.3.1
 
-  '@sendgrid/mail@8.1.5':
+  '@sendgrid/mail@8.1.6':
     dependencies:
       '@sendgrid/client': 8.1.5
       '@sendgrid/helpers': 8.0.0
