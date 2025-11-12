@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
 import { getCategoryByHandle, listCategories } from "@lib/data/categories"
 import { listRegions } from "@lib/data/regions"
@@ -14,6 +15,12 @@ type Props = {
     page?: string
   }
 }
+
+// Enable ISR with 1 hour revalidation
+export const revalidate = 3600
+
+// Force static generation where possible
+export const dynamicParams = false
 
 export async function generateStaticParams() {
   const product_categories = await listCategories()
@@ -80,11 +87,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   }
 
   return (
-    <CategoryTemplate
-      categories={product_categories}
-      sortBy={sortBy}
-      page={page}
-      countryCode={params.countryCode}
-    />
+    <Suspense fallback={<div>Loading category...</div>}>
+      <CategoryTemplate
+        categories={product_categories}
+        sortBy={sortBy}
+        page={page}
+        countryCode={params.countryCode}
+      />
+    </Suspense>
   )
 }

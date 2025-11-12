@@ -35,7 +35,12 @@ export const getProductByHandle = cache(async function (
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      { next: { tags: ["products"] } }
+      {
+        next: {
+          tags: ["products", `product-${handle}`],
+          revalidate: 3600, // ISR: revalidate every hour
+        } as { tags: string[]; revalidate?: number },
+      }
     )
     .then(({ products }) => products[0])
 })
@@ -73,7 +78,12 @@ export const getProductsList = cache(async function ({
         fields: "*variants.calculated_price",
         ...queryParams,
       },
-      { next: { tags: ["products"] } }
+      {
+        next: {
+          tags: ["products"],
+          revalidate: 3600, // ISR: revalidate every hour
+        } as { tags: string[]; revalidate?: number },
+      }
     )
     .then(({ products, count }) => {
       const nextPage = count > offset + limit ? pageParam + 1 : null

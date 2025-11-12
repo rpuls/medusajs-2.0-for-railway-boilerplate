@@ -1,7 +1,19 @@
-import Product from "../product-preview"
+import { Suspense } from "react"
+import dynamic from "next/dynamic"
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
+
+// Lazy load product preview for related products (below fold)
+const Product = dynamic(() => import("../product-preview"), {
+  loading: () => (
+    <div className="animate-pulse">
+      <div className="bg-gray-200 aspect-[9/16] rounded-lg mb-4"></div>
+      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+    </div>
+  ),
+})
 
 type RelatedProductsProps = {
   product: HttpTypes.StoreProduct
@@ -23,7 +35,7 @@ export default async function RelatedProducts({
   const region = await getRegion(countryCode)
 
   if (!region) {
-  const queryParams: StoreProductParamsWithTags = {}
+    return null
   }
 
   // edit this function to define your related products logic
@@ -69,7 +81,17 @@ export default async function RelatedProducts({
       <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
         {products.map((product) => (
           <li key={product.id}>
-            {region && <Product region={region} product={product} />}
+            <Suspense
+              fallback={
+                <div className="animate-pulse">
+                  <div className="bg-gray-200 aspect-[9/16] rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              }
+            >
+              {region && <Product region={region} product={product} />}
+            </Suspense>
           </li>
         ))}
       </ul>

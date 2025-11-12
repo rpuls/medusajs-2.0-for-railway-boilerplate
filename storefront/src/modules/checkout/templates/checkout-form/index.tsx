@@ -1,10 +1,29 @@
+import { Suspense } from "react"
+import dynamic from "next/dynamic"
 import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
-import Payment from "@modules/checkout/components/payment"
-import Review from "@modules/checkout/components/review"
 import Shipping from "@modules/checkout/components/shipping"
+
+// Lazy load payment and review components (heavy, client-side only)
+const Payment = dynamic(() => import("@modules/checkout/components/payment"), {
+  loading: () => (
+    <div className="animate-pulse">
+      <div className="h-8 bg-gray-200 rounded mb-4"></div>
+      <div className="h-32 bg-gray-200 rounded"></div>
+    </div>
+  ),
+})
+
+const Review = dynamic(() => import("@modules/checkout/components/review"), {
+  loading: () => (
+    <div className="animate-pulse">
+      <div className="h-8 bg-gray-200 rounded mb-4"></div>
+      <div className="h-24 bg-gray-200 rounded"></div>
+    </div>
+  ),
+})
 
 export default async function CheckoutForm({
   cart,
@@ -35,13 +54,31 @@ export default async function CheckoutForm({
           <Shipping cart={cart} availableShippingMethods={shippingMethods} />
         </div>
 
-        <div>
-          <Payment cart={cart} availablePaymentMethods={paymentMethods} />
-        </div>
+        <Suspense
+          fallback={
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded mb-4"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
+          }
+        >
+          <div>
+            <Payment cart={cart} availablePaymentMethods={paymentMethods} />
+          </div>
+        </Suspense>
 
-        <div>
-          <Review cart={cart} />
-        </div>
+        <Suspense
+          fallback={
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded mb-4"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          }
+        >
+          <div>
+            <Review cart={cart} />
+          </div>
+        </Suspense>
       </div>
     </div>
   )

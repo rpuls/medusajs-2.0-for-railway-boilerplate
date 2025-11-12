@@ -1,0 +1,126 @@
+{
+  "common": {
+    "cart": "Кошница",
+    "checkout": "Плащане",
+    "addToCart": "Добави в кошницата",
+    "wishlist": "Любими",
+    "search": "Търсене",
+    "account": "Профил",
+    "home": "Начало",
+    "products": "Продукти",
+    "categories": "Категории",
+    "collections": "Колекции",
+    "loading": "Зареждане...",
+    "error": "Грешка",
+    "success": "Успех",
+    "close": "Затвори",
+    "cancel": "Отказ",
+    "save": "Запази",
+    "delete": "Изтрий",
+    "edit": "Редактирай",
+    "view": "Виж",
+    "next": "Напред",
+    "previous": "Назад",
+    "submit": "Изпрати",
+    "continue": "Продължи",
+    "back": "Назад",
+    "promotion": "Промоция",
+    "faq": "Често задавани въпроси",
+    "reviews": "Мнения",
+    "blog": "Блог",
+    "registration": "Регистрация",
+    "searchPlaceholder": "Търсете в магазина"
+  },
+  "cart": {
+    "title": "Кошница",
+    "reviewOrder": "ПРЕГЛЕД НА ПОРЪЧКАТА",
+    "checkout": "ПЛАЩАНЕ",
+    "subtotal": "Междинна сума",
+    "total": "Общо",
+    "empty": "Вашата кошница е празна",
+    "emptyDescription": "Нямате нищо в кошницата си. Нека променим това, използвайте линка по-долу, за да започнете да разглеждате нашите продукти.",
+    "exploreProducts": "Разгледайте продуктите",
+    "quantity": "Количество",
+    "remove": "Премахни",
+    "product": "Продукт",
+    "price": "Цена"
+  },
+  "product": {
+    "addToCart": "Добави в кошницата",
+    "quickBuy": "Бърза покупка",
+    "buyNow": "Купи сега",
+    "relatedProducts": "Свързани продукти",
+    "selectVariant": "Изберете вариант",
+    "outOfStock": "Няма наличност",
+    "inStock": "В наличност",
+    "reviews": "Отзиви",
+    "description": "Описание",
+    "specifications": "Спецификации",
+    "shipping": "Доставка",
+    "returns": "Връщане"
+  },
+  "filters": {
+    "filter": "Филтър",
+    "sortBy": "Подреждане по",
+    "results": "резултата",
+    "showing": "показани",
+    "of": "от",
+    "clearFilters": "Изчисти филтрите",
+    "activeFilters": "Активни филтри",
+    "price": "Цена",
+    "category": "Категория",
+    "brand": "Марка",
+    "form": "Форма",
+    "subcategory": "Подкатегория"
+  },
+  "homepage": {
+    "hero": {
+      "title": "Открийте своя стил",
+      "subtitle": "Пазарувайте най-новите тенденции и намерете своя перфектен вид",
+      "cta": "Пазарувайте сега"
+    },
+    "categoryIcons": {
+      "title": "Търсене по предназначение"
+    },
+    "advantages": {
+      "freeShipping": {
+        "title": "Безплатна доставка над 79 лв.",
+        "description": "Гратис подарък над 100лв."
+      },
+      "fastDelivery": {
+        "title": "Бързо изпращане и доставка"
+      },
+      "securePurchase": {
+        "title": "Гарантирана сигурна покупка"
+      }
+    },
+    "newsletter": {
+      "title": "Абонирайте се за новини",
+      "description": "Получете отстъпка от 10% при абонамент за новини.",
+      "placeholder": "Въведете имейла си",
+      "button": "Абониране",
+      "marketingConsent": "Разрешавам използването на имейл адреса за маркетингови цели",
+      "success": "Успешно се абонирахте за нашия бюлетин!"
+    },
+    "trending": "Актуално в момента",
+    "bestSellers": "Най-продавани",
+    "buyAndSave": "Купете и спестете",
+    "othersAlsoBought": "Други също купиха",
+    "top10": "Топ 10",
+    "viewMore": "Виж повече",
+    "viewAll": "Виж всички →"
+  },
+  "checkout": {
+    "address": "Адрес",
+    "delivery": "Доставка",
+    "payment": "Плащане",
+    "review": "Преглед",
+    "placeOrder": "Направи поръчка",
+    "orderSummary": "Резюме на поръчката",
+    "shippingAddress": "Адрес за доставка",
+    "billingAddress": "Адрес за фактуриране",
+    "paymentMethod": "Начин на плащане",
+    "shippingMethod": "Начин на доставка"
+  }
+}
+

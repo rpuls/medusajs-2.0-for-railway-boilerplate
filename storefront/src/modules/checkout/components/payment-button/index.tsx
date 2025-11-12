@@ -10,6 +10,7 @@ import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
+import StripePaymentRequest from "./stripe-payment-request"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -172,6 +173,26 @@ const StripePaymentButton = ({
 
   return (
     <>
+      {/* Google Pay / Apple Pay Button */}
+      <div className="mb-4">
+        <StripePaymentRequest
+          cart={cart}
+          notReady={notReady || disabled}
+          onPaymentComplete={onPaymentCompleted}
+        />
+      </div>
+
+      {/* Divider between payment methods */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border-base"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-text-secondary">Or</span>
+        </div>
+      </div>
+
+      {/* Card Payment Button */}
       <Button
         disabled={disabled || notReady}
         onClick={handlePayment}

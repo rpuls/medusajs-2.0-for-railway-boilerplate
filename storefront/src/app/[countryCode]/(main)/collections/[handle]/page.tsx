@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
 import {
   getCollectionByHandle,
@@ -19,6 +20,12 @@ type Props = {
 }
 
 export const PRODUCT_LIMIT = 12
+
+// Enable ISR with 1 hour revalidation
+export const revalidate = 3600
+
+// Force static generation where possible
+export const dynamicParams = false
 
 export async function generateStaticParams() {
   const { collections } = await getCollectionsList()
@@ -78,11 +85,13 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   }
 
   return (
-    <CollectionTemplate
-      collection={collection}
-      page={page}
-      sortBy={sortBy}
-      countryCode={params.countryCode}
-    />
+    <Suspense fallback={<div>Loading collection...</div>}>
+      <CollectionTemplate
+        collection={collection}
+        page={page}
+        sortBy={sortBy}
+        countryCode={params.countryCode}
+      />
+    </Suspense>
   )
 }

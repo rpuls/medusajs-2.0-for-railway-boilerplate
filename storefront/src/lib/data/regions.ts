@@ -5,7 +5,15 @@ import { HttpTypes } from "@medusajs/types"
 
 export const listRegions = cache(async function () {
   return sdk.store.region
-    .list({}, { next: { tags: ["regions"] } })
+    .list(
+      {},
+      {
+        next: {
+          tags: ["regions"],
+          revalidate: 3600, // ISR: revalidate every hour
+        },
+      }
+    )
     .then(({ regions }) => regions)
     .catch(medusaError)
 })

@@ -1,0 +1,126 @@
+{
+  "common": {
+    "cart": "Cart",
+    "checkout": "Checkout",
+    "addToCart": "Add to cart",
+    "wishlist": "Wishlist",
+    "search": "Search",
+    "account": "Account",
+    "home": "Home",
+    "products": "Products",
+    "categories": "Categories",
+    "collections": "Collections",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "continue": "Continue",
+    "back": "Back",
+    "promotion": "Promotion",
+    "faq": "FAQ",
+    "reviews": "Reviews",
+    "blog": "Blog",
+    "registration": "Registration",
+    "searchPlaceholder": "Search in the store"
+  },
+  "cart": {
+    "title": "Cart",
+    "reviewOrder": "Review Order",
+    "checkout": "Checkout",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "empty": "Your cart is empty",
+    "emptyDescription": "You don't have anything in your cart. Let's change that, use the link below to start browsing our products.",
+    "exploreProducts": "Explore products",
+    "quantity": "Quantity",
+    "remove": "Remove",
+    "product": "Product",
+    "price": "Price"
+  },
+  "product": {
+    "addToCart": "Add to cart",
+    "quickBuy": "Quick Buy",
+    "buyNow": "Buy Now",
+    "relatedProducts": "Related Products",
+    "selectVariant": "Select variant",
+    "outOfStock": "Out of stock",
+    "inStock": "In stock",
+    "reviews": "Reviews",
+    "description": "Description",
+    "specifications": "Specifications",
+    "shipping": "Shipping",
+    "returns": "Returns"
+  },
+  "filters": {
+    "filter": "Filter",
+    "sortBy": "Sort by",
+    "results": "results",
+    "showing": "showing",
+    "of": "of",
+    "clearFilters": "Clear filters",
+    "activeFilters": "Active filters",
+    "price": "Price",
+    "category": "Category",
+    "brand": "Brand",
+    "form": "Form",
+    "subcategory": "Subcategory"
+  },
+  "homepage": {
+    "hero": {
+      "title": "Discover Your Style",
+      "subtitle": "Shop the latest trends and find your perfect look",
+      "cta": "Shop Now"
+    },
+    "categoryIcons": {
+      "title": "Search by Purpose"
+    },
+    "advantages": {
+      "freeShipping": {
+        "title": "Free shipping over 79 BGN",
+        "description": "Free gift over 100 BGN"
+      },
+      "fastDelivery": {
+        "title": "Fast shipping and delivery"
+      },
+      "securePurchase": {
+        "title": "Guaranteed secure purchase"
+      }
+    },
+    "newsletter": {
+      "title": "Subscribe to Newsletter",
+      "description": "Get 10% discount when subscribing to newsletter.",
+      "placeholder": "Enter your email",
+      "button": "Subscribe",
+      "marketingConsent": "I allow the use of email address for marketing purposes",
+      "success": "Successfully subscribed to our newsletter!"
+    },
+    "trending": "Currently Trending",
+    "bestSellers": "Best Sellers",
+    "buyAndSave": "Buy and Save",
+    "othersAlsoBought": "Others Also Bought",
+    "top10": "Top 10",
+    "viewMore": "View More",
+    "viewAll": "View all →"
+  },
+  "checkout": {
+    "address": "Address",
+    "delivery": "Delivery",
+    "payment": "Payment",
+    "review": "Review",
+    "placeOrder": "Place order",
+    "orderSummary": "Order Summary",
+    "shippingAddress": "Shipping Address",
+    "billingAddress": "Billing Address",
+    "paymentMethod": "Payment Method",
+    "shippingMethod": "Shipping Method"
+  }
+}
+

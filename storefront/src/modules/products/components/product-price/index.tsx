@@ -22,36 +22,39 @@ export default function ProductPrice({
   }
 
   return (
-    <div className="flex flex-col text-ui-fg-base">
-      <span
-        className={clx("text-xl-semi", {
-          "text-ui-fg-interactive": selectedPrice.price_type === "sale",
-        })}
-      >
-        {!variant && "From "}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-3">
         <span
-          data-testid="product-price"
-          data-value={selectedPrice.calculated_price_number}
+          className={clx("text-3xl md:text-4xl font-bold", {
+            "text-accent": selectedPrice.price_type === "sale",
+            "text-text-primary": selectedPrice.price_type !== "sale",
+          })}
         >
-          {selectedPrice.calculated_price}
+          {!variant && <span className="text-lg font-normal text-text-secondary">From </span>}
+          <span
+            data-testid="product-price"
+            data-value={selectedPrice.calculated_price_number}
+          >
+            {selectedPrice.calculated_price}
+          </span>
         </span>
-      </span>
-      {selectedPrice.price_type === "sale" && (
-        <>
-          <p>
-            <span className="text-ui-fg-subtle">Original: </span>
-            <span
-              className="line-through"
-              data-testid="original-product-price"
-              data-value={selectedPrice.original_price_number}
-            >
-              {selectedPrice.original_price}
-            </span>
-          </p>
-          <span className="text-ui-fg-interactive">
+        {selectedPrice.price_type === "sale" && (
+          <span className="px-2 py-1 text-sm font-semibold bg-accent/20 text-accent-dark rounded">
             -{selectedPrice.percentage_diff}%
           </span>
-        </>
+        )}
+      </div>
+      {selectedPrice.price_type === "sale" && (
+        <p className="text-base text-text-secondary">
+          <span>Original: </span>
+          <span
+            className="line-through"
+            data-testid="original-product-price"
+            data-value={selectedPrice.original_price_number}
+          >
+            {selectedPrice.original_price}
+          </span>
+        </p>
       )}
     </div>
   )

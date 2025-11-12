@@ -11,8 +11,10 @@ import OptionSelect from "@modules/products/components/product-actions/option-se
 
 import MobileActions from "./mobile-actions"
 import ProductPrice from "../product-price"
+import QuickBuy from "../quick-buy"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
+import { useStorefrontConfig } from "@lib/hooks/use-storefront-config"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -37,6 +39,7 @@ export default function ProductActions({
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
+  const config = useStorefrontConfig()
 
   // If there is only 1 variant, preselect the options
   useEffect(() => {
@@ -113,10 +116,13 @@ export default function ProductActions({
       <div className="flex flex-col gap-y-2" ref={actionsRef}>
         <div>
           {(product.variants?.length ?? 0) > 1 && (
-            <div className="flex flex-col gap-y-4">
+            <div className="flex flex-col gap-y-6">
               {(product.options || []).map((option) => {
                 return (
-                  <div key={option.id}>
+                  <div key={option.id} className="flex flex-col gap-3">
+                    <label className="text-sm font-semibold text-text-primary uppercase tracking-wide">
+                      {option.title}
+                    </label>
                     <OptionSelect
                       option={option}
                       current={options[option.title ?? ""]}
@@ -128,27 +134,38 @@ export default function ProductActions({
                   </div>
                 )
               })}
-              <Divider />
             </div>
           )}
         </div>
 
-        <ProductPrice product={product} variant={selectedVariant} />
+        <div className="py-4 border-t border-b border-border-base my-4">
+          <ProductPrice product={product} variant={selectedVariant} />
+        </div>
 
-        <Button
-          onClick={handleAddToCart}
-          disabled={!inStock || !selectedVariant || !!disabled || isAdding}
-          variant="primary"
-          className="w-full h-10"
-          isLoading={isAdding}
-          data-testid="add-product-button"
-        >
-          {!selectedVariant
-            ? "Select variant"
-            : !inStock
-            ? "Out of stock"
-            : "Add to cart"}
-        </Button>
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={handleAddToCart}
+            disabled={!inStock || !selectedVariant || !!disabled || isAdding}
+            className="w-full h-14 bg-primary text-text-inverse hover:bg-primary-hover transition-colors font-semibold text-lg rounded-lg shadow-md hover:shadow-lg"
+            isLoading={isAdding}
+            data-testid="add-product-button"
+          >
+            {!selectedVariant
+              ? "Select variant"
+              : !inStock
+              ? "Out of stock"
+              : "Add to cart"}
+          </Button>
+          
+          {/* Quick Buy Button */}
+          {config.quickBuy.showOnPDP && selectedVariant && inStock && (
+            <QuickBuy
+              product={product}
+              variant={selectedVariant}
+              className="w-full h-12 border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-text-inverse transition-colors font-semibold rounded-lg"
+            />
+          )}
+        </div>
         <MobileActions
           product={product}
           variant={selectedVariant}

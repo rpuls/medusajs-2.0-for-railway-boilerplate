@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
 import ProductTemplate from "@modules/products/templates"
 import { getRegion, listRegions } from "@lib/data/regions"
@@ -8,6 +9,12 @@ import { getProductByHandle, getProductsList } from "@lib/data/products"
 type Props = {
   params: { countryCode: string; handle: string }
 }
+
+// Enable ISR with 1 hour revalidation
+export const revalidate = 3600
+
+// Force static generation where possible
+export const dynamicParams = false
 
 export async function generateStaticParams() {
   const countryCodes = await listRegions().then(
@@ -80,10 +87,12 @@ export default async function ProductPage({ params }: Props) {
   }
 
   return (
-    <ProductTemplate
-      product={pricedProduct}
-      region={region}
-      countryCode={params.countryCode}
-    />
+    <Suspense fallback={<div>Loading product...</div>}>
+      <ProductTemplate
+        product={pricedProduct}
+        region={region}
+        countryCode={params.countryCode}
+      />
+    </Suspense>
   )
 }

@@ -2,17 +2,113 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+/* Theme CSS Variables - Can be overridden for client customization */
+:root {
+  /* Primary Color System - Green */
+  --color-primary: #519717;
+  --color-primary-hover: #468a0e;
+  --color-primary-active: #3d760e;
+  --color-primary-disabled: #9CA3AF;
+  --color-primary-light: #66ba20;
+  --color-primary-dark: #3d760e;
+
+  /* Secondary Color System - Yellow/Orange */
+  --color-secondary: #FCC100;
+  --color-secondary-hover: #FCC100;
+  --color-secondary-active: #FCC100;
+  --color-secondary-disabled: #E5E7EB;
+  --color-secondary-light: #FCC100;
+  --color-secondary-dark: #FCC100;
+
+  /* Accent Colors */
+  --color-accent: #FCC100;
+  --color-accent-hover: #FCC100;
+  --color-accent-light: #FCC100;
+  --color-accent-dark: #FCC100;
+
+  /* Interactive Colors - Blue */
+  --color-interactive: #3B82F6;
+  --color-interactive-hover: #2563EB;
+  --color-interactive-active: #1D4ED8;
+  --color-interactive-disabled: #637daa;
+
+  /* Success Colors */
+  --color-success: #10B981;
+  --color-success-hover: #059669;
+  --color-success-light: #D1FAE5;
+  --color-success-dark: #047857;
+
+  /* Error/Danger Colors */
+  --color-error: #EF4444;
+  --color-error-hover: #DC2626;
+  --color-error-light: #FEE2E2;
+  --color-error-dark: #B91C1C;
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-danger-light: #FEE2E2;
+  --color-danger-dark: #B91C1C;
+
+  /* Warning/Alert Colors */
+  --color-warning: #F59E0B;
+  --color-warning-hover: #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-warning-dark: #B45309;
+  --color-alert: #F59E0B;
+  --color-alert-hover: #D97706;
+  --color-alert-light: #FEF3C7;
+  --color-alert-dark: #B45309;
+
+  /* Text Colors */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-tertiary: #9CA3AF;
+  --color-text-muted: #9CA3AF;
+  --color-text-white: #FFFFFF;
+  --color-text-inverse: #FFFFFF;
+
+  /* Background Colors */
+  --color-background-base: #FFFFFF;
+  --color-background-elevated: #F9FAFB;
+  --color-background-overlay: rgba(0, 0, 0, 0.5);
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F9FAFB;
+  --color-bg-dark: #111827;
+  --color-bg-dark-secondary: #1F2937;
+  --color-bg-gray: #F3F4F6;
+
+  /* Contrast Colors */
+  --color-contrast-white: #FFFFFF;
+  --color-contrast-black: #000000;
+  --color-contrast-gray: #6B7280;
+
+  /* Border Colors */
+  --color-border-base: #E5E7EB;
+  --color-border-hover: #D1D5DB;
+  --color-border-focus: #3B82F6;
+  --color-border: #E5E7EB;
+  --color-border-light: #F3F4F6;
+  --color-border-dark: #D1D5DB;
+
+  /* Shadow Colors */
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-shadow-hover: rgba(0, 0, 0, 0.15);
+  --color-shadow-focus: rgba(59, 130, 246, 0.25);
+}
+
 @layer utilities {
   /* Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
 
-  .no-scrollbar::-webkit-scrollbar-track {
+  .no-scrollbar::-webkit-scrollbar-track,
+  .scrollbar-hide::-webkit-scrollbar-track {
     background-color: transparent;
   }
 
-  .no-scrollbar {
+  .no-scrollbar,
+  .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
