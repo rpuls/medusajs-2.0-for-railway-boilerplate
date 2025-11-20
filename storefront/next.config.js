@@ -17,12 +17,70 @@ const nextConfig = {
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
+  
+  // Bundle optimization
+  webpack: (config, { isServer }) => {
+    // Optimize bundle splitting
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // Vendor chunk for large libraries
+            vendor: {
+              name: 'vendor',
+              chunks: 'all',
+              test: /node_modules/,
+              priority: 20,
+            },
+            // MedusaJS SDK chunk
+            medusa: {
+              name: 'medusa',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/]@medusajs[\\/]/,
+              priority: 30,
+            },
+            // Payment providers chunk
+            payments: {
+              name: 'payments',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](@stripe|@paypal)[\\/]/,
+              priority: 25,
+            },
+            // Search chunk
+            search: {
+              name: 'search',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](react-instantsearch|@meilisearch|algoliasearch)[\\/]/,
+              priority: 25,
+            },
+            // Common chunk for shared code
+            common: {
+              name: 'common',
+              minChunks: 2,
+              chunks: 'all',
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      }
+    }
+    return config
+  },
+  
   images: {
     // Optimize images
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 3600,
+    // Enable image optimization
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: "http",

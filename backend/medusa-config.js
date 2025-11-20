@@ -3,6 +3,7 @@ import {
   ADMIN_CORS,
   AUTH_CORS,
   BACKEND_URL,
+  ADMIN_UI_URL,
   COOKIE_SECRET,
   DATABASE_URL,
   JWT_SECRET,
@@ -23,6 +24,7 @@ import {
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
+import { XML_PRODUCT_IMPORTER_MODULE } from './src/modules/xml-product-importer';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
@@ -132,7 +134,11 @@ const medusaConfig = {
           },
         ],
       },
-    }] : [])
+    }] : []),
+    {
+      key: XML_PRODUCT_IMPORTER_MODULE,
+      resolve: "./src/modules/xml-product-importer",
+    }
   ],
   plugins: [
   ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
