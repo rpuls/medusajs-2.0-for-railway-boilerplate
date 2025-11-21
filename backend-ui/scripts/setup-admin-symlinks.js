@@ -33,7 +33,7 @@ if (!backendExists) {
 // Paths
 const backendRoutes = path.join(backendDir, 'src', 'admin', 'routes')
 const backendMenuItems = path.join(backendDir, 'src', 'admin', 'menu-items')
-const uiRoutes = path.join(backendUiDir, 'src', 'admin', 'routes')
+const uiRoutes = path.join(backendUiDir, 'routes')
 const uiMenuItems = path.join(backendUiDir, 'src', 'admin', 'menu-items')
 
 // Helper function to recursively copy directory
