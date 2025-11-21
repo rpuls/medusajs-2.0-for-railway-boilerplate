@@ -7,6 +7,7 @@
   "scripts": {
     "generate:static": "node ./scripts/generate-currencies.js && prettier --write ./src/lib/currencies.ts",
     "setup:symlinks": "node ./scripts/setup-admin-symlinks.js",
+    "sync:admin": "node ./scripts/sync-admin-from-backend.js",
     "dev": "vite",
     "build": "tsup && node ./scripts/generate-types.js",
     "build:production": "npm run setup:symlinks && vite build --mode production",

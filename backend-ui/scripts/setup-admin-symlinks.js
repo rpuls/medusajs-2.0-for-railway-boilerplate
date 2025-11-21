@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Setup script to create symlinks for admin routes and menu items
+ * Setup script to create symlinks (or copy) admin routes and menu items
  * from the backend project to backend-ui for the admin-vite-plugin to discover.
  * 
- * This script runs before the build to ensure symlinks exist in production.
+ * - In local dev: Creates symlinks (maintains single source of truth)
+ * - In Railway/production: Copies files (backend not available in build context)
+ * 
+ * This script runs before the build to ensure admin extensions are available.
  */
 
 const fs = require('fs')
@@ -13,15 +16,18 @@ const path = require('path')
 const backendUiDir = process.cwd()
 const backendDir = path.resolve(backendUiDir, '../backend')
 
-console.log('🔗 Setting up admin extension symlinks...')
+console.log('🔗 Setting up admin extensions...')
 console.log('Backend UI dir:', backendUiDir)
 console.log('Backend dir:', backendDir)
 
-// Check if backend directory exists
-if (!fs.existsSync(backendDir)) {
+const backendExists = fs.existsSync(backendDir)
+const useSymlinks = backendExists // Use symlinks if backend exists, otherwise we'll need to copy from git
+
+if (!backendExists) {
   console.warn('⚠️  Backend directory not found at:', backendDir)
-  console.warn('   Symlinks will not be created. This is OK if backend is not in monorepo.')
-  process.exit(0)
+  console.warn('   This is expected in Railway builds (rootDirectory: backend-ui)')
+  console.warn('   Admin files should be committed to backend-ui for production builds')
+  // Don't exit - we'll check if files already exist in backend-ui
 }
 
 // Paths
@@ -30,74 +36,105 @@ const backendMenuItems = path.join(backendDir, 'src', 'admin', 'menu-items')
 const uiRoutes = path.join(backendUiDir, 'routes')
 const uiMenuItems = path.join(backendUiDir, 'src', 'admin', 'menu-items')
 
-// Helper function to safely create/update symlink
-function createSymlink(target, linkPath, name) {
+// Helper function to recursively copy directory
+function copyDir(src, dest) {
+  if (!fs.existsSync(src)) {
+    return false
+  }
+  
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true })
+  }
+  
+  const entries = fs.readdirSync(src, { withFileTypes: true })
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name)
+    const destPath = path.join(dest, entry.name)
+    
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath)
+    } else {
+      fs.copyFileSync(srcPath, destPath)
+    }
+  }
+  
+  return true
+}
+
+// Helper function to safely create symlink or copy
+function setupAdminFiles(source, target, name) {
   try {
-    // Check if link already exists
-    if (fs.existsSync(linkPath) || fs.lstatSync(linkPath)) {
+    // Check if target already exists
+    if (fs.existsSync(target)) {
       try {
-        const stats = fs.lstatSync(linkPath)
+        const stats = fs.lstatSync(target)
         if (stats.isSymbolicLink()) {
-          // Check if it points to the correct target
-          const currentTarget = fs.readlinkSync(linkPath)
-          const resolvedCurrent = path.resolve(path.dirname(linkPath), currentTarget)
-          const resolvedTarget = path.resolve(target)
+          // Check if symlink points to correct target
+          const currentTarget = fs.readlinkSync(target)
+          const resolvedCurrent = path.resolve(path.dirname(target), currentTarget)
+          const resolvedSource = path.resolve(source)
           
-          if (resolvedCurrent === resolvedTarget) {
+          if (resolvedCurrent === resolvedSource) {
             console.log(`✅ ${name} symlink already exists and is correct`)
             return true
           } else {
             // Remove incorrect symlink
-            fs.unlinkSync(linkPath)
-            console.log(`🔄 Removed incorrect ${name} symlink (was pointing to ${currentTarget})`)
+            fs.unlinkSync(target)
+            console.log(`🔄 Removed incorrect ${name} symlink`)
           }
         } else {
-          // It's a real directory/file, not a symlink
-          console.warn(`⚠️  ${name} exists and is not a symlink. Skipping to avoid overwriting.`)
-          return false
+          // It's a real directory - check if it has content
+          const files = fs.readdirSync(target)
+          if (files.length > 0) {
+            console.log(`✅ ${name} directory already exists with content (${files.length} items)`)
+            return true // Already copied, skip
+          }
         }
       } catch (err) {
-        // If lstatSync fails, the file might not exist, continue to create
         if (err.code !== 'ENOENT') {
           throw err
         }
       }
     }
     
-    // Create the symlink
-    fs.symlinkSync(target, linkPath, 'dir')
-    console.log(`✅ Created symlink: ${name} -> ${target}`)
-    return true
-  } catch (error) {
-    if (error.code === 'EEXIST') {
-      // Try to remove and recreate
-      try {
-        fs.unlinkSync(linkPath)
-        fs.symlinkSync(target, linkPath, 'dir')
-        console.log(`✅ Recreated symlink: ${name} -> ${target}`)
-        return true
-      } catch (retryError) {
-        console.error(`❌ Error recreating ${name} symlink:`, retryError.message)
+    // Create symlink if backend exists, otherwise copy
+    if (useSymlinks && fs.existsSync(source)) {
+      fs.symlinkSync(source, target, 'dir')
+      console.log(`✅ Created symlink: ${name} -> ${source}`)
+    } else if (fs.existsSync(source)) {
+      // Copy directory
+      if (copyDir(source, target)) {
+        console.log(`✅ Copied ${name} directory from ${source}`)
+      } else {
+        console.warn(`⚠️  Could not copy ${name} from ${source}`)
         return false
       }
+    } else {
+      console.warn(`⚠️  Source ${name} not found at: ${source}`)
+      return false
     }
-    console.error(`❌ Error creating ${name} symlink:`, error.message)
+    
+    return true
+  } catch (error) {
+    console.error(`❌ Error setting up ${name}:`, error.message)
     return false
   }
 }
 
-// Create symlinks
+// Setup admin files
 try {
   let success = true
   
-  // Create routes symlink
-  if (fs.existsSync(backendRoutes)) {
-    if (!createSymlink(backendRoutes, uiRoutes, 'routes')) {
+  // Setup routes
+  if (!setupAdminFiles(backendRoutes, uiRoutes, 'routes')) {
+    // Check if routes already exist in backend-ui (committed for Railway)
+    if (fs.existsSync(uiRoutes)) {
+      console.log('✅ Routes directory already exists in backend-ui')
+    } else {
+      console.warn('⚠️  Routes not found. Make sure backend/src/admin/routes is available or committed to backend-ui')
       success = false
     }
-  } else {
-    console.warn('⚠️  Backend routes directory not found:', backendRoutes)
-    success = false
   }
 
   // Create src/admin directory if it doesn't exist
@@ -106,23 +143,24 @@ try {
     fs.mkdirSync(uiAdminDir, { recursive: true })
   }
 
-  // Create menu-items symlink
-  if (fs.existsSync(backendMenuItems)) {
-    if (!createSymlink(backendMenuItems, uiMenuItems, 'menu-items')) {
-      success = false
+  // Setup menu-items (optional)
+  if (!setupAdminFiles(backendMenuItems, uiMenuItems, 'menu-items')) {
+    // Check if menu-items already exist in backend-ui
+    if (fs.existsSync(uiMenuItems)) {
+      console.log('✅ Menu-items directory already exists in backend-ui')
+    } else {
+      console.warn('⚠️  Menu-items not found (this is optional)')
     }
-  } else {
-    console.warn('⚠️  Backend menu-items directory not found:', backendMenuItems)
-    // Don't fail if menu-items doesn't exist, it's optional
   }
 
-  if (success) {
-    console.log('✅ Symlinks setup complete!')
+  if (success || fs.existsSync(uiRoutes)) {
+    console.log('✅ Admin extensions setup complete!')
   } else {
-    console.warn('⚠️  Some symlinks could not be created, but continuing...')
+    console.warn('⚠️  Admin extensions may not be available. Continuing build...')
   }
 } catch (error) {
-  console.error('❌ Error setting up symlinks:', error.message)
-  process.exit(1)
+  console.error('❌ Error setting up admin extensions:', error.message)
+  // Don't exit with error - allow build to continue even if admin extensions fail
+  console.warn('⚠️  Continuing build without admin extensions...')
 }
 
