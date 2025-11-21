@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
+import { getApiUrl, authenticatedFetch } from "../utils"
 
 interface FieldMappingEditorProps {
   mapping?: any
@@ -95,7 +96,7 @@ export const FieldMappingEditor = ({
   const loadMedusaFields = async () => {
     setLoadingMedusaFields(true)
     try {
-      const response = await fetch('/admin/xml-importer/product-fields')
+      const response = await authenticatedFetch(getApiUrl('/admin/xml-importer/product-fields'))
       if (response.ok) {
         const data = await response.json()
         setMedusaFields(data.fields || [])
@@ -118,11 +119,8 @@ export const FieldMappingEditor = ({
     setLoadingXml(true)
     setXmlError(null)
     try {
-      const response = await fetch('/admin/xml-importer/analyze-xml', {
+      const response = await authenticatedFetch(getApiUrl('/admin/xml-importer/analyze-xml'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           xmlUrl,
         }),
