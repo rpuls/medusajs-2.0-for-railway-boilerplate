@@ -31,58 +31,22 @@ execSync('pnpm i --prod --frozen-lockfile', {
   stdio: 'inherit'
 });
 
-// Run XML Importer migrations if DATABASE_URL is available
-// Note: This is a best-effort attempt during build. If it fails or DATABASE_URL isn't available,
-// migrations will be handled by init-backend at startup (which is the preferred method).
-if (process.env.DATABASE_URL) {
-  console.log('Running XML Importer migrations (best-effort during build)...');
-  const { Pool } = require('pg');
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    connectionTimeoutMillis: 5000, // 5 second timeout
-  });
+// Copy migration SQL file to build directory so it's available at runtime
+const migrationSqlPath = path.join(process.cwd(), 'src/modules/xml-product-importer/migrations/create-tables.sql');
+const migrationSqlDest = path.join(MEDUSA_SERVER_PATH, 'src/modules/xml-product-importer/migrations/create-tables.sql');
 
-  const sqlPath = path.join(
-    process.cwd(),
-    'src/modules/xml-product-importer/migrations/create-tables.sql'
-  );
-
-  if (fs.existsSync(sqlPath)) {
-    const sql = fs.readFileSync(sqlPath, 'utf-8');
-    const statements = sql
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
-
-    // Execute statements sequentially
-    let migrationPromise = Promise.resolve();
-    for (const statement of statements) {
-      if (statement.trim()) {
-        migrationPromise = migrationPromise.then(() => {
-          return pool.query(statement).catch(error => {
-            // Ignore "already exists" errors
-            if (
-              !error.message?.includes('already exists') &&
-              error.code !== '42P07' &&
-              !error.message?.includes('duplicate key')
-            ) {
-              console.warn('  Migration warning:', error.message);
-            }
-          });
-        });
-      }
-    }
-
-    migrationPromise
-      .then(() => pool.end())
-      .then(() => console.log('✅ XML Importer migrations completed'))
-      .catch(error => {
-        console.warn('⚠️  Migration error (will retry at startup):', error.message);
-        pool.end().catch(() => {});
-      });
-  } else {
-    console.log('⚠️  XML Importer migration SQL file not found');
+if (fs.existsSync(migrationSqlPath)) {
+  const migrationDir = path.dirname(migrationSqlDest);
+  if (!fs.existsSync(migrationDir)) {
+    fs.mkdirSync(migrationDir, { recursive: true });
   }
+  fs.copyFileSync(migrationSqlPath, migrationSqlDest);
+  console.log('✅ Copied XML Importer migration SQL to build directory');
 } else {
-  console.log('ℹ️  DATABASE_URL not available during build - migrations will run at startup via init-backend');
+  console.log('⚠️  XML Importer migration SQL file not found (will be checked at startup)');
 }
+
+// Note: Migrations run at startup via ensure-migrations.ts script
+// Railway's internal database hostnames (postgres.railway.internal) are only
+// available at runtime, not during build.
+console.log('ℹ️  XML Importer migrations will run automatically at startup');
