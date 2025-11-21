@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import React, { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { ImportConfigForm } from "./components/import-config-form"
 import { FieldMappingEditor } from "./components/field-mapping-editor"
 

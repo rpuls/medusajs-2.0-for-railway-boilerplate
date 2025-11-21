@@ -45,8 +45,8 @@ export default defineConfig(({ mode }) => {
   
   // Log for debugging (will show in Railway build logs and dev server)
   const resolvedPath = MEDUSA_PROJECT ? path.resolve(MEDUSA_PROJECT) : null
-  const localRoutesExists = fs.existsSync(path.join(backendUiDir, 'routes'))
-  const symlinkedRoutesExists = fs.existsSync(path.join(backendUiDir, 'routes', 'custom', 'xml-importer'))
+  const localRoutesExists = fs.existsSync(path.join(backendUiDir, 'src', 'admin', 'routes'))
+  const symlinkedRoutesExists = fs.existsSync(path.join(backendUiDir, 'src', 'admin', 'routes', 'custom', 'xml-importer'))
   
   console.error('🔧 Admin extensions source:', {
     MEDUSA_PROJECT,

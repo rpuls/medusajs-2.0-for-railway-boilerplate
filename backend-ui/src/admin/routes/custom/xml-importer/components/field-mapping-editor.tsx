@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 
 interface FieldMappingEditorProps {
   mapping?: any
@@ -188,7 +188,7 @@ export const FieldMappingEditor = ({
     
     setFormData({
       ...formData,
-      mappings: formData.mappings.filter((_, i) => i !== index),
+      mappings: formData.mappings.filter((_: any, i: number) => i !== index),
     })
   }
 
@@ -214,7 +214,7 @@ export const FieldMappingEditor = ({
 
     // Filter out empty mappings and validate
     const validMappings = formData.mappings.filter(
-      (m) => m.xmlPath && m.xmlPath.trim() !== '' && m.medusaField && m.medusaField.trim() !== ''
+      (m: any) => m.xmlPath && m.xmlPath.trim() !== '' && m.medusaField && m.medusaField.trim() !== ''
     )
 
     if (validMappings.length === 0) {
@@ -224,12 +224,12 @@ export const FieldMappingEditor = ({
 
     // Validate required fields are present
     const requiredFieldsPresent = REQUIRED_FIELDS.every(field => 
-      validMappings.some(m => m.medusaField === field && m.xmlPath && m.xmlPath.trim() !== '')
+      validMappings.some((m: any) => m.medusaField === field && m.xmlPath && m.xmlPath.trim() !== '')
     )
     
     if (!requiredFieldsPresent) {
       const missingFields = REQUIRED_FIELDS.filter(field => 
-        !validMappings.some(m => m.medusaField === field && m.xmlPath && m.xmlPath.trim() !== '')
+        !validMappings.some((m: any) => m.medusaField === field && m.xmlPath && m.xmlPath.trim() !== '')
       )
       alert(`Missing required fields: ${missingFields.join(', ')}. Please map these fields before saving.`)
       return
@@ -237,7 +237,7 @@ export const FieldMappingEditor = ({
 
     // Save with only valid mappings and include xmlUrl
     // Ensure all mapping properties are preserved (including categoryDelimiter, imageDelimiter, etc.)
-    const mappingsToSave = validMappings.map(m => {
+    const mappingsToSave = validMappings.map((m: any) => {
       // Preserve all properties including categoryDelimiter, imageDelimiter, isImageCollection, etc.
       const mapping = { ...m }
       // Ensure categoryDelimiter is included if medusaField is categories
@@ -248,7 +248,7 @@ export const FieldMappingEditor = ({
     })
     
     console.log('Saving mappings:', JSON.stringify(mappingsToSave, null, 2))
-    console.log('Categories mapping:', mappingsToSave.find(m => m.medusaField === 'categories'))
+    console.log('Categories mapping:', mappingsToSave.find((m: any) => m.medusaField === 'categories'))
     
     onSave({
       ...formData,
@@ -466,7 +466,7 @@ export const FieldMappingEditor = ({
         </div>
 
           <div style={{ display: 'grid', gap: '16px' }}>
-          {formData.mappings.map((map, index) => (
+          {formData.mappings.map((map: any, index: number) => (
             <div
               key={index}
               style={{
