@@ -2,6 +2,8 @@ import inject from "@medusajs/admin-vite-plugin"
 import react from "@vitejs/plugin-react"
 import { defineConfig, loadEnv } from "vite"
 import inspect from "vite-plugin-inspect"
+import path from "path"
+import fs from "fs"
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -29,10 +31,28 @@ export default defineConfig(({ mode }) => {
   })
 
   /**
-   * Add this to your .env file to specify the project to load admin extensions from.
+   * Load admin extensions from the backend in this monorepo.
+   * The admin-vite-plugin crawls ${source}/routes, so we use symlinks to link
+   * backend/src/admin/routes and menu-items into backend-ui/src/admin/
+   * This maintains a single source of truth without copying files.
    */
-  const MEDUSA_PROJECT = env.VITE_MEDUSA_PROJECT || null
-  const sources = MEDUSA_PROJECT ? [MEDUSA_PROJECT] : []
+  const MEDUSA_PROJECT = env.VITE_MEDUSA_PROJECT || path.resolve(process.cwd(), '../backend')
+  // Use backend-ui as the source since we've symlinked the admin files here
+  const sources = [process.cwd()]
+  
+  // Log for debugging (will show in Railway build logs and dev server)
+  const resolvedPath = MEDUSA_PROJECT ? path.resolve(MEDUSA_PROJECT) : null
+  const localRoutesExists = fs.existsSync(path.join(process.cwd(), 'routes'))
+  const symlinkedRoutesExists = fs.existsSync(path.join(process.cwd(), 'routes', 'custom', 'xml-importer'))
+  
+  console.error('🔧 Admin extensions source:', {
+    MEDUSA_PROJECT,
+    sources,
+    currentDir: process.cwd(),
+    localRoutesExists,
+    symlinkedRoutesExists,
+    resolvedPath
+  })
 
   return {
     base: BASE,
@@ -43,6 +63,12 @@ export default defineConfig(({ mode }) => {
         sources,
       }),
     ],
+    resolve: {
+      alias: resolvedPath ? {
+        // Alias the backend admin directory so the plugin can find it
+        '@backend-admin': path.join(resolvedPath, 'src', 'admin'),
+      } : {},
+    },
     define: {
       __BASE__: JSON.stringify(BASE),
       __BACKEND_URL__: JSON.stringify(BACKEND_URL),

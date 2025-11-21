@@ -22,6 +22,14 @@ interface AppProps {
 }
 
 function App({ plugins = [] }: AppProps) {
+  // Debug: Log what the virtual modules contain
+  console.log('🔍 Virtual modules debug:', {
+    menuItems: menuItemModule?.menuItems || [],
+    routes: routeModule?.routes || [],
+    menuItemCount: menuItemModule?.menuItems?.length || 0,
+    routeCount: routeModule?.routes?.length || 0,
+  })
+
   const app = new DashboardApp({
     plugins: [localPlugin, ...plugins],
   })
