@@ -1,0 +1,752 @@
+---
+description: Next.js 14 storefront best practices, SSR, static generation, and App Router patterns
+globs: storefront/**/*
+alwaysApply: true
+---
+# Storefront Best Practices
+
+This document outlines best practices for the Next.js 14 storefront application, focusing on Server Components, Static Generation, ISR, and App Router patterns.
+
+## Core Principles
+
+1. **Default to Server Components** - Only use Client Components when necessary
+2. **Leverage Static Generation** - Pre-render pages at build time when possible
+3. **Use ISR for Dynamic Content** - Revalidate static pages periodically
+4. **Optimize Data Fetching** - Use React `cache()` and Next.js caching strategies
+5. **Implement Proper Suspense Boundaries** - Improve perceived performance
+6. **Use Server Actions** - Handle mutations server-side
+
+## Server Components vs Client Components
+
+### When to Use Server Components (Default)
+
+Server Components are the default in Next.js 14 App Router. Use them for:
+- Data fetching
+- Accessing backend resources
+- Keeping sensitive information (API keys, tokens) on the server
+- Large dependencies that shouldn't be sent to the client
+- Static content rendering
+
+**Example:**
+```typescript
+// ✅ Good: Server Component (default)
+export default async function ProductPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle, region.id)
+  return <ProductTemplate product={product} />
+}
+```
+
+### When to Use Client Components
+
+Only use `"use client"` when you need:
+- Browser APIs (`window`, `document`, `localStorage`)
+- React hooks (`useState`, `useEffect`, `useContext`)
+- Event listeners (`onClick`, `onChange`)
+- Third-party libraries that require client-side JavaScript
+
+**Example:**
+```typescript
+// ✅ Good: Client Component (only when needed)
+"use client"
+
+import { useParams } from "next/navigation"
+
+export default function LocalizedClientLink({ href, children }) {
+  const { countryCode } = useParams()
+  return <Link href={`/${countryCode}${href}`}>{children}</Link>
+}
+```
+
+### Best Practices
+
+1. **Keep Client Components Small** - Extract client logic into small, focused components
+2. **Pass Data from Server to Client** - Fetch data in Server Components, pass as props
+3. **Use Composition** - Compose Server and Client Components together
+
+```typescript
+// ✅ Good: Server Component fetches data, Client Component handles interaction
+export default async function ProductPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle, region.id)
+  
+  return (
+    <div>
+      <ProductInfo product={product} /> {/* Server Component */}
+      <ProductActions product={product} /> {/* Client Component */}
+    </div>
+  )
+}
+```
+
+## Static Site Generation (SSG)
+
+### Force Static Generation
+
+Use `export const dynamic = "force-static"` for pages that should be statically generated:
+
+```typescript
+// ✅ Good: Force static generation
+export const dynamic = "force-static"
+export const revalidate = 3600 // ISR: revalidate every hour
+
+export default async function HomePage({ params }: Props) {
+  const products = await getProductsList({ countryCode: params.countryCode })
+  return <HomeTemplate products={products} />
+}
+```
+
+### Generate Static Params
+
+Use `generateStaticParams()` to pre-generate dynamic routes at build time:
+
+```typescript
+// ✅ Good: Pre-generate all product pages
+export const dynamicParams = false // Don't generate on-demand
+
+export async function generateStaticParams() {
+  const countryCodes = await listRegions().then(
+    (regions) =>
+      regions
+        ?.map((r) => r.countries?.map((c) => c.iso_2))
+        .flat()
+        .filter(Boolean) as string[]
+  )
+
+  const products = await Promise.all(
+    countryCodes.map((countryCode) => getProductsList({ countryCode }))
+  ).then((responses) =>
+    responses.map(({ response }) => response.products).flat()
+  )
+
+  return countryCodes.map((countryCode) =>
+    products.map((product) => ({
+      countryCode,
+      handle: product.handle,
+    }))
+  ).flat()
+}
+```
+
+**Best Practices:**
+- Set `dynamicParams = false` to prevent on-demand generation
+- Generate params for all known routes at build time
+- Handle missing params with `notFound()` in the page component
+
+## Incremental Static Regeneration (ISR)
+
+### Revalidation Strategy
+
+Use ISR to update static pages periodically:
+
+```typescript
+// ✅ Good: ISR with 1 hour revalidation
+export const revalidate = 3600 // Revalidate every hour
+
+export default async function ProductPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle, region.id)
+  return <ProductTemplate product={product} />
+}
+```
+
+### On-Demand Revalidation
+
+Use `revalidateTag()` and `revalidatePath()` in Server Actions:
+
+```typescript
+"use server"
+
+import { revalidateTag } from "next/cache"
+
+export async function addToCart({ variantId, quantity, countryCode }) {
+  // ... cart logic ...
+  
+  // ✅ Good: Revalidate cart-related cache
+  revalidateTag("cart")
+  revalidateTag("products") // If product inventory changed
+}
+```
+
+### Cache Tags
+
+Use cache tags for granular cache invalidation:
+
+```typescript
+// ✅ Good: Tag data fetches for targeted revalidation
+export const getProductByHandle = cache(async function (
+  handle: string,
+  regionId: string
+) {
+  return sdk.store.product
+    .list(
+      { handle, region_id: regionId },
+      {
+        next: {
+          tags: ["products", `product-${handle}`], // Tag for revalidation
+          revalidate: 3600, // ISR: revalidate every hour
+        },
+      }
+    )
+    .then(({ products }) => products[0])
+})
+```
+
+## Data Fetching Patterns
+
+### Use React `cache()` for Request Deduplication
+
+Wrap data fetching functions with `cache()` to deduplicate requests:
+
+```typescript
+import { cache } from "react"
+
+// ✅ Good: Cache function to deduplicate requests
+export const getProductByHandle = cache(async function (
+  handle: string,
+  regionId: string
+) {
+  return sdk.store.product.list({ handle, region_id: regionId })
+})
+```
+
+**Benefits:**
+- Deduplicates identical requests within the same render
+- Works across Server Components in the same request
+- Reduces database/API calls
+
+### Fetch Configuration
+
+Always configure fetch caching:
+
+```typescript
+// ✅ Good: Configure caching with tags and revalidation
+const response = await fetch(`${BACKEND_URL}/store/products`, {
+  headers: { "x-publishable-api-key": PUBLISHABLE_API_KEY },
+  next: {
+    revalidate: 3600, // ISR: revalidate every hour
+    tags: ["products"], // Tag for on-demand revalidation
+  },
+})
+```
+
+### Parallel Data Fetching
+
+Fetch data in parallel when possible:
+
+```typescript
+// ✅ Good: Fetch in parallel
+export default async function HomePage({ params }: Props) {
+  const [collections, region, trendingProducts, bestSellers] = await Promise.all([
+    getCollectionsWithProducts(params.countryCode),
+    getRegion(params.countryCode),
+    getProductsList({ pageParam: 1, queryParams: { limit: 8 }, countryCode: params.countryCode }),
+    getProductsList({ pageParam: 1, queryParams: { limit: 8 }, countryCode: params.countryCode }),
+  ])
+  
+  return <HomeTemplate {...{ collections, region, trendingProducts, bestSellers }} />
+}
+```
+
+## Server Actions
+
+### Use Server Actions for Mutations
+
+Server Actions handle form submissions and mutations:
+
+```typescript
+"use server"
+
+import { revalidateTag } from "next/cache"
+import { redirect } from "next/navigation"
+
+// ✅ Good: Server Action for cart operations
+export async function addToCart({
+  variantId,
+  quantity,
+  countryCode,
+}: {
+  variantId: string
+  quantity: number
+  countryCode: string
+}) {
+  const cart = await getOrSetCart(countryCode)
+  
+  await sdk.store.cart.createLineItem(cart.id, {
+    variant_id: variantId,
+    quantity,
+  })
+  
+  // Revalidate cart cache
+  revalidateTag("cart")
+}
+```
+
+### Form Actions
+
+Use Server Actions with forms:
+
+```typescript
+// ✅ Good: Form with Server Action
+export default function CheckoutForm() {
+  return (
+    <form action={setAddresses}>
+      <input name="shipping_address.first_name" />
+      <input name="shipping_address.last_name" />
+      <button type="submit">Continue</button>
+    </form>
+  )
+}
+
+"use server"
+export async function setAddresses(currentState: unknown, formData: FormData) {
+  const data = {
+    shipping_address: {
+      first_name: formData.get("shipping_address.first_name"),
+      // ... more fields
+    },
+  }
+  
+  await updateCart(data)
+  redirect(`/${countryCode}/checkout?step=delivery`)
+}
+```
+
+**Best Practices:**
+- Use `"use server"` directive at the top of Server Action files
+- Revalidate relevant cache tags after mutations
+- Use `redirect()` for navigation after successful mutations
+- Handle errors gracefully
+
+## Suspense Boundaries
+
+### Implement Suspense for Better UX
+
+Use Suspense to show loading states:
+
+```typescript
+// ✅ Good: Suspense boundaries for async components
+export default async function ProductPage({ params }: Props) {
+  return (
+    <Suspense fallback={<div>Loading product...</div>}>
+      <ProductTemplate
+        product={await getProductByHandle(params.handle, region.id)}
+        region={region}
+        countryCode={params.countryCode}
+      />
+    </Suspense>
+  )
+}
+```
+
+### Nested Suspense Boundaries
+
+Use multiple Suspense boundaries for granular loading:
+
+```typescript
+// ✅ Good: Multiple Suspense boundaries
+export default async function HomePage({ params }: Props) {
+  return (
+    <>
+      <Suspense fallback={<div className="h-[400px] bg-background-elevated" />}>
+        <BannerSliderLazy />
+      </Suspense>
+      
+      <Suspense fallback={<div className="h-32 bg-background-base" />}>
+        <CategoryIconsCarousel countryCode={params.countryCode} />
+      </Suspense>
+      
+      <Suspense fallback={<div className="h-96 bg-background-base" />}>
+        <FeaturedProducts collections={collections} />
+      </Suspense>
+    </>
+  )
+}
+```
+
+**Best Practices:**
+- Wrap async Server Components in Suspense
+- Provide meaningful fallback UI
+- Use multiple Suspense boundaries for independent data fetching
+- Match fallback dimensions to actual content
+
+## Dynamic Imports
+
+### Code Splitting with `next/dynamic`
+
+Use dynamic imports for code splitting:
+
+```typescript
+import dynamicImport from "next/dynamic"
+
+// ✅ Good: Lazy load heavy components
+const BannerSliderLazy = dynamicImport(
+  () => import("@modules/home/components/banner-slider"),
+  {
+    ssr: true, // Keep SSR for SEO
+  }
+)
+
+// ✅ Good: Client-only component
+const NewsletterLazy = dynamicImport(
+  () => import("@modules/home/components/newsletter"),
+  {
+    ssr: false, // Client-side only
+  }
+)
+```
+
+**Best Practices:**
+- Use `ssr: true` for SEO-critical components
+- Use `ssr: false` for client-only components (newsletter, modals)
+- Lazy load heavy third-party libraries
+- Provide loading states for dynamic imports
+
+## Metadata Generation
+
+### Static Metadata
+
+Define static metadata:
+
+```typescript
+// ✅ Good: Static metadata
+export const metadata: Metadata = {
+  title: "Medusa Next.js Starter Template",
+  description: "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
+}
+```
+
+### Dynamic Metadata
+
+Generate metadata dynamically:
+
+```typescript
+// ✅ Good: Dynamic metadata generation
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const product = await getProductByHandle(params.handle, region.id)
+  
+  if (!product) {
+    return {
+      title: "Product Not Found",
+    }
+  }
+  
+  return {
+    title: `${product.title} | Medusa Store`,
+    description: product.description || `${product.title}`,
+    openGraph: {
+      title: `${product.title} | Medusa Store`,
+      description: product.description || `${product.title}`,
+      images: product.thumbnail ? [product.thumbnail] : [],
+    },
+  }
+}
+```
+
+**Best Practices:**
+- Generate metadata for all pages
+- Include Open Graph tags for social sharing
+- Use product images for Open Graph images
+- Handle missing data gracefully
+
+## Image Optimization
+
+### Use Next.js Image Component
+
+Always use `next/image` for images:
+
+```typescript
+import Image from "next/image"
+
+// ✅ Good: Optimized image
+<Image
+  src={product.thumbnail}
+  alt={product.title}
+  width={800}
+  height={600}
+  priority={isAboveFold} // Prioritize above-fold images
+  loading={isAboveFold ? "eager" : "lazy"}
+/>
+```
+
+### Image Configuration
+
+Configure image domains in `next.config.js`:
+
+```javascript
+// ✅ Good: Configure image domains
+images: {
+  formats: ["image/avif", "image/webp"], // Modern formats
+  deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+  imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  minimumCacheTTL: 3600,
+  remotePatterns: [
+    {
+      protocol: "https",
+      hostname: process.env.NEXT_PUBLIC_MINIO_ENDPOINT,
+    },
+  ],
+}
+```
+
+**Best Practices:**
+- Always specify `width` and `height` for layout stability
+- Use `priority` for above-fold images
+- Use `loading="lazy"` for below-fold images
+- Configure remote patterns for external images
+- Use AVIF and WebP formats
+
+## Middleware
+
+### Region Detection and Routing
+
+The middleware handles region detection and routing:
+
+```typescript
+// ✅ Good: Middleware for region detection
+export async function middleware(request: NextRequest) {
+  const regionMap = await getRegionMap()
+  const countryCode = await getCountryCode(request, regionMap)
+  
+  // Redirect to country-specific route if needed
+  if (!urlHasCountryCode && countryCode) {
+    return NextResponse.redirect(
+      `${request.nextUrl.origin}/${countryCode}${request.nextUrl.pathname}`,
+      307
+    )
+  }
+  
+  return NextResponse.next()
+}
+```
+
+**Best Practices:**
+- Cache region data in middleware
+- Use `revalidate` in fetch for ISR
+- Handle edge cases (missing regions, invalid country codes)
+- Set appropriate redirect status codes (307 for GET requests)
+
+## Performance Optimizations
+
+### 1. Minimize Client Components
+
+Keep Client Components small and focused:
+
+```typescript
+// ❌ Bad: Large Client Component
+"use client"
+export default function ProductPage({ product }) {
+  // Too much logic in client component
+}
+
+// ✅ Good: Small, focused Client Component
+"use client"
+export default function AddToCartButton({ productId }) {
+  // Only cart interaction logic
+}
+```
+
+### 2. Optimize Bundle Size
+
+- Use dynamic imports for heavy components
+- Tree-shake unused code
+- Use `server-only` package to prevent server code from being bundled client-side
+
+```typescript
+import "server-only" // ✅ Prevents this module from being imported in client components
+
+export async function getServerData() {
+  // This will never be bundled for the client
+}
+```
+
+### 3. Cache Aggressively
+
+- Use ISR for frequently accessed pages
+- Cache API responses with appropriate tags
+- Use `cache()` for request deduplication
+
+### 4. Optimize Data Fetching
+
+- Fetch data in parallel when possible
+- Use `Promise.all()` for independent requests
+- Minimize waterfall requests
+
+## Error Handling
+
+### Use `notFound()` for Missing Resources
+
+```typescript
+// ✅ Good: Handle missing resources
+export default async function ProductPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle, region.id)
+  
+  if (!product) {
+    notFound() // Renders not-found.tsx
+  }
+  
+  return <ProductTemplate product={product} />
+}
+```
+
+### Error Boundaries
+
+Use error boundaries for Client Components:
+
+```typescript
+"use client"
+
+import { ErrorBoundary } from "react-error-boundary"
+
+export default function ProductActions({ product }) {
+  return (
+    <ErrorBoundary fallback={<div>Error loading product actions</div>}>
+      <AddToCartButton productId={product.id} />
+    </ErrorBoundary>
+  )
+}
+```
+
+## Route Organization
+
+### App Router Structure
+
+Follow Next.js App Router conventions:
+
+```
+app/
+├── [countryCode]/          # Dynamic route segment
+│   ├── (checkout)/         # Route group (doesn't affect URL)
+│   │   └── checkout/
+│   └── (main)/             # Route group
+│       ├── page.tsx        # Homepage
+│       ├── products/
+│       │   └── [handle]/
+│       │       └── page.tsx
+│       └── layout.tsx      # Layout for (main) group
+└── layout.tsx              # Root layout
+```
+
+**Best Practices:**
+- Use route groups `()` for different layouts
+- Use dynamic segments `[]` for dynamic routes
+- Co-locate `layout.tsx` with route groups
+- Use `not-found.tsx` for custom 404 pages
+
+## TypeScript Best Practices
+
+### Type Props Correctly
+
+```typescript
+// ✅ Good: Properly typed props
+type Props = {
+  params: { countryCode: string; handle: string }
+  searchParams: { page?: string; sortBy?: SortOptions }
+}
+
+export default async function ProductPage({ params, searchParams }: Props) {
+  // ...
+}
+```
+
+### Use Type-Safe Data Fetching
+
+```typescript
+// ✅ Good: Type-safe data fetching
+import { HttpTypes } from "@medusajs/types"
+
+export const getProductByHandle = cache(async function (
+  handle: string,
+  regionId: string
+): Promise<HttpTypes.StoreProduct | undefined> {
+  return sdk.store.product.list({ handle, region_id: regionId })
+    .then(({ products }) => products[0])
+})
+```
+
+## Checklist for New Pages
+
+When creating a new page, ensure:
+
+- [ ] Page is a Server Component (no `"use client"` unless needed)
+- [ ] Data fetching uses `cache()` for deduplication
+- [ ] Fetch calls include `next: { tags, revalidate }` configuration
+- [ ] Page uses `generateStaticParams()` if dynamic route
+- [ ] Page exports `revalidate` for ISR
+- [ ] Page exports `generateMetadata()` for SEO
+- [ ] Async components wrapped in `<Suspense>`
+- [ ] Images use `next/image` with proper dimensions
+- [ ] Errors handled with `notFound()` or error boundaries
+- [ ] TypeScript types are properly defined
+
+## Common Patterns
+
+### Pattern: Server Component with Client Interaction
+
+```typescript
+// page.tsx (Server Component)
+export default async function ProductPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle, region.id)
+  
+  return (
+    <div>
+      <ProductInfo product={product} /> {/* Server Component */}
+      <ProductActionsWrapper productId={product.id} /> {/* Server Component wrapper */}
+    </div>
+  )
+}
+
+// product-actions-wrapper.tsx (Server Component)
+export default async function ProductActionsWrapper({ productId }) {
+  const cart = await retrieveCart()
+  
+  return <ProductActions productId={productId} cart={cart} /> {/* Client Component */}
+}
+
+// product-actions.tsx (Client Component)
+"use client"
+export default function ProductActions({ productId, cart }) {
+  // Client-side interaction logic
+}
+```
+
+### Pattern: Parallel Data Fetching
+
+```typescript
+export default async function HomePage({ params }: Props) {
+  const [collections, region, products] = await Promise.all([
+    getCollectionsWithProducts(params.countryCode),
+    getRegion(params.countryCode),
+    getProductsList({ countryCode: params.countryCode }),
+  ])
+  
+  return <HomeTemplate {...{ collections, region, products }} />
+}
+```
+
+### Pattern: ISR with On-Demand Revalidation
+
+```typescript
+// page.tsx
+export const revalidate = 3600 // ISR: revalidate every hour
+
+export default async function ProductPage({ params }: Props) {
+  const product = await getProductByHandle(params.handle, region.id)
+  return <ProductTemplate product={product} />
+}
+
+// actions.ts
+"use server"
+import { revalidateTag } from "next/cache"
+
+export async function updateProduct(productId: string) {
+  await updateProductInDatabase(productId)
+  revalidateTag("products") // On-demand revalidation
+  revalidateTag(`product-${productId}`)
+}
+```
+
+## Resources
+
+- [Next.js 14 Documentation](https://nextjs.org/docs)
+- [Server Components](https://nextjs.org/docs/app/building-your-application/rendering/server-components)
+- [Data Fetching](https://nextjs.org/docs/app/building-your-application/data-fetching)
+- [Caching](https://nextjs.org/docs/app/building-your-application/caching)
+- [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)

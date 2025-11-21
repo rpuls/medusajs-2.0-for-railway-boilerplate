@@ -1,0 +1,389 @@
+---
+description: medusajs model system and how to save data
+alwaysApply: false
+---
+# MedusaJS Model System Best Practices
+
+This rule documents best practices for creating custom modules in MedusaJS 2.0 using the model system, following the [Subscriptions Recipe example](https://docs.medusajs.com/resources/recipes/subscriptions/examples/standard).
+
+## Core Principles
+
+1. **Use `model.define()` for Data Models** - Never use raw SQL or manual migrations
+2. **Extend `MedusaService`** - Automatically provides CRUD operations and repository injection
+3. **Use `Module()` Helper** - Proper module registration with MedusaJS container
+4. **Let MedusaJS Handle Migrations** - Migrations are generated automatically
+
+## 1. Define Data Models
+
+Always use `model.define()` from `@medusajs/framework/utils` to define your data models:
+
+```typescript
+// ✅ Good: Using model.define()
+import { model } from "@medusajs/framework/utils"
+
+const Subscription = model.define("subscription", {
+  id: model.id().primaryKey(),
+  status: model.enum(SubscriptionStatus).default(SubscriptionStatus.ACTIVE),
+  interval: model.enum(SubscriptionInterval),
+  period: model.number(),
+  subscription_date: model.dateTime(),
+  expiration_date: model.dateTime().index(),
+  metadata: model.json().nullable(),
+})
+
+export default Subscription
+```
+
+### Model Field Types
+
+- `model.id().primaryKey()` - Primary key (auto-generated ULID)
+- `model.text()` - Text field
+- `model.text().nullable()` - Optional text field
+- `model.text().index()` - Text field with database index
+- `model.number()` - Number field
+- `model.number().default(0)` - Number with default value
+- `model.boolean().default(true)` - Boolean with default
+- `model.dateTime().default(() => new Date())` - DateTime with default
+- `model.dateTime().nullable()` - Optional DateTime
+- `model.dateTime().index()` - DateTime with index for queries
+- `model.json()` - JSON field
+- `model.json().nullable()` - Optional JSON field
+- `model.enum(EnumType)` - Enum field
+
+**Important:** MedusaJS automatically adds `created_at` and `updated_at` fields to every model. **Never define these fields explicitly** - you'll get an error if you do!
+
+### Best Practices
+
+- Use snake_case for database field names (`xml_url`, `mapping_id`, `created_at`)
+- Add `.index()` to fields frequently queried (`status`, `config_id`, `execution_id`)
+- Use `.nullable()` for optional fields
+- Use `.default()` for fields that should have default values
+- Use `model.json()` for complex nested data structures
+
+## 2. Create Service with MedusaService
+
+Always extend `MedusaService` and pass your models:
+
+```typescript
+// ✅ Good: Extending MedusaService
+import { MedusaService } from "@medusajs/framework/utils"
+import { Logger } from "@medusajs/framework/types"
+import { DAL } from "@medusajs/framework/types"
+import FieldMapping from "./models/field-mapping"
+import ImportConfig from "./models/import-config"
+
+type InjectedDependencies = {
+  logger: Logger
+  fieldMappingRepository: DAL.RepositoryService<any>
+  importConfigRepository: DAL.RepositoryService<any>
+}
+
+class XmlProductImporterService extends MedusaService({
+  FieldMapping,
+  ImportConfig,
+}) {
+  protected readonly logger_: Logger
+  protected readonly fieldMappingRepository_: DAL.RepositoryService<any>
+  protected readonly importConfigRepository_: DAL.RepositoryService<any>
+
+  constructor({
+    logger,
+    fieldMappingRepository,
+    importConfigRepository,
+  }: InjectedDependencies) {
+    // @ts-ignore - MedusaService constructor
+    super(...arguments)
+    this.logger_ = logger
+    this.fieldMappingRepository_ = fieldMappingRepository
+    this.importConfigRepository_ = importConfigRepository
+  }
+
+  // Custom business logic methods here
+  // CRUD operations are automatically available via repositories
+}
+```
+
+### Repository Naming Convention
+
+MedusaJS automatically creates repositories with the naming pattern:
+- Model name: `FieldMapping` → Repository: `fieldMappingRepository`
+- Model name: `ImportConfig` → Repository: `importConfigRepository`
+- Model name: `ImportExecution` → Repository: `importExecutionRepository`
+
+### Repository Methods Available
+
+Each repository automatically provides:
+- `create(data)` - Create a new record
+- `update(selector, data)` - Update records matching selector
+- `delete(selector)` - Delete records matching selector
+- `find(options)` - Find records with options (where, skip, take, order, relations)
+- `findOne(options)` - Find a single record
+- `findAndCount(options)` - Find records and return count
+
+## 3. Register Module Properly
+
+Use the `Module()` helper from `@medusajs/framework/utils`:
+
+```typescript
+// ✅ Good: Using Module() helper
+import XmlProductImporterService from "./service"
+import { Module } from "@medusajs/framework/utils"
+
+export const XML_PRODUCT_IMPORTER_MODULE = "xmlProductImporter"
+
+export default Module(XML_PRODUCT_IMPORTER_MODULE, {
+  service: XmlProductImporterService,
+})
+```
+
+### Module Registration Name
+
+- Use camelCase for module names: `xmlProductImporter` (not `xml_product_importer`)
+- Export the module name constant for use in other files
+- The module name is registered in the Medusa container with this name
+
+## 4. Migrations Are Automatic
+
+**Never create manual migration files!** MedusaJS automatically generates migrations when you:
+
+1. Define models using `model.define()`
+2. Run `pnpm medusa db:migrate`
+
+MedusaJS will:
+- Detect model changes
+- Generate migration files automatically
+- Apply migrations to the database
+
+### Migration Process
+
+```bash
+# MedusaJS automatically detects model changes and generates migrations
+pnpm medusa db:migrate
+```
+
+## 5. Using Repositories in API Routes
+
+Resolve the service from the container and use repositories:
+
+```typescript
+// ✅ Good: Using service repositories in API routes
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
+import { getService } from "../storage"
+
+export async function GET(req: MedusaRequest, res: MedusaResponse) {
+  const service = getService(req)
+  
+  // Use repository methods
+  const [mappings, count] = await service.fieldMappingRepository_.findAndCount({
+    where: { enabled: true },
+    skip: 0,
+    take: 20,
+    order: { created_at: "DESC" },
+  })
+  
+  res.json({ mappings, count })
+}
+```
+
+### Repository Query Options
+
+```typescript
+// Find with filters
+await repository.find({
+  where: {
+    status: "active",
+    config_id: "config_123",
+  },
+  skip: 0,
+  take: 20,
+  order: { created_at: "DESC" },
+  relations: ["logs"], // If relationships are defined
+})
+
+// Find one record
+await repository.findOne({
+  where: { id: "record_123" },
+})
+
+// Find and count
+const [records, count] = await repository.findAndCount({
+  where: { status: "active" },
+})
+
+// Create
+await repository.create({
+  name: "Example",
+  status: "active",
+})
+
+// Update
+await repository.update(
+  { id: "record_123" },
+  { status: "completed" }
+)
+
+// Delete
+await repository.delete({ id: "record_123" })
+```
+
+## 6. Field Name Mapping
+
+### Database Fields (snake_case)
+- Use snake_case in model definitions: `xml_url`, `mapping_id`, `created_at`
+
+### TypeScript Interfaces (camelCase)
+- Use camelCase in TypeScript interfaces: `xmlUrl`, `mappingId`, `createdAt`
+
+### Conversion in API Routes
+
+When creating/updating records, convert between formats:
+
+```typescript
+// API receives camelCase
+const body = req.body as { xmlUrl: string, mappingId: string }
+
+// Convert to snake_case for database
+await service.importConfigRepository_.create({
+  xml_url: body.xmlUrl,      // Convert camelCase → snake_case
+  mapping_id: body.mappingId, // Convert camelCase → snake_case
+})
+
+// Database returns snake_case
+const config = await service.importConfigRepository_.findOne({ where: { id } })
+// config.xml_url, config.mapping_id
+
+// Convert back to camelCase for API response
+res.json({
+  xmlUrl: config.xml_url,      // Convert snake_case → camelCase
+  mappingId: config.mapping_id, // Convert snake_case → camelCase
+})
+```
+
+## 7. Common Patterns
+
+### Pattern: List with Pagination
+
+```typescript
+export async function GET(req: MedusaRequest, res: MedusaResponse) {
+  const { limit = 50, offset = 0, status } = req.query
+  const service = getService(req)
+  
+  const where: any = {}
+  if (status) where.status = status
+  
+  const [records, count] = await service.repository_.findAndCount({
+    where,
+    skip: parseInt(offset as string),
+    take: parseInt(limit as string),
+    order: { created_at: "DESC" },
+  })
+  
+  res.json({ records, count, limit, offset })
+}
+```
+
+### Pattern: Create with Validation
+
+```typescript
+export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  const body = req.body
+  
+  // Validate required fields
+  if (!body.name) {
+    res.status(400).json({ message: "Name is required" })
+    return
+  }
+  
+  const service = getService(req)
+  const record = await service.repository_.create({
+    name: body.name,
+    description: body.description || null,
+  })
+  
+  res.json({ record })
+}
+```
+
+### Pattern: Update with Existence Check
+
+```typescript
+export async function PUT(req: MedusaRequest, res: MedusaResponse) {
+  const { id } = req.params
+  const body = req.body
+  const service = getService(req)
+  
+  const existing = await service.repository_.findOne({ where: { id } })
+  if (!existing) {
+    res.status(404).json({ message: "Record not found" })
+    return
+  }
+  
+  const updateData: any = {}
+  if (body.name !== undefined) updateData.name = body.name
+  if (body.description !== undefined) updateData.description = body.description || null
+  
+  const updated = await service.repository_.update({ id }, updateData)
+  res.json({ record: updated })
+}
+```
+
+## 8. What NOT to Do
+
+### ❌ Don't Use Raw SQL
+
+```typescript
+// ❌ Bad: Raw SQL queries
+await this.pool.query('SELECT * FROM xml_import_mapping WHERE id = $1', [id])
+```
+
+### ❌ Don't Create Manual Migrations
+
+```typescript
+// ❌ Bad: Manual migration files
+export class Migration20250101000000CreateTables extends Migration {
+  async up() {
+    this.addSql(`CREATE TABLE ...`)
+  }
+}
+```
+
+### ❌ Don't Use Custom Repositories
+
+```typescript
+// ❌ Bad: Custom repository class
+export class XmlImporterRepository {
+  async createMapping() { /* raw SQL */ }
+}
+```
+
+### ❌ Don't Access Database Directly
+
+```typescript
+// ❌ Bad: Direct database access
+const knex = req.scope.resolve('knex')
+await knex.raw('SELECT * FROM ...')
+```
+
+## 9. References
+
+- [Subscriptions Recipe Example](https://docs.medusajs.com/resources/recipes/subscriptions/examples/standard) - Official example using MedusaJS model system
+- [MedusaJS Modules Documentation](https://docs.medusajs.com/learn/fundamentals/modules) - How to create modules
+- [MedusaJS Data Models](https://docs.medusajs.com/learn/fundamentals/modules/data-models) - Data model reference
+- [MedusaJS Service Factory](https://docs.medusajs.com/resources/service-factory-reference) - Service factory methods
+
+## Checklist for New Modules
+
+When creating a new custom module:
+
+- [ ] Define models using `model.define()` in `models/` directory
+- [ ] Use snake_case for database field names
+- [ ] Add `.index()` to frequently queried fields
+- [ ] Extend `MedusaService` with your models
+- [ ] Inject repositories in constructor
+- [ ] Use `Module()` helper in `index.ts`
+- [ ] Export module name constant
+- [ ] Register module in `medusa-config.js`
+- [ ] Use repositories in API routes (not raw SQL)
+- [ ] Convert between camelCase (API) and snake_case (database)
+- [ ] Run `pnpm medusa db:migrate` to generate migrations
+- [ ] Never create manual migration files

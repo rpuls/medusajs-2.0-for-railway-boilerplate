@@ -1,0 +1,330 @@
+---
+description: Project directory structure and important files overview for MedusaJS 2.0 monorepo
+globs:
+alwaysApply: true
+---
+# Project Structure
+
+This is a MedusaJS 2.0 monorepo consisting of three main applications: Backend, Backend UI (Admin Dashboard), and Storefront. The project is configured for deployment on Railway.
+
+## Monorepo Overview
+
+```
+medusajs-2.0-for-railway/
+├── backend/          # MedusaJS 2.0 backend API
+├── backend-ui/       # Admin dashboard (standalone React app)
+├── storefront/       # Next.js 14 storefront application
+└── .cursor/          # Cursor IDE rules and configuration
+```
+
+## Backend (`/backend`)
+
+The MedusaJS 2.0 backend API server.
+
+### Key Files
+- `medusa-config.js` - Main Medusa configuration file
+- `package.json` - Backend dependencies and scripts
+- `tsconfig.json` - TypeScript configuration
+
+### Source Structure (`/backend/src`)
+
+```
+src/
+├── admin/              # Admin-specific configuration
+│   ├── README.md
+│   └── tsconfig.json
+├── api/                # API route handlers
+│   ├── admin/          # Admin API routes
+│   │   └── custom/
+│   │       └── route.ts
+│   ├── key-exchange/   # Key exchange endpoint
+│   │   └── route.ts
+│   ├── store/          # Store API routes
+│   │   └── custom/
+│   │       └── route.ts
+│   └── README.md
+├── jobs/               # Background job definitions
+│   └── README.md
+├── lib/                # Shared libraries and utilities
+│   ├── constants.ts    # Application constants
+│   └── notification-templates.ts
+├── modules/            # Custom Medusa modules
+│   ├── email-notifications/  # Email service integration (Resend/SendGrid)
+│   │   ├── services/
+│   │   │   ├── resend.ts
+│   │   │   └── sendgrid.ts
+│   │   └── templates/  # Email templates (React Email)
+│   ├── minio-file/     # MinIO file storage integration
+│   │   ├── service.ts
+│   │   └── index.ts
+│   └── README.md
+├── scripts/            # Utility scripts
+│   ├── postBuild.js   # Post-build script
+│   ├── seed.ts        # Database seeding script
+│   └── README.md
+├── subscribers/       # Event subscribers
+│   ├── invite-created.ts
+│   ├── order-placed.ts
+│   └── README.md
+├── utils/             # Utility functions
+│   └── assert-value.ts
+└── workflows/         # Workflow definitions
+    └── README.md
+```
+
+### Important Backend Files
+- `src/lib/constants.ts` - Application-wide constants
+- `src/modules/email-notifications/` - Email service integration with React Email templates
+- `src/modules/minio-file/` - MinIO cloud storage integration
+- `src/subscribers/` - Event-driven subscribers for business logic
+
+### Backend Commands
+- `pnpm ib` or `npm run ib` - Initialize backend (migrations + seed)
+- `pnpm dev` or `npm run dev` - Start development server
+- `pnpm build && pnpm start` - Build and run production
+
+## Backend UI (`/backend-ui`)
+
+Standalone React admin dashboard application built with Vite, React, and TypeScript.
+
+### Key Files
+- `package.json` - Frontend dependencies and scripts
+- `vite.config.mts` - Vite configuration
+- `tsconfig.json` - TypeScript configuration
+- `tailwind.config.cjs` - Tailwind CSS configuration
+- `railway.json` / `railway.toml` - Railway deployment configuration
+- `serve.json` - Static file serving configuration
+
+### Source Structure (`/backend-ui/src`)
+
+```
+src/
+├── app.tsx            # Main application component
+├── main.tsx           # Application entry point
+├── index.ts           # Main exports
+├── index.css          # Global styles
+├── assets/            # Static assets
+│   └── fonts/         # Custom fonts (Inter, Roboto Mono)
+├── components/        # React components (organized by feature)
+│   ├── authentication/    # Auth-related components
+│   ├── common/            # Shared/common components (63 files)
+│   ├── data-grid/         # Data grid components (45 files)
+│   ├── data-table/        # Data table components (10 files)
+│   ├── filtering/         # Filter components
+│   ├── forms/             # Form components
+│   ├── inputs/            # Input components
+│   ├── layout/            # Layout components (header, sidebar, etc.)
+│   ├── localization/      # i18n components
+│   ├── modals/            # Modal/drawer components
+│   ├── search/            # Search functionality
+│   ├── table/             # Table components (97 files)
+│   └── utilities/         # Utility components
+├── dashboard-app/     # Dashboard-specific app configuration
+│   ├── dashboard-app.tsx
+│   ├── forms/         # Form extensions
+│   ├── links/         # Navigation links
+│   ├── routes/        # Route definitions
+│   └── types.ts
+├── hooks/             # React hooks
+│   ├── api/           # API hooks (46 files)
+│   ├── table/         # Table hooks (51 files)
+│   └── [custom hooks] # Various utility hooks
+├── i18n/              # Internationalization
+│   ├── config.ts
+│   ├── languages.ts
+│   ├── translations/  # Translation files (30 JSON files)
+│   └── types.ts
+├── lib/               # Utility libraries
+│   ├── client/        # API client configuration
+│   ├── data/          # Data utilities
+│   └── [helpers]      # Various helper functions
+├── providers/         # React context providers
+│   ├── extension-provider/
+│   ├── feature-flag-provider/
+│   ├── i18n-provider/
+│   ├── keybind-provider/
+│   ├── search-provider/
+│   ├── sidebar-provider/
+│   └── theme-provider/
+└── routes/            # Feature routes (1082 files)
+    ├── api-key-management/
+    ├── campaigns/
+    ├── categories/
+    ├── collections/
+    ├── customer-groups/
+    ├── customers/
+    ├── inventory/
+    ├── locations/
+    ├── orders/        # Order management (158 files)
+    ├── products/       # Product management (129 files)
+    ├── promotions/
+    ├── regions/
+    ├── reservations/
+    ├── settings/
+    ├── shipping-profiles/
+    ├── tax-regions/
+    ├── users/
+    └── [other routes]/
+```
+
+### Important Backend UI Files
+- `src/routes/` - Contains all feature routes (orders, products, customers, etc.)
+- `src/components/table/` - Table components for data display
+- `src/hooks/api/` - API hooks for data fetching
+- `src/providers/` - React context providers for app-wide state
+
+### Backend UI Commands
+- `npm run dev` - Start development server (port 5173)
+- `npm run build:preview` - Build for production
+- `npm run preview` - Preview production build locally
+
+### Scripts (`/backend-ui/scripts`)
+- `generate-currencies.js` - Generate currency data
+- `generate-types.js` - Generate TypeScript types
+- `i18n/generate-schema.js` - Generate i18n schema
+- `i18n/validate-translation.js` - Validate translations
+
+## Storefront (`/storefront`)
+
+Next.js 14 storefront application with App Router, Server Components, and Server Actions.
+
+### Key Files
+- `package.json` - Storefront dependencies
+- `next.config.js` - Next.js configuration
+- `tailwind.config.js` - Tailwind CSS configuration
+- `playwright.config.ts` - E2E testing configuration
+- `next-sitemap.js` - Sitemap generation config
+
+### Source Structure (`/storefront/src`)
+
+```
+src/
+├── app/               # Next.js App Router pages
+│   ├── [countryCode]/ # Dynamic country code route
+│   │   ├── (checkout)/    # Checkout route group
+│   │   │   └── checkout/
+│   │   └── (main)/        # Main route group
+│   │       ├── account/   # Customer account pages
+│   │       ├── cart/      # Shopping cart
+│   │       ├── categories/    # Category pages
+│   │       ├── collections/   # Collection pages
+│   │       ├── order/     # Order pages
+│   │       ├── products/  # Product pages
+│   │       ├── results/   # Search results
+│   │       ├── search/    # Search page
+│   │       └── store/     # Store page
+│   ├── api/           # API routes
+│   │   └── healthcheck/
+│   ├── layout.tsx     # Root layout
+│   └── not-found.tsx  # 404 page
+├── lib/               # Utility libraries
+│   ├── config/        # Configuration files
+│   ├── context/       # React contexts
+│   ├── data/          # Data fetching functions
+│   ├── hooks/         # Custom React hooks
+│   ├── i18n/          # Internationalization
+│   ├── search-client.ts   # Search client (MeiliSearch/Algolia)
+│   ├── theme/         # Theme configuration
+│   └── util/          # Utility functions
+├── middleware.ts      # Next.js middleware (country code enforcement)
+├── modules/           # Feature modules (162 files)
+│   ├── account/       # Account management
+│   ├── cart/          # Shopping cart functionality
+│   ├── categories/    # Category display
+│   ├── checkout/      # Checkout flow
+│   ├── collections/   # Collection display
+│   ├── common/        # Shared components and icons
+│   ├── home/          # Homepage components
+│   ├── layout/        # Layout components (header, footer, nav)
+│   ├── order/         # Order display
+│   ├── products/      # Product display and actions
+│   ├── search/        # Search functionality
+│   ├── skeletons/     # Loading skeletons
+│   └── store/         # Store components
+├── styles/            # Global styles
+│   └── globals.css
+└── types/             # TypeScript type definitions
+    ├── global.ts
+    └── icon.ts
+```
+
+### E2E Testing (`/storefront/e2e`)
+- `fixtures/` - Page object models and test fixtures
+- `tests/` - Test suites (authenticated, global, public)
+- `data/` - Test data seeding and reset utilities
+- `utils/` - Test utilities and locators
+
+### Important Storefront Files
+- `src/middleware.ts` - Enforces country code in URLs, handles region detection
+- `src/lib/data/` - Medusa API client functions for data fetching
+- `src/modules/` - Feature modules with components, templates, and actions
+- `src/app/[countryCode]/` - All routes are under country code dynamic segment
+
+### Storefront Commands
+- `pnpm dev` or `npm run dev` - Start development server (port 8000)
+- `pnpm build` - Build for production
+
+## Root Level Files
+
+### Documentation
+- `README.md` - Main project documentation
+- `BACKEND_UI_SETUP.md` - Backend UI setup instructions
+- `CORS_SETUP.md` - CORS configuration guide
+- `SENDGRID_TEMPLATES.md` - Email template documentation
+
+### Configuration
+- `.cursor/rules/` - Cursor IDE rules and guidelines
+
+## Key Patterns and Conventions
+
+### File Organization
+- Each major feature has its own directory
+- Components are co-located with their types/interfaces
+- Routes follow Next.js App Router conventions
+- Modules group related functionality together
+
+### Naming Conventions
+- Directories: kebab-case (e.g., `email-notifications`, `data-grid`)
+- Files: kebab-case for directories, camelCase for utilities
+- Components: PascalCase for React components
+
+### Technology Stack
+
+**Backend:**
+- MedusaJS 2.0
+- TypeScript
+- PostgreSQL (database)
+- Redis (cache)
+- MinIO (file storage)
+- MeiliSearch (search)
+
+**Backend UI:**
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- React Query (data fetching)
+
+**Storefront:**
+- Next.js 14 (App Router)
+- React Server Components
+- TypeScript
+- Tailwind CSS
+- Playwright (E2E testing)
+
+## Important Notes
+
+1. **Country Code Routing**: The storefront uses `[countryCode]` as the root dynamic segment for all routes to support multi-region functionality.
+
+2. **Module Structure**: Custom modules in the backend (`src/modules/`) extend Medusa functionality:
+   - Email notifications (Resend/SendGrid)
+   - MinIO file storage
+
+3. **Route Groups**: Next.js route groups `(checkout)` and `(main)` are used to apply different layouts without affecting URLs.
+
+4. **Environment Variables**: Each application has its own `.env` file:
+   - `backend/.env` - Backend configuration
+   - `backend-ui/.env` - Admin dashboard configuration
+   - `storefront/.env.local` - Storefront configuration
+
+5. **Railway Deployment**: Configuration files (`railway.json`, `railway.toml`) are present for Railway deployment automation.

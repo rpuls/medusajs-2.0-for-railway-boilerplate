@@ -1,0 +1,425 @@
+---
+description: Technology stack, dependency versions, and best practices for MedusaJS 2.0 monorepo
+globs:
+alwaysApply: true
+---
+# Technology Stack and Dependencies
+
+This document outlines the complete technology stack, dependency versions, and best practices for the MedusaJS 2.0 monorepo.
+
+## Package Manager
+
+- **pnpm**: `9.10.0` (Backend)
+- **npm**: Used in Backend UI and Storefront
+
+**Best Practices:**
+- Backend uses pnpm exclusively - always use `pnpm` commands in backend directory
+- Use `pnpm-lock.yaml` for reproducible builds
+- Backend UI and Storefront can use npm, but consider standardizing on pnpm for consistency
+
+## Runtime Environments
+
+### Backend
+- **Node.js**: `22.x` (required)
+- **npm**: `10.x` (required)
+
+**Best Practices:**
+- Node.js 22 is required - do not downgrade to Node 20 or earlier
+- Use LTS versions when available
+- Ensure Railway/deployment environments match Node 22.x
+
+### Backend UI
+- **Node.js**: `>=20` (minimum)
+
+**Best Practices:**
+- Compatible with Node 20+ but works best with Node 22
+- Consider aligning with backend Node version for consistency
+
+### Storefront
+- **Node.js**: Not explicitly specified (assumes Node 18+)
+
+**Best Practices:**
+- Next.js 14 requires Node.js 18.17 or later
+- Recommend Node 20+ for better performance and security
+
+## Backend Stack
+
+### Core Framework
+- **MedusaJS**: `2.10.2` (all @medusajs/* packages)
+  - `@medusajs/framework`: `2.10.2`
+  - `@medusajs/medusa`: `2.10.2`
+  - `@medusajs/admin-sdk`: `2.10.2`
+  - `@medusajs/cli`: `2.10.2`
+  - `@medusajs/dashboard`: `2.10.2`
+  - `@medusajs/draft-order`: `^2.10.2`
+  - `@medusajs/workflow-engine-redis`: `2.10.2`
+
+**Best Practices:**
+- Keep all MedusaJS packages at the same version (`2.10.2`) to avoid compatibility issues
+- Use exact versions (no `^`) for MedusaJS packages in production
+- Check [MedusaJS changelog](https://github.com/medusajs/medusa/releases) before upgrading
+- MedusaJS 2.10.2 is a stable release - upgrade carefully to newer versions
+
+### Database & ORM
+- **PostgreSQL**: Via `pg` driver `^8.13.1`
+- **MikroORM**: `6.4.3` (core, knex, migrations, postgresql)
+
+**Best Practices:**
+- MikroORM 6.4.3 is stable - ensure migrations run before deployment
+- Use connection pooling for PostgreSQL in production
+- Monitor database connection limits
+- MikroORM 6.x uses different API than 5.x - be careful with custom queries
+
+### Caching & Workflows
+- **Redis**: Required for workflow engine
+- **Workflow Engine**: `@medusajs/workflow-engine-redis` `2.10.2`
+
+**Best Practices:**
+- Redis is required for production - workflow engine depends on it
+- Configure Redis persistence for production
+- Monitor Redis memory usage
+- Use Redis Sentinel or Cluster for high availability
+
+### File Storage
+- **MinIO**: `^8.0.3`
+
+**Best Practices:**
+- MinIO 8.x is stable - ensure bucket policies are configured correctly
+- Use MinIO for production, local storage only for development
+- Configure CORS properly for MinIO buckets
+- Monitor storage usage and set up lifecycle policies
+
+### Email Services
+- **Resend**: `4.0.1`
+- **SendGrid**: `^8.1.6` (via `@medusajs/notification-sendgrid` `2.10.2`)
+- **React Email**: `^3.0.4` (templates)
+- **@react-email/components**: `^0.0.26`
+- **@react-email/render**: `^2.0.0`
+
+**Best Practices:**
+- React Email 3.x is the latest - templates use modern React patterns
+- Use Resend for transactional emails (better developer experience)
+- SendGrid integration is official MedusaJS plugin
+- Test email templates locally with `npm run email:dev`
+- React Email templates are server-side rendered - no client-side React needed
+
+### Payment Processing
+- **Stripe**: `@medusajs/payment-stripe` `2.10.2`
+
+**Best Practices:**
+- Official MedusaJS Stripe plugin - keep version aligned with MedusaJS
+- Configure webhooks properly for payment status updates
+- Use Stripe test mode during development
+- Handle payment failures gracefully
+
+### Search
+- **MeiliSearch Plugin**: `@rokmohar/medusa-plugin-meilisearch` `1.3.5`
+
+**Best Practices:**
+- Community plugin - check for updates regularly
+- MeiliSearch is fast but requires separate service
+- Configure indexing properly for product search
+- Monitor search performance and index size
+
+### TypeScript & Build Tools
+- **TypeScript**: `^5.7.2`
+- **SWC**: `1.5.7` (core), `^0.2.37` (jest)
+- **Vite**: `^5.4.11` (dev dependency)
+
+**Best Practices:**
+- TypeScript 5.7.x is latest - use strict mode
+- SWC is faster than Babel - use for builds
+- Enable type checking in CI/CD pipeline
+- Use `ts-node` for running TypeScript scripts directly
+
+### Testing
+- **Jest**: `^29.7.0`
+- **@medusajs/test-utils**: `2.10.2`
+
+**Best Practices:**
+- Jest 29.x is latest major version - good performance
+- Use MedusaJS test utils for integration tests
+- Write tests for custom modules and subscribers
+- Mock external services (email, payment) in tests
+
+### Dependency Injection
+- **Awilix**: `^8.0.1`
+
+**Best Practices:**
+- Awilix 8.x is latest - used by MedusaJS internally
+- Use dependency injection for custom services
+- Register services in module loaders
+
+## Backend UI Stack
+
+### Core Framework
+- **React**: `^18.2.0`
+- **React DOM**: `^18.2.0`
+- **React Router**: `6.20.1`
+
+**Best Practices:**
+- React 18.2 is stable - use concurrent features carefully
+- React Router 6.x uses new data APIs - ensure compatibility
+- Use React 18 features: Suspense, Transitions, Server Components (where applicable)
+- Avoid breaking changes when upgrading React
+
+### Build Tool
+- **Vite**: `^5.4.14`
+- **@vitejs/plugin-react**: `4.2.1`
+
+**Best Practices:**
+- Vite 5.x is latest - excellent dev experience
+- Use Vite's HMR for fast development
+- Configure build optimizations for production
+- Use Vite plugins for code splitting
+
+### TypeScript
+- **TypeScript**: `5.2.2`
+
+**Best Practices:**
+- TypeScript 5.2 is stable - ensure strict mode enabled
+- Use type imports for better tree-shaking
+- Leverage TypeScript 5.x features (decorators, const type parameters)
+
+### State Management & Data Fetching
+- **TanStack Query**: `5.64.2` (React Query)
+- **TanStack Table**: `8.20.5`
+- **TanStack Virtual**: `^3.8.3`
+
+**Best Practices:**
+- TanStack Query 5.x is latest - excellent caching and synchronization
+- Use React Query for all API data fetching
+- Configure query client with proper defaults
+- Use TanStack Table for complex data tables
+- Virtual scrolling for large lists improves performance
+
+### UI Components
+- **Radix UI**: Various packages (`@radix-ui/react-dialog` `1.1.4`, etc.)
+- **@medusajs/ui**: `4.0.22`
+- **Ariakit**: `^0.4.15`
+
+**Best Practices:**
+- Radix UI provides accessible, unstyled components
+- MedusaJS UI 4.x is latest - use official components when possible
+- Ariakit complements Radix UI - use for complex interactions
+- Customize styling with Tailwind CSS
+
+### Form Management
+- **React Hook Form**: `7.49.1`
+- **@hookform/resolvers**: `3.4.2`
+- **Zod**: `3.25.76`
+
+**Best Practices:**
+- React Hook Form 7.x is latest - excellent performance
+- Use Zod for schema validation with React Hook Form
+- Validate on blur for better UX
+- Use form state for conditional rendering
+
+### Internationalization
+- **i18next**: `23.7.11`
+- **react-i18next**: `13.5.0`
+- **i18next-browser-languagedetector**: `7.2.0`
+- **i18next-http-backend**: `2.4.2`
+
+**Best Practices:**
+- i18next 23.x is latest - supports modern JavaScript features
+- Use HTTP backend for loading translations
+- Implement language detection properly
+- Validate translations with `npm run i18n:validate`
+
+### Utilities
+- **date-fns**: `^3.6.0` - Date manipulation
+- **lodash**: `^4.17.21` - Utility functions
+- **qs**: `^6.12.0` - Query string parsing
+- **cmdk**: `^0.2.0` - Command palette
+
+**Best Practices:**
+- date-fns 3.x is latest - tree-shakeable
+- Minimize lodash usage - prefer native JavaScript when possible
+- Use qs for URL query parameter handling
+- cmdk provides excellent command palette UX
+
+### Animation
+- **Motion**: `^11.15.0` (Framer Motion successor)
+
+**Best Practices:**
+- Motion 11.x is latest - better performance than Framer Motion
+- Use for page transitions and micro-interactions
+- Prefer CSS animations for simple effects
+
+### Build & Bundling
+- **tsup**: `^8.0.2` - TypeScript bundler
+
+**Best Practices:**
+- tsup 8.x is latest - fast TypeScript bundling
+- Use for library builds
+- Configure properly for ESM and CJS outputs
+
+## Storefront Stack
+
+### Core Framework
+- **Next.js**: `^14.0.0`
+- **React**: `^18.2.0`
+- **React DOM**: `^18.2.0`
+
+**Best Practices:**
+- Next.js 14 is latest stable - use App Router exclusively
+- Leverage Server Components for better performance
+- Use Server Actions for mutations
+- Implement proper caching strategies
+- Next.js 14 requires Node 18.17+ - ensure compatibility
+
+### MedusaJS Integration
+- **@medusajs/js-sdk**: `preview`
+- **@medusajs/types**: `preview`
+- **@medusajs/ui**: `preview`
+
+**Best Practices:**
+- ⚠️ **CRITICAL**: Using `preview` versions - these are unstable
+- Consider upgrading to stable versions (`2.10.2`) when available
+- Preview versions may have breaking changes
+- Test thoroughly before deploying preview versions
+- Monitor MedusaJS releases for stable versions
+
+### TypeScript
+- **TypeScript**: `^5.3.2`
+
+**Best Practices:**
+- TypeScript 5.3 is stable - use strict mode
+- Next.js 14 has excellent TypeScript support
+- Use type-safe API routes and Server Actions
+
+### Search
+- **MeiliSearch**: `@meilisearch/instant-meilisearch` `^0.7.1`
+- **Algolia**: `algoliasearch` `^4.20.0`
+- **react-instantsearch-hooks-web**: `^6.29.0`
+
+**Best Practices:**
+- MeiliSearch is primary search provider
+- Algolia is alternative - code supports both
+- Use InstantSearch hooks for search UI
+- Configure search properly for production
+
+### Payment Processing
+- **Stripe**: `@stripe/stripe-js` `^1.29.0`, `@stripe/react-stripe-js` `^1.7.2`
+- **PayPal**: `@paypal/paypal-js` `^5.0.6`, `@paypal/react-paypal-js` `^7.8.1`
+
+**Best Practices:**
+- Stripe 1.29.x is latest - use Elements for payment forms
+- PayPal 5.x/7.x are latest - test both payment methods
+- Handle payment errors gracefully
+- Use test mode during development
+
+### UI Components
+- **Headless UI**: `^1.6.1`
+- **Tailwind CSS Radix**: `^2.8.0`
+
+**Best Practices:**
+- Headless UI provides accessible components
+- Use Tailwind for styling
+- Radix integration for advanced components
+- Follow accessibility guidelines
+
+### Utilities
+- **Axios**: `^1.6.7` - HTTP client
+- **lodash**: `^4.17.21` - Utilities
+- **qs**: `^6.12.1` - Query string parsing
+- **react-intersection-observer**: `^9.3.4` - Intersection Observer
+
+**Best Practices:**
+- Axios 1.6.x is latest - use for API calls
+- Minimize lodash - prefer native JavaScript
+- Use intersection observer for lazy loading
+- qs for URL parameter handling
+
+### Testing
+- **Playwright**: `^1.41.1`
+
+**Best Practices:**
+- Playwright 1.41.x is latest - excellent E2E testing
+- Write tests for critical user flows
+- Use page object model pattern
+- Run tests in CI/CD pipeline
+
+### Styling
+- **Tailwind CSS**: `^3.0.23`
+- **PostCSS**: `^8.4.8`
+- **Autoprefixer**: `^10.4.2`
+
+**Best Practices:**
+- Tailwind 3.x is latest - use JIT mode
+- Configure content paths properly
+- Use Tailwind plugins for extended functionality
+- Optimize CSS for production
+
+## Version Compatibility Matrix
+
+### MedusaJS Ecosystem
+- All `@medusajs/*` packages should be at version `2.10.2`
+- Storefront uses `preview` versions - upgrade to `2.10.2` when stable
+- Backend UI uses stable `2.10.2` versions
+
+### React Ecosystem
+- React 18.2.0 across all applications
+- React Router 6.x in Backend UI
+- Next.js 14 uses React 18 internally
+
+### TypeScript
+- Backend: TypeScript 5.7.2 (latest)
+- Backend UI: TypeScript 5.2.2 (stable)
+- Storefront: TypeScript 5.3.2 (stable)
+
+### Node.js
+- Backend: Node 22.x (required)
+- Backend UI: Node >=20 (minimum)
+- Storefront: Node 18.17+ (Next.js 14 requirement)
+
+## Upgrade Considerations
+
+### High Priority
+1. **Storefront MedusaJS packages**: Upgrade from `preview` to `2.10.2` when stable
+2. **TypeScript versions**: Consider aligning all apps to TypeScript 5.7.x
+3. **Node.js versions**: Align Backend UI and Storefront to Node 22.x
+
+### Medium Priority
+1. **React**: All apps use 18.2.0 - monitor for 18.3.x updates
+2. **Next.js**: Monitor for Next.js 15.x release
+3. **TanStack Query**: Consider upgrading to latest 5.x patch versions
+
+### Low Priority
+1. **Utility libraries**: Update lodash, qs, etc. as needed
+2. **Dev dependencies**: Keep testing tools updated
+
+## Security Considerations
+
+1. **Preview Versions**: Storefront uses preview MedusaJS packages - monitor for security updates
+2. **Dependency Updates**: Regularly run `npm audit` and `pnpm audit`
+3. **Node.js**: Keep Node.js updated for security patches
+4. **Payment Libraries**: Stripe and PayPal libraries are regularly updated - keep current
+5. **Email Libraries**: SendGrid and Resend libraries should be kept updated
+
+## Performance Best Practices
+
+1. **Build Optimization**: Use Vite and Next.js build optimizations
+2. **Code Splitting**: Leverage dynamic imports in Next.js
+3. **Caching**: Configure Redis caching properly
+4. **Database**: Use connection pooling and query optimization
+5. **CDN**: Use CDN for static assets in production
+6. **Image Optimization**: Use Next.js Image component
+7. **Bundle Size**: Monitor bundle sizes with Next.js analyzer
+
+## Development Workflow
+
+1. **Package Manager**: Use pnpm for backend, npm for others (consider standardizing)
+2. **Type Checking**: Enable TypeScript strict mode
+3. **Linting**: Use ESLint and Prettier consistently
+4. **Testing**: Write tests for critical functionality
+5. **Version Control**: Lock dependency versions for production
+
+## Monitoring & Maintenance
+
+1. **Dependency Updates**: Use Dependabot or Renovate for automated updates
+2. **Version Pinning**: Pin critical dependencies (MedusaJS, React, Next.js)
+3. **Changelog Review**: Review changelogs before major version upgrades
+4. **Breaking Changes**: Test thoroughly after dependency updates
+5. **Performance Monitoring**: Monitor bundle sizes and runtime performance
