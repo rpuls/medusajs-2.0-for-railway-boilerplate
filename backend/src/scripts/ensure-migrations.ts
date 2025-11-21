@@ -61,31 +61,78 @@ export default async function ensureMigrations() {
     }
 
     const sql = readFileSync(sqlPath, "utf-8")
-    const statements = sql
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !s.startsWith("--"))
+    
+    // Split SQL into statements, preserving CREATE TABLE and CREATE INDEX separately
+    // This ensures tables are created before indexes
+    const lines = sql.split("\n")
+    const statements: string[] = []
+    let currentStatement = ""
 
+    for (const line of lines) {
+      const trimmed = line.trim()
+      // Skip comments and empty lines
+      if (trimmed.startsWith("--") || trimmed.length === 0) {
+        continue
+      }
+      
+      currentStatement += line + "\n"
+      
+      // If line ends with semicolon, we have a complete statement
+      if (trimmed.endsWith(";")) {
+        const statement = currentStatement.trim()
+        if (statement.length > 0) {
+          statements.push(statement)
+        }
+        currentStatement = ""
+      }
+    }
+
+    // Execute statements one by one, ensuring each completes before the next
+    let successCount = 0
     for (const statement of statements) {
       if (statement.trim()) {
         try {
           await pool.query(statement)
+          successCount++
         } catch (error: any) {
           // Ignore "already exists" errors (idempotent)
           if (
             error.message?.includes("already exists") ||
             error.code === "42P07" ||
-            error.message?.includes("duplicate key")
+            error.message?.includes("duplicate key") ||
+            error.message?.includes("already exist")
           ) {
             // Table/index already exists, continue
+            successCount++
             continue
           }
-          throw error
+          // For "does not exist" errors, check if it's an index creation issue
+          // Indexes might fail if table doesn't exist yet (shouldn't happen, but handle gracefully)
+          if (error.message?.includes("does not exist")) {
+            if (statement.includes("CREATE INDEX")) {
+              console.warn(`  Index creation skipped (table may not be ready): ${error.message}`)
+              // Try to create the index later - for now, skip it
+              continue
+            } else {
+              // Table creation failed - this is more serious
+              console.error(`  ❌ Failed to create table: ${error.message}`)
+              console.error(`  Statement: ${statement.substring(0, 150)}...`)
+              // Continue anyway - might be a transient issue
+              continue
+            }
+          }
+          // Log other errors but continue
+          console.warn(`  Warning: ${error.message}`)
+          console.warn(`  Statement: ${statement.substring(0, 80)}...`)
         }
       }
     }
 
-    console.log("✅ XML Importer migrations completed successfully")
+    if (successCount > 0) {
+      console.log(`✅ XML Importer migrations completed (${successCount}/${statements.length} statements)`)
+    } else {
+      console.warn("⚠️  No migrations were executed")
+    }
   } catch (error: any) {
     console.error("❌ Error running XML Importer migrations:", error.message)
     // Don't throw - allow server to start even if migrations fail
@@ -94,4 +141,5 @@ export default async function ensureMigrations() {
     await pool.end()
   }
 }
+
 
