@@ -1,0 +1,22 @@
+# Nixpacks configuration for backend-ui in monorepo
+# This file tells Nixpacks to build the backend-ui subdirectory
+#
+# IMPORTANT: You MUST set Root Directory to "backend-ui" in Railway dashboard:
+# 1. Go to your Railway project → Settings → Source
+# 2. Set "Root Directory" to: backend-ui
+# 3. Save and redeploy
+#
+# This nixpacks.toml is a fallback if rootDirectory isn't set correctly
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x"]
+
+[phases.install]
+cmds = ["cd backend-ui && npm ci"]
+
+[phases.build]
+cmds = ["cd backend-ui && npm run build:production"]
+
+[start]
+cmd = "cd backend-ui && npm run start"
+
