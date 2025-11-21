@@ -191,6 +191,102 @@ class XmlProductImporterService extends MedusaService({
   }
 
   /**
+   * Update an import config
+   */
+  async updateImportConfig(id: string, data: Partial<{
+    name?: string
+    description?: string | null
+    xml_url?: string
+    mapping_id?: string
+    options?: any
+    recurring?: any | null
+    enabled?: boolean
+  }>): Promise<any> {
+    try {
+      this.logger_.debug(`Updating import config: ${id}`)
+      
+      // First verify the config exists
+      const existing = await this.findImportConfigById(id)
+      if (!existing) {
+        this.logger_.error(`Cannot update import config ${id}: config not found`)
+        throw new MedusaError(
+          MedusaError.Types.NOT_FOUND,
+          `XmlImportConfig with id "${id}" not found`
+        )
+      }
+      
+      // Use MedusaService's auto-generated updateImportConfigs method
+      // @ts-ignore - Auto-generated method from MedusaService
+      const result = await this.updateImportConfigs({ id }, data)
+      const updated = Array.isArray(result) && result.length > 0 ? result[0] : result
+      
+      this.logger_.debug(`Updated import config ${id} successfully`)
+      return updated
+    } catch (error) {
+      this.logger_.error(`Error updating import config: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      if (error instanceof Error && error.stack) {
+        this.logger_.error(`Stack trace: ${error.stack}`)
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Delete an import config
+   */
+  async deleteImportConfig(id: string): Promise<void> {
+    try {
+      this.logger_.debug(`Deleting import config: ${id}`)
+      
+      // First verify the config exists
+      const existing = await this.findImportConfigById(id)
+      if (!existing) {
+        this.logger_.error(`Cannot delete import config ${id}: config not found`)
+        throw new MedusaError(
+          MedusaError.Types.NOT_FOUND,
+          `XmlImportConfig with id "${id}" not found`
+        )
+      }
+      
+      // Use MedusaService's auto-generated deleteImportConfigs method
+      // @ts-ignore - Auto-generated method from MedusaService
+      await this.deleteImportConfigs({ id })
+      
+      this.logger_.debug(`Deleted import config ${id} successfully`)
+    } catch (error) {
+      this.logger_.error(`Error deleting import config: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      if (error instanceof Error && error.stack) {
+        this.logger_.error(`Stack trace: ${error.stack}`)
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Get import execution logs for a specific execution
+   */
+  async getImportExecutionLogs(executionId: string): Promise<any[]> {
+    try {
+      const logs = await this.importExecutionLogRepository_.find({
+        where: { execution_id: executionId },
+      } as any)
+      
+      const logsArray = Array.isArray(logs) ? logs : []
+      // Sort by timestamp ascending
+      logsArray.sort((a: any, b: any) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0
+        return aTime - bTime
+      })
+      
+      return logsArray
+    } catch (error) {
+      this.logger_.error(`Error listing import execution logs: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      return []
+    }
+  }
+
+  /**
    * Find a single import execution by ID
    */
   async findImportExecutionById(id: string): Promise<any | null> {

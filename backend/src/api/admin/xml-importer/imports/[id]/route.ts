@@ -21,17 +21,7 @@ export async function GET(
     }
 
     // Fetch logs separately if needed
-    const logs = await service.importExecutionLogRepository_.find({
-      where: { execution_id: id },
-    } as any)
-
-    // Ensure logs is always an array and sort by timestamp
-    const logsArray = Array.isArray(logs) ? logs : []
-    logsArray.sort((a: any, b: any) => {
-      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0
-      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0
-      return aTime - bTime
-    })
+    const logsArray = await service.getImportExecutionLogs(id)
 
     res.json({
       execution: {

@@ -42,7 +42,7 @@ export async function PUT(
     const body = req.body as Partial<ImportConfig>
     const service = getService(req)
 
-    const existingConfig = await service.importConfigRepository_.findOne({ where: { id } })
+    const existingConfig = await service.findImportConfigById(id)
 
     if (!existingConfig) {
       res.status(404).json({ message: "Configuration not found" })
@@ -69,7 +69,7 @@ export async function PUT(
     if (body.recurring !== undefined) updateData.recurring = body.recurring || null
     if (body.enabled !== undefined) updateData.enabled = body.enabled
 
-    const updatedConfig = await service.importConfigRepository_.update({ id }, updateData)
+    const updatedConfig = await service.updateImportConfig(id, updateData)
 
     res.json({ config: updatedConfig })
   } catch (error) {
@@ -98,7 +98,7 @@ export async function DELETE(
       return
     }
 
-    await service.importConfigRepository_.delete({ id })
+    await service.deleteImportConfig(id)
 
     res.status(204).send()
   } catch (error) {
