@@ -53,6 +53,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/error-message": "^2.0.1",
     "@hookform/resolvers": "3.4.2",
+    "@medusajs/admin-sdk": "^2.10.2",
     "@medusajs/admin-shared": "2.10.2",
     "@medusajs/icons": "2.10.2",
     "@medusajs/js-sdk": "2.10.2",
