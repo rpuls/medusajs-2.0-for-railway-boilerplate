@@ -2,11 +2,12 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install && npm run build:production",
-    "rootDirectory": "backend-ui"
+    "buildCommand": "cd backend-ui && npm install && npm run build:production"
   },
   "deploy": {
-    "startCommand": "npm run start"
+    "startCommand": "cd backend-ui && npm run start",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
   }
 }
 

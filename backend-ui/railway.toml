@@ -1,7 +1,7 @@
 [build]
 builder = "NIXPACKS"
+buildCommand = "cd backend-ui && npm install && npm run build:production"
 
 [deploy]
-startCommand = "npm run start"
-buildCommand = "npm install && npm run build:production"
+startCommand = "cd backend-ui && npm run start"
 
