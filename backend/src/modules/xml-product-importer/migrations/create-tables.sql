@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS xml_import_mapping (
   xml_url VARCHAR(500),
   mappings JSONB NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP NULL
 );
 
 -- Create xml_import_config table
@@ -23,7 +24,8 @@ CREATE TABLE IF NOT EXISTS xml_import_config (
   recurring JSONB,
   enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP NULL
 );
 
 -- Create xml_import_execution table
@@ -37,7 +39,10 @@ CREATE TABLE IF NOT EXISTS xml_import_execution (
   processed_products INTEGER DEFAULT 0,
   successful_products INTEGER DEFAULT 0,
   failed_products INTEGER DEFAULT 0,
-  error TEXT
+  error TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP NULL
 );
 
 -- Create xml_import_execution_log table
@@ -49,7 +54,10 @@ CREATE TABLE IF NOT EXISTS xml_import_execution_log (
   product_index INTEGER,
   product_data JSONB,
   error JSONB,
-  timestamp TIMESTAMP DEFAULT NOW()
+  timestamp TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP NULL
 );
 
 -- Create indexes for better performance

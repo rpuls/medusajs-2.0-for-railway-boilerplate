@@ -33,7 +33,32 @@ export default async function ensureMigrations() {
     const tableExists = checkResult.rows[0]?.exists
 
     if (tableExists) {
-      console.log("✅ XML Importer tables already exist")
+      // Check if deleted_at column exists (it might be missing from older migrations)
+      const checkDeletedAt = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'xml_import_mapping' 
+        AND column_name = 'deleted_at';
+      `)
+      
+      if (checkDeletedAt.rows.length === 0) {
+        console.log("📦 Adding missing deleted_at columns to existing tables...")
+        // Add deleted_at to all tables that might be missing it
+        const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
+        for (const table of tables) {
+          try {
+            await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;`)
+          } catch (error: any) {
+            if (!error.message?.includes("already exists") && error.code !== "42P07") {
+              console.warn(`  Warning adding deleted_at to ${table}: ${error.message}`)
+            }
+          }
+        }
+        console.log("✅ Added missing deleted_at columns")
+      } else {
+        console.log("✅ XML Importer tables already exist with all required columns")
+      }
       return
     }
 
