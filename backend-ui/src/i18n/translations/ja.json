@@ -474,6 +474,28 @@
       }
     },
     "deleteWarning": "商品「{{title}}」を削除しようとしています。この操作は元に戻せません。",
+    "bulkEdit": {
+      "action": "ステータスを編集",
+      "selectAll": "すべて選択",
+      "deselectAll": "選択解除",
+      "title_one": "{{count}}件の商品を編集",
+      "title_other": "{{count}}件の商品を編集",
+      "description_one": "選択された{{count}}件の商品のステータスを更新します。",
+      "description_other": "選択された{{count}}件の商品のステータスを更新します。",
+      "descriptionAll_one": "現在のフィルターに一致するすべての{{count}}件の商品のステータスを更新します。",
+      "descriptionAll_other": "現在のフィルターに一致するすべての{{count}}件の商品のステータスを更新します。",
+      "success": {
+        "header_one": "{{count}}件の商品が正常に更新されました",
+        "header_other": "{{count}}件の商品が正常に更新されました",
+        "description_one": "商品のステータスが{{status}}に更新されました。",
+        "description_other": "商品のステータスが{{status}}に更新されました。"
+      },
+      "error": {
+        "header": "商品の更新に失敗しました",
+        "description": "商品の更新中にエラーが発生しました。"
+      },
+      "loading": "{{count}}件の商品を読み込み中..."
+    },
     "variants": {
       "header": "バリエーション",
       "empty": {

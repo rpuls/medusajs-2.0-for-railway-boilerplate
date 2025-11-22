@@ -487,6 +487,32 @@
       }
     },
     "deleteWarning": "You are about to delete the product {{title}}. This action cannot be undone.",
+    "bulkEdit": {
+      "action": "Edit Status",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "title_one": "Edit {{count}} Product",
+      "title_other": "Edit {{count}} Products",
+      "description_one": "Update the status for {{count}} selected product.",
+      "description_other": "Update the status for {{count}} selected products.",
+      "descriptionAll_one": "Update the status for all {{count}} product matching the current filters.",
+      "descriptionAll_other": "Update the status for all {{count}} products matching the current filters.",
+      "success": {
+        "header_one": "Successfully updated {{count}} product",
+        "header_other": "Successfully updated {{count}} products",
+        "description_one": "The product status has been updated to {{status}}.",
+        "description_other": "The products status has been updated to {{status}}."
+      },
+      "error": {
+        "header": "Failed to update products",
+        "description": "An error occurred while updating the products."
+      },
+      "loading": "Loading {{count}} products..."
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published"
+    },
     "variants": {
       "header": "Variants",
       "empty": {
@@ -563,6 +589,9 @@
       "shipping_profile": {
         "label": "Shipping profile",
         "hint": "Connect the product to a shipping profile"
+      },
+      "status": {
+        "label": "Status"
       },
       "type": {
         "label": "Type"

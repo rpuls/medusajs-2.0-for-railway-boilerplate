@@ -485,6 +485,28 @@
       }
     },
     "deleteWarning": "Ürün {{title}}'i silmek üzeresiniz. Bu işlem geri alınamaz.",
+    "bulkEdit": {
+      "action": "Durumu düzenle",
+      "selectAll": "Tümünü seç",
+      "deselectAll": "Seçimi kaldır",
+      "title_one": "{{count}} ürünü düzenle",
+      "title_other": "{{count}} ürünü düzenle",
+      "description_one": "Seçilen {{count}} ürünün durumunu güncelleyin.",
+      "description_other": "Seçilen {{count}} ürünün durumunu güncelleyin.",
+      "descriptionAll_one": "Mevcut filtrelerle eşleşen tüm {{count}} ürünün durumunu güncelleyin.",
+      "descriptionAll_other": "Mevcut filtrelerle eşleşen tüm {{count}} ürünün durumunu güncelleyin.",
+      "success": {
+        "header_one": "{{count}} ürün başarıyla güncellendi",
+        "header_other": "{{count}} ürün başarıyla güncellendi",
+        "description_one": "Ürün durumu {{status}} olarak güncellendi.",
+        "description_other": "Ürün durumu {{status}} olarak güncellendi."
+      },
+      "error": {
+        "header": "Ürünler güncellenemedi",
+        "description": "Ürünler güncellenirken bir hata oluştu."
+      },
+      "loading": "{{count}} ürün yükleniyor..."
+    },
     "variants": {
       "header": "Varyantlar",
       "empty": {

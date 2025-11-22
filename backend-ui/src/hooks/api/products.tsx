@@ -419,3 +419,34 @@ export const useConfirmImportProducts = (
     ...options,
   })
 }
+
+export const useBulkUpdateProducts = (
+  options?: UseMutationOptions<
+    HttpTypes.AdminProductResponse[],
+    FetchError,
+    { productIds: string[]; data: Partial<HttpTypes.AdminUpdateProduct> }
+  >
+) => {
+  return useMutation({
+    mutationFn: async ({ productIds, data }) => {
+      // Update all products in parallel
+      const updatePromises = productIds.map((id) =>
+        sdk.admin.product.update(id, data)
+      )
+      const results = await Promise.all(updatePromises)
+      return results
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate all product queries
+      queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists() })
+      // Invalidate each updated product's detail query
+      variables.productIds.forEach((id) => {
+        queryClient.invalidateQueries({
+          queryKey: productsQueryKeys.detail(id),
+        })
+      })
+      options?.onSuccess?.(data, variables, context)
+    },
+    ...options,
+  })
+}
