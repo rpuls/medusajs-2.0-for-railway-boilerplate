@@ -332,7 +332,9 @@ const mapFieldsStep = createStep(
 )
 
 /**
- * Step: Process product images - upload to MinIO in production, use URLs in development
+ * Step: Prepare product images - store URLs for later upload (transactional with product creation)
+ * Images will be uploaded in importBatchStep right before product creation (PRODUCTION ONLY)
+ * In development, original URLs are used directly without upload
  */
 const processImagesStep = createStep(
   'process-images',
@@ -341,9 +343,6 @@ const processImagesStep = createStep(
     { container }: { container: MedusaContainer }
   ) => {
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
-    
-    // Check if we should upload to MinIO (production) or use URLs directly (development)
-    const shouldUploadToMinIO = !IS_DEV && MINIO_ENDPOINT
     
     // Find image collection mapping rule
     const imageCollectionRule = input.fieldMapping.mappings.find(
@@ -355,80 +354,41 @@ const processImagesStep = createStep(
       return new StepResponse(input.products)
     }
     
-    logger.info(`Processing images for ${input.products.length} products (upload to MinIO: ${shouldUploadToMinIO})`)
+    // Check if we're in production (will determine upload behavior in importBatchStep)
+    const isProduction = !IS_DEV && MINIO_ENDPOINT
+    logger.info(`Preparing images for ${input.products.length} products (upload to MinIO: ${isProduction ? 'YES' : 'NO - using URLs directly'})`)
     
-    const processedProducts = await Promise.all(
-      input.products.map(async (product, index) => {
-        // Get image URLs from the product (should be set by mapFieldsStep)
-        const imageUrls = product.images || []
-        
-        // Only process images if product doesn't already have images AND we have images to add
-        if (imageUrls.length === 0) {
-          logger.debug(`Product ${index + 1} has no images to process`)
-          return product
-        }
-        
-        // If product already has images from another source, skip processing
-        // (This allows manual image assignment to take precedence)
-        if (product.images && product.images.length > 0 && product.images[0]?.url && !product.images[0]?.url.includes('youshop.bg')) {
-          logger.debug(`Product ${index + 1} already has ${product.images.length} images from another source, skipping`)
-          return product
-        }
-        
-        if (shouldUploadToMinIO) {
-          // Upload images to MinIO
-          try {
-            const fileService = container.resolve(Modules.FILE)
-            const uploadedImages = await Promise.all(
-              imageUrls.map(async (img: { url: string }) => {
-                try {
-                  // Fetch image from URL
-                  const response = await fetch(img.url)
-                  if (!response.ok) {
-                    logger.warn(`Failed to fetch image ${img.url}: ${response.statusText}`)
-                    return img // Fallback to original URL
-                  }
-                  
-                  const imageBuffer = await response.arrayBuffer()
-                  const contentType = response.headers.get('content-type') || 'image/jpeg'
-                  const filename = img.url.split('/').pop() || 'image.jpg'
-                  
-                  // Upload to MinIO using File Module service
-                  const [uploadResult] = await fileService.createFiles([{
-                    filename,
-                    content: Buffer.from(imageBuffer).toString('binary'),
-                    mimeType: contentType,
-                  }])
-                  
-                  logger.debug(`Uploaded image ${img.url} to MinIO: ${uploadResult.url}`)
-                  return { url: uploadResult.url }
-                } catch (error) {
-                  logger.warn(`Failed to upload image ${img.url}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                  return img // Fallback to original URL
-                }
-              })
-            )
-            
-            return {
-              ...product,
-              images: uploadedImages,
-            }
-          } catch (error) {
-            logger.error(`Error processing images for product ${index + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-            return product // Return product with original images or empty array
-          }
-        } else {
-          // Development: use URLs directly
-          logger.debug(`Product ${index + 1}: Using ${imageUrls.length} image URLs directly (development mode)`)
-          return {
-            ...product,
-            images: imageUrls,
-          }
-        }
-      })
-    )
+    // Just prepare image URLs - don't upload yet
+    // Upload will happen in importBatchStep right before product creation for transactional safety
+    // In development, original URLs are used directly; in production, images are uploaded to MinIO
+    const processedProducts = input.products.map((product, index) => {
+      // Get image URLs from the product (should be set by mapFieldsStep)
+      const imageUrls = product.images || []
+      
+      // Only process images if product doesn't already have images AND we have images to add
+      if (imageUrls.length === 0) {
+        logger.debug(`Product ${index + 1} has no images to process`)
+        return product
+      }
+      
+      // If product already has images from another source, skip processing
+      // (This allows manual image assignment to take precedence)
+      if (product.images && product.images.length > 0 && product.images[0]?.url && !product.images[0]?.url.includes('youshop.bg')) {
+        logger.debug(`Product ${index + 1} already has ${product.images.length} images from another source, skipping`)
+        return product
+      }
+      
+      // Store original URLs
+      // - In development: URLs are used directly (no upload)
+      // - In production: URLs will be uploaded to MinIO in importBatchStep before product creation
+      logger.debug(`Product ${index + 1}: Prepared ${imageUrls.length} image URLs for processing`)
+      return {
+        ...product,
+        images: imageUrls, // Keep original URLs - will upload in importBatchStep (production only)
+      }
+    })
     
-    logger.info(`Processed images for ${processedProducts.length} products`)
+    logger.info(`Prepared images for ${processedProducts.length} products`)
     
     return new StepResponse(processedProducts)
   }
@@ -741,6 +701,82 @@ const importBatchStep = createStep(
 
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
     
+    // Check if we should upload to MinIO (production) or use URLs directly (development)
+    const shouldUploadToMinIO = !IS_DEV && MINIO_ENDPOINT
+    
+    // Helper function to upload images to MinIO
+    const uploadImagesToMinIO = async (product: any, fileService: any): Promise<{ uploadedImages: any[]; uploadedFileIds: string[] }> => {
+      const imageUrls = product.images || []
+      if (imageUrls.length === 0 || !shouldUploadToMinIO) {
+        return { uploadedImages: imageUrls, uploadedFileIds: [] }
+      }
+      
+      const uploadedImages: any[] = []
+      const uploadedFileIds: string[] = []
+      
+      for (const img of imageUrls) {
+        try {
+          // Fetch image from URL
+          const response = await fetch(img.url)
+          if (!response.ok) {
+            logger.warn(`Failed to fetch image ${img.url}: ${response.statusText}`)
+            uploadedImages.push(img) // Fallback to original URL
+            continue
+          }
+          
+          const imageBuffer = await response.arrayBuffer()
+          const contentType = response.headers.get('content-type') || 'image/jpeg'
+          const filename = img.url.split('/').pop() || 'image.jpg'
+          
+          // Upload to MinIO using File Module service
+          const [uploadResult] = await fileService.createFiles([{
+            filename,
+            content: Buffer.from(imageBuffer).toString('binary'),
+            mimeType: contentType,
+          }])
+          
+          uploadedImages.push({ url: uploadResult.url })
+          uploadedFileIds.push(uploadResult.id)
+          logger.debug(`Uploaded image ${img.url} to MinIO: ${uploadResult.url} (ID: ${uploadResult.id})`)
+        } catch (error) {
+          logger.warn(`Failed to upload image ${img.url}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          uploadedImages.push(img) // Fallback to original URL
+        }
+      }
+      
+      return { uploadedImages, uploadedFileIds }
+    }
+    
+    // Helper function to delete uploaded files from MinIO
+    const deleteUploadedFiles = async (fileIds: string[], fileService: any): Promise<void> => {
+      if (fileIds.length === 0) return
+      
+      try {
+        // Try using deleteFiles method (takes array of file IDs)
+        if (typeof fileService.deleteFiles === 'function') {
+          await fileService.deleteFiles(fileIds)
+          logger.info(`Deleted ${fileIds.length} uploaded files after product creation failure`)
+        } else {
+          // Fallback: try deleteFile for each ID
+          logger.warn(`deleteFiles method not available, trying individual deletions`)
+          for (const fileId of fileIds) {
+            try {
+              if (typeof fileService.deleteFile === 'function') {
+                await fileService.deleteFile(fileId)
+              } else {
+                logger.warn(`Cannot delete file ${fileId}: no delete method available`)
+              }
+            } catch (fileError) {
+              logger.warn(`Failed to delete file ${fileId}: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`)
+            }
+          }
+        }
+      } catch (error) {
+        logger.error(`Failed to delete uploaded files: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        // Don't throw - cleanup failure shouldn't break the workflow
+      }
+    }
+    
     if (!products || products.length === 0) {
       logger.warn('No products to import in batch')
       return new StepResponse({
@@ -985,10 +1021,53 @@ const importBatchStep = createStep(
           logger.debug(`First product to create has categories: ${JSON.stringify(productsToCreate[0].categories, null, 2)}`)
         }
         
+        // Upload images before creating products (transactional, PRODUCTION ONLY)
+        // In development, original URLs are used directly without upload
+        const fileService = shouldUploadToMinIO ? container.resolve(Modules.FILE) : null
+        const uploadedFilesByProduct: Map<number, string[]> = new Map()
+        const productsWithUploadedImages: any[] = []
+        
+        if (shouldUploadToMinIO && fileService) {
+          // PRODUCTION: Upload images to MinIO before product creation
+          logger.info(`Uploading images for ${productsToCreate.length} products before creation...`)
+          for (let i = 0; i < productsToCreate.length; i++) {
+            const product = productsToCreate[i]
+            try {
+              const { uploadedImages, uploadedFileIds } = await uploadImagesToMinIO(product, fileService)
+              productsWithUploadedImages.push({
+                ...product,
+                images: uploadedImages,
+              })
+              if (uploadedFileIds.length > 0) {
+                uploadedFilesByProduct.set(i, uploadedFileIds)
+              }
+            } catch (uploadError) {
+              logger.error(`Failed to upload images for product ${i + 1}: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`)
+              // Continue with original images - product creation will use original URLs
+              productsWithUploadedImages.push(product)
+            }
+          }
+        } else {
+          // DEVELOPMENT MODE: Use original image URLs directly (no upload to MinIO)
+          logger.debug(`Development mode: Using original image URLs for ${productsToCreate.length} products (no upload)`)
+          productsWithUploadedImages.push(...productsToCreate)
+        }
+        
         try {
-          createdProducts = await productService.createProducts(productsToCreate as any)
+          createdProducts = await productService.createProducts(productsWithUploadedImages as any)
           logger.info(`Successfully created ${createdProducts.length} products`)
+          // Clear uploaded files tracking - products were created successfully
+          uploadedFilesByProduct.clear()
         } catch (createError: any) {
+          // Product creation failed - delete uploaded images
+          if (uploadedFilesByProduct.size > 0 && fileService) {
+            logger.error(`Product creation failed, cleaning up uploaded images...`)
+            const allUploadedFileIds: string[] = []
+            for (const fileIds of uploadedFilesByProduct.values()) {
+              allUploadedFileIds.push(...fileIds)
+            }
+            await deleteUploadedFiles(allUploadedFileIds, fileService)
+          }
           // Check if error is "already exists"
           const errorMessage = createError?.message || ''
           const isAlreadyExistsError = errorMessage.includes('already exists') || 
@@ -1010,10 +1089,36 @@ const importBatchStep = createStep(
             const failedToCreate: any[] = []
             
             for (const product of productsToCreate) {
+              let uploadedFileIds: string[] = []
+              let productWithImages = product
+              
+              // Upload images before creating product (transactional, PRODUCTION ONLY)
+              // In development, original URLs are used directly
+              if (shouldUploadToMinIO && fileService) {
+                try {
+                  const { uploadedImages, uploadedFileIds: fileIds } = await uploadImagesToMinIO(product, fileService)
+                  productWithImages = {
+                    ...product,
+                    images: uploadedImages,
+                  }
+                  uploadedFileIds = fileIds
+                } catch (uploadError) {
+                  logger.error(`Failed to upload images for product "${product.handle}": ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`)
+                  // Continue with original images
+                }
+              }
+              
               try {
-                const result = await productService.createProducts([product] as any)
+                const result = await productService.createProducts([productWithImages] as any)
                 individualResults.push(...(Array.isArray(result) ? result : [result]))
+                // Product created successfully - clear uploaded files tracking
+                uploadedFileIds = []
               } catch (individualError: any) {
+                // Product creation failed - delete uploaded images
+                if (uploadedFileIds.length > 0 && fileService) {
+                  logger.error(`Product creation failed for "${product.handle}", cleaning up uploaded images...`)
+                  await deleteUploadedFiles(uploadedFileIds, fileService)
+                }
                 const individualErrorMessage = individualError?.message || ''
                 const isIndividualExistsError = individualErrorMessage.includes('already exists') ||
                                                 individualErrorMessage.includes('duplicate') ||
