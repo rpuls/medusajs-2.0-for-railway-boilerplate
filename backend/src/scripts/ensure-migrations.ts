@@ -21,27 +21,32 @@ export default async function ensureMigrations() {
   })
 
   try {
-    // Check if xml_import_mapping table exists
-    const checkResult = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'xml_import_mapping'
-      );
-    `)
-
-    const tableExists = checkResult.rows[0]?.exists
-
-    if (tableExists) {
-      // Check if all required timestamp columns exist (they might be missing from older migrations)
-      const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
-      const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
+    const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
+    const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
+    
+    // Check which tables exist
+    const existingTables: string[] = []
+    for (const table of tables) {
+      const checkResult = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = $1
+        );
+      `, [table])
       
+      if (checkResult.rows[0]?.exists) {
+        existingTables.push(table)
+      }
+    }
+    
+    if (existingTables.length > 0) {
+      // Some tables exist - check for missing columns and add them
       let needsUpdate = false
       const missingColumns: Array<{ table: string; column: string }> = []
       
-      // Check each table for missing columns
-      for (const table of tables) {
+      // Check each existing table for missing columns
+      for (const table of existingTables) {
         for (const column of requiredColumns) {
           const checkColumn = await pool.query(`
             SELECT column_name 
@@ -71,18 +76,51 @@ export default async function ensureMigrations() {
               // created_at and updated_at should have defaults
               await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} TIMESTAMP DEFAULT NOW();`)
             }
-            console.log(`   ✅ Added ${column} to ${table}`)
+            
+            // Verify the column was actually added
+            const verifyColumn = await pool.query(`
+              SELECT column_name 
+              FROM information_schema.columns 
+              WHERE table_schema = 'public' 
+              AND table_name = $1
+              AND column_name = $2;
+            `, [table, column])
+            
+            if (verifyColumn.rows.length > 0) {
+              console.log(`   ✅ Added ${column} to ${table}`)
+            } else {
+              console.error(`   ❌ Failed to add ${column} to ${table} - column still missing after ALTER TABLE`)
+            }
           } catch (error: any) {
-            if (!error.message?.includes("already exists") && error.code !== "42P07") {
-              console.warn(`   ⚠️  Warning adding ${column} to ${table}: ${error.message}`)
+            // Check if column exists now (might have been added by another process)
+            const verifyColumn = await pool.query(`
+              SELECT column_name 
+              FROM information_schema.columns 
+              WHERE table_schema = 'public' 
+              AND table_name = $1
+              AND column_name = $2;
+            `, [table, column])
+            
+            if (verifyColumn.rows.length > 0) {
+              console.log(`   ✅ ${column} already exists in ${table}`)
+            } else if (!error.message?.includes("already exists") && error.code !== "42P07") {
+              console.error(`   ❌ Error adding ${column} to ${table}: ${error.message}`)
+              throw error // Re-throw if it's a real error and column doesn't exist
             }
           }
         }
-        console.log("✅ Added missing timestamp columns")
+        console.log("✅ Finished checking/adding timestamp columns")
       } else {
         console.log("✅ XML Importer tables already exist with all required columns")
       }
-      return
+      
+      // If all tables exist, we're done
+      if (existingTables.length === tables.length) {
+        return
+      }
+      
+      // Otherwise, continue to create missing tables
+      console.log(`📦 Some tables are missing (${tables.length - existingTables.length} of ${tables.length}), creating them...`)
     }
 
     console.log("📦 XML Importer tables not found, running migrations...")
@@ -178,6 +216,47 @@ export default async function ensureMigrations() {
 
     if (successCount > 0) {
       console.log(`✅ XML Importer migrations completed (${successCount}/${statements.length} statements)`)
+      
+      // Verify all tables have required columns after creation
+      console.log("🔍 Verifying all tables have required columns...")
+      const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
+      const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
+      
+      let allColumnsPresent = true
+      for (const table of tables) {
+        for (const column of requiredColumns) {
+          const checkColumn = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = $1
+            AND column_name = $2;
+          `, [table, column])
+          
+          if (checkColumn.rows.length === 0) {
+            console.error(`   ❌ Missing column: ${table}.${column}`)
+            allColumnsPresent = false
+            
+            // Try to add it
+            try {
+              if (column === 'deleted_at') {
+                await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} TIMESTAMP NULL;`)
+              } else {
+                await pool.query(`ALTER TABLE ${table} ADD COLUMN ${column} TIMESTAMP DEFAULT NOW();`)
+              }
+              console.log(`   ✅ Added missing ${column} to ${table}`)
+            } catch (addError: any) {
+              console.error(`   ❌ Failed to add ${column} to ${table}: ${addError.message}`)
+            }
+          }
+        }
+      }
+      
+      if (allColumnsPresent) {
+        console.log("✅ All tables verified with required columns")
+      } else {
+        console.warn("⚠️  Some columns were missing and have been added")
+      }
     } else {
       console.warn("⚠️  No migrations were executed")
     }
