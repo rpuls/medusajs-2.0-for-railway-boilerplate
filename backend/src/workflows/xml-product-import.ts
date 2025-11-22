@@ -1557,53 +1557,23 @@ const processAllBatchesStep = createStep(
     let successfulBatches = 0
     let failedBatches = 0
 
-    // Process batches sequentially to avoid overwhelming the system
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i]
-      logger.info(`Processing batch ${i + 1}/${batches.length} (${batch.length} products)`)
+    // Flatten all batches into one array and process together
+    // This avoids the issue of steps calling other steps
+    const allProducts = batches.flat()
+    logger.info(`Processing ${allProducts.length} products from ${batches.length} batches as a single batch`)
 
-      try {
-        // Process this batch by calling importBatchStep's function directly
-        // Steps can't be called from within other steps, so we need to use the step's function
-        const stepFn = (importBatchStep as any).__stepFunction__ || importBatchStep
-        const batchResult = await stepFn(
-          {
-            products: batch,
-            updateExisting,
-            updateBy: updateBy || 'sku',
-            shippingProfileId,
-          },
-          { container }
-        )
-
-        // Extract result from StepResponse
-        const result = batchResult instanceof StepResponse ? batchResult.output : batchResult
-
-        if (result && result.success) {
-          totalImported += result.imported || 0
-          successfulBatches++
-          logger.info(`Batch ${i + 1}/${batches.length} completed successfully: ${result.imported || 0} products imported`)
-        } else {
-          failedBatches++
-          logger.error(`Batch ${i + 1}/${batches.length} failed: ${(result as any)?.error || 'Unknown error'}`)
-        }
-      } catch (error) {
-        failedBatches++
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        logger.error(`Batch ${i + 1}/${batches.length} threw an error: ${errorMessage}`)
-      }
-    }
-
-    logger.info(
-      `Completed processing all batches: ${totalImported} products imported, ${successfulBatches} successful batches, ${failedBatches} failed batches`
-    )
-
+    // Note: This step is no longer used in the workflow
+    // The workflow now calls importBatchStep directly with all products flattened
+    // This step is kept for backwards compatibility but returns an error
+    logger.warn(`processAllBatchesStep is deprecated - workflow now processes all products in one batch`)
+    
     return new StepResponse({
-      success: failedBatches === 0,
-      imported: totalImported,
+      success: false,
+      imported: 0,
       totalBatches: batches.length,
-      successfulBatches,
-      failedBatches,
+      successfulBatches: 0,
+      failedBatches: batches.length,
+      error: 'processAllBatchesStep is deprecated - use importBatchStep directly'
     })
   }
 )
@@ -1616,13 +1586,18 @@ const calculateImportStatsStep = createStep(
   async (input: {
     executionId: string
     validationResult: { validProducts: ProductData[]; errors: Array<{ index: number; errors: string[] }> }
-    batchResult: { success: boolean; imported: number; totalBatches: number; successfulBatches: number; failedBatches: number }
+    batchResult: { success: boolean; imported: number; error?: string; products?: any[] } | { success: boolean; imported: number; totalBatches: number; successfulBatches: number; failedBatches: number }
     totalProducts: number
   }) => {
     const validationErrorCount = input.validationResult.errors?.length || 0
-    const importErrorCount = input.batchResult.failedBatches > 0 ? input.batchResult.totalBatches - input.batchResult.successfulBatches : 0
+    
+    // Handle both old (processAllBatchesStep) and new (importBatchStep) result structures
+    const batchResult = input.batchResult as any
+    const importErrorCount = batchResult.failedBatches !== undefined 
+      ? (batchResult.failedBatches > 0 ? batchResult.totalBatches - batchResult.successfulBatches : 0)
+      : (batchResult.success === false ? 1 : 0) // If batch failed, count as 1 error
     const failedCount = validationErrorCount + importErrorCount
-    const successfulCount = input.batchResult.imported || 0
+    const successfulCount = batchResult.imported || 0
     const finalStatusValue: ImportStatus = successfulCount > 0 ? 'completed' : (failedCount > 0 ? 'failed' : 'completed')
     
     const output: WorkflowOutput = {
@@ -1684,15 +1659,20 @@ export const xmlProductImportWorkflow = createWorkflow<
     fieldMapping,
   })
 
-  // Step 6: Segment into batches
+  // Step 6: Segment into batches (for logging/debugging, but we'll process as one batch)
   const batches = segmentProductsStep({
     products: productsWithCategories,
     batchSize: options.batchSize || 100,
   })
 
-  // Step 7: Process all batches
-  const batchResult = processAllBatchesStep({
-    batches,
+  // Step 7: Process all products in a single batch
+  // Note: We process all products together instead of in separate batches
+  // because steps cannot call other steps (processAllBatchesStep can't call importBatchStep)
+  // Flatten all batches into one array
+  const allProducts = batches.flat()
+  
+  const batchResult = importBatchStep({
+    products: allProducts,
     updateExisting: options.updateExisting || false,
     updateBy: options.updateBy || 'sku',
     shippingProfileId: resolvedShippingProfileId,
