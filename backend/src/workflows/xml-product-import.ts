@@ -1659,20 +1659,11 @@ export const xmlProductImportWorkflow = createWorkflow<
     fieldMapping,
   })
 
-  // Step 6: Segment into batches (for logging/debugging, but we'll process as one batch)
-  const batches = segmentProductsStep({
-    products: productsWithCategories,
-    batchSize: options.batchSize || 100,
-  })
-
-  // Step 7: Process all products in a single batch
-  // Note: We process all products together instead of in separate batches
+  // Step 6: Process all products in a single batch
+  // Note: We process all products together instead of segmenting into batches
   // because steps cannot call other steps (processAllBatchesStep can't call importBatchStep)
-  // Flatten all batches into one array
-  const allProducts = batches.flat()
-  
   const batchResult = importBatchStep({
-    products: allProducts,
+    products: productsWithCategories,
     updateExisting: options.updateExisting || false,
     updateBy: options.updateBy || 'sku',
     shippingProfileId: resolvedShippingProfileId,
