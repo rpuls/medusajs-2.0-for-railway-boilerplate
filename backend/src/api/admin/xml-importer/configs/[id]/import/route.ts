@@ -134,7 +134,7 @@ export async function POST(
 
     // Update execution status to processing
     const updatedExecution = await service.updateImportExecution(importExecutionId, {
-      status: "processing",
+        status: "processing",
     })
 
     res.json({

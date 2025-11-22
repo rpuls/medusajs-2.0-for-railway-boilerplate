@@ -70,7 +70,7 @@ export const FieldMappingEditor = ({
     // If we have a mapping, initialize formData with it (for editing)
     if (mapping) {
       if (mapping.xmlUrl) {
-        setXmlUrl(mapping.xmlUrl)
+      setXmlUrl(mapping.xmlUrl)
       }
       // Update formData when mapping changes - preserve all properties including categoryDelimiter
       setFormData({

@@ -768,8 +768,10 @@ class XmlProductImporterService extends MedusaService({
       errors.push('Product title is required')
     }
 
-    if (!productData.description) {
-      errors.push('Product description is required')
+    // Description is optional - allow empty string or missing
+    // If missing, set to empty string to prevent validation errors
+    if (productData.description === undefined || productData.description === null) {
+      productData.description = ''
     }
 
     // Validate images (required for product display)
