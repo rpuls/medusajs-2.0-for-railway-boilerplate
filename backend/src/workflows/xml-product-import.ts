@@ -421,19 +421,28 @@ const validateProductsStep = createStep(
             validatedProducts.push(product)
           } else {
             const errorMessages = validation.errors.join(', ')
-            logger.warn(`Product ${index + 1} validation failed: ${errorMessages}`)
-            logger.warn(`Product ${index + 1} data: ${JSON.stringify(product, null, 2)}`)
+            const productIdentifier = product.handle || product.external_id || product.title || `Index ${index + 1}`
+            logger.warn(`❌ Product validation failed [${productIdentifier}]: ${errorMessages}`)
+            logger.warn(`   Product details: handle="${product.handle || 'N/A'}", external_id="${product.external_id || 'N/A'}", title="${product.title || 'N/A'}"`)
             errors.push({ index, errors: validation.errors })
           }
         } catch (productError) {
           const errorMsg = productError instanceof Error ? productError.message : 'Unknown validation error'
           const errorStack = productError instanceof Error ? productError.stack : undefined
-          logger.error(`Error validating product ${index + 1}: ${errorMsg}${errorStack ? '\n' + errorStack : ''}`)
+          const productIdentifier = (product as any)?.handle || (product as any)?.external_id || (product as any)?.title || `Index ${index + 1}`
+          logger.error(`❌ Error validating product [${productIdentifier}]: ${errorMsg}${errorStack ? '\n' + errorStack : ''}`)
           errors.push({ index, errors: [`Validation error: ${errorMsg}`] })
         }
       })
 
-      logger.info(`Validation complete: ${validatedProducts.length} valid, ${errors.length} invalid`)
+      // Log detailed validation summary
+      if (errors.length > 0) {
+        logger.warn(`⚠️  Validation Summary: ${validatedProducts.length} products passed, ${errors.length} products failed validation`)
+        logger.warn(`   Failed products will be skipped and not imported`)
+        logger.warn(`   Continuing import with ${validatedProducts.length} valid products...`)
+      } else {
+        logger.info(`✅ Validation Summary: All ${validatedProducts.length} products passed validation`)
+      }
 
       return new StepResponse({
         validProducts: validatedProducts,
