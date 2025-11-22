@@ -33,29 +33,52 @@ export default async function ensureMigrations() {
     const tableExists = checkResult.rows[0]?.exists
 
     if (tableExists) {
-      // Check if deleted_at column exists (it might be missing from older migrations)
-      const checkDeletedAt = await pool.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'xml_import_mapping' 
-        AND column_name = 'deleted_at';
-      `)
+      // Check if all required timestamp columns exist (they might be missing from older migrations)
+      const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
+      const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
       
-      if (checkDeletedAt.rows.length === 0) {
-        console.log("📦 Adding missing deleted_at columns to existing tables...")
-        // Add deleted_at to all tables that might be missing it
-        const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
-        for (const table of tables) {
+      let needsUpdate = false
+      const missingColumns: Array<{ table: string; column: string }> = []
+      
+      // Check each table for missing columns
+      for (const table of tables) {
+        for (const column of requiredColumns) {
+          const checkColumn = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = $1
+            AND column_name = $2;
+          `, [table, column])
+          
+          if (checkColumn.rows.length === 0) {
+            needsUpdate = true
+            missingColumns.push({ table, column })
+          }
+        }
+      }
+      
+      if (needsUpdate) {
+        console.log(`📦 Adding missing timestamp columns to existing tables...`)
+        console.log(`   Missing: ${missingColumns.map(m => `${m.table}.${m.column}`).join(', ')}`)
+        
+        // Add missing columns to each table
+        for (const { table, column } of missingColumns) {
           try {
-            await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;`)
+            if (column === 'deleted_at') {
+              await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} TIMESTAMP NULL;`)
+            } else {
+              // created_at and updated_at should have defaults
+              await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} TIMESTAMP DEFAULT NOW();`)
+            }
+            console.log(`   ✅ Added ${column} to ${table}`)
           } catch (error: any) {
             if (!error.message?.includes("already exists") && error.code !== "42P07") {
-              console.warn(`  Warning adding deleted_at to ${table}: ${error.message}`)
+              console.warn(`   ⚠️  Warning adding ${column} to ${table}: ${error.message}`)
             }
           }
         }
-        console.log("✅ Added missing deleted_at columns")
+        console.log("✅ Added missing timestamp columns")
       } else {
         console.log("✅ XML Importer tables already exist with all required columns")
       }
