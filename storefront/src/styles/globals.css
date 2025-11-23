@@ -205,4 +205,95 @@
   .text-3xl-semi {
     @apply text-[32px] leading-[44px] font-semibold;
   }
+
+  /* Product Description HTML Styles */
+  .product-description {
+    color: var(--color-text-secondary);
+  }
+
+  .product-description ul {
+    @apply list-disc list-inside space-y-1 my-2;
+  }
+
+  .product-description ol {
+    @apply list-decimal list-inside space-y-1 my-2;
+  }
+
+  .product-description li {
+    color: var(--color-text-secondary);
+  }
+
+  .product-description p {
+    @apply my-2;
+  }
+
+  .product-description p:first-child {
+    @apply mt-0;
+  }
+
+  .product-description p:last-child {
+    @apply mb-0;
+  }
+
+  .product-description strong,
+  .product-description b {
+    @apply font-semibold;
+    color: var(--color-text-primary);
+  }
+
+  .product-description em,
+  .product-description i {
+    @apply italic;
+  }
+
+  .product-description a {
+    @apply underline;
+    color: var(--color-primary);
+  }
+
+  .product-description a:hover {
+    color: var(--color-primary-hover);
+  }
+
+  .product-description h1,
+  .product-description h2,
+  .product-description h3,
+  .product-description h4,
+  .product-description h5,
+  .product-description h6 {
+    @apply font-semibold mt-4 mb-2;
+    color: var(--color-text-primary);
+  }
+
+  .product-description h1 {
+    @apply text-2xl;
+  }
+
+  .product-description h2 {
+    @apply text-xl;
+  }
+
+  .product-description h3 {
+    @apply text-lg;
+  }
+
+  .product-description blockquote {
+    @apply border-l-4 pl-4 italic my-2;
+    border-color: var(--color-border-base);
+  }
+
+  .product-description code {
+    @apply px-1 py-0.5 rounded text-sm font-mono;
+    background-color: var(--color-background-elevated);
+  }
+
+  .product-description pre {
+    @apply p-4 rounded overflow-x-auto my-2;
+    background-color: var(--color-background-elevated);
+  }
+
+  .product-description hr {
+    @apply border-t my-4;
+    border-color: var(--color-border-base);
+  }
 }

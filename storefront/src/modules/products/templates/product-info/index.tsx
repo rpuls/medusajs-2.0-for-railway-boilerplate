@@ -1,5 +1,6 @@
 import { HttpTypes } from "@medusajs/types"
-import { Heading, Text } from "@medusajs/ui"
+import { Heading } from "@medusajs/ui"
+import parse from "html-react-parser"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type ProductInfoProps = {
@@ -26,12 +27,12 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
       </Heading>
 
       {product.description && (
-        <Text
-          className="text-lg text-text-secondary whitespace-pre-line leading-relaxed mt-2"
+        <div
+          className="text-lg text-text-secondary leading-relaxed mt-2 product-description"
           data-testid="product-description"
         >
-          {product.description}
-        </Text>
+          {parse(product.description)}
+        </div>
       )}
     </div>
   )
