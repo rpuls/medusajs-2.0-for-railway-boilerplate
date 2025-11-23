@@ -86,6 +86,22 @@ npm install @plugin-name --legacy-peer-deps
 
 **Note:** Use `--legacy-peer-deps` if there are peer dependency conflicts.
 
+**Important for Production Builds:** 
+
+1. Create an `.npmrc` file in `backend-ui/`:
+```bash
+# backend-ui/.npmrc
+legacy-peer-deps=true
+```
+
+2. Update `nixpacks.toml` to explicitly use the flag (Railway/Nixpacks):
+```toml
+[phases.install]
+cmds = ["npm ci --legacy-peer-deps"]
+```
+
+This ensures Railway and other CI/CD systems can install dependencies without peer dependency conflicts. The explicit flag in `nixpacks.toml` ensures it works even if `.npmrc` isn't read during the build.
+
 #### 4. Configure Vite for Plugin Discovery
 
 ```typescript
@@ -200,6 +216,7 @@ Check browser console and build logs for:
 - [ ] Install plugin in backend (`pnpm add @plugin-name`)
 - [ ] Register plugin in `backend/medusa-config.js`
 - [ ] Install plugin in admin UI (`npm install @plugin-name --legacy-peer-deps`)
+- [ ] **Create or update `backend-ui/.npmrc` with `legacy-peer-deps=true`** (for production builds)
 - [ ] Add backend to sources in `backend-ui/vite.config.mts`
 - [ ] Add plugin to `optimizeDeps.include` in vite config
 - [ ] Manually import plugin in `backend-ui/src/app.tsx`
