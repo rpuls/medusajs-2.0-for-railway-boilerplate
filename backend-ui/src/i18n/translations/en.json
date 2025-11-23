@@ -497,6 +497,11 @@
       "description_other": "Update the status for {{count}} selected products.",
       "descriptionAll_one": "Update the status for all {{count}} product matching the current filters.",
       "descriptionAll_other": "Update the status for all {{count}} products matching the current filters.",
+      "actionType": {
+        "label": "Action",
+        "update": "Update Status",
+        "delete": "Delete Products"
+      },
       "success": {
         "header_one": "Successfully updated {{count}} product",
         "header_other": "Successfully updated {{count}} products",
@@ -508,6 +513,26 @@
         "description": "An error occurred while updating the products."
       },
       "loading": "Loading {{count}} products..."
+    },
+    "bulkDelete": {
+      "confirm": {
+        "title_one": "Delete {{count}} Product?",
+        "title_other": "Delete {{count}} Products?",
+        "description_one": "This will permanently delete the product and all associated images. This action cannot be undone.",
+        "description_other": "This will permanently delete the products and all associated images. This action cannot be undone."
+      },
+      "warning_one": "This will permanently delete {{count}} product and all associated images. This action cannot be undone.",
+      "warning_other": "This will permanently delete {{count}} products and all associated images. This action cannot be undone.",
+      "success": {
+        "header_one": "Successfully deleted {{count}} product",
+        "header_other": "Successfully deleted {{count}} products",
+        "description_one": "The product and its images have been permanently deleted.",
+        "description_other": "The products and their images have been permanently deleted."
+      },
+      "error": {
+        "header": "Failed to delete products",
+        "description": "An error occurred while deleting the products."
+      }
     },
     "status": {
       "draft": "Draft",

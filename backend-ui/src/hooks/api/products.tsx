@@ -450,3 +450,42 @@ export const useBulkUpdateProducts = (
     ...options,
   })
 }
+
+export const useBulkDeleteProducts = (
+  options?: UseMutationOptions<
+    { message: string; deletedCount: number; deletedProductIds: string[] },
+    FetchError,
+    { productIds: string[] }
+  >
+) => {
+  return useMutation({
+    mutationFn: async ({ productIds }) => {
+      const response = await fetch("/admin/products/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ productIds }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Failed to delete products" }))
+        throw new Error(error.message || "Failed to delete products")
+      }
+
+      return response.json()
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate all product queries
+      queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists() })
+      // Invalidate each deleted product's detail query
+      variables.productIds.forEach((id) => {
+        queryClient.invalidateQueries({
+          queryKey: productsQueryKeys.detail(id),
+        })
+      })
+      options?.onSuccess?.(data, variables, context)
+    },
+    ...options,
+  })
+}
