@@ -48,7 +48,7 @@ const SearchBarContentWrapper = ({
   const [searchValue, setSearchValue] = useState("")
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  
+
   // Debounce search value to reduce API calls (300ms delay)
   const debouncedSearchValue = useDebounce(searchValue, 300)
 
@@ -112,7 +112,7 @@ const SearchBarContentWrapper = ({
                 onClick={handleReset}
                 type="button"
                 className="p-1 text-text-secondary hover:text-text-primary transition-colors"
-                aria-label="Clear search"
+                aria-label={t("search.clear")}
               >
                 <svg
                   className="w-4 h-4"
@@ -132,7 +132,7 @@ const SearchBarContentWrapper = ({
             <button
               type="submit"
               className="p-2 text-text-secondary hover:text-primary transition-colors"
-              aria-label="Search"
+              aria-label={t("search.submit")}
             >
               <svg
                 className="w-5 h-5"
@@ -154,13 +154,13 @@ const SearchBarContentWrapper = ({
 
       {/* Only load InstantSearch when search is active and user has typed something */}
       {isSearchActive && debouncedSearchValue && (
-        <InstantSearch 
-          indexName={SEARCH_INDEX_NAME} 
+        <InstantSearch
+          indexName={SEARCH_INDEX_NAME}
           searchClient={searchClient}
         >
-          <SearchBarContent 
+          <SearchBarContent
             query={debouncedSearchValue}
-            onClose={() => setIsSearchActive(false)} 
+            onClose={() => setIsSearchActive(false)}
           />
         </InstantSearch>
       )}
@@ -223,7 +223,7 @@ const SearchBar = () => {
     <>
       {/* Backdrop overlay when search is active - covers content but header stays visible (header is z-50) */}
       {isSearchActive && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[49]"
           onClick={() => setIsSearchActive(false)}
         />
@@ -232,9 +232,8 @@ const SearchBar = () => {
       {/* Search Container */}
       <div
         ref={searchContainerRef}
-        className={`relative z-[51] transition-all ${
-          isSearchActive ? "w-full max-w-4xl mx-auto" : "w-full"
-        }`}
+        className={`relative z-[51] transition-all ${isSearchActive ? "w-full max-w-4xl mx-auto" : "w-full"
+          }`}
       >
         <SearchBarContentWrapper
           isSearchActive={isSearchActive}

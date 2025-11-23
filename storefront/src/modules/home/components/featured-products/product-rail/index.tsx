@@ -53,7 +53,7 @@ export default async function ProductRail({
         {showViewAll && (
           <InteractiveLink
             href={`/collections/${collection.handle}`}
-            className="text-sm md:text-base text-text-secondary hover:text-primary transition-colors"
+            className="flex gap-x-1 items-center text-sm md:text-base text-text-secondary hover:text-primary transition-colors"
           >
             {viewAllText}
           </InteractiveLink>

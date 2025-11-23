@@ -9,10 +9,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
 }
 
-export default async function PageLayout(props: { children: React.ReactNode }) {
+export default async function PageLayout(props: {
+  children: React.ReactNode
+  params: { countryCode: string }
+}) {
   return (
     <CartProvider>
-      <Nav />
+      <Nav countryCode={props.params.countryCode} />
       {props.children}
       <Footer />
     </CartProvider>

@@ -29,7 +29,8 @@
     "reviews": "Reviews",
     "blog": "Blog",
     "registration": "Registration",
-    "searchPlaceholder": "Search in the store"
+    "searchPlaceholder": "Search in the store",
+    "allProducts": "All products"
   },
   "cart": {
     "title": "Cart",
@@ -121,6 +122,21 @@
     "billingAddress": "Billing Address",
     "paymentMethod": "Payment Method",
     "shippingMethod": "Shipping Method"
+  },
+  "gallery": {
+    "noImage": "No image available",
+    "viewImage": "View image",
+    "thumbnail": "Thumbnail",
+    "mainImage": "Main image",
+    "previous": "Previous image",
+    "next": "Next image"
+  },
+  "search": {
+    "clear": "Clear search",
+    "submit": "Search"
+  },
+  "cartButton": {
+    "items": "items",
+    "currency": "BGN"
   }
 }
-

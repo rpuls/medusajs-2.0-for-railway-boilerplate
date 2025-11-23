@@ -4,12 +4,14 @@ import { useCartDrawer } from "@modules/cart/context/cart-context"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { convertToLocale } from "@lib/util/money"
+import { useTranslation } from "@lib/i18n/hooks/use-translation"
 
 type CartButtonClientProps = {
   cart: HttpTypes.StoreCart | null
 }
 
 const CartButtonClient = ({ cart }: CartButtonClientProps) => {
+  const { t } = useTranslation()
   const { openCart } = useCartDrawer()
 
   const totalItems =
@@ -29,7 +31,7 @@ const CartButtonClient = ({ cart }: CartButtonClientProps) => {
       onClick={openCart}
       className="hover:text-text-primary text-text-secondary transition-colors flex items-center gap-2"
       data-testid="nav-cart-link"
-      aria-label={`Cart (${totalItems} items)`}
+      aria-label={`${t("cart.title")} (${totalItems} ${t("cartButton.items")})`}
     >
       <svg
         className="w-5 h-5"
@@ -46,10 +48,10 @@ const CartButtonClient = ({ cart }: CartButtonClientProps) => {
       </svg>
       {total > 0 ? (
         <span className="text-sm font-medium">
-          {formattedTotal} <span className="text-xs opacity-75">(eu)</span>
+          {formattedTotal} <span className="text-xs opacity-75">({t("cartButton.currency")})</span>
         </span>
       ) : (
-        <span className="text-sm font-medium">0.00 лв</span>
+        <span className="text-sm font-medium">0.00 {t("cartButton.currency")}</span>
       )}
     </button>
   )

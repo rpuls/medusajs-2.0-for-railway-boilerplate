@@ -29,7 +29,8 @@
     "reviews": "Мнения",
     "blog": "Блог",
     "registration": "Регистрация",
-    "searchPlaceholder": "Търсете в магазина"
+    "searchPlaceholder": "Търсете в магазина",
+    "allProducts": "Всички продукти"
   },
   "cart": {
     "title": "Кошница",
@@ -108,7 +109,7 @@
     "othersAlsoBought": "Други също купиха",
     "top10": "Топ 10",
     "viewMore": "Виж повече",
-    "viewAll": "Виж всички →"
+    "viewAll": "Виж всички"
   },
   "checkout": {
     "address": "Адрес",
@@ -121,6 +122,21 @@
     "billingAddress": "Адрес за фактуриране",
     "paymentMethod": "Начин на плащане",
     "shippingMethod": "Начин на доставка"
+  },
+  "gallery": {
+    "noImage": "Няма налично изображение",
+    "viewImage": "Виж изображение",
+    "thumbnail": "Миниатюра",
+    "mainImage": "Основно изображение",
+    "previous": "Предишно изображение",
+    "next": "Следващо изображение"
+  },
+  "search": {
+    "clear": "Изчисти търсенето",
+    "submit": "Търси"
+  },
+  "cartButton": {
+    "items": "артикула",
+    "currency": "лв."
   }
 }
-

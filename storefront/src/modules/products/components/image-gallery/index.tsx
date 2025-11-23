@@ -3,6 +3,7 @@
 import { HttpTypes } from "@medusajs/types"
 import Image from "next/image"
 import { useState } from "react"
+import { useTranslation } from "@lib/i18n/hooks/use-translation"
 
 type ImageGalleryProps = {
   images: HttpTypes.StoreProductImage[]
@@ -10,13 +11,14 @@ type ImageGalleryProps = {
 }
 
 const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
+  const { t } = useTranslation()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
   if (!images || images.length === 0) {
     return (
       <div className="relative aspect-square w-full overflow-hidden bg-background-elevated rounded-lg">
         <div className="absolute inset-0 flex items-center justify-center text-text-tertiary">
-          No image available
+          {t("gallery.noImage")}
         </div>
       </div>
     )
@@ -37,14 +39,14 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
                 ? "border-primary shadow-md"
                 : "border-border-base hover:border-primary/50"
                 }`}
-              aria-label={`View image ${index + 1}`}
+              aria-label={`${t("gallery.viewImage")} ${index + 1}`}
             >
               {image.url && (
                 <Image
                   src={image.url}
                   loading="lazy"
                   className="object-cover"
-                  alt={`${productName || "Product"} - Thumbnail ${index + 1}`}
+                  alt={`${productName || t("cart.product")} - ${t("gallery.thumbnail")} ${index + 1}`}
                   fill
                   sizes="80px"
                   quality={60}
@@ -66,7 +68,7 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
               priority={selectedImageIndex === 0}
               loading={selectedImageIndex === 0 ? "eager" : "lazy"}
               className="object-cover transition-opacity duration-300"
-              alt={`${productName || "Product"} - Main image`}
+              alt={`${productName || t("cart.product")} - ${t("gallery.mainImage")}`}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               quality={90}
@@ -86,7 +88,7 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
                     )
                   }
                   className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Previous image"
+                  aria-label={t("gallery.previous")}
                 >
                   <svg
                     className="w-5 h-5 text-text-primary"
@@ -111,7 +113,7 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
                     )
                   }
                   className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Next image"
+                  aria-label={t("gallery.next")}
                 >
                   <svg
                     className="w-5 h-5 text-text-primary"
@@ -144,7 +146,7 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
                 ? "border-primary shadow-md"
                 : "border-border-base"
                 }`}
-              aria-label={`View image ${index + 1}`}
+              aria-label={`${t("gallery.viewImage")} ${index + 1}`}
             >
               {image.url && (
                 <Image

@@ -5,8 +5,10 @@ import CartButton from "@modules/layout/components/cart-button"
 import SearchBar from "./search-bar"
 import HeaderLinks from "./header-links"
 import AccountLink from "./account-link"
+import { getTranslations } from "@lib/i18n/server"
 
-const MainHeader = async () => {
+const MainHeader = async ({ countryCode }: { countryCode: string }) => {
+  const translations = await getTranslations(countryCode)
 
   return (
     <div className="w-full bg-background-base border-b border-border-base">
@@ -93,7 +95,7 @@ const MainHeader = async () => {
                       d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                     />
                   </svg>
-                  <span className="hidden md:inline text-sm">0.00 лв</span>
+                  <span className="hidden md:inline text-sm">0.00 {translations.cartButton.currency}</span>
                 </div>
               }
             >

@@ -1,16 +1,18 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getCategoriesList } from "@lib/data/categories"
+import { getTranslations } from "@lib/i18n/server"
 
 import CategoryMenuItem from "./category-menu-item"
 
-const CategoryNav = async () => {
-  const { product_categories } = await getCategoriesList(0, 10)
+const CategoryNav = async ({ countryCode }: { countryCode: string }) => {
+  const { product_categories } = await getCategoriesList(0, 100)
+  const translations = await getTranslations(countryCode)
 
   const displayCategories =
     product_categories && product_categories.length > 0
       ? product_categories
         .filter((cat) => !cat.parent_category)
-        .slice(0, 7)
+        .slice(0, 20)
       : []
 
   return (
@@ -35,7 +37,7 @@ const CategoryNav = async () => {
                 d="M4 6h16M4 12h16M4 18h16"
               />
             </svg>
-            <span>All products</span>
+            <span>{translations.common.allProducts}</span>
           </LocalizedClientLink>
 
           {/* Category Links */}

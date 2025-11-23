@@ -13,6 +13,9 @@ export interface TranslationKeys {
   filters: Record<string, string>
   homepage: Record<string, any>
   checkout: Record<string, string>
+  gallery: Record<string, string>
+  search: Record<string, string>
+  cartButton: Record<string, string>
 }
 
 /**
