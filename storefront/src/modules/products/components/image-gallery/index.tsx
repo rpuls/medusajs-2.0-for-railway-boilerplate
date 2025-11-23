@@ -6,9 +6,10 @@ import { useState } from "react"
 
 type ImageGalleryProps = {
   images: HttpTypes.StoreProductImage[]
+  productName?: string
 }
 
-const ImageGallery = ({ images }: ImageGalleryProps) => {
+const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
   if (!images || images.length === 0) {
@@ -32,11 +33,10 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
             <button
               key={image.id}
               onClick={() => setSelectedImageIndex(index)}
-              className={`relative w-20 h-20 overflow-hidden bg-background-elevated rounded-lg border-2 transition-all ${
-                selectedImageIndex === index
-                  ? "border-primary shadow-md"
-                  : "border-border-base hover:border-primary/50"
-              }`}
+              className={`relative w-20 h-20 overflow-hidden bg-background-elevated rounded-lg border-2 transition-all ${selectedImageIndex === index
+                ? "border-primary shadow-md"
+                : "border-border-base hover:border-primary/50"
+                }`}
               aria-label={`View image ${index + 1}`}
             >
               {image.url && (
@@ -44,10 +44,12 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                   src={image.url}
                   loading="lazy"
                   className="object-cover"
-                  alt={`${image.alt || "Product"} - Thumbnail ${index + 1}`}
+                  alt={`${productName || "Product"} - Thumbnail ${index + 1}`}
                   fill
                   sizes="80px"
-                  quality={75}
+                  quality={60}
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                 />
               )}
             </button>
@@ -64,14 +66,14 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
               priority={selectedImageIndex === 0}
               loading={selectedImageIndex === 0 ? "eager" : "lazy"}
               className="object-cover transition-opacity duration-300"
-              alt={`${selectedImage.alt || "Product"} - Main image`}
+              alt={`${productName || "Product"} - Main image`}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               quality={90}
               placeholder="blur"
               blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
             />
-            
+
             {/* Image Navigation Arrows */}
             {images.length > 1 && (
               <>
@@ -138,11 +140,10 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
             <button
               key={image.id}
               onClick={() => setSelectedImageIndex(index)}
-              className={`relative flex-shrink-0 w-20 h-20 overflow-hidden bg-background-elevated rounded-lg border-2 transition-all ${
-                selectedImageIndex === index
-                  ? "border-primary shadow-md"
-                  : "border-border-base"
-              }`}
+              className={`relative flex-shrink-0 w-20 h-20 overflow-hidden bg-background-elevated rounded-lg border-2 transition-all ${selectedImageIndex === index
+                ? "border-primary shadow-md"
+                : "border-border-base"
+                }`}
               aria-label={`View image ${index + 1}`}
             >
               {image.url && (
@@ -150,10 +151,12 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                   src={image.url}
                   loading="lazy"
                   className="object-cover"
-                  alt={`${image.alt || "Product"} - Thumbnail ${index + 1}`}
+                  alt={`${productName || "Product"} - Thumbnail ${index + 1}`}
                   fill
                   sizes="80px"
-                  quality={75}
+                  quality={60}
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                 />
               )}
             </button>

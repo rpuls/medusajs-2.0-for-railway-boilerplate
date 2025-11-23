@@ -35,13 +35,13 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column: Image Gallery */}
           <div className="w-full">
-            <ImageGallery images={product?.images || []} />
+            <ImageGallery images={product?.images || []} productName={product.title} />
           </div>
 
           {/* Right Column: Product Info & Actions */}
           <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
             <ProductInfo product={product} />
-            
+
             <Suspense
               fallback={
                 <ProductActions
@@ -61,7 +61,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <ProductTabs product={product} />
         </div>
       </div>
-      
+
       {/* Related Products */}
       <div
         className="content-container my-16 small:my-32"

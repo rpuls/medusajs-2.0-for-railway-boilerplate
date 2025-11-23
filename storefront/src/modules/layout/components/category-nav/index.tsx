@@ -1,7 +1,7 @@
-import { Bars3 } from "@medusajs/icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getCategoriesList } from "@lib/data/categories"
-import { HttpTypes } from "@medusajs/types"
+
+import CategoryMenuItem from "./category-menu-item"
 
 const CategoryNav = async () => {
   const { product_categories } = await getCategoriesList(0, 10)
@@ -9,18 +9,14 @@ const CategoryNav = async () => {
   const displayCategories =
     product_categories && product_categories.length > 0
       ? product_categories
-          .filter((cat) => !cat.parent_category)
-          .slice(0, 7)
-          .map((cat) => ({
-            handle: cat.handle,
-            name: cat.name,
-          }))
+        .filter((cat) => !cat.parent_category)
+        .slice(0, 7)
       : []
 
   return (
     <div className="w-full bg-background-elevated border-b border-border-base">
       <div className="content-container">
-        <nav className="flex items-center gap-6 overflow-x-auto py-3">
+        <nav className="flex items-center gap-6 py-3">
           {/* All Products Menu */}
           <LocalizedClientLink
             href="/store"
@@ -46,13 +42,7 @@ const CategoryNav = async () => {
           {displayCategories.length > 0 && (
             <div className="flex items-center gap-6">
               {displayCategories.map((category) => (
-                <LocalizedClientLink
-                  key={category.handle}
-                  href={`/categories/${category.handle}`}
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors whitespace-nowrap font-medium"
-                >
-                  {category.name}
-                </LocalizedClientLink>
+                <CategoryMenuItem key={category.handle} category={category} />
               ))}
             </div>
           )}

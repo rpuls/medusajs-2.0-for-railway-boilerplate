@@ -2,15 +2,41 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "@lib/i18n/hooks/use-translation"
-import { InstantSearch } from "react-instantsearch-hooks-web"
+import dynamic from "next/dynamic"
 import { SEARCH_INDEX_NAME, searchClient } from "@lib/search-client"
-import { useSearchBox, useHits } from "react-instantsearch-hooks-web"
 import { useRouter } from "next/navigation"
 import { ChangeEvent, FormEvent } from "react"
-import SearchResults from "./search-results"
+
+// Lazy load InstantSearch and hooks only when needed
+const InstantSearch = dynamic(
+  () => import("react-instantsearch-hooks-web").then((mod) => mod.InstantSearch),
+  { ssr: false }
+)
+
+const SearchBarContent = dynamic(
+  () => import("./search-bar-content"),
+  { ssr: false }
+)
+
+// Debounce utility
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 // Inner component that uses InstantSearch hooks
-const SearchBarContent = ({
+const SearchBarContentWrapper = ({
   isSearchActive,
   setIsSearchActive,
 }: {
@@ -22,25 +48,9 @@ const SearchBarContent = ({
   const [searchValue, setSearchValue] = useState("")
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const { query, refine } = useSearchBox()
-  const { hits } = useHits()
-
-  // Sync searchValue to InstantSearch query when user types
-  useEffect(() => {
-    refine(searchValue)
-    // refine is stable and doesn't need to be in dependencies
-    // We only want to refine when searchValue changes (user typing)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchValue])
-
-  // Sync InstantSearch query back to searchValue when query changes externally
-  // (e.g., when navigating from search results page)
-  useEffect(() => {
-    if (document.activeElement !== inputRef.current && query !== searchValue) {
-      setSearchValue(query)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query])
+  
+  // Debounce search value to reduce API calls (300ms delay)
+  const debouncedSearchValue = useDebounce(searchValue, 300)
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSearchValue(event.currentTarget.value)
@@ -48,7 +58,6 @@ const SearchBarContent = ({
 
   const handleReset = () => {
     setSearchValue("")
-    refine("")
     inputRef.current?.focus()
   }
 
@@ -143,11 +152,17 @@ const SearchBarContent = ({
         </div>
       </form>
 
-      {/* Search Results Dropdown - Only show when there are results */}
-      {isSearchActive && searchValue && hits.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-background-base border border-border-base rounded-lg shadow-xl max-h-[70vh] overflow-y-auto z-[52]">
-          <SearchResults onClose={() => setIsSearchActive(false)} />
-        </div>
+      {/* Only load InstantSearch when search is active and user has typed something */}
+      {isSearchActive && debouncedSearchValue && (
+        <InstantSearch 
+          indexName={SEARCH_INDEX_NAME} 
+          searchClient={searchClient}
+        >
+          <SearchBarContent 
+            query={debouncedSearchValue}
+            onClose={() => setIsSearchActive(false)} 
+          />
+        </InstantSearch>
       )}
     </>
   )
@@ -205,30 +220,28 @@ const SearchBar = () => {
   }, [isSearchActive])
 
   return (
-    <InstantSearch indexName={SEARCH_INDEX_NAME} searchClient={searchClient}>
-      <>
-        {/* Backdrop overlay when search is active - covers content but header stays visible (header is z-50) */}
-        {isSearchActive && (
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[49]"
-            onClick={() => setIsSearchActive(false)}
-          />
-        )}
+    <>
+      {/* Backdrop overlay when search is active - covers content but header stays visible (header is z-50) */}
+      {isSearchActive && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[49]"
+          onClick={() => setIsSearchActive(false)}
+        />
+      )}
 
-        {/* Search Container */}
-        <div
-          ref={searchContainerRef}
-          className={`relative z-[51] transition-all ${
-            isSearchActive ? "w-full max-w-4xl mx-auto" : "w-full"
-          }`}
-        >
-          <SearchBarContent
-            isSearchActive={isSearchActive}
-            setIsSearchActive={setIsSearchActive}
-          />
-        </div>
-      </>
-    </InstantSearch>
+      {/* Search Container */}
+      <div
+        ref={searchContainerRef}
+        className={`relative z-[51] transition-all ${
+          isSearchActive ? "w-full max-w-4xl mx-auto" : "w-full"
+        }`}
+      >
+        <SearchBarContentWrapper
+          isSearchActive={isSearchActive}
+          setIsSearchActive={setIsSearchActive}
+        />
+      </div>
+    </>
   )
 }
 

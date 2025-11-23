@@ -14,7 +14,7 @@ export const getCategoriesList = cache(async function (
   return sdk.store.category.list(
     // TODO: Look into fixing the type
     // @ts-ignore
-    { limit, offset },
+    { limit, offset, fields: "+category_children" },
     { next: { tags: ["categories"] } }
   )
 })

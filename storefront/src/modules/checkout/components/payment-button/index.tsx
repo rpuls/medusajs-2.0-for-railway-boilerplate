@@ -5,12 +5,18 @@ import { OnApproveActions, OnApproveData } from "@paypal/paypal-js"
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import React, { useState } from "react"
+import dynamic from "next/dynamic"
 import ErrorMessage from "../error-message"
 import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
-import StripePaymentRequest from "./stripe-payment-request"
+
+// Lazy load Stripe payment request component (heavy)
+const StripePaymentRequest = dynamic(
+  () => import("./stripe-payment-request"),
+  { ssr: false }
+)
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
