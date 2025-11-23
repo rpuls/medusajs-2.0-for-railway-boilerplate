@@ -7,7 +7,7 @@ import {
   useQuery,
   UseQueryOptions,
 } from "@tanstack/react-query"
-import { sdk } from "../../lib/client"
+import { sdk, backendUrl } from "../../lib/client"
 import { queryClient } from "../../lib/query-client"
 import { queryKeysFactory } from "../../lib/query-key-factory"
 import { inventoryItemsQueryKeys } from "./inventory.tsx"
@@ -460,8 +460,11 @@ export const useBulkDeleteProducts = (
 ) => {
   return useMutation({
     mutationFn: async ({ productIds }) => {
-      const response = await fetch("/admin/products/bulk-delete", {
+      // Use fetch with backend URL and proper headers
+      const url = `${backendUrl.replace(/\/$/, "")}/admin/products/bulk-delete`
+      const response = await fetch(url, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

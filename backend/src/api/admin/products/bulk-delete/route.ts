@@ -60,12 +60,13 @@ export async function POST(
 
     // Delete files from MinIO if configured
     const minioEndpoint = process.env.MINIO_ENDPOINT
-    const minioBucket = process.env.MINIO_BUCKET || "medusa"
+    const defaultBucket = process.env.MINIO_BUCKET || "medusa-media" // Use correct default
     const minioAccessKey = process.env.MINIO_ACCESS_KEY
     const minioSecretKey = process.env.MINIO_SECRET_KEY
 
     if (minioEndpoint && minioAccessKey && minioSecretKey && imageUrls.length > 0) {
-      const fileKeysToDelete: string[] = []
+      // Map of bucket -> file keys to delete
+      const filesByBucket = new Map<string, string[]>()
 
       imageUrls.forEach((url) => {
         try {
@@ -75,22 +76,28 @@ export async function POST(
           
           // Check if this is our MinIO endpoint
           if (urlObj.hostname === minioEndpoint || urlObj.hostname.includes(minioEndpoint)) {
-            // Extract file key from path: /bucket-name/file-key
+            // Extract bucket and file key from path: /bucket-name/file-key
             const pathParts = urlObj.pathname.split("/").filter(Boolean)
             
-            // Find bucket in path and get file key after it
-            const bucketIndex = pathParts.findIndex((part) => part === minioBucket)
-            if (bucketIndex >= 0 && bucketIndex < pathParts.length - 1) {
-              // File key is everything after the bucket name
-              const fileKey = pathParts.slice(bucketIndex + 1).join("/")
-              if (fileKey) {
-                fileKeysToDelete.push(fileKey)
+            if (pathParts.length >= 2) {
+              // First part is bucket, rest is file key
+              const bucket = pathParts[0]
+              const fileKey = pathParts.slice(1).join("/")
+              
+              if (bucket && fileKey) {
+                if (!filesByBucket.has(bucket)) {
+                  filesByBucket.set(bucket, [])
+                }
+                filesByBucket.get(bucket)!.push(fileKey)
               }
-            } else if (pathParts.length > 0) {
-              // Fallback: assume last part is file key
-              const fileKey = pathParts[pathParts.length - 1]
+            } else if (pathParts.length === 1) {
+              // Only one part - assume it's a file key in the default bucket
+              const fileKey = pathParts[0]
               if (fileKey) {
-                fileKeysToDelete.push(fileKey)
+                if (!filesByBucket.has(defaultBucket)) {
+                  filesByBucket.set(defaultBucket, [])
+                }
+                filesByBucket.get(defaultBucket)!.push(fileKey)
               }
             }
           }
@@ -100,8 +107,9 @@ export async function POST(
       })
 
       // Delete files from MinIO using MinIO client directly
-      if (fileKeysToDelete.length > 0) {
-        logger.info(`🗑️  Deleting ${fileKeysToDelete.length} file(s) from MinIO`)
+      if (filesByBucket.size > 0) {
+        const totalFiles = Array.from(filesByBucket.values()).reduce((sum, files) => sum + files.length, 0)
+        logger.info(`🗑️  Deleting ${totalFiles} file(s) from MinIO across ${filesByBucket.size} bucket(s)`)
         
         try {
           const minioClient = new Client({
@@ -112,17 +120,34 @@ export async function POST(
             secretKey: minioSecretKey,
           })
 
-          const deletePromises = fileKeysToDelete.map(async (fileKey) => {
-            try {
-              await minioClient.removeObject(minioBucket, fileKey)
-              logger.debug(`Deleted file ${fileKey} from MinIO`)
-            } catch (error) {
-              logger.warn(`Failed to delete file ${fileKey} from MinIO: ${error instanceof Error ? error.message : "Unknown error"}`)
+          // Delete files from each bucket
+          const deletePromises: Promise<void>[] = []
+          
+          for (const [bucket, fileKeys] of filesByBucket.entries()) {
+            // Check if bucket exists before trying to delete
+            const bucketExists = await minioClient.bucketExists(bucket).catch(() => false)
+            
+            if (!bucketExists) {
+              logger.warn(`Bucket ${bucket} does not exist, skipping ${fileKeys.length} file(s)`)
+              continue
             }
-          })
+            
+            for (const fileKey of fileKeys) {
+              deletePromises.push(
+                minioClient.removeObject(bucket, fileKey)
+                  .then(() => {
+                    logger.debug(`Deleted file ${fileKey} from bucket ${bucket}`)
+                  })
+                  .catch((error) => {
+                    logger.warn(`Failed to delete file ${fileKey} from bucket ${bucket}: ${error instanceof Error ? error.message : "Unknown error"}`)
+                  })
+              )
+            }
+          }
 
           await Promise.allSettled(deletePromises)
-          logger.info(`✅ Deleted ${fileKeysToDelete.length} file(s) from MinIO`)
+          const deletedCount = deletePromises.length
+          logger.info(`✅ Completed deletion attempt for ${deletedCount} file(s) from MinIO`)
         } catch (error) {
           logger.warn(`Failed to delete some files from MinIO: ${error instanceof Error ? error.message : "Unknown error"}`)
           // Don't fail the entire operation if file deletion fails
