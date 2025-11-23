@@ -141,7 +141,11 @@ const medusaConfig = {
     }
   ],
   plugins: [
-  ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
+    {
+      resolve: '@agilo/medusa-analytics-plugin',
+      options: {},
+    },
+    ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
       resolve: '@rokmohar/medusa-plugin-meilisearch',
       options: {
         config: {

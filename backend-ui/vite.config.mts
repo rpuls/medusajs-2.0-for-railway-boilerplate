@@ -43,7 +43,19 @@ export default defineConfig(({ mode }) => {
   const backendUiDir = __dirname
   const MEDUSA_PROJECT = env.VITE_MEDUSA_PROJECT || path.resolve(backendUiDir, '../backend')
   // Use backend-ui as the source since we've symlinked the admin files here
+  // Also include backend node_modules so plugins can be discovered
   const sources = [backendUiDir]
+  
+  // Add backend node_modules for plugin discovery (for separated admin UI)
+  // The admin-vite-plugin will automatically discover plugins from node_modules
+  if (MEDUSA_PROJECT && fs.existsSync(MEDUSA_PROJECT)) {
+    const backendNodeModules = path.join(MEDUSA_PROJECT, 'node_modules')
+    if (fs.existsSync(backendNodeModules)) {
+      // The plugin will automatically scan node_modules for Medusa plugins
+      // No need to add it to sources, but we ensure the path exists
+      console.error('✅ Backend node_modules found for plugin discovery:', backendNodeModules)
+    }
+  }
   
   // Log for debugging (will show in Railway build logs and dev server)
   const resolvedPath = MEDUSA_PROJECT ? path.resolve(MEDUSA_PROJECT) : null
