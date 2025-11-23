@@ -42,18 +42,32 @@ export default defineConfig(({ mode }) => {
    */
   const backendUiDir = __dirname
   const MEDUSA_PROJECT = env.VITE_MEDUSA_PROJECT || path.resolve(backendUiDir, '../backend')
-  // Use backend-ui as the source since we've symlinked the admin files here
-  // Also include backend node_modules so plugins can be discovered
+  
+  // Sources for admin-vite-plugin to discover routes and plugins
+  // The admin-vite-plugin reads medusa-config.js from sources to discover registered plugins
+  // Include backend project so it can read medusa-config.js and discover plugins
   const sources = [backendUiDir]
   
-  // Add backend node_modules for plugin discovery (for separated admin UI)
-  // The admin-vite-plugin will automatically discover plugins from node_modules
+  // Add backend directory to sources if it exists (for plugin discovery)
+  // This allows the admin-vite-plugin to read medusa-config.js and discover plugins
   if (MEDUSA_PROJECT && fs.existsSync(MEDUSA_PROJECT)) {
+    const medusaConfigPath = path.join(MEDUSA_PROJECT, 'medusa-config.js')
+    if (fs.existsSync(medusaConfigPath)) {
+      // Add backend to sources so admin-vite-plugin can read medusa-config.js
+      sources.push(MEDUSA_PROJECT)
+      console.error('✅ Backend medusa-config.js found, added to sources for plugin discovery:', medusaConfigPath)
+    }
+    
+    // Check plugin locations
     const backendNodeModules = path.join(MEDUSA_PROJECT, 'node_modules')
-    if (fs.existsSync(backendNodeModules)) {
-      // The plugin will automatically scan node_modules for Medusa plugins
-      // No need to add it to sources, but we ensure the path exists
-      console.error('✅ Backend node_modules found for plugin discovery:', backendNodeModules)
+    const agiloPluginPath = path.join(backendNodeModules, '@agilo/medusa-analytics-plugin')
+    const adminUiPluginPath = path.join(backendUiDir, 'node_modules', '@agilo/medusa-analytics-plugin')
+    
+    if (fs.existsSync(agiloPluginPath)) {
+      console.error('✅ Agilo Analytics plugin found in backend node_modules')
+    }
+    if (fs.existsSync(adminUiPluginPath)) {
+      console.error('✅ Agilo Analytics plugin found in admin UI node_modules')
     }
   }
   
@@ -79,6 +93,9 @@ export default defineConfig(({ mode }) => {
       react(),
       inject({
         sources,
+        // Enable plugin mode to discover plugins from node_modules
+        // The plugin will automatically read medusa-config.js from the backend
+        pluginMode: true,
       }),
     ],
     resolve: {
@@ -91,6 +108,9 @@ export default defineConfig(({ mode }) => {
       __BASE__: JSON.stringify(BASE),
       __BACKEND_URL__: JSON.stringify(BACKEND_URL),
       __STOREFRONT_URL__: JSON.stringify(STOREFRONT_URL),
+    },
+    optimizeDeps: {
+      include: ["@agilo/medusa-analytics-plugin/admin"],
     },
     server: {
       open: true,

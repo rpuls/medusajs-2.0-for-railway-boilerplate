@@ -1,0 +1,255 @@
+---
+description: How to integrate MedusaJS plugins and custom admin extensions in a separated admin UI setup
+globs:
+  - backend/src/modules/**/*
+  - backend/src/admin/**/*
+  - backend/medusa-config.js
+  - backend/package.json
+  - backend-ui/src/app.tsx
+  - backend-ui/vite.config.mts
+  - backend-ui/src/routes/**/*
+  - backend-ui/package.json
+alwaysApply: true
+---
+# MedusaJS Plugin Integration for Separated Admin UI
+
+This guide documents how to integrate MedusaJS plugins and custom admin extensions when the admin UI is separated from the backend (e.g., on Railway with separate services).
+
+## Overview
+
+When the admin UI is deployed separately from the backend, the `@medusajs/admin-vite-plugin` may not automatically discover plugins from the backend's `medusa-config.js`. This guide shows how to manually integrate plugins to ensure they work in both local development and production.
+
+## Two Integration Patterns
+
+### Pattern 1: Custom Admin Routes (XML Importer)
+
+For custom admin routes created in the backend, use symlinks or copy files to the admin UI.
+
+**Location:** `backend/src/admin/routes/` → `backend-ui/src/routes/`
+
+**Steps:**
+
+1. Create admin routes in `backend/src/admin/routes/custom/your-feature/page.tsx`
+2. Use `defineRouteConfig` to configure the route:
+   ```typescript
+   import { defineRouteConfig } from "@medusajs/admin-sdk"
+   
+   export const config = defineRouteConfig({
+     label: "Your Feature",
+     // ... other config
+   })
+   
+   const YourFeaturePage = () => {
+     // Your component
+   }
+   
+   export default YourFeaturePage
+   ```
+3. Symlink or copy to `backend-ui/src/routes/custom/your-feature/page.tsx`
+4. The admin-vite-plugin will automatically discover routes in `backend-ui/src/routes/`
+
+**Example:** See `backend/src/admin/routes/custom/xml-importer/` → `backend-ui/src/routes/custom/xml-importer/`
+
+### Pattern 2: Third-Party Plugins (Agilo Analytics)
+
+For third-party plugins installed via npm, manually import and register them in the admin UI.
+
+**Steps:**
+
+#### 1. Install Plugin in Backend
+
+```bash
+cd backend
+pnpm add @plugin-name
+```
+
+#### 2. Register Plugin in Backend Config
+
+```javascript
+// backend/medusa-config.js
+plugins: [
+  {
+    resolve: '@plugin-name',
+    options: {
+      // plugin options
+    },
+  },
+]
+```
+
+#### 3. Install Plugin in Admin UI
+
+```bash
+cd backend-ui
+npm install @plugin-name --legacy-peer-deps
+```
+
+**Note:** Use `--legacy-peer-deps` if there are peer dependency conflicts.
+
+#### 4. Configure Vite for Plugin Discovery
+
+```typescript
+// backend-ui/vite.config.mts
+const backendUiDir = __dirname
+const MEDUSA_PROJECT = env.VITE_MEDUSA_PROJECT || path.resolve(backendUiDir, '../backend')
+
+const sources = [backendUiDir]
+
+// Add backend directory to sources so admin-vite-plugin can read medusa-config.js
+if (MEDUSA_PROJECT && fs.existsSync(MEDUSA_PROJECT)) {
+  const medusaConfigPath = path.join(MEDUSA_PROJECT, 'medusa-config.js')
+  if (fs.existsSync(medusaConfigPath)) {
+    sources.push(MEDUSA_PROJECT)
+  }
+}
+
+return {
+  plugins: [
+    inject({
+      sources,
+      pluginMode: true, // Enable plugin discovery mode
+    }),
+  ],
+  define: {
+    __BASE__: JSON.stringify(BASE),
+    __BACKEND_URL__: JSON.stringify(BACKEND_URL),
+    __STOREFRONT_URL__: JSON.stringify(STOREFRONT_URL),
+  },
+  optimizeDeps: {
+    include: ["@plugin-name/admin"], // Add plugin admin export to optimizeDeps
+  },
+}
+```
+
+#### 5. Manually Import Plugin in Admin UI
+
+```typescript
+// backend-ui/src/app.tsx
+import agiloPlugin from "@plugin-name/admin"
+
+// ... existing imports
+
+function App({ plugins = [] }: AppProps) {
+  const localPlugin = {
+    widgetModule,
+    routeModule,
+    displayModule,
+    formModule,
+    menuItemModule,
+  }
+  
+  // Import the plugin
+  const pluginModules = agiloPlugin || {}
+  
+  // Pass both plugins separately - DashboardApp will merge them
+  const pluginsToUse = [localPlugin, pluginModules, ...plugins]
+
+  const app = new DashboardApp({
+    plugins: pluginsToUse,
+  })
+
+  return <div>{app.render()}</div>
+}
+```
+
+**Important:** Do NOT try to manually merge plugin modules. The `DashboardApp` handles merging automatically. Plugin modules are Maps/Records, not arrays, so spreading them will cause errors.
+
+## Key Points
+
+### Plugin Module Structure
+
+Plugins export modules with the following structure:
+```typescript
+{
+  widgetModule: { widgets: WidgetExtension[] },
+  routeModule: { routes: RouteExtension[] },
+  menuItemModule: { menuItems: MenuItemExtension[] },
+  formModule: { customFields: Record<...> }, // Record, not array
+  displayModule: { displays: Map<...> }, // Map, not array
+}
+```
+
+### Why Manual Import is Needed
+
+In a separated admin UI setup:
+- The admin-vite-plugin may not automatically read the backend's `medusa-config.js`
+- Plugins installed only in the backend won't be available to the admin UI build
+- The plugin's admin routes need to be bundled with the admin UI
+
+### Debugging
+
+Add debug logging to verify plugin discovery:
+
+```typescript
+// In app.tsx
+console.log('🔍 Plugin debug:', {
+  hasPlugin: !!pluginModules,
+  pluginKeys: Object.keys(pluginModules),
+  routeCount: pluginModules.routeModule?.routes?.length || 0,
+  menuItemCount: pluginModules.menuItemModule?.menuItems?.length || 0,
+})
+```
+
+Check browser console and build logs for:
+- Plugin found in node_modules
+- Backend medusa-config.js found
+- Plugin modules loaded successfully
+
+## Checklist for New Plugin Integration
+
+- [ ] Install plugin in backend (`pnpm add @plugin-name`)
+- [ ] Register plugin in `backend/medusa-config.js`
+- [ ] Install plugin in admin UI (`npm install @plugin-name --legacy-peer-deps`)
+- [ ] Add backend to sources in `backend-ui/vite.config.mts`
+- [ ] Add plugin to `optimizeDeps.include` in vite config
+- [ ] Manually import plugin in `backend-ui/src/app.tsx`
+- [ ] Pass plugin as separate entry to `DashboardApp` (don't merge manually)
+- [ ] Test in local development
+- [ ] Verify in production (separated deployment)
+
+## Common Issues
+
+### Error: `__BACKEND_URL__ is not defined`
+
+**Solution:** Ensure `__BACKEND_URL__` is defined in `vite.config.mts`:
+```typescript
+define: {
+  __BACKEND_URL__: JSON.stringify(BACKEND_URL),
+}
+```
+
+### Error: `((intermediate value) || []) is not iterable`
+
+**Solution:** Don't try to spread plugin modules. Pass them separately to `DashboardApp`:
+```typescript
+// ❌ Bad - trying to merge manually
+const merged = {
+  routeModule: {
+    routes: [...localPlugin.routeModule.routes, ...plugin.routeModule.routes]
+  }
+}
+
+// ✅ Good - let DashboardApp merge
+const pluginsToUse = [localPlugin, pluginModules]
+```
+
+### Plugin Not Appearing in Sidebar
+
+**Check:**
+1. Plugin is installed in both backend and admin UI
+2. Plugin is registered in `medusa-config.js`
+3. Plugin is manually imported in `app.tsx`
+4. Check browser console for plugin debug logs
+5. Verify plugin exports admin routes via `"./admin"` export in package.json
+
+## Examples
+
+### XML Importer (Custom Route)
+- **Backend:** `backend/src/admin/routes/custom/xml-importer/page.tsx`
+- **Admin UI:** `backend-ui/src/routes/custom/xml-importer/page.tsx` (symlinked)
+- **Config:** Uses `defineRouteConfig` in the route file
+
+### Agilo Analytics (Third-Party Plugin)
+- **Backend:** Installed via `pnpm add @agilo/medusa-analytics-plugin`
+- **Admin UI:** Installed via `npm install @agilo/medusa-analytics-plugin --legacy-peer-deps`
+- **Config:** Manually imported in `app.tsx` and passed to `DashboardApp`
