@@ -21,8 +21,6 @@ export async function GET(
       offset: parseInt(offset as string),
     })
 
-    logger.info(`Imports: ${JSON.stringify(imports, null, 2)}`)
-
     // Transform snake_case to camelCase for frontend
     const transformedImports = imports.map((imp: any) => ({
       id: imp.id,

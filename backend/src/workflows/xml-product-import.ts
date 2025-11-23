@@ -5,7 +5,7 @@ import {
   WorkflowResponse,
 } from '@medusajs/framework/workflows-sdk'
 import { MedusaContainer } from '@medusajs/framework/types'
-import { createShippingProfilesWorkflow } from '@medusajs/medusa/core-flows'
+import { createProductsWorkflow, createShippingProfilesWorkflow } from '@medusajs/medusa/core-flows'
 import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import { IFulfillmentModuleService, IProductModuleService } from '@medusajs/framework/types'
 import { XML_PRODUCT_IMPORTER_MODULE } from '../modules/xml-product-importer'
@@ -129,10 +129,6 @@ const normalizePricesStep = createStep(
 
     logger.info(`Using default currency: ${defaultCurrency}`)
 
-    // Log first product structure for debugging
-    if (input.products.length > 0) {
-      logger.debug(`Before normalization - First product structure: ${JSON.stringify(input.products[0], null, 2)}`)
-    }
 
     const normalizedProducts = input.products.map((product, productIndex) => {
       const normalizedProduct = { ...product }
@@ -174,18 +170,30 @@ const normalizePricesStep = createStep(
           // Also check for simple "_price" field (from product-level price mapping)
           // Check multiple possible field names where price might be stored
           let rawPriceAmount: any = undefined
+          let priceSource: string = 'none'
+          
           if (variant._price !== undefined && variant._price !== null) {
             rawPriceAmount = variant._price
+            priceSource = 'variant._price'
           } else if (variant.amount !== undefined && variant.amount !== null) {
             rawPriceAmount = variant.amount
+            priceSource = 'variant.amount'
           } else if (variant.price !== undefined && variant.price !== null) {
             rawPriceAmount = variant.price
+            priceSource = 'variant.price'
           } else if (normalizedProduct._price !== undefined && normalizedProduct._price !== null) {
             // Check product-level price as fallback
             rawPriceAmount = normalizedProduct._price
+            priceSource = 'product._price'
           } else if (normalizedProduct.price !== undefined && normalizedProduct.price !== null) {
             // Check product-level price field (common case)
             rawPriceAmount = normalizedProduct.price
+            priceSource = 'product.price'
+          }
+          
+          // Log price source for debugging
+          if (rawPriceAmount !== undefined && rawPriceAmount !== null) {
+            logger.debug(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Found price from ${priceSource}: ${rawPriceAmount}`)
           }
           
           // Check if prices array exists and has valid entries
@@ -213,21 +221,14 @@ const normalizePricesStep = createStep(
                 normalizedPrice.currency_code = defaultCurrency
               }
 
-              // Convert amount from decimal to cents if needed
+              // Keep price as-is (in dollars) - createProductsWorkflow expects dollars
               if (normalizedPrice.amount !== undefined && normalizedPrice.amount !== null) {
-                // If amount is a string or decimal number (e.g., "17.95" or 17.95), convert to cents
                 if (typeof normalizedPrice.amount === 'string') {
                   const decimalAmount = parseFloat(normalizedPrice.amount)
                   if (!isNaN(decimalAmount)) {
-                    normalizedPrice.amount = Math.round(decimalAmount * 100)
+                    normalizedPrice.amount = decimalAmount
                   } else {
                     logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}, Price ${priceIndex + 1}: Invalid price amount string: ${normalizedPrice.amount}`)
-                  }
-                } else if (typeof normalizedPrice.amount === 'number') {
-                  // If amount is less than 1000, assume it's in decimal format and convert to cents
-                  // (assuming prices are typically > $10, so amounts > 1000 cents)
-                  if (normalizedPrice.amount < 1000 && normalizedPrice.amount > 0) {
-                    normalizedPrice.amount = Math.round(normalizedPrice.amount * 100)
                   }
                 }
               } else {
@@ -237,10 +238,69 @@ const normalizePricesStep = createStep(
               return normalizedPrice
             })
 
-          // Filter out prices without valid amounts
-          normalizedVariant.prices = normalizedVariant.prices.filter((p: any) => 
-            p.amount !== undefined && p.amount !== null && typeof p.amount === 'number' && p.amount > 0
-          )
+          // Filter out prices without valid amounts and ensure proper format
+          normalizedVariant.prices = normalizedVariant.prices
+            .filter((p: any) => {
+              if (!p || typeof p !== 'object') {
+                return false
+              }
+              
+              // Check if amount is valid (should already be in cents)
+              let amount: number | null = null
+              if (typeof p.amount === 'number') {
+                amount = p.amount
+              } else if (typeof p.amount === 'string') {
+                const parsed = parseFloat(p.amount)
+                if (!isNaN(parsed)) {
+                  amount = parsed
+                }
+              }
+              
+              if (!amount || isNaN(amount) || amount <= 0) {
+                logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Filtering out invalid price amount: ${p.amount}`)
+                return false
+              }
+              
+              // Check if currency_code is valid
+              if (!p.currency_code || typeof p.currency_code !== 'string' || p.currency_code.trim() === '') {
+                logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Filtering out price with invalid currency_code: ${p.currency_code}`)
+                return false
+              }
+              
+              return true
+            })
+            .map((p: any) => {
+              // Amount should already be in cents from normalization above
+              // Only convert if it's a string that looks like a decimal (shouldn't happen after normalization)
+              let amount: number
+              if (typeof p.amount === 'number') {
+                amount = p.amount
+              } else if (typeof p.amount === 'string') {
+                const parsed = parseFloat(p.amount)
+                // If string contains decimal point and value < 100, it might be in decimal format
+                if (p.amount.includes('.') && parsed < 100 && parsed > 0) {
+                  logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Price "${p.amount}" appears to be decimal after normalization. Converting...`)
+                  amount = Math.round(parsed * 100)
+                } else {
+                  // Assume already in cents
+                  amount = Math.round(parsed)
+                }
+              } else {
+                amount = 0
+              }
+              
+              return {
+                amount: amount,
+                currency_code: typeof p.currency_code === 'string' ? p.currency_code.trim().toLowerCase() : defaultCurrency,
+              }
+            })
+          
+          // Log price normalization result
+          if (normalizedVariant.prices.length > 0) {
+            // Prices normalized
+          } else {
+            logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: No valid prices after normalization`)
+          }
           } else {
             // No valid prices array - create from product-level or variant-level price
             if (rawPriceAmount !== undefined && rawPriceAmount !== null) {
@@ -248,16 +308,14 @@ const normalizePricesStep = createStep(
               if (typeof amount === 'string') {
                 const decimalAmount = parseFloat(amount)
                 if (!isNaN(decimalAmount)) {
-                  amount = Math.round(decimalAmount * 100)
+                  amount = decimalAmount // Keep as dollars, don't convert to cents
                 } else {
                   amount = undefined
                   logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Invalid price amount string: ${rawPriceAmount}`)
                 }
               } else if (typeof amount === 'number') {
-                // Convert decimal to cents if needed (amounts < 1000 are likely in decimal format)
-                if (amount < 1000 && amount > 0) {
-                amount = Math.round(amount * 100)
-                }
+                // Keep as-is (assume it's already in dollars)
+                amount = amount
               }
 
               if (amount !== undefined && amount > 0) {
@@ -265,14 +323,21 @@ const normalizePricesStep = createStep(
                   amount,
                   currency_code: defaultCurrency,
                 }]
-                logger.debug(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Created price from product-level price: ${rawPriceAmount} -> ${amount} cents`)
+                // Price created from product-level price
               } else {
                 normalizedVariant.prices = []
                 logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: Could not create valid price from: ${rawPriceAmount}`)
               }
             } else {
               normalizedVariant.prices = []
-              logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: No price found. Product keys: ${Object.keys(normalizedProduct).join(', ')}, Variant keys: ${Object.keys(variant).join(', ')}`)
+              logger.warn(`Product ${productIndex + 1}, Variant ${variantIndex + 1}: ⚠️ NO PRICE FOUND`)
+              logger.warn(`  - Product title: ${normalizedProduct.title || 'N/A'}`)
+              logger.warn(`  - Variant title: ${normalizedVariant.title || 'N/A'}`)
+              logger.warn(`  - Product keys: ${Object.keys(normalizedProduct).join(', ')}`)
+              logger.warn(`  - Variant keys: ${Object.keys(variant).join(', ')}`)
+              logger.warn(`  - Checked price sources: variant._price, variant.amount, variant.price, product._price, product.price`)
+              logger.warn(`  - Price field mapping may be missing or incorrect in field mapping configuration`)
+              logger.warn(`  - Product will be created WITHOUT PRICES - you'll need to add prices manually in the admin UI`)
             }
           }
           
@@ -295,11 +360,16 @@ const normalizePricesStep = createStep(
     })
 
     // Log first product after normalization for debugging
-    if (normalizedProducts.length > 0) {
-      logger.debug(`After normalization - First product structure: ${JSON.stringify(normalizedProducts[0], null, 2)}`)
-      if (normalizedProducts[0].variants && normalizedProducts[0].variants.length > 0) {
-        logger.debug(`First variant prices: ${JSON.stringify(normalizedProducts[0].variants[0].prices, null, 2)}`)
-      }
+    // Count products with and without prices
+    const productsWithPrices = normalizedProducts.filter(p => 
+      p.variants && p.variants.some((v: any) => v.prices && v.prices.length > 0)
+    )
+    const productsWithoutPrices = normalizedProducts.filter(p => 
+      !p.variants || !p.variants.some((v: any) => v.prices && v.prices.length > 0)
+    )
+    
+    if (productsWithoutPrices.length > 0) {
+      logger.warn(`${productsWithoutPrices.length} products without prices after normalization`)
     }
 
     return new StepResponse(normalizedProducts)
@@ -322,9 +392,38 @@ const mapFieldsStep = createStep(
 
     const mappedProducts = importerService.mapFields(input.xmlData, input.fieldMapping)
     
-    logger.info(`Mapped ${mappedProducts.length} products from XML`)
+    logger.info(`📋 Mapped ${mappedProducts.length} products from XML`)
+    
+    // Analyze price mapping
     if (mappedProducts.length > 0) {
-      logger.debug(`First mapped product sample: ${JSON.stringify(mappedProducts[0], null, 2)}`)
+      const productsWithPrices = mappedProducts.filter(p => {
+        if (!p.variants || p.variants.length === 0) return false
+        return p.variants.some((v: any) => {
+          const hasPriceArray = v.prices && Array.isArray(v.prices) && v.prices.length > 0
+          const hasPriceField = v._price !== undefined && v._price !== null
+          const hasProductPrice = (p as any).price !== undefined && (p as any).price !== null
+          return hasPriceArray || hasPriceField || hasProductPrice
+        })
+      })
+      
+      const productsWithoutPrices = mappedProducts.filter(p => {
+        if (!p.variants || p.variants.length === 0) return true
+        return !p.variants.some((v: any) => {
+          const hasPriceArray = v.prices && Array.isArray(v.prices) && v.prices.length > 0
+          const hasPriceField = v._price !== undefined && v._price !== null
+          const hasProductPrice = (p as any).price !== undefined && (p as any).price !== null
+          return hasPriceArray || hasPriceField || hasProductPrice
+        })
+      })
+      
+      
+      if (mappedProducts[0]) {
+        const firstProduct = mappedProducts[0]
+      }
+      
+      if (productsWithoutPrices.length > 0 && productsWithoutPrices.length <= 10) {
+        logger.warn(`${productsWithoutPrices.length} products without price data after mapping`)
+      }
     }
     
     return new StepResponse(mappedProducts)
@@ -422,7 +521,7 @@ const validateProductsStep = createStep(
           } else {
             const errorMessages = validation.errors.join(', ')
             const productIdentifier = product.handle || product.external_id || product.title || `Index ${index + 1}`
-            logger.warn(`❌ Product validation failed [${productIdentifier}]: ${errorMessages}`)
+            logger.warn(`Product validation failed [${productIdentifier}]: ${errorMessages}`)
             logger.warn(`   Product details: handle="${product.handle || 'N/A'}", external_id="${product.external_id || 'N/A'}", title="${product.title || 'N/A'}"`)
             errors.push({ index, errors: validation.errors })
           }
@@ -799,57 +898,160 @@ const importBatchStep = createStep(
       logger.warn(`Importing batch of ${products.length} products`)
       
       // Prepare products for import
-      const productsToImport = products.map((product) => {
+      const productsToImport = products.map((product, productIdx) => {
         const hasVariants = product.variants && product.variants.length > 0
         const hasOptions = product.options && Array.isArray(product.options) && product.options.length > 0
         const isSingleVariant = hasVariants && product.variants.length === 1
         
-        // If product has a single variant with no options, treat it as a simple product
-        // Using product service directly - try without options first
+        // Helper function to validate and format prices
+        // CRITICAL: Always returns an array, never null/undefined/object
+        // NOTE: Prices should already be in cents from normalizePricesStep, so we don't convert again
+        const formatPrices = (prices: any[] | undefined | null): Array<{ amount: number; currency_code: string }> => {
+          // Handle null, undefined, or non-array values
+          if (!prices) {
+            return []
+          }
+          
+          // If it's not an array, try to convert it
+          if (!Array.isArray(prices)) {
+            // If it's a single price object, wrap it in an array
+            if (prices && typeof prices === 'object' && 'amount' in prices) {
+              logger.warn(`Product ${productIdx + 1}: Prices is not an array, converting single price object to array`)
+              prices = [prices]
+            } else {
+              logger.warn(`Product ${productIdx + 1}: Prices is not an array and not a valid price object, using empty array`)
+              return []
+            }
+          }
+          
+          // Now prices is guaranteed to be an array
+          return prices
+            .filter((p: any) => {
+              // Validate price object has required fields
+              if (!p || typeof p !== 'object') {
+                return false
+              }
+              
+              // Ensure amount is a valid number
+              // Prices should already be in cents from normalization, so parse as-is
+              let amount: number | null = null
+              if (typeof p.amount === 'number') {
+                amount = p.amount
+              } else if (typeof p.amount === 'string') {
+                const parsed = parseFloat(p.amount)
+                if (!isNaN(parsed)) {
+                  amount = parsed
+                }
+              }
+              
+              if (!amount || isNaN(amount) || amount <= 0) {
+                logger.warn(`Product ${productIdx + 1}: Invalid price amount: ${p.amount}`)
+                return false
+              }
+              
+              // Ensure currency_code is a valid string
+              if (!p.currency_code || typeof p.currency_code !== 'string' || p.currency_code.trim() === '') {
+                logger.warn(`Product ${productIdx + 1}: Invalid currency_code: ${p.currency_code}`)
+                return false
+              }
+              
+              return true
+            })
+            .map((p: any) => {
+              // Prices should already be in cents from normalizePricesStep
+              // Don't convert again - just ensure it's a number
+              let amount: number
+              
+              if (typeof p.amount === 'number') {
+                // Already a number - assume it's in cents (from normalization)
+                amount = p.amount
+              } else if (typeof p.amount === 'string') {
+                const parsed = parseFloat(p.amount)
+                if (isNaN(parsed)) {
+                  logger.warn(`Product ${productIdx + 1}: Cannot parse price amount string: ${p.amount}`)
+                  amount = 0
+                } else {
+                  // If the string contains a decimal point and the value is < 100, it might be in decimal format
+                  // But since normalization should have already converted, this is likely already in cents
+                  // Only convert if it's clearly a decimal (has . and value < 100)
+                  if (p.amount.includes('.') && parsed < 100 && parsed > 0) {
+                    // This shouldn't happen after normalization, but handle edge case
+                    logger.warn(`Product ${productIdx + 1}: Price "${p.amount}" appears to be in decimal format after normalization. Converting to cents...`)
+                    amount = Math.round(parsed * 100)
+                  } else {
+                    // Assume it's already in cents (normalized)
+                    amount = Math.round(parsed)
+                  }
+                }
+              } else {
+                logger.warn(`Product ${productIdx + 1}: Price amount is not a number or string: ${typeof p.amount}`)
+                amount = 0
+              }
+              
+              return {
+                amount: amount,
+                currency_code: typeof p.currency_code === 'string' ? p.currency_code.trim().toLowerCase() : 'usd',
+              }
+            })
+        }
+        
+        // If product has a single variant with no options, create a default option
+        // createProductsWorkflow requires all products to have options
         if (isSingleVariant && !hasOptions) {
           const singleVariant = product.variants[0]
-          const variantPrices = singleVariant.prices && Array.isArray(singleVariant.prices) && singleVariant.prices.length > 0
-            ? singleVariant.prices.filter((p: any) => p.amount && p.currency_code)
-            : []
+          const variantPrices = formatPrices(singleVariant.prices)
           
-          // If we have prices, create a single variant
-          // Product service might accept variants without options
-          if (variantPrices.length > 0) {
-            const variantTitle = singleVariant.title || product.title || 'Default'
-            return {
-              ...product,
-              status: product.status || 'draft',
-              shipping_profile_id: product.shipping_profile_id || shippingProfileId,
-              // Try without options - product service might be more lenient
-              variants: [{
-                title: variantTitle,
-                ...(singleVariant.sku && { sku: singleVariant.sku }),
-                prices: variantPrices,
-              }],
-            }
+          // Log price information for debugging
+          if (variantPrices.length === 0) {
+            logger.warn(`Product ${productIdx + 1} (${product.title || 'Unknown'}): No valid prices found for variant. Original prices: ${JSON.stringify(singleVariant.prices)}`)
           } else {
-            // No prices - omit variants and options entirely
-            return {
+            logger.debug(`Product ${productIdx + 1} (${product.title || 'Unknown'}): Found ${variantPrices.length} valid price(s) for variant`)
+          }
+          
+          const variantTitle = singleVariant.title || product.title || 'Default'
+          // Create a default option for single-variant products (required by createProductsWorkflow)
+          return {
             ...product,
             status: product.status || 'draft',
             shipping_profile_id: product.shipping_profile_id || shippingProfileId,
-            }
+            options: [{
+              title: 'Default',
+              values: ['Default'],
+            }],
+            variants: [{
+              title: variantTitle,
+              ...(singleVariant.sku && { sku: singleVariant.sku }),
+              options: {
+                Default: 'Default',
+              },
+              prices: variantPrices,
+              manage_inventory: false, // Mark inventory as not managed by backend
+            }],
           }
         }
         
         // Products with multiple variants or options - keep them as-is
-        const mappedVariants = product.variants?.map((variant: any) => {
+        const mappedVariants = product.variants?.map((variant: any, variantIdx: number) => {
           const variantTitle = variant.title || product.title || 'Default Variant'
+          const variantPrices = formatPrices(variant.prices)
+          
+          // Log price information for debugging
+          if (variantPrices.length === 0) {
+            logger.warn(`Product ${productIdx + 1}, Variant ${variantIdx + 1} (${variantTitle}): No valid prices found. Original prices: ${JSON.stringify(variant.prices)}`)
+          } else {
+            logger.debug(`Product ${productIdx + 1}, Variant ${variantIdx + 1} (${variantTitle}): Found ${variantPrices.length} valid price(s)`)
+          }
+          
           return {
-              ...variant,
+            ...variant,
             // Ensure title is set (required by MedusaJS)
             title: variantTitle,
-              // Ensure prices array exists and is valid
-              prices: variant.prices && Array.isArray(variant.prices) && variant.prices.length > 0
-                ? variant.prices.filter((p: any) => p.amount && p.currency_code)
-                : [],
+            // Always include prices array (even if empty)
+            prices: variantPrices,
+            // Mark inventory as not managed by backend
+            manage_inventory: false,
           }
-        }).filter((v: any) => v.prices.length > 0) || []
+        }) || []
         
         // Products with multiple variants or options - keep them as-is
         // Only add options if they were originally provided
@@ -863,15 +1065,7 @@ const importBatchStep = createStep(
       })
 
       // Log first product structure for debugging
-      if (productsToImport.length > 0) {
-        logger.debug(`First product to import: ${JSON.stringify(productsToImport[0], null, 2)}`)
-        if (productsToImport[0].variants && productsToImport[0].variants.length > 0) {
-          logger.debug(`First variant to import: ${JSON.stringify(productsToImport[0].variants[0], null, 2)}`)
-        }
-        if ((productsToImport[0] as any).categories) {
-          logger.debug(`First product categories: ${JSON.stringify((productsToImport[0] as any).categories, null, 2)}`)
-        }
-      }
+      logger.info(`Preparing to import ${productsToImport.length} products`)
       
       // Use Product Service directly to bypass workflow validation
       const productService: IProductModuleService = container.resolve(Modules.PRODUCT)
@@ -884,7 +1078,7 @@ const importBatchStep = createStep(
       const existingProductsByExternalId = new Map<string, any>()
       
       try {
-        logger.info(`🔍 Querying all products to build lookup map...`)
+        logger.info(`Querying existing products to build lookup map...`)
         // Query in batches to handle large product catalogs
         let offset = 0
         const batchSize = 100
@@ -893,7 +1087,6 @@ const importBatchStep = createStep(
         
         while (hasMore) {
           try {
-            logger.info(`📦 Querying products batch: offset=${offset}, take=${batchSize}`)
             // Use offset instead of skip (admin SDK uses offset)
             // Try passing undefined or empty object for filters - MedusaJS might require explicit undefined
             const queryOptions: any = { take: batchSize }
@@ -925,7 +1118,6 @@ const importBatchStep = createStep(
             
             // Check different possible return structures
             const products = (result as any)?.products || (result as any)?.data || (Array.isArray(result) ? result : [])
-            logger.info(`✅ Extracted ${products.length} products from result`)
             
             if (products && products.length > 0) {
               // Track products we've seen to detect duplicates (infinite loop protection)
@@ -948,7 +1140,7 @@ const importBatchStep = createStep(
               
               // Safety check: if we didn't add any new products, we're getting duplicates (infinite loop)
               if (newProductsInBatch === 0 && products.length > 0) {
-                logger.warn(`⚠️ No new products added in this batch (got ${products.length} products but all were duplicates). Stopping to prevent infinite loop.`)
+                logger.warn(`No new products added in this batch (got ${products.length} products but all were duplicates). Stopping to prevent infinite loop.`)
                 hasMore = false
               } else if (products.length < batchSize) {
                 // Got fewer products than requested, we've reached the end
@@ -961,7 +1153,7 @@ const importBatchStep = createStep(
                 
                 // Safety limit: stop if we've queried more than 10,000 products (shouldn't happen in normal operation)
                 if (totalQueried > 10000) {
-                  logger.warn(`⚠️ Safety limit reached: queried ${totalQueried} products. Stopping to prevent excessive queries.`)
+                  logger.warn(`Safety limit reached: queried ${totalQueried} products. Stopping to prevent excessive queries.`)
                   hasMore = false
                 }
               }
@@ -979,10 +1171,10 @@ const importBatchStep = createStep(
             hasMore = false // Stop on error
           }
         }
-        logger.info(`✅ Built lookup map with ${existingProductsMap.size} products by handle and ${existingProductsByExternalId.size} by external_id (queried ${totalQueried} total)`)
+        logger.info(`Built lookup map with ${existingProductsMap.size} products by handle and ${existingProductsByExternalId.size} by external_id`)
         
         if (existingProductsMap.size === 0 && existingProductsByExternalId.size === 0) {
-          logger.warn(`⚠️ No products found in database! This might be expected if this is the first import.`)
+          logger.warn(`No products found in database! This might be expected if this is the first import.`)
         }
       } catch (error) {
         logger.error(`❌ Could not query all products upfront: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -1063,8 +1255,18 @@ const importBatchStep = createStep(
         }
         
         try {
-          createdProducts = await productService.createProducts(productsWithUploadedImages as any)
+          // Create products with prices using the official createProductsWorkflow
+          // Prices are included directly in variants.prices array (in dollars)
+          const workflow = createProductsWorkflow(container)
+          const { result } = await workflow.run({
+            input: {
+              products: productsWithUploadedImages,
+            },
+          })
+          
+          createdProducts = Array.isArray(result) ? result : [result]
           logger.info(`Successfully created ${createdProducts.length} products`)
+          
           // Clear uploaded files tracking - products were created successfully
           uploadedFilesByProduct.clear()
         } catch (createError: any) {
@@ -1090,7 +1292,6 @@ const importBatchStep = createStep(
             const handleMatch = errorMessage.match(/handle:\s*([^,]+)/i)
             const errorHandle = handleMatch ? handleMatch[1].trim() : null
             if (errorHandle) {
-              logger.info(`📌 Extracted handle from error: "${errorHandle}"`)
             }
             
             // Try to create products individually and catch "already exists" errors
@@ -1118,8 +1319,15 @@ const importBatchStep = createStep(
               }
               
               try {
-                const result = await productService.createProducts([productWithImages] as any)
-                individualResults.push(...(Array.isArray(result) ? result : [result]))
+                const workflow = createProductsWorkflow(container)
+                const { result } = await workflow.run({
+                  input: {
+                    products: [productWithImages],
+                  },
+                })
+                // The workflow returns an array of products directly
+                const workflowResult = Array.isArray(result) ? result : [result]
+                individualResults.push(...workflowResult)
                 // Product created successfully - clear uploaded files tracking
                 uploadedFileIds = []
               } catch (individualError: any) {
@@ -1135,7 +1343,7 @@ const importBatchStep = createStep(
                 
                 if (isIndividualExistsError && product.handle) {
                   // Product exists - find it and update it
-                  logger.info(`🔍 Product with handle "${product.handle}" already exists, will update`)
+                  logger.info(`Product with handle "${product.handle}" already exists, will update`)
                   logger.info(`Searching for product with handle: "${product.handle}" and external_id: "${product.external_id}"`)
                   try {
                     // Use the pre-built lookup maps to find existing product
@@ -1143,13 +1351,12 @@ const importBatchStep = createStep(
                     
                     if (product.handle && existingProductsMap.has(product.handle)) {
                       existingProduct = existingProductsMap.get(product.handle)
-                      logger.info(`✅ Found product by handle "${product.handle}" (ID: ${existingProduct.id}, external_id: ${existingProduct.external_id})`)
+                      logger.info(`Found product by handle "${product.handle}" (ID: ${existingProduct.id})`)
                     } else if (product.external_id && existingProductsByExternalId.has(product.external_id)) {
                       existingProduct = existingProductsByExternalId.get(product.external_id)
-                      logger.info(`✅ Found product by external_id "${product.external_id}" (ID: ${existingProduct.id}, handle: ${existingProduct.handle})`)
+                      logger.info(`Found product by external_id "${product.external_id}" (ID: ${existingProduct.id})`)
                     } else {
                       // Product not in pre-built map - try querying by handle directly
-                      logger.info(`Product not in pre-built map, querying by handle directly...`)
                       try {
                         // Try querying by handle - this should work if the product exists
                         const handleQueryResult = await productService.listProducts({ handle: product.handle }, { take: 1 } as any)
@@ -1157,7 +1364,7 @@ const importBatchStep = createStep(
                         const handleProducts = (handleQueryResult as any)?.products || (handleQueryResult as any)?.data || (Array.isArray(handleQueryResult) ? handleQueryResult : [])
                         if (handleProducts && handleProducts.length > 0) {
                           existingProduct = handleProducts[0]
-                          logger.info(`✅ Found product via handle query (ID: ${existingProduct.id})`)
+                          logger.info(`Found product via handle query (ID: ${existingProduct.id})`)
                         } else {
                           // Try querying all products and filtering (last resort)
                           logger.info(`Handle query returned 0 results, trying to query all products...`)
@@ -1169,9 +1376,9 @@ const importBatchStep = createStep(
                               p.handle === product.handle || (p as any).external_id === (product as any).external_id
                             )
                             if (existingProduct) {
-                              logger.info(`✅ Found product via full query and filter (ID: ${existingProduct.id})`)
+                              logger.info(`Found product via full query (ID: ${existingProduct.id})`)
                             } else {
-                              logger.warn(`⚠️ Product not found even after full query. Searched for handle="${product.handle}", external_id="${product.external_id}"`)
+                              logger.warn(`Product not found even after full query. Searched for handle="${product.handle}", external_id="${product.external_id}"`)
                             }
                           }
                         }
@@ -1211,10 +1418,10 @@ const importBatchStep = createStep(
                           }
                           return null
                         }).filter(Boolean)
-                        logger.info(`📦 Updating product "${product.handle}" (ID: ${existingProduct.id}) with ${updateData.categories.length} categories`)
+                        logger.info(`Updating product "${product.handle}" (ID: ${existingProduct.id})`)
                         logger.debug(`Categories: ${JSON.stringify(updateData.categories, null, 2)}`)
                       } else {
-                        logger.warn(`⚠️ Product "${product.handle}" has no categories to assign`)
+                        logger.warn(`Product "${product.handle}" has no categories to assign`)
                       }
                       
                       logger.info(`Update data keys: ${Object.keys(updateData).join(', ')}`)
@@ -1242,7 +1449,7 @@ const importBatchStep = createStep(
                       const updated = await productService.updateProducts(productUpdateId, productUpdateData)
                       const updatedProduct = updated
                       individualResults.push(updatedProduct)
-                      logger.info(`✅ Successfully updated product "${product.handle}" (ID: ${existingProduct.id})`)
+                      logger.info(`Successfully updated product "${product.handle}" (ID: ${existingProduct.id})`)
                     } else {
                       logger.error(`❌ Product not found in database! Searched by:`)
                       logger.error(`   - external_id: "${product.external_id || 'N/A'}"`)
@@ -1296,6 +1503,11 @@ const importBatchStep = createStep(
       let updatedProducts: any[] = []
       if (productsToUpdate.length > 0) {
         logger.info(`Updating ${productsToUpdate.length} existing products`)
+        
+        // Log all product names being updated
+        const productNamesToUpdate = productsToUpdate.map(({ data }) => data.title || data.handle || 'Unknown').join(', ')
+        logger.info(`📝 Products being updated: ${productNamesToUpdate}`)
+        
         updatedProducts = await Promise.all(
           productsToUpdate.map(async ({ id, data }) => {
             try {
@@ -1364,6 +1576,155 @@ const importBatchStep = createStep(
               // updateProducts expects (id, data) or (selector, data), not an array
               const { id: productUpdateId, ...productUpdatePayload } = cleanUpdateData
               const updated = await productService.updateProducts(productUpdateId, productUpdatePayload)
+              
+              // Also update variant prices if they exist in the data
+              if (data.variants && Array.isArray(data.variants) && data.variants.length > 0) {
+                try {
+                  const { updateProductVariantsWorkflow } = await import("@medusajs/medusa/core-flows")
+                  
+                  // Get existing variants to match by index or SKU
+                  const existingVariants = await productService.listProductVariants({ product_id: [productUpdateId] })
+                  
+                  // Fetch existing prices for all variants to get their IDs
+                  const pricingModuleService = container.resolve(Modules.PRICING)
+                  const link = container.resolve(ContainerRegistrationKeys.LINK)
+                  
+                  const variantUpdatesWithIds = await Promise.all(
+                    data.variants.map(async (v: any, idx: number) => {
+                      const existingVariant = existingVariants[idx] || existingVariants.find((ev: any) => ev.sku === v.sku)
+                      if (!existingVariant) {
+                        logger.debug(`  ⚠️ Could not find existing variant for variant ${idx + 1} in product ${id}`)
+                        return null
+                      }
+                      
+                      if (v.prices && Array.isArray(v.prices) && v.prices.length > 0) {
+                        logger.debug(`  💰 Updating prices for variant "${existingVariant.title}" (${existingVariant.id}): ${v.prices.length} price(s)`)
+                        
+                        // Get existing prices for this variant to match by currency_code
+                        let existingPrices: any[] = []
+                        try {
+                          const links = await link.list({
+                            [Modules.PRODUCT]: { variant_id: existingVariant.id },
+                          })
+                          
+                          logger.debug(`  🔗 Found ${links?.length || 0} link(s) for variant ${existingVariant.id}`)
+                          
+                          if (links && Array.isArray(links) && links.length > 0) {
+                            // Log all links to see their structure
+                            links.forEach((l: any, idx: number) => {
+                              logger.debug(`  🔗 Link ${idx + 1}: ${JSON.stringify(Object.keys(l || {}))}`)
+                              if (l && l[Modules.PRICING]) {
+                                logger.debug(`  🔗 Link ${idx + 1} has PRICING module: ${JSON.stringify(l[Modules.PRICING])}`)
+                              }
+                            })
+                            
+                            const pricingLink = links.find((l: any) => {
+                              if (!l || typeof l !== 'object') return false
+                              const hasPricing = l[Modules.PRICING] && typeof l[Modules.PRICING] === 'object'
+                              if (hasPricing) {
+                              }
+                              return hasPricing && l[Modules.PRICING].price_set_id
+                            })
+                            
+                            if (pricingLink && pricingLink[Modules.PRICING]?.price_set_id) {
+                              const priceSetId = pricingLink[Modules.PRICING].price_set_id
+                              existingPrices = await pricingModuleService.listPrices({ price_set_id: [priceSetId] })
+                            } else {
+                              logger.warn(`No pricing link found for variant ${existingVariant.id}`)
+                            }
+                          } else {
+                            logger.warn(`No links found for variant ${existingVariant.id}`)
+                          }
+                        } catch (priceFetchError) {
+                          logger.error(`  ❌ Could not fetch existing prices for variant ${existingVariant.id}: ${priceFetchError instanceof Error ? priceFetchError.message : 'Unknown error'}`)
+                          if (priceFetchError instanceof Error && priceFetchError.stack) {
+                            logger.debug(`  Error stack: ${priceFetchError.stack}`)
+                          }
+                        }
+                        
+                        // Map new prices with existing price IDs if they match by currency_code
+                        const pricesWithIds = v.prices.map((newPrice: any) => {
+                          // Find existing price with same currency_code and no region rules
+                          const existingPrice = existingPrices.find((ep: any) => 
+                            ep.currency_code === newPrice.currency_code &&
+                            (!ep.rules || Object.keys(ep.rules).length === 0) &&
+                            (!newPrice.rules || Object.keys(newPrice.rules).length === 0)
+                          )
+                          
+                          const priceUpdate = {
+                            ...(existingPrice?.id ? { id: existingPrice.id } : {}), // Include ID if exists
+                            amount: newPrice.amount,
+                            currency_code: newPrice.currency_code,
+                            ...(newPrice.rules ? { rules: newPrice.rules } : {}),
+                          }
+                          
+                        return priceUpdate
+                      })
+                        
+                        return {
+                          id: existingVariant.id,
+                          prices: pricesWithIds,
+                        }
+                      } else {
+                      }
+                      return null
+                    })
+                  )
+                  
+                  const validUpdates = variantUpdatesWithIds.filter(Boolean)
+                  
+                  if (validUpdates.length > 0) {
+                    try {
+                      const { upsertVariantPricesWorkflow } = await import("@medusajs/medusa/core-flows")
+                      const upsertWorkflow = upsertVariantPricesWorkflow(container)
+                      
+                      const variantPrices = validUpdates.flatMap((vu: any) => 
+                        vu.prices.map((p: any) => ({
+                          variant_id: vu.id,
+                          product_id: productUpdateId,
+                          amount: p.amount,
+                          currency_code: p.currency_code,
+                          ...(p.rules ? { rules: p.rules } : {}),
+                        }))
+                      )
+                      
+                      const previousVariantIds = validUpdates.map((vu: any) => vu.id)
+                      
+                      await upsertWorkflow.run({
+                        input: {
+                          variantPrices,
+                          previousVariantIds,
+                        },
+                      })
+                    } catch (upsertError: any) {
+                      // Fallback to updateProductVariantsWorkflow if upsert fails
+                      try {
+                        const { updateProductVariantsWorkflow } = await import("@medusajs/medusa/core-flows")
+                        const updateWorkflow = updateProductVariantsWorkflow(container)
+                        
+                        await updateWorkflow.run({
+                          input: {
+                            product_variants: validUpdates,
+                          },
+                        })
+                      } catch (updateError: any) {
+                        logger.error(`Failed to update variant prices: ${updateError?.message || 'Unknown error'}`)
+                      }
+                    }
+                  }
+                } catch (priceUpdateError: any) {
+                  logger.error(`  ❌ Failed to update variant prices for product ${id}: ${priceUpdateError?.message || 'Unknown error'}`)
+                  if (priceUpdateError?.stack) {
+                    logger.error(`  Price update error stack: ${priceUpdateError.stack}`)
+                  }
+                  if (priceUpdateError?.cause) {
+                    logger.error(`  Price update error cause: ${JSON.stringify(priceUpdateError.cause, null, 2)}`)
+                  }
+                  // Don't fail the whole update if price update fails
+                }
+              } else {
+              }
+              
               return updated
             } catch (error) {
               logger.error(`Failed to update product ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -1375,6 +1736,8 @@ const importBatchStep = createStep(
           })
         )
         logger.info(`Successfully updated ${updatedProducts.length} products`)
+        
+        // Verify prices by fetching updated products
       }
       
       const totalProcessed = createdProducts.length + updatedProducts.length
@@ -1429,7 +1792,7 @@ const importBatchStep = createStep(
               await productService.updateProducts(productId, {
                 category_ids: allCategoryIds
               })
-              logger.info(`✅ Assigned product "${product.handle}" (ID: ${productId}) to categories: ${newCategoryIds.join(', ')}`)
+              logger.info(`Assigned product "${product.handle}" (ID: ${productId}) to categories`)
             } else {
               logger.debug(`Product "${product.handle}" already has all categories assigned`)
             }
