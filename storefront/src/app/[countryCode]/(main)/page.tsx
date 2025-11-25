@@ -18,9 +18,9 @@ const BannerSliderLazy = dynamicImport(
 )
 
 export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
+  title: "MS Storefront",
   description:
-    "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
+    "A performant frontend ecommerce storefront.",
 }
 
 // Enable ISR with 1 hour revalidation for homepage
