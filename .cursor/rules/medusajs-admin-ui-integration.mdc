@@ -1,0 +1,431 @@
+---
+description: Best practices for integrating custom features into MedusaJS 2.0 admin UI, including module registration, API routes, forms, and database migrations
+globs: 
+  - backend/src/modules/**/*
+  - backend/src/api/admin/**/*
+  - backend-ui/src/routes/**/*
+alwaysApply: false
+---
+
+# MedusaJS 2.0 Admin UI Integration
+
+This guide documents common patterns and pitfalls when integrating custom features into the MedusaJS 2.0 admin UI, based on lessons learned from the Econt shipping integration.
+
+## Module Registration
+
+### Critical: Register Modules in medusa-config.js
+
+**Problem**: Module defined but not registered causes "Could not resolve 'moduleName'" errors.
+
+**Solution**: Always register custom modules in `backend/medusa-config.js`:
+
+```javascript
+import { ECONT_SHIPPING_MODULE } from './src/modules/econt-shipping'
+
+const medusaConfig = {
+  modules: [
+    // ... other modules
+    {
+      key: ECONT_SHIPPING_MODULE,
+      resolve: "./src/modules/econt-shipping",
+    }
+  ]
+}
+```
+
+**Checklist**:
+- [ ] Module is defined in `src/modules/[module-name]/index.ts`
+- [ ] Module exports a constant (e.g., `ECONT_SHIPPING_MODULE = "econtShipping"`)
+- [ ] Module is imported in `medusa-config.js`
+- [ ] Module is added to the `modules` array with correct `key` and `resolve` path
+
+## Admin UI Forms
+
+### Form Context Provider
+
+**Problem**: `Form.Field` components throw "Cannot destructure property 'getFieldState' of 'useFormContext(...)' as it is null" when not wrapped in `FormProvider`.
+
+**Solution**: Always wrap `KeyboundForm` with `Form` (which is `FormProvider`):
+
+```typescript
+import { Form } from "../../../../components/common/form"
+import { KeyboundForm } from "../../../../components/utilities/keybound-form"
+
+export const MySettingsPage = () => {
+  const { t } = useTranslation()
+  const form = useForm<FormData>({
+    resolver: zodResolver(Schema),
+    defaultValues: { /* ... */ }
+  })
+
+  return (
+    <Container>
+      <Form {...form}>
+        <KeyboundForm onSubmit={form.handleSubmit(onSubmit)}>
+          <Form.Field
+            control={form.control}
+            name="fieldName"
+            render={({ field }) => (
+              <Form.Item>
+                <Form.Label>{t("path.to.label")}</Form.Label>
+                <Form.Control>
+                  <Input {...field} />
+                </Form.Control>
+                <Form.ErrorMessage />
+              </Form.Item>
+            )}
+          />
+        </KeyboundForm>
+      </Form>
+    </Container>
+  )
+}
+```
+
+**Pattern**:
+- `Form {...form}>` provides the form context
+- `KeyboundForm` handles keyboard shortcuts (Ctrl/Cmd+Enter to submit)
+- `Form.Field` with `control={form.control}` connects to the form
+- Always use `form.handleSubmit(onSubmit)` for the submit handler
+
+## API Authentication
+
+### Use SDK Client for Authenticated Requests
+
+**Problem**: Direct `fetch` calls return HTML (login page) instead of JSON because authentication cookies aren't included.
+
+**Solution**: Always use `sdk.client.fetch` for admin API requests:
+
+```typescript
+import { sdk } from "../../../../lib/client"
+
+// ❌ Bad: Direct fetch (not authenticated)
+const response = await fetch("/admin/econt/settings", {
+  credentials: "include",
+})
+
+// ✅ Good: SDK client (automatically authenticated)
+const response = await sdk.client.fetch<{ settings: any }>("/admin/econt/settings", {
+  method: "GET",
+})
+
+// For POST requests - ALWAYS include Content-Type header
+const result = await sdk.client.fetch<{ settings: any }>("/admin/econt/settings", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(data),
+})
+```
+
+**Benefits**:
+- Automatically includes session authentication cookies
+- Uses correct base URL from SDK configuration
+- Provides better error handling
+- Type-safe with TypeScript generics
+
+**Important**: Always set `Content-Type: application/json` header when sending JSON body, otherwise the backend may receive double-stringified JSON causing parsing errors.
+
+## CORS Configuration
+
+### Configure CORS for Separated Admin UI
+
+**Problem**: When admin UI is deployed separately from backend (e.g., on Railway with different domains), CORS errors occur: "Access to fetch at 'backend-url' from origin 'admin-ui-url' has been blocked by CORS policy".
+
+**Solution**: Configure `ADMIN_CORS` environment variable in backend to include admin UI domain:
+
+```bash
+# backend/.env
+ADMIN_CORS=https://compassionate-simplicity-production-c69a.up.railway.app,http://localhost:5173
+```
+
+**Configuration**:
+- `ADMIN_CORS` is used in `medusa-config.js` for `adminCors` setting
+- Include all admin UI domains (production, staging, localhost)
+- Separate multiple origins with commas
+- No spaces around commas
+- Include protocol (`https://` or `http://`)
+
+**For Railway Deployment**:
+```bash
+# Backend service environment variables
+ADMIN_CORS=https://your-admin-ui-domain.up.railway.app,http://localhost:5173
+```
+
+**Verification**:
+- Check backend logs for CORS errors
+- Verify `ADMIN_CORS` is set in backend environment
+- Ensure admin UI domain matches exactly (including protocol and port if applicable)
+
+## MedusaService Query Methods
+
+### List Methods Don't Accept `take` in Filter
+
+**Problem**: `listEcontSettings({ take: 1 })` causes "Trying to query by not existing property EcontSettings.take" error.
+
+**Solution**: Call list methods without `take` parameter, or use proper pagination:
+
+```typescript
+// ❌ Bad: take in filter object
+const settings = await econtService.listEcontSettings({ take: 1 })
+
+// ✅ Good: No parameters (returns all, use first result)
+const settings = await econtService.listEcontSettings()
+const first = settings[0]
+
+// ✅ Good: If pagination is needed, check MedusaService documentation
+// Most list methods return arrays directly
+```
+
+**Note**: MedusaService auto-generated methods have specific signatures. Check the service implementation or use repository methods directly if you need custom queries.
+
+## Database Migrations
+
+### Creating Migrations for New Models
+
+**Problem**: Model defined but table doesn't exist causes "relation does not exist" errors.
+
+**Solution**: Create migration files and ensure tables are created:
+
+1. **Create Migration File**:
+
+```typescript
+// backend/src/modules/[module-name]/migrations/Migration[YYYYMMDDHHMMSS]-[Description].ts
+import { Migration } from '@mikro-orm/migrations'
+
+export class Migration20251204000000CreateEcontSettingsTable extends Migration {
+  async up(): Promise<void> {
+    this.addSql(`
+      CREATE TABLE IF NOT EXISTS "econt_settings" (
+        "id" text NOT NULL,
+        "username" text NOT NULL,
+        "password" text NOT NULL,
+        "live" boolean NOT NULL DEFAULT false,
+        "sender_type" text NOT NULL DEFAULT 'OFFICE',
+        "sender_city" text NOT NULL,
+        "sender_post_code" text NOT NULL,
+        "sender_office_code" text NULL,
+        "sender_street" text NULL,
+        "sender_street_num" text NULL,
+        "sender_quarter" text NULL,
+        "sender_building_num" text NULL,
+        "sender_entrance_num" text NULL,
+        "sender_floor_num" text NULL,
+        "sender_apartment_num" text NULL,
+        "created_at" timestamptz NOT NULL DEFAULT now(),
+        "updated_at" timestamptz NOT NULL DEFAULT now(),
+        "deleted_at" timestamptz NULL,
+        CONSTRAINT "econt_settings_pkey" PRIMARY KEY ("id")
+      );
+    `)
+
+    this.addSql(`
+      CREATE INDEX IF NOT EXISTS "IDX_econt_settings_deleted_at" 
+      ON "econt_settings" ("deleted_at") 
+      WHERE "deleted_at" IS NULL;
+    `)
+  }
+
+  async down(): Promise<void> {
+    this.addSql(`DROP TABLE IF EXISTS "econt_settings" CASCADE;`)
+  }
+}
+```
+
+2. **Add to ensure-migrations.ts** (for immediate table creation on startup):
+
+```typescript
+// backend/src/scripts/ensure-migrations.ts
+// Check and create table if it doesn't exist
+const tableExists = await pool.query(`
+  SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'econt_settings'
+  );
+`)
+
+if (!tableExists.rows[0]?.exists) {
+  console.log("📦 Creating econt_settings table...")
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "econt_settings" (
+      // ... table definition
+    );
+  `)
+  console.log("✅ econt_settings table created")
+}
+```
+
+**Migration Naming**:
+- Format: `Migration[YYYYMMDDHHMMSS]-[Description].ts`
+- Example: `Migration20251204000000-CreateEcontSettingsTable.ts`
+- Use descriptive names that indicate what the migration does
+
+**Table Structure**:
+- Always include: `id`, `created_at`, `updated_at`, `deleted_at` (for soft deletes)
+- Use `text` for IDs (MedusaJS uses text IDs)
+- Use `timestamptz` for timestamps
+- Add indexes on `deleted_at` for soft delete queries
+- Use `IF NOT EXISTS` for idempotent migrations
+
+## Internationalization (i18n)
+
+### Translation Key Structure
+
+**Problem**: Using wrong translation paths causes TypeScript errors and missing translations.
+
+**Solution**: Use correct path structure based on location:
+
+```typescript
+// ✅ Correct: Settings pages use app.nav.settings.*
+t("app.nav.settings.econt.title")
+t("app.nav.settings.econt.apiCredentials.username")
+
+// ❌ Wrong: Don't use settings.settings.*
+t("settings.settings.econt.title") // TypeScript error
+```
+
+**Translation File Structure**:
+
+```json
+{
+  "app": {
+    "nav": {
+      "settings": {
+        "econt": {
+          "title": "Econt Shipping Settings",
+          "apiCredentials": {
+            "title": "API Credentials",
+            "username": "Username"
+          },
+          "validation": {
+            "usernameRequired": "Username is required"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Best Practices**:
+- Add translations to both `en.json` and `bg.json` (and other languages as needed)
+- Use nested objects for logical grouping
+- Keep validation messages under a `validation` key
+- Use descriptive keys that match the UI structure
+
+## Route Registration
+
+### Admin UI Route Setup
+
+**Pattern for Settings Pages**:
+
+1. **Create route file**: `backend-ui/src/routes/settings/[feature]/page.tsx`
+```typescript
+import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { FeatureSettingsPage } from "./components/feature-settings-page"
+
+export const config = defineRouteConfig({
+  label: "Feature Name",
+})
+
+export default FeatureSettingsPage
+```
+
+2. **Create index file**: `backend-ui/src/routes/settings/[feature]/index.ts`
+```typescript
+export { default as Component } from "./page"
+export { config } from "./page"
+```
+
+3. **Register in route map**: `backend-ui/src/dashboard-app/routes/get-route.map.tsx`
+```typescript
+{
+  path: "[feature]",
+  errorElement: <ErrorBoundary />,
+  lazy: () => import("../../routes/settings/[feature]"),
+  handle: {
+    breadcrumb: () => "Feature Name",
+  },
+}
+```
+
+4. **Add to settings navigation**: `backend-ui/src/components/layout/settings-layout/settings-layout.tsx`
+```typescript
+{
+  label: "Feature Name",
+  to: "/settings/[feature]",
+}
+```
+
+## Common Error Patterns
+
+### Error: "Could not resolve 'moduleName'"
+- **Cause**: Module not registered in `medusa-config.js`
+- **Fix**: Add module to `modules` array in config
+
+### Error: "Cannot destructure property 'getFieldState'"
+- **Cause**: `Form.Field` used outside `FormProvider`
+- **Fix**: Wrap `KeyboundForm` with `<Form {...form}>`
+
+### Error: "Unexpected token '<', '<!doctype'... is not valid JSON"
+- **Cause**: API request not authenticated (returns HTML login page)
+- **Fix**: Use `sdk.client.fetch` instead of direct `fetch`
+
+### Error: "Trying to query by not existing property Model.take"
+- **Cause**: Passing `take` in filter object to MedusaService list methods
+- **Fix**: Call method without `take`, or use proper pagination parameters
+
+### Error: "relation 'public.table_name' does not exist"
+- **Cause**: Database table not created
+- **Fix**: Create migration file and add to `ensure-migrations.ts` for immediate creation
+
+### Error: "Access to fetch at 'backend-url' from origin 'admin-ui-url' has been blocked by CORS policy"
+- **Cause**: Admin UI domain not included in `ADMIN_CORS` environment variable
+- **Fix**: Add admin UI domain to `ADMIN_CORS` in backend environment variables:
+  ```bash
+  ADMIN_CORS=https://your-admin-ui-domain.up.railway.app,http://localhost:5173
+  ```
+
+### Error: "Unexpected token '"', ""{\"userna"... is not valid JSON"
+- **Cause**: Missing `Content-Type: application/json` header in POST request, causing double-stringified JSON
+- **Fix**: Always include `Content-Type: application/json` header when sending JSON body:
+  ```typescript
+  await sdk.client.fetch("/admin/endpoint", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+  ```
+
+## Checklist for New Admin UI Feature
+
+When creating a new admin UI feature:
+
+- [ ] Module registered in `medusa-config.js`
+- [ ] Database model defined with migration file
+- [ ] Migration added to `ensure-migrations.ts` (for immediate table creation)
+- [ ] Admin API routes created (`backend/src/api/admin/[feature]/`)
+- [ ] Routes use `sdk.client.fetch` for authenticated requests
+- [ ] Admin UI route files created (`backend-ui/src/routes/[feature]/`)
+- [ ] Route registered in `get-route.map.tsx`
+- [ ] Navigation link added to appropriate layout
+- [ ] Form wrapped with `<Form {...form}>` and `KeyboundForm`
+- [ ] Translations added to `en.json` and `bg.json`
+- [ ] Translation keys use correct path structure (`app.nav.*`)
+- [ ] MedusaService methods called without invalid parameters
+- [ ] Error handling implemented with user-friendly messages
+
+## Testing Checklist
+
+- [ ] Module resolves without errors
+- [ ] Database table exists
+- [ ] API routes return JSON (not HTML)
+- [ ] Form fields render without context errors
+- [ ] Form submission works
+- [ ] Translations display correctly
+- [ ] Error messages are user-friendly
+- [ ] Page accessible from navigation

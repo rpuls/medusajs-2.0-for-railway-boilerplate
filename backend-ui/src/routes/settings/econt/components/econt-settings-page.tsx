@@ -91,6 +91,9 @@ export const EcontSettingsPage = () => {
       setIsSaving(true)
       const result = await sdk.client.fetch<{ settings: any }>("/admin/econt/settings", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       })
 
