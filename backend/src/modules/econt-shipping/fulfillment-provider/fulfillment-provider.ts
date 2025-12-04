@@ -153,31 +153,47 @@ class EcontFulfillmentProvider extends AbstractFulfillmentProviderService {
           let econtService: EcontShippingService | null = null
           
           if ((context as any)?.scope?.resolve) {
-            econtService = (context as any).scope.resolve(ECONT_SHIPPING_MODULE) as EcontShippingService
+            try {
+              econtService = (context as any).scope.resolve(ECONT_SHIPPING_MODULE) as EcontShippingService
+            } catch (resolveError: any) {
+              this.logger_.warn(`Could not resolve Econt service: ${resolveError.message}`)
+            }
           }
           
           if (econtService && econtService.calculateShippingPrice) {
-            // Get settings from database with fallback to constants
-            const settings = await econtService.getSettingsWithFallback()
-            
-            // Configure service with credentials from settings
-            econtService.configure({
-              username: settings.username,
-              password: settings.password,
-              live: settings.live,
-            })
-
-            // Check if we have enough data for API calculation
-            const hasOfficeData = shippingTo === "OFFICE" && econtData.office_code && econtData.city_id && econtData.postcode
-            const hasDoorData = shippingTo === "DOOR" && econtData.city_id && econtData.postcode && econtData.street && econtData.street_num
-
-            if (hasOfficeData || hasDoorData) {
-              this.logger_.info(
-                `Calculating shipping price via Econt API: shippingTo=${shippingTo}, hasOfficeData=${hasOfficeData}, hasDoorData=${hasDoorData}, weight=${totalWeight}kg`
-              )
-
+            try {
               // Get settings from database with fallback to constants
               const settings = await econtService.getSettingsWithFallback()
+              
+              // Validate credentials are present
+              if (!settings.username || !settings.password) {
+                this.logger_.warn("Econt credentials (username/password) are missing, using estimated pricing")
+                throw new Error("Missing Econt credentials")
+              }
+              
+              // Validate required sender settings
+              if (!settings.sender_city || !settings.sender_post_code) {
+                this.logger_.warn("Econt settings missing required sender city/postcode, using estimated pricing")
+                throw new Error("Missing required sender settings")
+              }
+              
+              // Configure service with credentials from settings
+              econtService.configure({
+                username: settings.username,
+                password: settings.password,
+                live: settings.live,
+              })
+              
+              this.logger_.info(`Econt service configured: username=${settings.username}, live=${settings.live}, sender_type=${settings.sender_type}`)
+
+              // Check if we have enough data for API calculation
+              const hasOfficeData = shippingTo === "OFFICE" && econtData.office_code && econtData.city_id && econtData.postcode
+              const hasDoorData = shippingTo === "DOOR" && econtData.city_id && econtData.postcode && econtData.street && econtData.street_num
+
+              if (hasOfficeData || hasDoorData) {
+                this.logger_.info(
+                  `Calculating shipping price via Econt API: shippingTo=${shippingTo}, hasOfficeData=${hasOfficeData}, hasDoorData=${hasDoorData}, weight=${totalWeight}kg`
+                )
 
               // Build parameters based on shipping type
               const priceParams: any = {
@@ -222,10 +238,13 @@ class EcontFulfillmentProvider extends AbstractFulfillmentProviderService {
                 `Econt API calculated price: ${priceResult.totalPrice} ${priceResult.currency}`
               )
 
-              return {
-                calculated_amount: priceResult.totalPrice,
-                is_calculated_price_tax_inclusive: false,
+                return {
+                  calculated_amount: priceResult.totalPrice,
+                  is_calculated_price_tax_inclusive: false,
+                }
               }
+            } catch (settingsError: any) {
+              this.logger_.warn(`Error getting Econt settings, using estimated pricing: ${settingsError.message}`)
             }
           }
         } catch (apiError: any) {
@@ -284,10 +303,15 @@ class EcontFulfillmentProvider extends AbstractFulfillmentProviderService {
         is_calculated_price_tax_inclusive: false,
       }
     } catch (error: any) {
-      this.logger_.error("Error calculating Econt price:", error)
-      // Fallback to a default price if calculation fails
+      // Never throw errors - always return a valid price to prevent "invalid shipping options" errors
+      this.logger_.error(`Error in Econt calculatePrice: ${error.message || 'Unknown error'}`)
+      if (error.stack) {
+        this.logger_.error(`Stack trace: ${error.stack}`)
+      }
+      
+      // Return a safe default price instead of throwing
       return {
-        calculated_amount: 1000, // 10.00 EUR default
+        calculated_amount: 4.00, // 4.00 EUR default fallback
         is_calculated_price_tax_inclusive: false,
       }
     }

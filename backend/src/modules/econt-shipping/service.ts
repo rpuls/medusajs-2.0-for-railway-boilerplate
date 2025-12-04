@@ -128,21 +128,33 @@ class EcontShippingService extends MedusaService({
     try {
       const settings = await this.listEcontSettings()
       if (settings.length > 0) {
-        // Cast sender_type to the correct type
-        return {
+        const dbSettings = {
           ...settings[0],
           sender_type: settings[0].sender_type as "OFFICE" | "ADDRESS",
         }
+        
+        // Always use database settings if they exist (database is source of truth)
+        // Log warnings if credentials are missing, but still return database settings
+        if (!dbSettings.username || !dbSettings.password) {
+          this.logger_.warn("Econt settings in database missing username/password - API calls will fail")
+        } else {
+          this.logger_.info("Using Econt settings from database")
+        }
+        
+        // Return database settings even if incomplete - let the caller handle validation
+        return dbSettings
       }
     } catch (error: any) {
       this.logger_.warn(`Error fetching Econt settings from database, using constants: ${error.message}`)
     }
     
-    // Fallback to constants (already imported at top of file)
+    // Fallback to constants only if no database settings exist
+    // This should only happen on first setup before admin UI is configured
+    this.logger_.info("No Econt settings found in database, using environment variables as fallback")
     
-    return {
-      username: ECONT_USERNAME,
-      password: ECONT_PASSWORD,
+    const fallbackSettings = {
+      username: ECONT_USERNAME || "",
+      password: ECONT_PASSWORD || "",
       live: ECONT_LIVE,
       sender_type: ECONT_SENDER_TYPE,
       sender_city: ECONT_SENDER_CITY,
@@ -156,6 +168,13 @@ class EcontShippingService extends MedusaService({
       sender_floor_num: ECONT_SENDER_FLOOR_NUM || null,
       sender_apartment_num: ECONT_SENDER_APARTMENT_NUM || null,
     }
+    
+    // Log if credentials are missing from constants
+    if (!fallbackSettings.username || !fallbackSettings.password) {
+      this.logger_.warn("Econt credentials (ECONT_USERNAME/ECONT_PASSWORD) are not set in environment variables. Please configure Econt settings in the admin UI.")
+    }
+    
+    return fallbackSettings
   }
 
   /**
