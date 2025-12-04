@@ -121,7 +121,8 @@
     "shippingAddress": "Адрес за доставка",
     "billingAddress": "Адрес за фактуриране",
     "paymentMethod": "Начин на плащане",
-    "shippingMethod": "Начин на доставка"
+    "shippingMethod": "Начин на доставка",
+    "waitingForInput": "Изберете данни за доставка"
   },
   "gallery": {
     "noImage": "Няма налично изображение",

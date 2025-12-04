@@ -22,9 +22,13 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY
+  MEILISEARCH_ADMIN_KEY,
+  ECONT_USERNAME,
+  ECONT_PASSWORD,
+  ECONT_LIVE
 } from 'lib/constants';
 import { XML_PRODUCT_IMPORTER_MODULE } from './src/modules/xml-product-importer';
+import { ECONT_SHIPPING_MODULE } from './src/modules/econt-shipping';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
@@ -119,6 +123,28 @@ const medusaConfig = {
         ]
       }
     }] : []),
+    {
+      key: Modules.FULFILLMENT,
+      resolve: '@medusajs/fulfillment',
+      options: {
+        providers: [
+          {
+            resolve: '@medusajs/fulfillment-manual',
+            id: 'manual',
+            options: {},
+          },
+          {
+            resolve: './src/modules/econt-shipping/fulfillment-provider',
+            id: 'econt',
+            options: {
+              username: ECONT_USERNAME,
+              password: ECONT_PASSWORD,
+              live: ECONT_LIVE,
+            },
+          },
+        ],
+      },
+    },
     ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',

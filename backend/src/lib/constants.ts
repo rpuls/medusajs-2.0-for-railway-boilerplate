@@ -97,6 +97,29 @@ export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
 export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 
 /**
+ * Econt shipping configuration
+ */
+export const ECONT_USERNAME = process.env.ECONT_USERNAME || (IS_DEV ? "demo" : "");
+export const ECONT_PASSWORD = process.env.ECONT_PASSWORD || (IS_DEV ? "demo" : "");
+export const ECONT_LIVE = process.env.ECONT_LIVE === "true"; // Default to false (test), set to "true" for production
+
+/**
+ * Sender address configuration
+ * Sender type: "OFFICE" (send from Econt office) or "ADDRESS" (send from address)
+ */
+export const ECONT_SENDER_TYPE = (process.env.ECONT_SENDER_TYPE || "OFFICE").toUpperCase() as "OFFICE" | "ADDRESS";
+export const ECONT_SENDER_CITY = process.env.ECONT_SENDER_CITY || "София";
+export const ECONT_SENDER_POST_CODE = process.env.ECONT_SENDER_POST_CODE || "1000";
+export const ECONT_SENDER_OFFICE_CODE = process.env.ECONT_SENDER_OFFICE_CODE || "1000-1"; // Required if SENDER_TYPE=OFFICE
+export const ECONT_SENDER_STREET = process.env.ECONT_SENDER_STREET || ""; // Required if SENDER_TYPE=ADDRESS
+export const ECONT_SENDER_STREET_NUM = process.env.ECONT_SENDER_STREET_NUM || ""; // Required if SENDER_TYPE=ADDRESS
+export const ECONT_SENDER_QUARTER = process.env.ECONT_SENDER_QUARTER || ""; // Optional
+export const ECONT_SENDER_BUILDING_NUM = process.env.ECONT_SENDER_BUILDING_NUM || ""; // Optional
+export const ECONT_SENDER_ENTRANCE_NUM = process.env.ECONT_SENDER_ENTRANCE_NUM || ""; // Optional
+export const ECONT_SENDER_FLOOR_NUM = process.env.ECONT_SENDER_FLOOR_NUM || ""; // Optional
+export const ECONT_SENDER_APARTMENT_NUM = process.env.ECONT_SENDER_APARTMENT_NUM || ""; // Optional
+
+/**
  * Worker mode
  */
 export const WORKER_MODE =

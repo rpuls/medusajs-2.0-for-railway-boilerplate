@@ -7,11 +7,14 @@ import { Button, Heading, Text, clx } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import Radio from "@modules/common/components/radio"
 import ErrorMessage from "@modules/checkout/components/error-message"
+import EcontShipping from "@modules/checkout/components/econt-shipping"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { setShippingMethod } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+import { sdk } from "@lib/config"
+import { useTranslation } from "@lib/i18n/hooks/use-translation"
 
 type ShippingProps = {
   cart: HttpTypes.StoreCart
@@ -20,10 +23,12 @@ type ShippingProps = {
 
 const Shipping: React.FC<ShippingProps> = ({
   cart,
-  availableShippingMethods,
+  availableShippingMethods: initialShippingMethods,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [availableShippingMethods, setAvailableShippingMethods] = useState<HttpTypes.StoreCartShippingOption[] | null>(initialShippingMethods)
+  const { t } = useTranslation()
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -35,6 +40,10 @@ const Shipping: React.FC<ShippingProps> = ({
     // To do: remove the previously selected shipping method instead of using the last one
     (method) => method.id === cart.shipping_methods?.at(-1)?.shipping_option_id
   )
+  
+  // Get the calculated amount from cart's shipping method if available
+  const selectedCartShippingMethod = cart.shipping_methods?.at(-1)
+  const calculatedAmount = selectedCartShippingMethod?.amount ?? selectedCartShippingMethod?.total
 
   const handleEdit = () => {
     router.push(pathname + "?step=delivery", { scroll: false })
@@ -58,6 +67,47 @@ const Shipping: React.FC<ShippingProps> = ({
   useEffect(() => {
     setError(null)
   }, [isOpen])
+
+  // Fetch shipping methods client-side when cart changes to get updated prices
+  // Use a ref to prevent fetching if we just fetched (debounce)
+  const lastFetchRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    const fetchShippingMethods = async () => {
+      // Create a key from cart state to prevent duplicate fetches
+      const fetchKey = JSON.stringify({
+        cartId: cart.id,
+        econtData: cart.metadata?.econt,
+        shippingMethodsCount: cart.shipping_methods?.length,
+        shippingTotal: cart.shipping_total,
+      })
+      
+      // Skip if we just fetched with the same key
+      if (lastFetchRef.current === fetchKey) {
+        return
+      }
+      
+      try {
+        const { shipping_options } = await sdk.store.fulfillment.listCartOptions(
+          { cart_id: cart.id },
+          {}
+        )
+        if (shipping_options) {
+          setAvailableShippingMethods(shipping_options)
+          lastFetchRef.current = fetchKey
+        }
+      } catch (err) {
+        console.error("Error fetching shipping methods:", err)
+        // Keep existing methods on error
+      }
+    }
+
+    // Only fetch when delivery step is open (to avoid unnecessary fetches)
+    // Or when shipping methods are actually added/removed
+    if (cart.id && (isOpen || cart.shipping_methods?.length !== availableShippingMethods?.length)) {
+      fetchShippingMethods()
+    }
+  }, [cart.id, cart.metadata?.econt, cart.shipping_methods?.length, cart.shipping_total, isOpen, availableShippingMethods?.length])
 
   return (
     <div className="bg-white">
@@ -117,16 +167,38 @@ const Shipping: React.FC<ShippingProps> = ({
                       <span className="text-base-regular">{option.name}</span>
                     </div>
                     <span className="justify-self-end text-ui-fg-base">
-                      {convertToLocale({
-                        amount: option.amount!,
-                        currency_code: cart?.currency_code,
-                      })}
+                      {(() => {
+                        // Check if this option is selected and has a calculated amount in cart
+                        const isSelected = option.id === selectedCartShippingMethod?.shipping_option_id
+                        
+                        // Use cart method amount if available (calculated price), otherwise use option amount
+                        // Use != null to properly handle 0 (free shipping) vs null/undefined
+                        const displayAmount = isSelected && calculatedAmount != null
+                          ? calculatedAmount 
+                          : option.amount
+                        
+                        if (displayAmount != null && !isNaN(displayAmount) && displayAmount > 0) {
+                          return convertToLocale({
+                            amount: displayAmount,
+                            currency_code: cart?.currency_code,
+                          })
+                        } else {
+                          return <span className="text-gray-400">{t("checkout.waitingForInput")}</span>
+                        }
+                      })()}
                     </span>
                   </RadioGroup.Option>
                 )
               })}
             </RadioGroup>
           </div>
+
+          {/* Show Econt shipping fields if Econt shipping method is selected */}
+          {selectedShippingMethod?.name?.toLowerCase().includes("econt") && (
+            <div className="mt-6">
+              <EcontShipping cart={cart} shippingMethod={selectedShippingMethod} />
+            </div>
+          )}
 
           <ErrorMessage
             error={error}
@@ -154,10 +226,19 @@ const Shipping: React.FC<ShippingProps> = ({
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
                   {selectedShippingMethod?.name}{" "}
-                  {convertToLocale({
-                    amount: selectedShippingMethod?.amount!,
-                    currency_code: cart?.currency_code,
-                  })}
+                  {(() => {
+                    // Use cart's calculated amount if available, otherwise use option amount
+                    const displayAmount = calculatedAmount ?? selectedShippingMethod?.amount
+                    
+                    if (displayAmount != null && !isNaN(displayAmount) && displayAmount > 0) {
+                      return convertToLocale({
+                        amount: displayAmount,
+                        currency_code: cart?.currency_code,
+                      })
+                    } else {
+                      return t("checkout.waitingForInput")
+                    }
+                  })()}
                 </Text>
               </div>
             )}

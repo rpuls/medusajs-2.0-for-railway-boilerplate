@@ -15,6 +15,7 @@ import { OrderFulfillmentSection } from "./components/order-fulfillment-section"
 import { OrderGeneralSection } from "./components/order-general-section"
 import { OrderPaymentSection } from "./components/order-payment-section"
 import { OrderSummarySection } from "./components/order-summary-section"
+import { OrderEcontSection } from "./components/order-econt-section"
 import { DEFAULT_FIELDS } from "./constants"
 import { orderLoader } from "./loader"
 
@@ -83,6 +84,7 @@ export const OrderDetail = () => {
         <ActiveOrderExchangeSection orderPreview={orderPreview!} />
         <ActiveOrderReturnSection orderPreview={orderPreview!} />
         <OrderGeneralSection order={order} />
+        <OrderEcontSection order={order} />
         <OrderSummarySection order={order} plugins={plugins} />
         <OrderPaymentSection order={order} plugins={plugins} />
         <OrderFulfillmentSection order={order} />

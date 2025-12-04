@@ -121,7 +121,8 @@
     "shippingAddress": "Shipping Address",
     "billingAddress": "Billing Address",
     "paymentMethod": "Payment Method",
-    "shippingMethod": "Shipping Method"
+    "shippingMethod": "Shipping Method",
+    "waitingForInput": "Select delivery details"
   },
   "gallery": {
     "noImage": "No image available",
