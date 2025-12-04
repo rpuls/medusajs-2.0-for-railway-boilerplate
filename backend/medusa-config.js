@@ -164,6 +164,10 @@ const medusaConfig = {
     {
       key: XML_PRODUCT_IMPORTER_MODULE,
       resolve: "./src/modules/xml-product-importer",
+    },
+    {
+      key: ECONT_SHIPPING_MODULE,
+      resolve: "./src/modules/econt-shipping",
     }
   ],
   plugins: [

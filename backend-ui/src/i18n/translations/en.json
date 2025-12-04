@@ -258,7 +258,45 @@
         "header": "Settings",
         "general": "General",
         "developer": "Developer",
-        "myAccount": "My Account"
+        "myAccount": "My Account",
+        "econt": {
+          "title": "Econt Shipping Settings",
+          "apiCredentials": {
+            "title": "API Credentials",
+            "username": "Username",
+            "password": "Password",
+            "liveMode": "Live Mode",
+            "liveModeHint": "Enable for production, disable for testing"
+          },
+          "senderAddress": {
+            "title": "Sender Address",
+            "city": "City",
+            "postCode": "Post Code",
+            "senderType": "Sender Type",
+            "office": "Office",
+            "address": "Address",
+            "officeCode": "Office Code",
+            "street": "Street",
+            "streetNumber": "Street Number",
+            "quarter": "Quarter (Optional)",
+            "buildingNumber": "Building Number (Optional)",
+            "entrance": "Entrance (Optional)",
+            "floor": "Floor (Optional)",
+            "apartment": "Apartment (Optional)"
+          },
+          "saveButton": "Save Settings",
+          "loading": "Loading settings...",
+          "saveSuccess": "Settings saved successfully",
+          "saveError": "Failed to save settings",
+          "loadError": "Failed to load settings",
+          "errorMessage": "You can still configure settings below.",
+          "validation": {
+            "usernameRequired": "Username is required",
+            "passwordRequired": "Password is required",
+            "cityRequired": "Sender city is required",
+            "postCodeRequired": "Sender post code is required"
+          }
+        }
       }
     }
   },

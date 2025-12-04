@@ -1004,7 +1004,7 @@ export function getRouteMap({
             {
               path: "econt",
               errorElement: <ErrorBoundary />,
-              lazy: () => import("../../routes/settings/econt/page"),
+              lazy: () => import("../../routes/settings/econt"),
               handle: {
                 breadcrumb: () => "Econt Shipping",
               },
