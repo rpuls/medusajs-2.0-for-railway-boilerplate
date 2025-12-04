@@ -126,7 +126,7 @@ class EcontShippingService extends MedusaService({
     sender_apartment_num?: string | null
   }> {
     try {
-      const settings = await this.listEcontSettings({ take: 1 })
+      const settings = await this.listEcontSettings()
       if (settings.length > 0) {
         // Cast sender_type to the correct type
         return {

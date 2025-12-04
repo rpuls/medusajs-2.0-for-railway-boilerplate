@@ -14,9 +14,7 @@ export async function GET(
     const econtService = req.scope.resolve<EcontShippingService>(ECONT_SHIPPING_MODULE)
     
     // Get settings from database (there should only be one record)
-    const settings = await econtService.listEcontSettings({
-      take: 1,
-    })
+    const settings = await econtService.listEcontSettings()
     
     if (settings.length === 0) {
       // Return default/empty settings if none exist
@@ -98,9 +96,7 @@ export async function POST(
     }
     
     // Check if settings already exist
-    const existingSettings = await econtService.listEcontSettings({
-      take: 1,
-    })
+    const existingSettings = await econtService.listEcontSettings()
     
     const settingsData = {
       username: body.username,
