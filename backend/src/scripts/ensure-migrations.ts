@@ -3,7 +3,7 @@ import { readFileSync } from "fs"
 import { join } from "path"
 
 /**
- * Startup script to ensure XML Importer tables exist
+ * Startup script to ensure XML Importer and Econt Shipping tables exist
  * Runs automatically at startup via init-backend
  * Checks if tables exist, creates them if missing
  */
@@ -21,6 +21,51 @@ export default async function ensureMigrations() {
   })
 
   try {
+    // Check and create econt_settings table if it doesn't exist
+    const econtSettingsExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'econt_settings'
+      );
+    `)
+
+    if (!econtSettingsExists.rows[0]?.exists) {
+      console.log("📦 Creating econt_settings table...")
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS "econt_settings" (
+          "id" text NOT NULL,
+          "username" text NOT NULL,
+          "password" text NOT NULL,
+          "live" boolean NOT NULL DEFAULT false,
+          "sender_type" text NOT NULL DEFAULT 'OFFICE',
+          "sender_city" text NOT NULL,
+          "sender_post_code" text NOT NULL,
+          "sender_office_code" text NULL,
+          "sender_street" text NULL,
+          "sender_street_num" text NULL,
+          "sender_quarter" text NULL,
+          "sender_building_num" text NULL,
+          "sender_entrance_num" text NULL,
+          "sender_floor_num" text NULL,
+          "sender_apartment_num" text NULL,
+          "created_at" timestamptz NOT NULL DEFAULT now(),
+          "updated_at" timestamptz NOT NULL DEFAULT now(),
+          "deleted_at" timestamptz NULL,
+          CONSTRAINT "econt_settings_pkey" PRIMARY KEY ("id")
+        );
+      `)
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS "IDX_econt_settings_deleted_at" 
+        ON "econt_settings" ("deleted_at") 
+        WHERE "deleted_at" IS NULL;
+      `)
+
+      console.log("✅ econt_settings table created")
+    } else {
+      console.log("✅ econt_settings table already exists")
+    }
     const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
     const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
     
