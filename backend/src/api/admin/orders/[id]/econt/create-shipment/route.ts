@@ -12,13 +12,24 @@ export async function POST(
   req: MedusaRequest,
   res: MedusaResponse
 ): Promise<void> {
+  const logger = req.scope.resolve("logger")
+  
   try {
     const { id } = req.params
-    const loadingData = req.body
+    // Handle body parsing - req.body should already be parsed by MedusaJS
+    // But if it's a string (double-stringified), parse it
+    let loadingData: any = req.body
+    if (typeof loadingData === "string") {
+      try {
+        loadingData = JSON.parse(loadingData)
+      } catch (parseError: any) {
+        logger.warn(`Failed to parse request body: ${parseError.message}`)
+        loadingData = {}
+      }
+    }
 
     const orderModuleService: IOrderModuleService = req.scope.resolve(Modules.ORDER)
     const econtService = req.scope.resolve<EcontShippingService>(ECONT_SHIPPING_MODULE)
-    const logger = req.scope.resolve("logger")
 
     // Get order
     const order = await orderModuleService.retrieveOrder(id, {
@@ -146,9 +157,19 @@ export async function POST(
       result,
     })
   } catch (error: any) {
-    req.scope.resolve("logger").error("Error creating Econt shipment:", error)
+    logger.error("Error creating Econt shipment:", error)
+    
+    // Log full error details for debugging
+    if (error instanceof Error) {
+      logger.error(`Error stack: ${error.stack || 'No stack trace'}`)
+      logger.error(`Error name: ${error.name || 'Unknown'}`)
+    } else {
+      logger.error(`Error (non-Error object): ${JSON.stringify(error)}`)
+    }
+    
     res.status(500).json({
       message: error.message || "Failed to create shipment",
+      error: process.env.NODE_ENV === "development" ? error.stack : undefined,
     })
   }
 }

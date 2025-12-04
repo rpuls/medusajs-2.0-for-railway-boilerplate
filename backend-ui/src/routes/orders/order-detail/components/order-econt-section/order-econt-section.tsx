@@ -8,14 +8,13 @@ import {
   usePrompt,
 } from "@medusajs/ui"
 import { useState } from "react"
-import { useTranslation } from "react-i18next"
+import { backendUrl } from "../../../../../lib/client"
 
 type OrderEcontSectionProps = {
   order: HttpTypes.AdminOrder
 }
 
 export const OrderEcontSection = ({ order }: OrderEcontSectionProps) => {
-  const { t } = useTranslation()
   const prompt = usePrompt()
   const [isCreating, setIsCreating] = useState(false)
   const [isLoadingStatus, setIsLoadingStatus] = useState(false)
@@ -37,27 +36,31 @@ export const OrderEcontSection = ({ order }: OrderEcontSectionProps) => {
 
     setIsCreating(true)
     try {
-      const response = await fetch(
-        `/admin/orders/${order.id}/econt/create-shipment`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            // Add shipment data here based on order and Econt data
-            // This is a simplified version - you'll need to build the full structure
-          }),
-        }
-      )
+      // Use native fetch with backend URL for authenticated requests
+      const url = `${backendUrl}/admin/orders/${order.id}/econt/create-shipment`
+      
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include session cookies
+        body: JSON.stringify({}), // Empty body - backend builds the data from order
+      })
 
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.message || "Failed to create shipment")
       }
 
-      const result = await response.json()
-      toast.success("Shipment created successfully")
+      const { loading_num } = await response.json()
+      
+      // Show success message with shipment details if available
+      if (loading_num) {
+        toast.success(`Shipment created successfully. Loading number: ${loading_num}`)
+      } else {
+        toast.success("Shipment created successfully")
+      }
       
       // Refresh the page to show updated data
       window.location.reload()
@@ -80,7 +83,7 @@ export const OrderEcontSection = ({ order }: OrderEcontSectionProps) => {
         throw new Error(error.message || "Failed to get shipment status")
       }
 
-      const result = await response.json()
+      await response.json() // Response is not used, just need to consume it
       toast.success("Shipment status updated")
       
       // Refresh the page to show updated data
