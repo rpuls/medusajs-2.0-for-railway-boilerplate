@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Button, Heading, Input, Switch, toast } from "@medusajs/ui"
+import { Button, Container, Heading, Input, Switch, toast } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
@@ -9,7 +9,6 @@ import { z } from "zod"
 
 import { Form } from "../../../../components/common/form"
 import { KeyboundForm } from "../../../../components/utilities/keybound-form"
-import { sdk } from "../../../../lib/client"
 
 const EcontSettingsSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -62,20 +61,27 @@ export const EcontSettingsPage = () => {
     const loadSettings = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch("/admin/econt/settings")
-        if (response.ok) {
-          const data = await response.json()
-          if (data.settings) {
-            // Don't populate password field if it's empty (for security)
-            form.reset({
-              ...data.settings,
-              password: data.settings.password || "",
-            })
-          }
+        const response = await fetch("/admin/econt/settings", {
+          credentials: "include", // Include cookies for authentication
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load settings: ${response.status} ${response.statusText}`)
+        }
+        
+        const data = await response.json()
+        if (data.settings) {
+          // Don't populate password field if it's empty (for security)
+          form.reset({
+            ...data.settings,
+            password: data.settings.password || "",
+          })
         }
       } catch (error) {
         console.error("Error loading settings:", error)
-        toast.error("Failed to load settings")
+        const errorMessage = error instanceof Error ? error.message : "Failed to load settings"
+        toast.error(errorMessage)
+        // Don't set loading to false on error so user can see the form with defaults
       } finally {
         setIsLoading(false)
       }
@@ -92,38 +98,49 @@ export const EcontSettingsPage = () => {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Include cookies for authentication
         body: JSON.stringify(data),
       })
 
-      if (response.ok) {
-        toast.success("Settings saved successfully")
-      } else {
-        const error = await response.json()
-        toast.error(error.message || "Failed to save settings")
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: `Failed to save settings: ${response.status} ${response.statusText}` }))
+        throw new Error(error.message || "Failed to save settings")
+      }
+
+      const result = await response.json()
+      toast.success("Settings saved successfully")
+      
+      // Reload settings to get updated data
+      if (result.settings) {
+        form.reset({
+          ...result.settings,
+          password: data.password, // Keep the password the user entered
+        })
       }
     } catch (error) {
       console.error("Error saving settings:", error)
-      toast.error("Failed to save settings")
+      const errorMessage = error instanceof Error ? error.message : "Failed to save settings"
+      toast.error(errorMessage)
     } finally {
       setIsSaving(false)
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-ui-fg-subtle">Loading settings...</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-y-4">
-      <div className="flex items-center justify-between">
-        <Heading>Econt Shipping Settings</Heading>
+    <Container className="divide-y p-0">
+      <div className="flex items-center justify-between px-6 py-4">
+        <div>
+          <Heading>Econt Shipping Settings</Heading>
+        </div>
       </div>
 
-      <KeyboundForm form={form} onSubmit={onSubmit}>
+      <div className="px-6 py-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-ui-fg-subtle">Loading settings...</p>
+          </div>
+        ) : (
+          <KeyboundForm form={form} onSubmit={onSubmit}>
         <div className="flex flex-col gap-y-8">
           {/* API Credentials Section */}
           <div className="flex flex-col gap-y-4">
@@ -358,7 +375,9 @@ export const EcontSettingsPage = () => {
           </div>
         </div>
       </KeyboundForm>
-    </div>
+        )}
+      </div>
+    </Container>
   )
 }
 
