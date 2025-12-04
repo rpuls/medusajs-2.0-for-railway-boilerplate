@@ -117,22 +117,36 @@ export async function POST(
       Object.assign(fullLoadingData, loadingData)
     }
 
+    // Calculate order weight from items
+    const totalWeight = order.items?.reduce((sum, item) => {
+      const itemWeight = (item as any).variant?.weight || 0.5 // Default 0.5kg per item if weight not available
+      return sum + (itemWeight * item.quantity)
+    }, 0) || 1.0 // Default to 1.0kg if no items
+
+    // Add weight and other required fields to loading data
+    fullLoadingData.weight = totalWeight
+    fullLoadingData.pack_count = 1
+    fullLoadingData.shipment_type = "PACK"
+    fullLoadingData.shipment_description = `Order ${order.display_id || order.id}`
+
     // Create label via Econt API
     const result = await econtService.createLabel(fullLoadingData)
 
     // Save shipment to database
-    if (result.loadings?.row?.loading_num) {
-      const loadingNum = result.loadings.row.loading_num
-      const pdfUrl = result.loadings.row.pdf_url || ""
+    // JSON API returns different structure than XML API
+    const loadingNum = result.loadingNum || result.loading_num || result.label?.loadingNum || result.label?.loading_num
+    const pdfUrl = result.pdfUrl || result.pdf_url || result.label?.pdfUrl || result.label?.pdf_url || ""
+    const loadingId = result.loadingId || result.loading_id || result.label?.loadingId || result.label?.loading_id || ""
 
+    if (loadingNum) {
       // Use MedusaService's auto-generated createEcontShipments method
       // @ts-ignore - Auto-generated method from MedusaService
       await econtService.createEcontShipments([{
         order_id: id,
         loading_num: loadingNum,
-        loading_id: result.loadings.row.loading_id || "",
+        loading_id: loadingId,
         pdf_url: pdfUrl,
-        is_imported: result.loadings.row.is_imported === "1",
+        is_imported: result.isImported || result.is_imported || false,
         status: "created",
         tracking_data: result,
       }])
@@ -152,8 +166,8 @@ export async function POST(
 
     res.json({
       success: true,
-      loading_num: result.loadings?.row?.loading_num,
-      pdf_url: result.loadings?.row?.pdf_url,
+      loading_num: loadingNum,
+      pdf_url: pdfUrl,
       result,
     })
   } catch (error: any) {

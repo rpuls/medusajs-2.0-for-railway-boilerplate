@@ -881,21 +881,125 @@ class EcontShippingService extends MedusaService({
   }
 
   /**
-   * Create a shipment (label) via Econt API
+   * Create a shipment (label) via Econt JSON API
+   * Uses LabelService.createLabel endpoint
    */
   async createLabel(loadingData: any): Promise<any> {
     try {
-      const xmlDataObj = {
-        loadings: {
-          row: loadingData,
+      // Build sender address from loadingData
+      const senderAddress: any = {
+        city: {
+          name: loadingData.sender_city,
+          postCode: loadingData.sender_post_code,
+          country: {
+            code3: "BGR",
+          },
         },
       }
 
-      const result = await this.xmlApiRequest("label", xmlDataObj)
+      // Add sender office or address based on sender type
+      if (loadingData.sender_office_code) {
+        senderAddress.office = {
+          code: loadingData.sender_office_code,
+        }
+      } else if (loadingData.sender_street && loadingData.sender_street_num) {
+        senderAddress.street = loadingData.sender_street
+        senderAddress.num = loadingData.sender_street_num
+        if (loadingData.sender_quarter) {
+          senderAddress.quarter = loadingData.sender_quarter
+        }
+        if (loadingData.sender_street_bl) {
+          senderAddress.bl = loadingData.sender_street_bl
+        }
+        if (loadingData.sender_street_vh) {
+          senderAddress.vh = loadingData.sender_street_vh
+        }
+        if (loadingData.sender_street_et) {
+          senderAddress.et = loadingData.sender_street_et
+        }
+        if (loadingData.sender_street_ap) {
+          senderAddress.ap = loadingData.sender_street_ap
+        }
+      }
 
-      const responseData = result.response || result
-      if (responseData?.error || result.error) {
-        const errorMsg = responseData?.error?.message || result.error?.message || "Failed to create label"
+      // Build receiver address from loadingData
+      const receiverAddress: any = {
+        city: {
+          name: loadingData.receiver_city,
+          postCode: loadingData.receiver_post_code,
+          country: {
+            code3: "BGR",
+          },
+        },
+      }
+
+      // Add receiver office or address based on shipping_to
+      if (loadingData.receiver_shipping_to === "OFFICE" && loadingData.receiver_office_code) {
+        receiverAddress.office = {
+          code: loadingData.receiver_office_code,
+        }
+      } else if (loadingData.receiver_street && loadingData.receiver_street_num) {
+        receiverAddress.street = loadingData.receiver_street
+        receiverAddress.num = loadingData.receiver_street_num
+        if (loadingData.receiver_quarter) {
+          receiverAddress.quarter = loadingData.receiver_quarter
+        }
+        if (loadingData.receiver_street_bl) {
+          receiverAddress.bl = loadingData.receiver_street_bl
+        }
+        if (loadingData.receiver_street_vh) {
+          receiverAddress.vh = loadingData.receiver_street_vh
+        }
+        if (loadingData.receiver_street_et) {
+          receiverAddress.et = loadingData.receiver_street_et
+        }
+        if (loadingData.receiver_street_ap) {
+          receiverAddress.ap = loadingData.receiver_street_ap
+        }
+      }
+
+      // Build label request body (same structure as calculateShippingPrice but without mode)
+      const requestBody: any = {
+        label: {
+          senderAddress,
+          receiverAddress,
+          receiverName: loadingData.receiver_name || loadingData.receiver_name_person,
+          receiverPhone: loadingData.receiver_phone_num,
+          receiverEmail: loadingData.receiver_email,
+          packCount: loadingData.pack_count || 1,
+          shipmentType: loadingData.shipment_type || "PACK",
+          weight: loadingData.weight || 1.0,
+          shipmentDescription: loadingData.shipment_description || `Order ${loadingData.order_num || ""}`,
+        },
+        // No mode parameter - defaults to create
+      }
+
+      // Add optional fields
+      if (loadingData.declaredValue) {
+        requestBody.label.declaredValue = loadingData.declaredValue
+      }
+      if (loadingData.codAmount) {
+        requestBody.label.codAmount = loadingData.codAmount
+      }
+      if (loadingData.payAfterAccept) {
+        requestBody.label.payAfterAccept = loadingData.payAfterAccept
+      }
+      if (loadingData.payAfterTest) {
+        requestBody.label.payAfterTest = loadingData.payAfterTest
+      }
+
+      this.logger_.info(`Creating label via Econt JSON API for order: ${loadingData.order_num || "unknown"}`)
+
+      // Use same service as calculateShippingPrice but without mode (or with mode: "create")
+      // According to Econt API documentation, use ShipmentsService.createLabel
+      const result = await this.jsonApiRequest(
+        "Shipments",
+        "ShipmentsService.createLabel",
+        requestBody
+      )
+
+      if (result?.error) {
+        const errorMsg = result.error?.message || result.error || "Failed to create label"
         throw new Error(errorMsg)
       }
 
