@@ -128,16 +128,39 @@ export async function POST(
       logger.info("Econt settings created")
     }
     
-    // Don't return password in response
-    const { password, ...settingsWithoutPassword } = Array.isArray(result) ? result[0] : result
+    // Handle result - MedusaService methods can return array or single object
+    const settingsResult = Array.isArray(result) ? result[0] : result
     
-    res.json({
+    if (!settingsResult) {
+      logger.error("No result returned from create/update operation")
+      res.status(500).json({
+        message: "Failed to save Econt settings: No result returned",
+      })
+      return
+    }
+    
+    // Don't return password in response - safely handle if password doesn't exist
+    const settingsWithoutPassword = { ...settingsResult }
+    delete settingsWithoutPassword.password
+    
+    res.status(200).json({
       settings: settingsWithoutPassword,
     })
   } catch (error: any) {
-    req.scope.resolve("logger").error("Error saving Econt settings:", error)
+    const logger = req.scope.resolve("logger")
+    logger.error("Error saving Econt settings:", error)
+    
+    // Log full error details for debugging
+    if (error instanceof Error) {
+      logger.error(`Error stack: ${error.stack || 'No stack trace'}`)
+      logger.error(`Error name: ${error.name || 'Unknown'}`)
+    } else {
+      logger.error(`Error (non-Error object): ${JSON.stringify(error)}`)
+    }
+    
     res.status(500).json({
       message: error.message || "Failed to save Econt settings",
+      error: process.env.NODE_ENV === "development" ? error.stack : undefined,
     })
   }
 }
