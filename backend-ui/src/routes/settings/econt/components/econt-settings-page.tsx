@@ -7,7 +7,7 @@ import { z } from "zod"
 
 import { Form } from "../../../../components/common/form"
 import { KeyboundForm } from "../../../../components/utilities/keybound-form"
-import { sdk } from "../../../../lib/client"
+import { sdk, backendUrl } from "../../../../lib/client"
 
 export const EcontSettingsPage = () => {
   const { t } = useTranslation()
@@ -89,13 +89,25 @@ export const EcontSettingsPage = () => {
   const onSubmit = form.handleSubmit(async (data: EcontSettingsFormData) => {
     try {
       setIsSaving(true)
-      const result = await sdk.client.fetch<{ settings: any }>("/admin/econt/settings", {
+      
+      // Use native fetch to avoid SDK body transformation issues
+      const url = `${backendUrl}/admin/econt/settings`
+      
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Include session cookies
         body: JSON.stringify(data),
       })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to save Econt settings")
+      }
+
+      const result = await response.json()
 
       toast.success(t("app.nav.settings.econt.saveSuccess"))
       
