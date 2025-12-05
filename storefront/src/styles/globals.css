@@ -2,6 +2,50 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+/* Global Chrome Autofill Fix - Must be outside layers for maximum specificity */
+@-webkit-keyframes autofill {
+  to {
+    color: #111827 !important;
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+  }
+}
+
+@keyframes autofill {
+  to {
+    color: #111827 !important;
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+  }
+}
+
+/* Completely remove Chrome autofill styling from MUI inputs */
+.MuiOutlinedInput-root input:-webkit-autofill,
+.MuiOutlinedInput-root input:-webkit-autofill:hover,
+.MuiOutlinedInput-root input:-webkit-autofill:focus,
+.MuiOutlinedInput-root input:-webkit-autofill:active,
+.MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill,
+.MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill:hover,
+.MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill:focus,
+.MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill:active,
+.MuiAutocomplete-root .MuiOutlinedInput-root input:-webkit-autofill,
+.MuiAutocomplete-root .MuiOutlinedInput-root input:-webkit-autofill:hover,
+.MuiAutocomplete-root .MuiOutlinedInput-root input:-webkit-autofill:focus,
+.MuiAutocomplete-root .MuiOutlinedInput-root input:-webkit-autofill:active {
+  -webkit-animation-name: autofill !important;
+  -webkit-animation-fill-mode: both !important;
+  animation-name: autofill !important;
+  animation-fill-mode: both !important;
+  -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+  box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
+  caret-color: #111827 !important;
+  transition: background-color 5000s ease-in-out 0s, color 5000s ease-in-out 0s !important;
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+}
+
 /* Theme CSS Variables - Can be overridden for client customization */
 :root {
   /* Primary Color System - Green */
@@ -120,21 +164,6 @@
 
   input:focus ~ label {
     @apply left-0;
-  }
-
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus,
-  textarea:-webkit-autofill,
-  textarea:-webkit-autofill:hover,
-  textarea:-webkit-autofill:focus,
-  select:-webkit-autofill,
-  select:-webkit-autofill:hover,
-  select:-webkit-autofill:focus {
-    border: 1px solid #212121;
-    -webkit-text-fill-color: #212121;
-    -webkit-box-shadow: 0 0 0px 1000px #fff inset;
-    transition: background-color 5000s ease-in-out 0s;
   }
 
   input[type="search"]::-webkit-search-decoration,
@@ -295,5 +324,56 @@
   .product-description hr {
     @apply border-t my-4;
     border-color: var(--color-border-base);
+  }
+
+  /* Keyframe animation to completely remove Chrome autofill styling */
+  @-webkit-keyframes autofill {
+    to {
+      color: #111827 !important;
+      background: #FFFFFF !important;
+      background-color: #FFFFFF !important;
+    }
+  }
+
+  @keyframes autofill {
+    to {
+      color: #111827 !important;
+      background: #FFFFFF !important;
+      background-color: #FFFFFF !important;
+    }
+  }
+
+  /* Apply animation + box-shadow hack to all autofilled MUI inputs - completely removes Chrome's styling */
+  /* Using very specific selectors to override Chrome's autofill */
+  .MuiOutlinedInput-root input:-webkit-autofill,
+  .MuiOutlinedInput-root input:-webkit-autofill:hover,
+  .MuiOutlinedInput-root input:-webkit-autofill:focus,
+  .MuiOutlinedInput-root input:-webkit-autofill:active,
+  .MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill,
+  .MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill:hover,
+  .MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill:focus,
+  .MuiTextField-root .MuiOutlinedInput-root input:-webkit-autofill:active {
+    /* Keyframe animation approach - most reliable */
+    -webkit-animation-name: autofill !important;
+    -webkit-animation-fill-mode: both !important;
+    animation-name: autofill !important;
+    animation-fill-mode: both !important;
+    /* Box-shadow hack as backup - covers Chrome's background */
+    -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    /* Text color override */
+    -webkit-text-fill-color: #111827 !important;
+    color: #111827 !important;
+    caret-color: #111827 !important;
+    /* Long transition to prevent Chrome from changing styles */
+    transition: background-color 5000s ease-in-out 0s, color 5000s ease-in-out 0s !important;
+    /* Explicit background color */
+    background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
+  }
+
+  /* Ensure MUI label stays visible with autofill */
+  .MuiInputLabel-root {
+    z-index: 1;
   }
 }

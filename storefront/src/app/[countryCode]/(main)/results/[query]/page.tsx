@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 type Params = {
-  params: { query: string; countryCode: string }
+  params: Promise<{ query: string; countryCode: string }>
   searchParams: {
     sortBy?: SortOptions
     page?: string
@@ -19,7 +19,9 @@ type Params = {
 }
 
 export default async function SearchResults({ params, searchParams }: Params) {
-  const { query } = params
+  // Await params in Next.js 16
+  const resolvedParams = await params
+  const { query, countryCode } = resolvedParams
   const { sortBy, page } = searchParams
 
   const hits = await search(query).then((data) => data)
@@ -36,7 +38,7 @@ export default async function SearchResults({ params, searchParams }: Params) {
       ids={ids}
       sortBy={sortBy}
       page={page}
-      countryCode={params.countryCode}
+      countryCode={countryCode}
     />
   )
 }

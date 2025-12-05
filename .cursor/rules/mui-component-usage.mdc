@@ -1,0 +1,431 @@
+---
+description: Guidelines for using Material UI (MUI) components in the storefront alongside Tailwind CSS
+globs: storefront/src/**/*.{tsx,ts}
+alwaysApply: true
+---
+# Material UI Component Usage Guidelines
+
+This rule defines when and how to use Material UI (MUI) components in the storefront, which is designed to work alongside Tailwind CSS for faster UI development.
+
+## Theme Location
+
+The MUI theme is defined in:
+- **Theme File**: `storefront/src/lib/theme/mui-theme.ts`
+- **Provider**: `storefront/src/app/mui-providers.tsx`
+- **Applied In**: `storefront/src/app/layout.tsx`
+
+To customize colors, typography, or component styles, edit `mui-theme.ts`.
+
+## When to Use MUI vs Tailwind
+
+### ✅ Use MUI For:
+- **Complex Form Components**: TextField, Autocomplete, Select, DatePicker
+- **Interactive Components**: Dialog, Snackbar, Stepper, Tabs, Accordion
+- **Data Display**: Table, Card, Rating, Chip, Badge
+- **Loading States**: Skeleton components
+- **Layout Utilities**: Container, Grid, Stack (when you need MUI's responsive system)
+
+### ✅ Use Tailwind For:
+- **Layout & Spacing**: Padding, margins, flexbox, grid layouts
+- **Custom Styling**: One-off styles, animations, responsive breakpoints
+- **Color Utilities**: Background colors, text colors (unless using theme colors)
+- **Typography**: Custom font sizes, weights (unless using theme typography)
+
+### ✅ Mix Both:
+You can combine MUI components with Tailwind classes:
+
+```tsx
+// ✅ Good: MUI component with Tailwind classes
+<Button 
+  variant="contained" 
+  className="mt-4 mb-2 w-full md:w-auto"
+>
+  Click Me
+</Button>
+
+<Card className="hover:shadow-lg transition-shadow">
+  <CardContent className="p-6">
+    Content
+  </CardContent>
+</Card>
+```
+
+## Import Best Practices
+
+### ✅ Direct Imports (Recommended)
+Always import components directly to enable tree-shaking and reduce bundle size:
+
+```tsx
+// ✅ Good: Direct imports
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import { ShoppingCart } from '@mui/icons-material'
+
+// ❌ Bad: Barrel imports (imports entire library)
+import { Button, TextField } from '@mui/material'
+```
+
+### ✅ Icon Imports
+Import icons from `@mui/icons-material`:
+
+```tsx
+// ✅ Good
+import { ShoppingCart, Favorite, Share } from '@mui/icons-material'
+
+// ❌ Bad
+import ShoppingCart from '@mui/icons-material/ShoppingCart'
+```
+
+## Component Usage Patterns
+
+### Forms & Inputs
+
+**Replace custom Input with TextField:**
+
+```tsx
+// ✅ Good: MUI TextField
+<TextField
+  fullWidth
+  label="Email"
+  type="email"
+  required
+  error={!!errors.email}
+  helperText={errors.email?.message}
+  autoComplete="email"
+/>
+
+// ❌ Bad: Custom input component when MUI is available
+<Input name="email" label="Email" />
+```
+
+**Use Autocomplete for searchable dropdowns:**
+
+```tsx
+// ✅ Good: MUI Autocomplete for city/office selection
+<Autocomplete
+  options={cities}
+  getOptionLabel={(option) => `гр. ${option.name} [п.к.: ${option.post_code}]`}
+  renderInput={(params) => (
+    <TextField {...params} label="City" placeholder="Search city..." />
+  )}
+  className="w-full"
+/>
+```
+
+### Modals & Dialogs
+
+**Replace Headless UI Modal with MUI Dialog:**
+
+```tsx
+// ✅ Good: MUI Dialog
+<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+  <DialogTitle>
+    Product Details
+    <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}>
+      <Close />
+    </IconButton>
+  </DialogTitle>
+  <DialogContent dividers>
+    {/* Content */}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={onClose}>Cancel</Button>
+    <Button variant="contained">Confirm</Button>
+  </DialogActions>
+</Dialog>
+```
+
+### Notifications
+
+**Use Snackbar + Alert for toast notifications:**
+
+```tsx
+// ✅ Good: MUI Snackbar
+const [snackbar, setSnackbar] = useState({ 
+  open: false, 
+  message: '', 
+  severity: 'success' as 'success' | 'error' | 'warning' | 'info' 
+})
+
+<Snackbar
+  open={snackbar.open}
+  autoHideDuration={6000}
+  onClose={() => setSnackbar({ ...snackbar, open: false })}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+>
+  <Alert 
+    onClose={() => setSnackbar({ ...snackbar, open: false })} 
+    severity={snackbar.severity}
+  >
+    {snackbar.message}
+  </Alert>
+</Snackbar>
+```
+
+### Loading States
+
+**Use MUI Skeleton instead of custom loading components:**
+
+```tsx
+// ✅ Good: MUI Skeleton
+<Skeleton variant="rectangular" height={200} />
+<Skeleton variant="text" height={32} />
+<Skeleton variant="circular" width={40} height={40} />
+
+// ❌ Bad: Custom skeleton divs
+<div className="animate-pulse bg-gray-200 h-32" />
+```
+
+### Product Cards
+
+**Use MUI Card components for consistent product display:**
+
+```tsx
+// ✅ Good: MUI Card for products
+<Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
+  <CardMedia
+    component="div"
+    className="relative h-48 bg-gray-100 overflow-hidden"
+  >
+    <Image src={product.thumbnail} alt={product.title} fill />
+  </CardMedia>
+  <CardContent className="flex-grow">
+    <Typography variant="h6" component="h3">
+      {product.title}
+    </Typography>
+    <Typography variant="h6" color="primary">
+      {product.price}
+    </Typography>
+  </CardContent>
+  <CardActions>
+    <Button variant="contained" fullWidth startIcon={<ShoppingCart />}>
+      Add to Cart
+    </Button>
+  </CardActions>
+</Card>
+```
+
+### Data Tables
+
+**Use MUI Table for order history, cart items:**
+
+```tsx
+// ✅ Good: MUI Table
+<Table>
+  <TableHead>
+    <TableRow>
+      <TableCell>Order #</TableCell>
+      <TableCell>Date</TableCell>
+      <TableCell>Status</TableCell>
+      <TableCell>Total</TableCell>
+    </TableRow>
+  </TableHead>
+  <TableBody>
+    {orders.map(order => (
+      <TableRow key={order.id}>
+        <TableCell>#{order.display_id}</TableCell>
+        <TableCell>{order.created_at}</TableCell>
+        <TableCell>
+          <Chip 
+            label={order.status} 
+            color={order.status === 'completed' ? 'success' : 'default'}
+            size="small"
+          />
+        </TableCell>
+        <TableCell>{order.total}</TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
+```
+
+## Grid System
+
+**Use MUI Grid v7 with `size` prop:**
+
+```tsx
+// ✅ Good: MUI Grid v7 syntax
+<Grid container spacing={3}>
+  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+    <ProductCard product={product} />
+  </Grid>
+</Grid>
+
+// ❌ Bad: Old Grid v6 syntax (doesn't work in v7)
+<Grid container spacing={3}>
+  <Grid item xs={12} sm={6} md={4}>
+    <ProductCard product={product} />
+  </Grid>
+</Grid>
+```
+
+## Server vs Client Components
+
+**MUI components that need interactivity must be Client Components:**
+
+```tsx
+// ✅ Good: Client component for interactive MUI
+'use client'
+
+import { Button, Dialog } from '@mui/material'
+
+export function ProductModal({ open, onClose }: Props) {
+  return (
+    <Dialog open={open} onClose={onClose}>
+      {/* Content */}
+    </Dialog>
+  )
+}
+
+// ✅ Good: Server component can use non-interactive MUI
+import { Typography, Card, CardContent } from '@mui/material'
+
+export default async function ProductPage({ params }: Props) {
+  const product = await getProduct(params.handle)
+  
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h4">{product.title}</Typography>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+## Theme Customization
+
+**Customize components via theme, not inline styles:**
+
+```tsx
+// ✅ Good: Customize in mui-theme.ts
+// storefront/src/lib/theme/mui-theme.ts
+MuiButton: {
+  styleOverrides: {
+    root: {
+      textTransform: 'none', // Disable uppercase
+      borderRadius: '4px',
+      fontWeight: 500,
+    },
+  },
+}
+
+// ❌ Bad: Inline style overrides
+<Button sx={{ textTransform: 'none' }}>Click</Button>
+```
+
+**Use theme colors:**
+
+```tsx
+// ✅ Good: Use theme colors
+<Button variant="contained" color="primary">Primary</Button>
+<Chip label="Success" color="success" />
+<Typography color="text.secondary">Secondary text</Typography>
+
+// ❌ Bad: Hardcoded colors
+<Button style={{ backgroundColor: '#519717' }}>Click</Button>
+```
+
+## Common Component Replacements
+
+### Priority 1: High-Impact Replacements
+
+1. **Autocomplete** → Replace custom city/office selectors (Econt shipping)
+2. **TextField** → Replace custom Input component
+3. **Dialog** → Replace Headless UI Modal
+4. **Skeleton** → Replace custom loading skeletons
+
+### Priority 2: Medium-Impact Replacements
+
+1. **Stepper** → Checkout flow visualization
+2. **Table** → Order history, cart items
+3. **Card** → Product cards
+4. **Snackbar** → Toast notifications
+
+### Priority 3: Nice-to-Have
+
+1. **Rating** → Product reviews
+2. **Chip** → Tags, badges, status indicators
+3. **Tabs** → Product details, account sections
+4. **Accordion** → FAQ, collapsible content
+
+## Stock Status Logic
+
+**When checking product stock, use this pattern:**
+
+```tsx
+// ✅ Good: Complete stock checking logic
+const isInStock = hasVariants && (product.variants || []).some((v: any) => {
+  // If inventory is not managed, product is always available
+  if (!v.manage_inventory) {
+    return true
+  }
+  // If backorders are allowed, product is available
+  if (v.allow_backorder) {
+    return true
+  }
+  // If inventory is managed and quantity > 0, product is available
+  if (v.manage_inventory && (v.inventory_quantity || 0) > 0) {
+    return true
+  }
+  return false
+})
+
+// ❌ Bad: Only checking inventory_quantity
+const isInStock = product.variants?.some(v => v.inventory_quantity > 0)
+```
+
+**Note**: Ensure `inventory_quantity` is requested in API queries:
+```tsx
+// In getProductsList, include inventory_quantity in fields
+fields: "*variants.calculated_price,+variants.inventory_quantity"
+```
+
+## Chrome Autofill Styling
+
+**The theme already includes Chrome autofill fixes.** Don't add additional overrides unless necessary. The fix uses a combination of:
+- Keyframe animations
+- Box-shadow hack
+- Long transition delays
+
+If you need to override autofill styles, do it in `mui-theme.ts`, not inline.
+
+## Next.js 16 Compatibility
+
+**All page components must await params (Next.js 16 requirement):**
+
+```tsx
+// ✅ Good: Await params in Next.js 16
+export default async function ProductPage({ 
+  params 
+}: { 
+  params: Promise<{ countryCode: string; handle: string }> 
+}) {
+  const resolvedParams = await params
+  const { handle, countryCode } = resolvedParams
+  // Use resolvedParams...
+}
+
+// ❌ Bad: Direct params access (Next.js 16)
+export default async function ProductPage({ 
+  params 
+}: { 
+  params: { countryCode: string; handle: string } 
+}) {
+  const { handle } = params // Error: params is a Promise
+}
+```
+
+## Performance Best Practices
+
+1. **Tree-shaking**: Always use direct imports
+2. **Code splitting**: MUI components are automatically code-split
+3. **Server Components**: Use MUI in Server Components when possible (non-interactive components)
+4. **Lazy loading**: Use `next/dynamic` for heavy MUI components
+
+## Resources
+
+- **Theme File**: `storefront/src/lib/theme/mui-theme.ts`
+- **MUI Documentation**: https://mui.com/material-ui/
+- **MUI Next.js Guide**: https://mui.com/material-ui/integrations/nextjs/
+- **Test Page**: `storefront/src/app/[countryCode]/(main)/test-mui/page.tsx` - See examples of all MUI components

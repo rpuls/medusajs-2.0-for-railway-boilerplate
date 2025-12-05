@@ -11,11 +11,19 @@ export const metadata: Metadata = {
 
 export default async function PageLayout(props: {
   children: React.ReactNode
-  params: { countryCode: string }
+  params: Promise<{ countryCode: string }>
 }) {
+  // Await params in Next.js 16
+  const resolvedParams = await props.params
+  
+  // Validate params
+  const countryCode = resolvedParams?.countryCode && typeof resolvedParams.countryCode === 'string' 
+    ? resolvedParams.countryCode.toLowerCase() 
+    : 'us' // Fallback to 'us' if countryCode is missing
+
   return (
     <CartProvider>
-      <Nav countryCode={props.params.countryCode} />
+      <Nav countryCode={countryCode} />
       {props.children}
       <Footer />
     </CartProvider>

@@ -9,8 +9,9 @@ import { cache } from "react"
 import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 
 export const getCustomer = cache(async function () {
+  const authHeaders = await getAuthHeaders()
   return await sdk.store.customer
-    .retrieve({}, { next: { tags: ["customer"] }, ...getAuthHeaders() })
+    .retrieve({}, { next: { tags: ["customer"] }, ...authHeaders })
     .then(({ customer }) => customer)
     .catch(() => null)
 })
@@ -18,8 +19,9 @@ export const getCustomer = cache(async function () {
 export const updateCustomer = cache(async function (
   body: HttpTypes.StoreUpdateCustomer
 ) {
+  const authHeaders = await getAuthHeaders()
   const updateRes = await sdk.store.customer
-    .update(body, {}, getAuthHeaders())
+    .update(body, {}, authHeaders)
     .then(({ customer }) => customer)
     .catch(medusaError)
 
@@ -55,7 +57,7 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     })
 
-    setAuthToken(typeof loginToken === 'string' ? loginToken : loginToken.location)
+    await setAuthToken(typeof loginToken === 'string' ? loginToken : loginToken.location)
 
     revalidateTag("customer")
     return createdCustomer
@@ -71,8 +73,8 @@ export async function login(_currentState: unknown, formData: FormData) {
   try {
     await sdk.auth
       .login("customer", "emailpass", { email, password })
-      .then((token) => {
-        setAuthToken(typeof token === 'string' ? token : token.location)
+      .then(async (token) => {
+        await setAuthToken(typeof token === 'string' ? token : token.location)
         revalidateTag("customer")
       })
   } catch (error: any) {
@@ -82,7 +84,7 @@ export async function login(_currentState: unknown, formData: FormData) {
 
 export async function signout(countryCode: string) {
   await sdk.auth.logout()
-  removeAuthToken()
+  await removeAuthToken()
   revalidateTag("auth")
   revalidateTag("customer")
   redirect(`/${countryCode}/account`)
@@ -105,8 +107,9 @@ export const addCustomerAddress = async (
     phone: formData.get("phone") as string,
   }
 
+  const authHeaders = await getAuthHeaders()
   return sdk.store.customer
-    .createAddress(address, {}, getAuthHeaders())
+    .createAddress(address, {}, authHeaders)
     .then(({ customer }) => {
       revalidateTag("customer")
       return { success: true, error: null }
@@ -119,8 +122,9 @@ export const addCustomerAddress = async (
 export const deleteCustomerAddress = async (
   addressId: string
 ): Promise<void> => {
+  const authHeaders = await getAuthHeaders()
   await sdk.store.customer
-    .deleteAddress(addressId, getAuthHeaders())
+    .deleteAddress(addressId, authHeaders)
     .then(() => {
       revalidateTag("customer")
       return { success: true, error: null }
@@ -149,8 +153,9 @@ export const updateCustomerAddress = async (
     phone: formData.get("phone") as string,
   }
 
+  const authHeaders = await getAuthHeaders()
   return sdk.store.customer
-    .updateAddress(addressId, address, {}, getAuthHeaders())
+    .updateAddress(addressId, address, {}, authHeaders)
     .then(() => {
       revalidateTag("customer")
       return { success: true, error: null }

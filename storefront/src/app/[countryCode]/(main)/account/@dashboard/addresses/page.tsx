@@ -15,9 +15,11 @@ export const metadata: Metadata = {
 export default async function Addresses({
   params,
 }: {
-  params: { countryCode: string }
+  params: Promise<{ countryCode: string }>
 }) {
-  const { countryCode } = params
+  // Await params in Next.js 16
+  const resolvedParams = await params
+  const { countryCode } = resolvedParams
   const customer = await getCustomer()
   const region = await getRegion(countryCode)
 

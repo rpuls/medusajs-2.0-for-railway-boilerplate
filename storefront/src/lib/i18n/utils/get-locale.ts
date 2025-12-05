@@ -18,6 +18,9 @@ const countryToLocaleMap: Record<string, string> = {
  * @returns locale code (defaults to 'en')
  */
 export function getLocaleFromCountryCode(countryCode: string): string {
+  if (!countryCode || typeof countryCode !== 'string') {
+    return "en"
+  }
   return countryToLocaleMap[countryCode.toLowerCase()] || "en"
 }
 

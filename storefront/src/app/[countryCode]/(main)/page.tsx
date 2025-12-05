@@ -8,6 +8,7 @@ import FeaturedProducts from "@modules/home/components/featured-products"
 import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
+import NewsletterWrapper from "./newsletter-wrapper"
 
 // Lazy load banner slider for better performance
 const BannerSliderLazy = dynamicImport(
@@ -29,19 +30,20 @@ export const revalidate = 3600
 // Force static generation
 export const dynamic = "force-static"
 
-// Lazy load newsletter component (client-side only)
-const NewsletterLazy = dynamicImport(
-  () => import("@modules/home/components/newsletter"),
-  {
-    ssr: false,
-  }
-)
-
 export default async function Home({
-  params: { countryCode },
+  params,
 }: {
-  params: { countryCode: string }
+  params: Promise<{ countryCode: string }>
 }) {
+  // Await params in Next.js 16
+  const resolvedParams = await params
+  
+  // Validate params
+  if (!resolvedParams?.countryCode || typeof resolvedParams.countryCode !== 'string') {
+    return null
+  }
+
+  const countryCode = resolvedParams.countryCode.toLowerCase()
   const collections = await getCollectionsWithProducts(countryCode)
   const region = await getRegion(countryCode)
 
@@ -109,7 +111,7 @@ export default async function Home({
       )}
 
       {/* Newsletter Subscription */}
-      <NewsletterLazy />
+      <NewsletterWrapper />
     </>
   )
 }

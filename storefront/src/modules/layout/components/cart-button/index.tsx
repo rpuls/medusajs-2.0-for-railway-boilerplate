@@ -1,15 +1,7 @@
 import { notFound } from "next/navigation"
-import dynamic from "next/dynamic"
 import CartButtonClient from "./cart-button-client"
+import SlideInCartWrapper from "./slide-in-cart-wrapper"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
-
-// Lazy load slide-in cart (client-side only)
-const SlideInCart = dynamic(
-  () => import("@modules/cart/components/slide-in-cart"),
-  {
-    ssr: false,
-  }
-)
 
 const fetchCart = async () => {
   const cart = await retrieveCart()
@@ -32,7 +24,7 @@ export default async function CartButton() {
   return (
     <>
       <CartButtonClient cart={cart} />
-      <SlideInCart cart={cart} />
+      <SlideInCartWrapper cart={cart} />
     </>
   )
 }

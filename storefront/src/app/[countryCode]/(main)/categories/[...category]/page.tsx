@@ -9,7 +9,7 @@ import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 type Props = {
-  params: { category: string[]; countryCode: string }
+  params: Promise<{ category: string[]; countryCode: string }>
   searchParams: {
     sortBy?: SortOptions
     page?: string
@@ -30,16 +30,23 @@ export async function generateStaticParams() {
   }
 
   const countryCodes = await listRegions().then((regions: StoreRegion[]) =>
-    regions?.map((r) => r.countries?.map((c) => c.iso_2)).flat()
+    regions
+      ?.map((r) => r.countries?.map((c) => c.iso_2))
+      .flat()
+      .filter((code): code is string => Boolean(code)) // Filter out undefined values
   )
 
-  const categoryHandles = product_categories.map(
-    (category: any) => category.handle
-  )
+  const categoryHandles = product_categories
+    .map((category: any) => category.handle)
+    .filter((handle): handle is string => Boolean(handle)) // Filter out undefined handles
+
+  if (!countryCodes || countryCodes.length === 0 || categoryHandles.length === 0) {
+    return []
+  }
 
   const staticParams = countryCodes
-    ?.map((countryCode: string | undefined) =>
-      categoryHandles.map((handle: any) => ({
+    .map((countryCode: string) =>
+      categoryHandles.map((handle: string) => ({
         countryCode,
         category: [handle],
       }))
@@ -50,39 +57,68 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // Await params in Next.js 16
+  const resolvedParams = await params
+  
   try {
+    // Validate params
+    if (!resolvedParams.category || resolvedParams.category.length === 0) {
+      return {
+        title: "Category | MS Store",
+        description: "Category page",
+      }
+    }
+
     const { product_categories } = await getCategoryByHandle(
-      params.category
+      resolvedParams.category
     )
+
+    if (!product_categories || product_categories.length === 0) {
+      return {
+        title: "Category | MS Store",
+        description: "Category page",
+      }
+    }
 
     const title = product_categories
       .map((category: StoreProductCategory) => category.name)
-      .join(" | ")
+      .filter(Boolean)
+      .join(" | ") || "Category"
 
     const description =
-      product_categories[product_categories.length - 1].description ??
+      product_categories[product_categories.length - 1]?.description ??
       `${title} category.`
 
     return {
       title: `${title} | MS Store`,
       description,
       alternates: {
-        canonical: `${params.category.join("/")}`,
+        canonical: `${resolvedParams.category.filter(Boolean).join("/")}`,
       },
     }
   } catch (error) {
-    notFound()
+    return {
+      title: "Category | MS Store",
+      description: "Category page",
+    }
   }
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
+  // Await params in Next.js 16
+  const resolvedParams = await params
   const { sortBy, page } = searchParams
 
+  // Validate params
+  if (!resolvedParams.countryCode || !resolvedParams.category || resolvedParams.category.length === 0) {
+    notFound()
+  }
+
   const { product_categories } = await getCategoryByHandle(
-    params.category
+    resolvedParams.category
   )
 
-  if (!product_categories) {
+  if (!product_categories || product_categories.length === 0) {
     notFound()
   }
 
@@ -92,7 +128,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         categories={product_categories}
         sortBy={sortBy}
         page={page}
-        countryCode={params.countryCode}
+        countryCode={resolvedParams.countryCode}
       />
     </Suspense>
   )

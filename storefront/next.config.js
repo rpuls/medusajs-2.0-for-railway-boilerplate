@@ -7,18 +7,23 @@ checkEnvVariables()
  */
 const nextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
   // Optimize for production
-  swcMinify: true,
   compress: true,
   poweredByHeader: false,
+  // Transpile MUI packages for proper Next.js compatibility
+  transpilePackages: ['@mui/material', '@mui/system', '@mui/icons-material', '@mui/material-nextjs'],
+  
+  // Next.js 16 uses Turbopack by default. Since we have a webpack config for bundle optimization,
+  // we need to either:
+  // 1. Use Turbopack (add empty config below) - faster builds, but webpack optimizations won't apply
+  // 2. Use webpack (remove turbopack config, use --webpack flag) - keeps bundle splitting
+  // For now, using Turbopack to silence the error. To use webpack: next build --webpack
+  turbopack: {},
 
-  // Bundle optimization
+  // Bundle optimization (only applies when using webpack with --webpack flag)
   webpack: (config, { isServer }) => {
     // Optimize bundle splitting
     if (!isServer) {
@@ -117,9 +122,6 @@ const nextConfig = {
       }] : []),
     ],
   },
-  serverRuntimeConfig: {
-    port: process.env.PORT || 3000
-  }
 }
 
 module.exports = nextConfig

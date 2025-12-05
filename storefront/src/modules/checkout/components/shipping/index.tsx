@@ -180,7 +180,7 @@ const Shipping: React.FC<ShippingProps> = ({
                         if (displayAmount != null && !isNaN(displayAmount) && displayAmount > 0) {
                           return convertToLocale({
                             amount: displayAmount,
-                            currency_code: cart?.currency_code,
+                        currency_code: cart?.currency_code,
                           })
                         } else {
                           return <span className="text-gray-400">{t("checkout.waitingForInput")}</span>
@@ -233,7 +233,7 @@ const Shipping: React.FC<ShippingProps> = ({
                     if (displayAmount != null && !isNaN(displayAmount) && displayAmount > 0) {
                       return convertToLocale({
                         amount: displayAmount,
-                        currency_code: cart?.currency_code,
+                    currency_code: cart?.currency_code,
                       })
                     } else {
                       return t("checkout.waitingForInput")

@@ -29,8 +29,11 @@ const regionMap = new Map<string, HttpTypes.StoreRegion>()
 
 export const getRegion = cache(async function (countryCode: string) {
   try {
-    if (regionMap.has(countryCode)) {
-      return regionMap.get(countryCode)
+    // Normalize country code to lowercase for consistent lookup
+    const normalizedCode = countryCode?.toLowerCase() || ""
+    
+    if (regionMap.has(normalizedCode)) {
+      return regionMap.get(normalizedCode)
     }
 
     const regions = await listRegions()
@@ -39,14 +42,18 @@ export const getRegion = cache(async function (countryCode: string) {
       return null
     }
 
+    // Populate region map with normalized country codes
     regions.forEach((region) => {
       region.countries?.forEach((c) => {
-        regionMap.set(c?.iso_2 ?? "", region)
+        const iso2 = c?.iso_2?.toLowerCase() ?? ""
+        if (iso2) {
+          regionMap.set(iso2, region)
+        }
       })
     })
 
-    const region = countryCode
-      ? regionMap.get(countryCode)
+    const region = normalizedCode
+      ? regionMap.get(normalizedCode)
       : regionMap.get("us")
 
     return region

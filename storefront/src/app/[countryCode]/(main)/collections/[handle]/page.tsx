@@ -12,7 +12,7 @@ import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 type Props = {
-  params: { handle: string; countryCode: string }
+  params: Promise<{ handle: string; countryCode: string }>
   searchParams: {
     page?: string
     sortBy?: SortOptions
@@ -59,7 +59,9 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const collection = await getCollectionByHandle(params.handle)
+  // Await params in Next.js 16
+  const resolvedParams = await params
+  const collection = await getCollectionByHandle(resolvedParams.handle)
 
   if (!collection) {
     notFound()
@@ -74,9 +76,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {
+  // Await params in Next.js 16
+  const resolvedParams = await params
   const { sortBy, page } = searchParams
 
-  const collection = await getCollectionByHandle(params.handle).then(
+  const collection = await getCollectionByHandle(resolvedParams.handle).then(
     (collection: StoreCollection) => collection
   )
 
@@ -90,7 +94,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
         collection={collection}
         page={page}
         sortBy={sortBy}
-        countryCode={params.countryCode}
+        countryCode={resolvedParams.countryCode}
       />
     </Suspense>
   )

@@ -1,0 +1,264 @@
+---
+description: Comprehensive UI/UX design principles and best practices for software development
+globs: storefront/src/**/*.{tsx,ts,css}
+alwaysApply: true
+---
+# UI/UX Design Principles
+
+You are an expert in UI and UX design principles for software development. Follow these guidelines when designing and implementing user interfaces.
+
+## Visual Design
+
+### Visual Hierarchy
+- Establish a clear visual hierarchy to guide user attention
+- Use size, color, contrast, and spacing to create hierarchy
+- Most important elements should be most prominent
+
+### Color Palette
+- Choose a cohesive color palette that reflects the brand
+- Ask the user for brand color guidelines if not provided
+- Use theme colors consistently across the application
+- Maintain sufficient contrast for legibility (WCAG 2.1 AA standard minimum)
+
+### Typography
+- Use typography effectively for readability and emphasis
+- Implement a consistent type scale (see MUI theme typography)
+- Use relative units (em, rem) for font sizes
+- Adjust line heights and letter spacing for readability on small screens
+- Implement a modular scale for consistent typography across breakpoints
+
+### Consistency
+- Design with a consistent style across the application
+- Develop and adhere to a design system
+- Use consistent terminology throughout the interface
+- Maintain consistent positioning of recurring elements
+- Ensure visual consistency across different sections
+
+## Interaction Design
+
+### Navigation
+- Create intuitive navigation patterns
+- Design mobile-friendly navigation patterns (e.g., hamburger menu)
+- Ensure navigation is accessible via keyboard and screen readers
+- Consider using a sticky header for easy navigation access
+- Use clear labeling and categorization for navigation
+
+### UI Components
+- Use familiar UI components to reduce cognitive load
+- Prefer MUI components for complex interactions (see `mui-component-usage.mdc`)
+- Use consistent component patterns throughout the application
+
+### Calls-to-Action
+- Provide clear calls-to-action to guide user behavior
+- Use visual emphasis (color, size, position) for primary actions
+- Ensure CTAs are accessible and keyboard-navigable
+
+### Animations
+- Use animations judiciously to enhance user experience
+- Prefer CSS animations over JavaScript when possible
+- Use subtle transitions for state changes
+- Avoid excessive or distracting animations
+
+### Responsive Design
+- Implement responsive design for cross-device compatibility
+- Design for mobile devices first, then scale up (mobile-first)
+- Use touch-friendly interface elements (min 44x44 pixels)
+- Consider thumb zones for important interactive elements
+- Test on actual devices, not just emulators
+
+## Accessibility
+
+### WCAG Compliance
+- Follow WCAG 2.1 guidelines for web accessibility (minimum AA standard)
+- Ensure sufficient color contrast (4.5:1 for normal text, 3:1 for large text)
+- Provide alternative text for images and non-text content
+- Use semantic HTML to enhance screen reader compatibility
+
+### Keyboard Navigation
+- Ensure keyboard navigability for all interactive elements
+- Provide visible focus indicators
+- Implement logical tab order
+- Support keyboard shortcuts for common actions
+
+### Screen Readers
+- Use semantic HTML elements (`<button>`, `<nav>`, `<main>`, etc.)
+- Provide ARIA labels when semantic HTML isn't sufficient
+- Test with various assistive technologies
+- Ensure form labels are properly associated
+
+### Touch Targets
+- Ensure interactive elements are large enough for touch (min 44x44 pixels)
+- Provide adequate spacing between touch targets
+- Consider hover states for desktop and focus states for touch/keyboard
+
+## Performance Optimization
+
+### Asset Optimization
+- Optimize images and assets to minimize load times
+- Use responsive images with `srcset` and `sizes` attributes
+- Implement lazy loading for non-critical resources (images, videos)
+- Use Next.js Image component for automatic optimization
+
+### Code Optimization
+- Use code splitting to improve initial load performance
+- Implement critical CSS for above-the-fold content
+- Prefer CSS animations instead of JavaScript when possible
+- Use `next/dynamic` for lazy loading heavy components
+
+### Core Web Vitals
+- Monitor and optimize Core Web Vitals:
+  - **LCP (Largest Contentful Paint)**: < 2.5s
+  - **FID (First Input Delay)**: < 100ms
+  - **CLS (Cumulative Layout Shift)**: < 0.1
+
+### Mobile Performance
+- Optimize assets for faster loading on mobile networks
+- Implement lazy loading for images and videos
+- Use efficient image formats (WebP, AVIF when supported)
+
+## User Feedback
+
+### Action Feedback
+- Incorporate clear feedback mechanisms for user actions
+- Use loading indicators for asynchronous operations
+- Provide visual confirmation for successful actions
+- Use MUI Snackbar/Alert for notifications
+
+### Error Handling
+- Provide clear error messages and recovery options
+- Use inline validation for forms
+- Display errors near the relevant input fields
+- Use appropriate error severity levels (error, warning, info)
+
+### Analytics
+- Implement analytics to track user behavior and pain points
+- Use heatmaps and session recordings to analyze user behavior
+- Regularly gather and incorporate user feedback
+
+## Information Architecture
+
+### Content Organization
+- Organize content logically to facilitate easy access
+- Use clear labeling and categorization for navigation
+- Implement effective search functionality
+- Create a sitemap to visualize overall structure
+
+### Content Prioritization
+- Prioritize content display for mobile views
+- Use progressive disclosure to reveal content as needed
+- Implement off-canvas patterns for secondary content on small screens
+- Hide less important content on smaller screens
+
+## Responsive Design
+
+### Fluid Layouts
+- Use relative units (%, em, rem) instead of fixed pixels
+- Implement CSS Grid and Flexbox for flexible layouts
+- Design with a mobile-first approach, then scale up
+- Use MUI Grid or Tailwind Grid for responsive layouts
+
+### Media Queries
+- Use breakpoints to adjust layouts for different screen sizes
+- Focus on content needs rather than specific devices
+- Test designs across a range of devices and orientations
+- Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`, `xl:`)
+
+### Responsive Images
+- Use responsive images with `srcset` and `sizes` attributes
+- Use Next.js Image component with proper `sizes` prop
+- Implement lazy loading for images and videos
+- Use CSS to make embedded media (like iframes) responsive
+
+### Typography Responsiveness
+- Use relative units (em, rem) for font sizes
+- Adjust line heights and letter spacing for readability on small screens
+- Implement a modular scale for consistent typography across breakpoints
+- Use MUI theme typography variants for consistency
+
+## Forms
+
+### Form Design
+- Design form layouts that adapt to different screen sizes
+- Use appropriate input types for better mobile experiences
+- Implement inline validation and clear error messaging
+- Use MUI TextField for consistent form inputs
+
+### Form Accessibility
+- Ensure form labels are properly associated
+- Provide clear error messages near inputs
+- Support keyboard navigation through form fields
+- Use proper input types (email, tel, number, etc.)
+
+## Testing and Iteration
+
+### A/B Testing
+- Conduct A/B testing for critical design decisions
+- Test different layouts, colors, and CTAs
+- Use data to inform design decisions
+
+### User Testing
+- Use heatmaps and session recordings to analyze user behavior
+- Regularly gather and incorporate user feedback
+- Test with actual users on real devices
+- Conduct usability testing across different device types
+
+### Browser Testing
+- Use browser developer tools to test responsiveness
+- Test on actual devices, not just emulators
+- Test across different browsers and versions
+- Test with various assistive technologies
+
+### Continuous Improvement
+- Continuously iterate on designs based on data and feedback
+- Monitor performance metrics and user behavior
+- Stay updated with latest UI/UX trends and best practices
+
+## Documentation
+
+### Style Guide
+- Maintain a comprehensive style guide
+- Document design patterns and component usage
+- Keep design assets organized and accessible to the team
+- Reference MUI theme for component styling
+
+### Design Patterns
+- Document design patterns and component usage
+- Create user flow diagrams for complex interactions
+- Maintain component library documentation
+- Document accessibility considerations
+
+## Implementation Guidelines
+
+### MUI Integration
+- Use MUI components for complex UI elements (see `mui-component-usage.mdc`)
+- Customize MUI theme in `storefront/src/lib/theme/mui-theme.ts`
+- Use Tailwind for layout and custom styling
+- Combine MUI components with Tailwind classes when needed
+
+### Next.js Best Practices
+- Use Server Components when possible for better performance
+- Use Client Components (`'use client'`) only when needed
+- Implement proper image optimization with Next.js Image
+- Use `next/dynamic` for code splitting
+
+### Code Quality
+- Follow TypeScript best practices
+- Use proper semantic HTML
+- Ensure all interactive elements are keyboard accessible
+- Test components in isolation and in context
+
+## Resources
+
+- **WCAG Guidelines**: https://www.w3.org/WAI/WCAG21/quickref/
+- **MUI Theme**: `storefront/src/lib/theme/mui-theme.ts`
+- **MUI Components**: See `mui-component-usage.mdc`
+- **Next.js Image Optimization**: https://nextjs.org/docs/app/building-your-application/optimizing/images
+- **Core Web Vitals**: https://web.dev/vitals/
+
+## Stay Updated
+
+- Refer to industry-standard guidelines
+- Stay updated with latest UI/UX trends and best practices
+- Monitor browser capabilities and new CSS features
+- Follow accessibility standards and updates
+- Keep up with responsive design techniques

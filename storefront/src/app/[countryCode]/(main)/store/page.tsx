@@ -20,12 +20,14 @@ type Params = {
     sortBy?: SortOptions
     page?: string
   }
-  params: {
+  params: Promise<{
     countryCode: string
-  }
+  }>
 }
 
 export default async function StorePage({ searchParams, params }: Params) {
+  // Await params in Next.js 16
+  const resolvedParams = await params
   const { sortBy, page } = searchParams
 
   return (
@@ -33,7 +35,7 @@ export default async function StorePage({ searchParams, params }: Params) {
       <StoreTemplate
         sortBy={sortBy}
         page={page}
-        countryCode={params.countryCode}
+        countryCode={resolvedParams.countryCode}
       />
     </Suspense>
   )
