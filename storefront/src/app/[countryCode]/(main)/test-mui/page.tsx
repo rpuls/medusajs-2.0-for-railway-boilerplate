@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { getProductsList } from "@lib/data/products"
+import { getProductsList, getProductsById } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import MuiTestPage from "./mui-test-page"
 
@@ -59,11 +59,24 @@ export default async function TestMuiPage({
       countryCode: fallbackRegion.countries?.[0]?.iso_2?.toLowerCase() || 'us',
     })
 
+    // Fetch priced products for all products
+    const productIds = response.products.map((p) => p.id!).filter(Boolean)
+    const pricedProducts = await getProductsById({
+      ids: productIds,
+      regionId: fallbackRegion.id,
+    })
+
+    // Create a map of product ID to priced product for quick lookup
+    const pricedProductsMap = new Map(
+      pricedProducts.map((p) => [p.id, p])
+    )
+
     return (
       <MuiTestPage 
         products={response.products} 
         region={fallbackRegion} 
-        countryCode={fallbackRegion.countries?.[0]?.iso_2?.toLowerCase() || 'us'} 
+        countryCode={fallbackRegion.countries?.[0]?.iso_2?.toLowerCase() || 'us'}
+        pricedProductsMap={pricedProductsMap}
       />
     )
   }
@@ -75,6 +88,25 @@ export default async function TestMuiPage({
     countryCode,
   })
 
-  return <MuiTestPage products={response.products} region={region} countryCode={countryCode} />
+  // Fetch priced products for all products
+  const productIds = response.products.map((p) => p.id!).filter(Boolean)
+  const pricedProducts = await getProductsById({
+    ids: productIds,
+    regionId: region.id,
+  })
+
+  // Create a map of product ID to priced product for quick lookup
+  const pricedProductsMap = new Map(
+    pricedProducts.map((p) => [p.id, p])
+  )
+
+  return (
+    <MuiTestPage 
+      products={response.products} 
+      region={region} 
+      countryCode={countryCode}
+      pricedProductsMap={pricedProductsMap}
+    />
+  )
 }
 

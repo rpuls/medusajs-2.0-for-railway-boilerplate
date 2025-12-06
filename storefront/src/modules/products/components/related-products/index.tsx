@@ -1,19 +1,8 @@
 import { Suspense } from "react"
-import dynamic from "next/dynamic"
 import { getRegion } from "@lib/data/regions"
-import { getProductsList } from "@lib/data/products"
+import { getProductsList, getProductsById } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
-
-// Lazy load product preview for related products (below fold)
-const Product = dynamic(() => import("../product-preview"), {
-  loading: () => (
-    <div className="animate-pulse">
-      <div className="bg-gray-200 aspect-[9/16] rounded-lg mb-4"></div>
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-    </div>
-  ),
-})
+import ProductTile, { ProductTileSkeleton } from "../product-tile"
 
 type RelatedProductsProps = {
   product: HttpTypes.StoreProduct
@@ -22,6 +11,8 @@ type RelatedProductsProps = {
 
 type StoreProductParamsWithTags = HttpTypes.StoreProductParams & {
   tags?: string[]
+  collection_id?: string[]
+  is_giftcard?: boolean
 }
 
 type StoreProductWithTags = HttpTypes.StoreProduct & {
@@ -67,6 +58,18 @@ export default async function RelatedProducts({
     return null
   }
 
+  // Batch fetch priced products for all related products (performance optimization)
+  const productIds = products.map((p) => p.id!).filter(Boolean)
+  const pricedProducts = await getProductsById({
+    ids: productIds,
+    regionId: region.id,
+  })
+
+  // Create a map for quick lookup
+  const pricedProductsMap = new Map(
+    pricedProducts.map((p) => [p.id, p])
+  )
+
   return (
     <div className="product-page-constraint">
       <div className="flex flex-col items-center text-center mb-16">
@@ -79,21 +82,25 @@ export default async function RelatedProducts({
       </div>
 
       <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-        {products.map((product) => (
-          <li key={product.id}>
-            <Suspense
-              fallback={
-                <div className="animate-pulse">
-                  <div className="bg-gray-200 aspect-[9/16] rounded-lg mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              }
-            >
-              {region && <Product region={region} product={product} />}
-            </Suspense>
-          </li>
-        ))}
+        {products.map((relatedProduct, index) => {
+          const pricedProduct = pricedProductsMap.get(relatedProduct.id!)
+          if (!pricedProduct) {
+            return null
+          }
+          return (
+            <li key={relatedProduct.id}>
+              <Suspense fallback={<ProductTileSkeleton />}>
+                <ProductTile
+                  product={relatedProduct}
+                  region={region}
+                  countryCode={countryCode}
+                  priority={index < 4} // Prioritize first 4 images for LCP
+                  pricedProduct={pricedProduct}
+                />
+              </Suspense>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )

@@ -64,15 +64,17 @@ import {
   Search,
 } from '@mui/icons-material'
 import { HttpTypes } from '@medusajs/types'
-import { getProductPrice } from '@lib/util/get-product-price'
+import ProductTileWrapper from '@modules/products/components/product-tile/product-tile-wrapper'
+import { ProductTileSkeleton } from '@modules/products/components/product-tile'
 
 type MuiTestPageProps = {
   products: HttpTypes.StoreProduct[]
   region: HttpTypes.StoreRegion
   countryCode: string
+  pricedProductsMap: Map<string, HttpTypes.StoreProduct>
 }
 
-export default function MuiTestPage({ products, region, countryCode }: MuiTestPageProps) {
+export default function MuiTestPage({ products, region, countryCode, pricedProductsMap }: MuiTestPageProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'warning' | 'info' })
   const [activeTab, setActiveTab] = useState(0)
@@ -176,141 +178,36 @@ export default function MuiTestPage({ products, region, countryCode }: MuiTestPa
         </Grid>
       </Paper>
 
-      {/* Product Cards Section */}
+      {/* Product Cards Section - Using Optimized ProductTile Component */}
       <Paper elevation={2} className="p-6 mb-6">
-        <Typography variant="h5" className="mb-4">Product Cards</Typography>
+        <Typography variant="h5" className="mb-4">Product Cards (Optimized)</Typography>
+        <Typography variant="body2" color="text.secondary" className="mb-4">
+          Features: Server-side rendering, lazy image loading, loading skeletons, smooth animations, stock status checking
+        </Typography>
         {products.length === 0 ? (
           <Typography variant="body1" color="text.secondary">
             No products available. Please add products to your store.
           </Typography>
         ) : (
           <Grid container spacing={3}>
-            {products.map((product) => {
-              const { cheapestPrice } = getProductPrice({ product })
-              const thumbnail = product.thumbnail || product.images?.[0]?.url
-              const hasVariants = product.variants && product.variants.length > 0
-              
-              // Check if any variant is in stock (matching logic from product-actions)
-              const isInStock = hasVariants && (product.variants || []).some((v: any) => {
-                // If inventory is not managed, product is always available
-                if (!v.manage_inventory) {
-                  return true
-                }
-                // If backorders are allowed, product is available
-                if (v.allow_backorder) {
-                  return true
-                }
-                // If inventory is managed and quantity > 0, product is available
-                if (v.manage_inventory && (v.inventory_quantity || 0) > 0) {
-                  return true
-                }
-                return false
-              })
-              
+            {products.map((product, index) => {
+              const pricedProduct = pricedProductsMap.get(product.id!)
+              if (!pricedProduct) {
+                return (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={product.id}>
+                    <ProductTileSkeleton />
+                  </Grid>
+                )
+              }
               return (
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={product.id}>
-                  <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
-                    <CardMedia
-                      component="div"
-                      className="relative h-48 bg-gray-100 overflow-hidden"
-                    >
-                      {thumbnail ? (
-                        <Link href={`/${countryCode}/products/${product.handle}`}>
-                          <Image
-                            src={thumbnail}
-                            alt={product.title || 'Product image'}
-                            fill
-                            className="object-cover hover:scale-105 transition-transform duration-300"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                        </Link>
-                      ) : (
-                        <Box className="h-full flex items-center justify-center">
-                          <Typography variant="body2" color="text.secondary">
-                            No Image
-                          </Typography>
-                        </Box>
-                      )}
-                    </CardMedia>
-                    <CardContent className="flex-grow">
-                      <Link href={`/${region.countries?.[0]?.iso_2 || 'bg'}/products/${product.handle}`}>
-                        <Typography 
-                          variant="h6" 
-                          component="h3" 
-                          className="mb-2 hover:text-primary cursor-pointer line-clamp-2"
-                        >
-                          {product.title}
-                        </Typography>
-                      </Link>
-                      {product.description && (
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary" 
-                          className="mb-2 line-clamp-2"
-                        >
-                          {product.description}
-                        </Typography>
-                      )}
-                      {cheapestPrice ? (
-                        <Box className="mb-2">
-                          {cheapestPrice.price_type === 'sale' && cheapestPrice.original_price_number > cheapestPrice.calculated_price_number ? (
-                            <Box>
-                              <Typography 
-                                variant="body2" 
-                                className="line-through text-gray-400"
-                              >
-                                {cheapestPrice.original_price}
-                              </Typography>
-                              <Box className="flex items-center gap-2">
-                                <Typography variant="h6" color="error" className="font-bold">
-                                  {cheapestPrice.calculated_price}
-                                </Typography>
-                                <Chip 
-                                  label={`-${cheapestPrice.percentage_diff}%`} 
-                                  size="small" 
-                                  color="error"
-                                />
-                              </Box>
-                            </Box>
-                          ) : (
-                            <Typography variant="h6" color="primary" className="font-bold">
-                              {cheapestPrice.calculated_price}
-                            </Typography>
-                          )}
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          Price not available
-                        </Typography>
-                      )}
-                      <Box className="flex gap-2 mt-2 flex-wrap">
-                        {isInStock ? (
-                          <Chip label="In Stock" size="small" color="success" />
-                        ) : (
-                          <Chip label="Out of Stock" size="small" color="error" />
-                        )}
-                        {product.collection && (
-                          <Chip 
-                            label={product.collection.title || 'Collection'} 
-                            size="small" 
-                            variant="outlined"
-                          />
-                        )}
-                      </Box>
-                    </CardContent>
-                    <CardActions className="p-4 pt-0">
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        startIcon={<ShoppingCart />}
-                        disabled={!isInStock}
-                        component={Link}
-                        href={`/${region.countries?.[0]?.iso_2 || 'bg'}/products/${product.handle}`}
-                      >
-                        {isInStock ? 'View Product' : 'Out of Stock'}
-                      </Button>
-                    </CardActions>
-                  </Card>
+                  <ProductTileWrapper
+                    product={product}
+                    region={region}
+                    countryCode={countryCode}
+                    priority={index < 3} // Prioritize first 3 images for LCP
+                    pricedProduct={pricedProduct}
+                  />
                 </Grid>
               )
             })}

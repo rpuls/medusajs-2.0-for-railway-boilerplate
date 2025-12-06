@@ -1,22 +1,9 @@
 import { HttpTypes } from "@medusajs/types"
-import dynamic from "next/dynamic"
 import { getTranslations, getTranslation } from "@lib/i18n/server"
+import { getProductsById } from "@lib/data/products"
 
 import InteractiveLink from "@modules/common/components/interactive-link"
-
-// Lazy load product preview for better performance
-const ProductPreview = dynamic(
-  () => import("@modules/products/components/product-preview"),
-  {
-    loading: () => (
-      <div className="animate-pulse">
-        <div className="bg-gray-200 aspect-[11/14] rounded-lg mb-4"></div>
-        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-      </div>
-    ),
-  }
-)
+import ProductTile from "@modules/products/components/product-tile"
 
 interface ProductRailProps {
   collection: HttpTypes.StoreCollection
@@ -44,6 +31,18 @@ export default async function ProductRail({
   const displayTitle = title || collection.title
   const viewAllText = getTranslation(translations, "homepage.viewAll")
 
+  // Batch fetch priced products for all products (performance optimization)
+  const productIds = products.map((p) => p.id!).filter(Boolean)
+  const pricedProducts = await getProductsById({
+    ids: productIds,
+    regionId: region.id,
+  })
+
+  // Create a map for quick lookup
+  const pricedProductsMap = new Map(
+    pricedProducts.map((p) => [p.id, p])
+  )
+
   return (
     <div className="content-container py-8 md:py-12">
       <div className="flex justify-between items-center mb-6 md:mb-8">
@@ -62,12 +61,24 @@ export default async function ProductRail({
       {/* Horizontal Scrollable Product Carousel */}
       <div className="overflow-x-auto scrollbar-hide -mx-6 px-6">
         <ul className="flex gap-4 md:gap-6 min-w-max">
-          {products.map((product) => (
-            <li key={product.id} className="flex-shrink-0 w-[200px] md:w-[240px]">
-              {/* @ts-ignore */}
-              <ProductPreview product={product} region={region} isFeatured />
-            </li>
-          ))}
+          {products.map((product, index) => {
+            const pricedProduct = pricedProductsMap.get(product.id!)
+            // Only render if we have priced product data
+            if (!pricedProduct) {
+              return null
+            }
+            return (
+              <li key={product.id} className="flex-shrink-0 w-[200px] md:w-[240px]">
+                <ProductTile 
+                  product={product} 
+                  region={region}
+                  countryCode={countryCode}
+                  priority={index < 4} // Prioritize first 4 images for LCP
+                  pricedProduct={pricedProduct}
+                />
+              </li>
+            )
+          })}
         </ul>
       </div>
     </div>

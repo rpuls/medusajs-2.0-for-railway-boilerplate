@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: "Explore all of our products.",
 }
 
+// Enable ISR with 1 hour revalidation for search results
+export const revalidate = 3600
+
 type Params = {
   params: Promise<{ query: string; countryCode: string }>
   searchParams: {

@@ -11,15 +11,23 @@ export default async function ProductPreview({
   product,
   isFeatured,
   region,
+  pricedProduct: preFetchedPricedProduct,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
+  pricedProduct?: HttpTypes.StoreProduct // Optional pre-fetched priced product for batch optimization
 }) {
-  const [pricedProduct] = await getProductsById({
-    ids: [product.id!],
-    regionId: region.id,
-  })
+  // Use pre-fetched priced product if provided, otherwise fetch it
+  let pricedProduct = preFetchedPricedProduct
+  
+  if (!pricedProduct) {
+    const [fetchedPricedProduct] = await getProductsById({
+      ids: [product.id!],
+      regionId: region.id,
+    })
+    pricedProduct = fetchedPricedProduct
+  }
 
   if (!pricedProduct) {
     return null
