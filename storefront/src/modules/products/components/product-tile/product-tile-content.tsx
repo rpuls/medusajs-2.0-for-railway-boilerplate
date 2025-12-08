@@ -19,6 +19,7 @@ import { ShoppingCart } from '@mui/icons-material'
 import { HttpTypes } from '@medusajs/types'
 import { getProductPrice } from '@lib/util/get-product-price'
 import { addToCartAction } from '@modules/products/actions/add-to-cart'
+import { useTranslation } from '@lib/i18n/hooks/use-translation'
 
 /**
  * Client Component for Product Tile with interactive features
@@ -36,6 +37,7 @@ export default function ProductTileContent({
   countryCode: string
   priority?: boolean
 }) {
+  const { t } = useTranslation()
   const params = useParams()
   const actualCountryCode = (params?.countryCode as string) || countryCode
   const [isAdding, setIsAdding] = useState(false)
@@ -128,7 +130,7 @@ export default function ProductTileContent({
           ) : (
             <Box className="h-full flex items-center justify-center bg-gray-100">
               <Typography variant="body2" color="text.secondary">
-                No Image
+                {t("product.noImage")}
               </Typography>
             </Box>
           )}
@@ -201,44 +203,44 @@ export default function ProductTileContent({
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary" className="mb-2">
-              Price not available
+              {t("product.priceNotAvailable")}
             </Typography>
           )}
 
           {/* Status Chips */}
-          <Box className="flex gap-2 mt-auto flex-wrap">
-            {isInStock ? (
-              <Chip label="In Stock" size="small" color="success" />
-            ) : (
-              <Chip label="Out of Stock" size="small" color="error" />
-            )}
-            {product.collection && (
-              <Chip
-                label={product.collection.title || 'Collection'}
-                size="small"
-                variant="outlined"
-              />
-            )}
-          </Box>
+              <Box className="flex gap-2 mt-auto flex-wrap">
+                {isInStock ? (
+                  <Chip label={t("product.inStock")} size="small" color="success" />
+                ) : (
+                  <Chip label={t("product.outOfStock")} size="small" color="error" />
+                )}
+                {product.collection && (
+                  <Chip
+                    label={product.collection.title || t("filters.collection")}
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
         </CardContent>
 
         {/* Actions */}
         <CardActions className="p-4 pt-0" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="contained"
-            fullWidth
-            startIcon={isAdding ? <CircularProgress size={16} color="inherit" /> : <ShoppingCart />}
-            disabled={!isInStock || isAdding || !defaultVariant}
-            onClick={handleAddToCart}
-            className="transition-all duration-200"
-            sx={{
-              '&:hover': {
-                transform: 'scale(1.02)',
-              },
-            }}
-          >
-            {isAdding ? 'Adding...' : isInStock ? 'Add to Cart' : 'Out of Stock'}
-          </Button>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={isAdding ? <CircularProgress size={16} color="inherit" /> : <ShoppingCart />}
+              disabled={!isInStock || isAdding || !defaultVariant}
+              onClick={handleAddToCart}
+              className="transition-all duration-200"
+              sx={{
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                },
+              }}
+            >
+              {isAdding ? t("product.adding") : isInStock ? t("product.addToCart") : t("product.outOfStock")}
+            </Button>
         </CardActions>
       </Card>
     </Link>

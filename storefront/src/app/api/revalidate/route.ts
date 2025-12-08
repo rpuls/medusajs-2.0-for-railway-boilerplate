@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (path) {
-      // Revalidate by path
-      revalidatePath(path)
+      // Revalidate by path (type can be 'page', 'layout', or 'page')
+      revalidatePath(path, "page")
       return NextResponse.json({
         revalidated: true,
         path,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // If neither tag nor path specified, revalidate common tags
     revalidateTag("products")
     revalidateTag("regions")
-    revalidatePath("/")
+    revalidatePath("/", "page")
     
     return NextResponse.json({
       revalidated: true,

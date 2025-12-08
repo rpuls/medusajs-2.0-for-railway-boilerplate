@@ -69,15 +69,31 @@ export const getProductsList = cache(async function ({
       nextPage: null,
     }
   }
+  // Build the request params, ensuring collection_id and category_id are properly included
+  const requestParams: any = {
+    limit,
+    offset,
+    region_id: region.id,
+    fields: "*variants.calculated_price,+variants.inventory_quantity",
+  }
+
+  // Explicitly add filter params to ensure they're included
+  if (queryParams?.collection_id) {
+    requestParams.collection_id = queryParams.collection_id
+  }
+  if (queryParams?.category_id) {
+    requestParams.category_id = queryParams.category_id
+  }
+  if (queryParams?.id) {
+    requestParams.id = queryParams.id
+  }
+  if (queryParams?.order) {
+    requestParams.order = queryParams.order
+  }
+
   return sdk.store.product
     .list(
-      {
-        limit,
-        offset,
-        region_id: region.id,
-        fields: "*variants.calculated_price,+variants.inventory_quantity",
-        ...queryParams,
-      },
+      requestParams,
       {
         next: {
           tags: ["products"],

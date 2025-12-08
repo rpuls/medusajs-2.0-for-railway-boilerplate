@@ -48,6 +48,7 @@
   },
   "product": {
     "addToCart": "Добави в кошницата",
+    "adding": "Добавяне...",
     "quickBuy": "Бърза покупка",
     "buyNow": "Купи сега",
     "relatedProducts": "Свързани продукти",
@@ -58,21 +59,35 @@
     "description": "Описание",
     "specifications": "Спецификации",
     "shipping": "Доставка",
-    "returns": "Връщане"
+    "returns": "Връщане",
+    "noImage": "Няма изображение",
+    "priceNotAvailable": "Цената не е налична"
   },
   "filters": {
     "filter": "Филтър",
     "sortBy": "Подреждане по",
     "results": "резултата",
-    "showing": "показани",
+    "showing": "Показани",
     "of": "от",
     "clearFilters": "Изчисти филтрите",
     "activeFilters": "Активни филтри",
     "price": "Цена",
     "category": "Категория",
+    "collection": "Колекция",
     "brand": "Марка",
     "form": "Форма",
-    "subcategory": "Подкатегория"
+    "subcategory": "Подкатегория",
+    "latestArrivals": "Най-нови",
+    "priceLowToHigh": "Цена: Ниска -> Висока",
+    "priceHighToLow": "Цена: Висока -> Ниска",
+    "allPrices": "Всички цени",
+    "under25": "Под 25",
+    "price25to50": "25 - 50",
+    "price50to100": "50 - 100",
+    "price100to200": "100 - 200",
+    "price200Plus": "200+",
+    "noProductsFound": "Няма намерени продукти",
+    "showingResults": "Показани {start}-{end} от {total} резултата"
   },
   "homepage": {
     "hero": {

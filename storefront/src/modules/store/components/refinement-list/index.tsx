@@ -2,38 +2,79 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
+import { HttpTypes } from "@medusajs/types"
 
-import SortProducts, { SortOptions } from "./sort-products"
+import FilterCollection from "./filter-collection"
+import FilterCategory from "./filter-category"
+import FilterPrice from "./filter-price"
 
 type RefinementListProps = {
-  sortBy: SortOptions
+  collections: HttpTypes.StoreCollection[]
+  categories: HttpTypes.StoreProductCategory[]
   search?: boolean
   'data-testid'?: string
 }
 
-const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListProps) => {
+const RefinementList = ({
+  collections,
+  categories,
+  'data-testid': dataTestId,
+}: RefinementListProps) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const createQueryString = useCallback(
-    (name: string, value: string) => {
+    (name: string, value: string | string[]) => {
       const params = new URLSearchParams(searchParams)
-      params.set(name, value)
-
+      if (Array.isArray(value)) {
+        // Handle array values (for multiple selections)
+        params.delete(name)
+        if (value.length > 0) {
+          value.forEach((v) => {
+            if (v) {
+              params.append(name, v)
+            }
+          })
+        }
+      } else {
+        // Handle single values
+        if (value) {
+          params.set(name, value)
+        } else {
+          params.delete(name)
+        }
+      }
+      // Reset to page 1 when filters change
+      params.delete("page")
       return params.toString()
     },
     [searchParams]
   )
 
-  const setQueryParams = (name: string, value: string) => {
+  const setQueryParams = (name: string, value: string | string[]) => {
     const query = createQueryString(name, value)
-    router.push(`${pathname}?${query}`)
+    router.push(`${pathname}?${query}`, { scroll: false })
+  }
+
+  const setQueryParamsArray = (name: string, values: string[]) => {
+    const query = createQueryString(name, values)
+    router.push(`${pathname}?${query}`, { scroll: false })
   }
 
   return (
-    <div className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
-      <SortProducts sortBy={sortBy} setQueryParams={setQueryParams} data-testid={dataTestId} />
+    <div className="flex small:flex-col gap-8 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
+      <FilterCollection
+        collections={collections}
+        setQueryParamsArray={setQueryParamsArray}
+      />
+      <FilterCategory
+        categories={categories}
+        setQueryParamsArray={setQueryParamsArray}
+      />
+      <FilterPrice
+        setQueryParams={setQueryParams}
+      />
     </div>
   )
 }

@@ -48,6 +48,7 @@
   },
   "product": {
     "addToCart": "Add to cart",
+    "adding": "Adding...",
     "quickBuy": "Quick Buy",
     "buyNow": "Buy Now",
     "relatedProducts": "Related Products",
@@ -58,21 +59,35 @@
     "description": "Description",
     "specifications": "Specifications",
     "shipping": "Shipping",
-    "returns": "Returns"
+    "returns": "Returns",
+    "noImage": "No Image",
+    "priceNotAvailable": "Price not available"
   },
   "filters": {
     "filter": "Filter",
     "sortBy": "Sort by",
     "results": "results",
-    "showing": "showing",
+    "showing": "Showing",
     "of": "of",
     "clearFilters": "Clear filters",
     "activeFilters": "Active filters",
     "price": "Price",
     "category": "Category",
+    "collection": "Collection",
     "brand": "Brand",
     "form": "Form",
-    "subcategory": "Subcategory"
+    "subcategory": "Subcategory",
+    "latestArrivals": "Latest Arrivals",
+    "priceLowToHigh": "Price: Low -> High",
+    "priceHighToLow": "Price: High -> Low",
+    "allPrices": "All Prices",
+    "under25": "Under 25",
+    "price25to50": "25 - 50",
+    "price50to100": "50 - 100",
+    "price100to200": "100 - 200",
+    "price200Plus": "200+",
+    "noProductsFound": "No products found",
+    "showingResults": "Showing {start}-{end} of {total} results"
   },
   "homepage": {
     "hero": {
