@@ -7,6 +7,7 @@ import ActiveFilters from "@modules/store/components/active-filters"
 import ProductCount from "@modules/store/components/product-count"
 import { getCollectionsList } from "@lib/data/collections"
 import { getCategoriesList } from "@lib/data/categories"
+import { getActiveBrands } from "@lib/data/brands"
 import { getTranslations, getTranslation } from "@lib/i18n/server"
 
 import PaginatedProducts from "./paginated-products"
@@ -17,18 +18,22 @@ async function PaginatedProductsWrapper({
   countryCode,
   collectionIds,
   categoryIds,
+  brandIds,
   priceRange,
   collections,
   categories,
+  brands,
 }: {
   sortBy: SortOptions
   page: number
   countryCode: string
   collectionIds?: string[]
   categoryIds?: string[]
+  brandIds?: string[]
   priceRange?: string
   collections: any[]
   categories: any[]
+  brands: any[]
 }) {
   const result = await PaginatedProducts({
     sortBy,
@@ -36,6 +41,7 @@ async function PaginatedProductsWrapper({
     countryCode,
     collectionIds,
     categoryIds,
+    brandIds,
     priceRange,
   })
 
@@ -50,8 +56,10 @@ async function PaginatedProductsWrapper({
         <ActiveFilters
           collections={collections}
           categories={categories}
+          brands={brands}
           selectedCollectionIds={collectionIds}
           selectedCategoryIds={categoryIds}
+          selectedBrandIds={brandIds}
           selectedPriceRange={priceRange}
         />
       </div>
@@ -66,6 +74,7 @@ const StoreTemplate = async ({
   countryCode,
   collectionIds,
   categoryIds,
+  brandIds,
   priceRange,
 }: {
   sortBy?: SortOptions
@@ -73,20 +82,22 @@ const StoreTemplate = async ({
   countryCode: string
   collectionIds?: string[]
   categoryIds?: string[]
+  brandIds?: string[]
   priceRange?: string
 }) => {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
   // Fetch filter data and translations server-side (optimized with caching)
-  const [{ collections }, { product_categories: categories }, translations] = await Promise.all([
+  const [{ collections }, { product_categories: categories }, brands, translations] = await Promise.all([
     getCollectionsList(0, 100),
     getCategoriesList(0, 100),
+    getActiveBrands(),
     getTranslations(countryCode),
   ])
 
   // Create key for Suspense based on filter arrays
-  const filterKey = `${JSON.stringify(collectionIds || [])}-${JSON.stringify(categoryIds || [])}-${priceRange}-${sort}-${pageNumber}`
+  const filterKey = `${JSON.stringify(collectionIds || [])}-${JSON.stringify(categoryIds || [])}-${JSON.stringify(brandIds || [])}-${priceRange}-${sort}-${pageNumber}`
 
   return (
     <div
@@ -96,6 +107,7 @@ const StoreTemplate = async ({
       <RefinementList
         collections={collections}
         categories={categories}
+        brands={brands}
       />
       <div className="w-full">
         <div className="mb-6 flex items-center justify-between">
@@ -121,9 +133,11 @@ const StoreTemplate = async ({
             countryCode={countryCode}
             collectionIds={collectionIds}
             categoryIds={categoryIds}
+            brandIds={brandIds}
             priceRange={priceRange}
             collections={collections}
             categories={categories}
+            brands={brands}
           />
         </Suspense>
       </div>

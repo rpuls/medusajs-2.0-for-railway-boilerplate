@@ -7,10 +7,13 @@ import { HttpTypes } from "@medusajs/types"
 import FilterCollection from "./filter-collection"
 import FilterCategory from "./filter-category"
 import FilterPrice from "./filter-price"
+import FilterBrand from "./filter-brand"
+import { Brand } from "@lib/data/brands"
 
 type RefinementListProps = {
   collections: HttpTypes.StoreCollection[]
   categories: HttpTypes.StoreProductCategory[]
+  brands?: Brand[]
   search?: boolean
   'data-testid'?: string
 }
@@ -18,6 +21,7 @@ type RefinementListProps = {
 const RefinementList = ({
   collections,
   categories,
+  brands,
   'data-testid': dataTestId,
 }: RefinementListProps) => {
   const router = useRouter()
@@ -72,6 +76,12 @@ const RefinementList = ({
         categories={categories}
         setQueryParamsArray={setQueryParamsArray}
       />
+      {brands && brands.length > 0 && (
+        <FilterBrand
+          brands={brands}
+          setQueryParamsArray={setQueryParamsArray}
+        />
+      )}
       <FilterPrice
         setQueryParams={setQueryParams}
       />

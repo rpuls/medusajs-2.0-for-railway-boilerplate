@@ -29,6 +29,7 @@ import {
 } from 'lib/constants';
 import { XML_PRODUCT_IMPORTER_MODULE } from './src/modules/xml-product-importer';
 import { ECONT_SHIPPING_MODULE } from './src/modules/econt-shipping';
+import { BRAND_MODULE } from './src/modules/brand';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
@@ -168,6 +169,10 @@ const medusaConfig = {
     {
       key: ECONT_SHIPPING_MODULE,
       resolve: "./src/modules/econt-shipping",
+    },
+    {
+      key: BRAND_MODULE,
+      resolve: "./src/modules/brand",
     }
   ],
   plugins: [

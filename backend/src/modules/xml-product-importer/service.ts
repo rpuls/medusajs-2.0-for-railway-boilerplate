@@ -1,8 +1,10 @@
 import { MedusaService } from "@medusajs/framework/utils"
 import { Logger, MedusaContainer } from "@medusajs/framework/types"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import { MedusaError, Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { XMLParser } from "fast-xml-parser"
 import { IProductModuleService } from "@medusajs/framework/types"
+import { IS_DEV, MINIO_ENDPOINT } from "../../lib/constants"
+import { BRAND_MODULE } from "../brand"
 import { FieldMapping } from "./models/field-mapping"
 import { ImportConfig } from "./models/import-config"
 import { ImportExecution } from "./models/import-execution"
@@ -1136,6 +1138,176 @@ class XmlProductImporterService extends MedusaService({
     }
     
     return parentCategoryId
+  }
+
+  /**
+   * Get or create brand by name
+   * Creates brand if it doesn't exist, uploads image to MinIO if provided
+   * Returns the brand ID
+   */
+  async getOrCreateBrand(
+    brandName: string,
+    brandImageUrl: string | undefined,
+    container: MedusaContainer,
+    brandCache?: Map<string, string>
+  ): Promise<string> {
+    this.logger_.info(`Processing brand: "${brandName}"`)
+    
+    if (!brandName || brandName.trim().length === 0) {
+      throw new Error(`Invalid brand name: "${brandName}"`)
+    }
+
+    // Normalize brand name (trim, case-insensitive for cache)
+    const normalizedBrandName = brandName.trim()
+    const cacheKey = normalizedBrandName.toLowerCase()
+    
+    // Initialize cache if not provided
+    const cache = brandCache || new Map<string, string>()
+    
+    // Check cache first
+    if (cache.has(cacheKey)) {
+      const brandId = cache.get(cacheKey)!
+      this.logger_.debug(`Found brand "${brandName}" in cache with ID ${brandId}`)
+      return brandId
+    }
+    
+    // Resolve Brand Module Service
+    const brandService = container.resolve<import("../brand/service").default>(BRAND_MODULE)
+    
+    // Query existing brand by name
+    try {
+      const existingBrands = await brandService.listBrands({ name: normalizedBrandName }, {})
+      
+      if (existingBrands && existingBrands.length > 0) {
+        // Brand exists, use its ID
+        const brandId = existingBrands[0].id
+        cache.set(cacheKey, brandId)
+        this.logger_.debug(`Found existing brand "${brandName}" with ID ${brandId}`)
+        
+        // If brand exists but has no image and we have an image URL, update it
+        if (brandImageUrl && !existingBrands[0].image_url) {
+          try {
+            const imageUrl = await this.uploadBrandImageToMinIO(brandImageUrl, container)
+            if (imageUrl) {
+              const updateResult = await brandService.updateBrands({ id: brandId }, { image_url: imageUrl })
+              // updateBrands returns array or single value
+              if (Array.isArray(updateResult) && updateResult.length > 0) {
+                this.logger_.debug(`Updated brand "${brandName}" with image: ${imageUrl}`)
+              }
+              this.logger_.info(`Updated brand "${brandName}" with image: ${imageUrl}`)
+            }
+          } catch (imageError) {
+            this.logger_.warn(`Failed to update brand image for "${brandName}": ${imageError instanceof Error ? imageError.message : 'Unknown error'}`)
+            // Continue without image update
+          }
+        }
+        
+        return brandId
+      }
+    } catch (error) {
+      this.logger_.warn(`Error querying brand "${brandName}": ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+    
+    // Brand doesn't exist, create it
+    try {
+      let imageUrl: string | null = null
+      
+      // Upload brand image to MinIO if provided
+      if (brandImageUrl) {
+        try {
+          imageUrl = await this.uploadBrandImageToMinIO(brandImageUrl, container)
+        } catch (imageError) {
+          this.logger_.warn(`Failed to upload brand image for "${brandName}": ${imageError instanceof Error ? imageError.message : 'Unknown error'}`)
+          // Continue without image
+        }
+      }
+      
+      const createdBrands = await brandService.createBrands([
+        {
+          name: normalizedBrandName,
+          image_url: imageUrl,
+        },
+      ])
+      
+      if (createdBrands && createdBrands.length > 0) {
+        const brandId = createdBrands[0].id
+        cache.set(cacheKey, brandId)
+        this.logger_.info(`Created brand "${brandName}" with ID ${brandId}${imageUrl ? ` and image: ${imageUrl}` : ''}`)
+        return brandId
+      } else {
+        throw new Error(`Failed to create brand "${brandName}"`)
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      // If brand already exists (handle conflict), try to find it and use it
+      if (errorMessage.includes('already exists') || errorMessage.includes('duplicate')) {
+        this.logger_.debug(`Brand "${brandName}" already exists, attempting to find it`)
+        
+        try {
+          const existingBrands = await brandService.listBrands({ name: normalizedBrandName }, {})
+          
+          if (existingBrands && existingBrands.length > 0) {
+            const brandId = existingBrands[0].id
+            cache.set(cacheKey, brandId)
+            this.logger_.info(`Found existing brand "${brandName}" with ID ${brandId}`)
+            return brandId
+          }
+        } catch (findError) {
+          this.logger_.warn(`Error finding existing brand "${brandName}": ${findError instanceof Error ? findError.message : 'Unknown error'}`)
+        }
+      }
+      
+      // If we couldn't recover from the error, throw it
+      this.logger_.error(`Error creating brand "${brandName}": ${errorMessage}`)
+      throw new Error(`Failed to create brand "${brandName}": ${errorMessage}`)
+    }
+  }
+
+  /**
+   * Upload brand image to MinIO (production) or return original URL (development)
+   */
+  private async uploadBrandImageToMinIO(
+    imageUrl: string,
+    container: MedusaContainer
+  ): Promise<string | null> {
+    const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+    const shouldUploadToMinIO = !IS_DEV && MINIO_ENDPOINT
+    
+    if (!shouldUploadToMinIO) {
+      // Development mode: return original URL
+      logger.debug(`Development mode: Using original brand image URL: ${imageUrl}`)
+      return imageUrl
+    }
+    
+    // Production mode: upload to MinIO
+    try {
+      const fileService = container.resolve(Modules.FILE)
+      
+      // Fetch image from URL
+      const response = await fetch(imageUrl)
+      if (!response.ok) {
+        logger.warn(`Failed to fetch brand image ${imageUrl}: ${response.statusText}`)
+        return null
+      }
+      
+      const imageBuffer = await response.arrayBuffer()
+      const contentType = response.headers.get('content-type') || 'image/jpeg'
+      const filename = imageUrl.split('/').pop() || 'brand-image.jpg'
+      
+      // Upload to MinIO using File Module service
+      const [uploadResult] = await fileService.createFiles([{
+        filename,
+        content: Buffer.from(imageBuffer).toString('binary'),
+        mimeType: contentType,
+      }])
+      
+      logger.debug(`Uploaded brand image ${imageUrl} to MinIO: ${uploadResult.url}`)
+      return uploadResult.url
+    } catch (error) {
+      logger.warn(`Failed to upload brand image ${imageUrl}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      return null
+    }
   }
 }
 

@@ -21,6 +21,7 @@ type Params = {
     page?: string
     collection?: string | string[]
     category?: string | string[]
+    brand?: string | string[]
     price?: string
   }>
   params: Promise<{
@@ -32,9 +33,9 @@ export default async function StorePage({ searchParams, params }: Params) {
   // Await both params and searchParams in Next.js 16
   const resolvedParams = await params
   const resolvedSearchParams = await searchParams
-  const { sortBy, page, collection, category, price } = resolvedSearchParams
+  const { sortBy, page, collection, category, brand, price } = resolvedSearchParams
 
-  // Normalize to arrays (URL can have multiple values for collection/category)
+  // Normalize to arrays (URL can have multiple values for collection/category/brand)
   const collectionIds = Array.isArray(collection) 
     ? collection.filter(Boolean)
     : collection 
@@ -47,6 +48,12 @@ export default async function StorePage({ searchParams, params }: Params) {
     ? [category]
     : []
 
+  const brandIds = Array.isArray(brand)
+    ? brand.filter(Boolean)
+    : brand
+    ? [brand]
+    : []
+
   return (
     <Suspense fallback={<div>Loading store...</div>}>
       <StoreTemplate
@@ -55,6 +62,7 @@ export default async function StorePage({ searchParams, params }: Params) {
         countryCode={resolvedParams.countryCode}
         collectionIds={collectionIds}
         categoryIds={categoryIds}
+        brandIds={brandIds}
         priceRange={price}
       />
     </Suspense>

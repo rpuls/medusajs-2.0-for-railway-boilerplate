@@ -899,6 +899,48 @@
       }
     }
   },
+  "brands": {
+    "domain": "Brands",
+    "subtitle": "Manage product brands and assign them to products",
+    "create": {
+      "header": "Create Brand",
+      "description": "Create a new brand",
+      "successToast": "Brand was successfully created."
+    },
+    "edit": {
+      "header": "Edit Brand",
+      "description": "Edit brand details",
+      "successToast": "Brand was successfully updated."
+    },
+    "delete": {
+      "confirmation": "You are about to delete the brand {{name}}. This action cannot be undone.",
+      "successToast": "Brand {{name}} was successfully deleted."
+    },
+    "products": {
+      "header": "Products",
+      "assigned_one": "{{count}} product assigned to this brand",
+      "assigned_other": "{{count}} products assigned to this brand",
+      "noRecordsMessage": "There are no products assigned to this brand."
+    },
+    "fields": {
+      "name": {
+        "label": "Name"
+      },
+      "image": {
+        "label": "Image",
+        "url": {
+          "label": "Image URL",
+          "placeholder": "https://example.com/image.jpg"
+        }
+      },
+      "productCount": {
+        "label": "Product Count"
+      },
+      "products": {
+        "label": "Products"
+      }
+    }
+  },
   "inventory": {
     "domain": "Inventory",
     "subtitle": "Manage your inventory items",

@@ -10,6 +10,7 @@ import { ContainerRegistrationKeys, Modules } from '@medusajs/framework/utils'
 import { IFulfillmentModuleService, IProductModuleService } from '@medusajs/framework/types'
 import { XML_PRODUCT_IMPORTER_MODULE } from '../modules/xml-product-importer'
 import XmlProductImporterService from '../modules/xml-product-importer/service'
+import { BRAND_MODULE } from '../modules/brand'
 import { IS_DEV, MINIO_ENDPOINT } from '../lib/constants'
 import {
   FieldMapping,
@@ -667,6 +668,105 @@ const processCategoriesStep = createStep(
 
     logger.info(
       `Processed categories for ${processedProducts.length} products. Cache size: ${categoryCache.size}`
+    )
+
+    return new StepResponse(processedProducts)
+  }
+)
+
+/**
+ * Step: Process brands - convert brand strings to brand IDs
+ */
+const processBrandsStep = createStep(
+  'process-brands',
+  async (
+    input: { products: ProductData[]; fieldMapping: FieldMapping },
+    { container }: { container: MedusaContainer }
+  ) => {
+    const { products, fieldMapping } = input
+    const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+    const importerService: XmlProductImporterService = container.resolve(
+      XML_PRODUCT_IMPORTER_MODULE
+    )
+
+    // Find the brand mapping rule
+    const brandRule = fieldMapping.mappings.find(
+      (rule) => rule.medusaField === 'brand'
+    )
+
+    if (!brandRule) {
+      // No brand mapping found, return products as-is
+      logger.debug('No brand mapping found, skipping brand processing')
+      logger.debug(`Available mappings: ${fieldMapping.mappings.map(m => m.medusaField).join(', ')}`)
+      return new StepResponse(products)
+    }
+
+    logger.info(`Processing brands`)
+    logger.info(`Found ${products.length} products to process for brands`)
+
+    // Cache for brand lookups within this batch
+    const brandCache = new Map<string, string>()
+
+    // Process each product
+    const processedProducts = await Promise.all(
+      products.map(async (product, index) => {
+        const processedProduct = { ...product }
+
+        // Check if product has brand field
+        if (!processedProduct.brand) {
+          logger.debug(`Product ${index + 1}: No brand field found`)
+          return processedProduct
+        }
+
+        logger.debug(`Product ${index + 1}: Found brand field: ${JSON.stringify(processedProduct.brand)}`)
+
+        // Handle brand as string (brands are simple strings, not arrays)
+        const brandName: string | null = typeof processedProduct.brand === 'string'
+          ? processedProduct.brand.trim()
+          : null
+
+        if (!brandName || brandName.length === 0) {
+          logger.debug(`Product ${index + 1}: No valid brand name found`)
+          return processedProduct
+        }
+
+        logger.info(`Product ${index + 1}: Processing brand: "${brandName}"`)
+
+        // Process brand
+        try {
+          // Check if there's a brand_image field in the product data
+          const brandImageUrl = (processedProduct as any).brand_image || undefined
+          
+          const brandId = await importerService.getOrCreateBrand(
+            brandName,
+            brandImageUrl,
+            container,
+            brandCache
+          )
+          
+          // Store brand ID in product metadata for later linking
+          if (!processedProduct.metadata) {
+            processedProduct.metadata = {}
+          }
+          processedProduct.metadata._brand_id = brandId
+          
+          logger.debug(
+            `Product ${index + 1}: Converted brand "${brandName}" to ID ${brandId}`
+          )
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          logger.warn(
+            `Product ${index + 1}: Failed to process brand "${brandName}": ${errorMessage}`
+          )
+          // Continue without brand assignment
+        }
+
+        return processedProduct
+      })
+    )
+
+    logger.info(
+      `Processed brands for ${processedProducts.length} products. Cache size: ${brandCache.size}`
     )
 
     return new StepResponse(processedProducts)
@@ -1807,6 +1907,53 @@ const importBatchStep = createStep(
         logger.info(`Completed category assignments for ${productsWithCategories.length} products`)
       }
       
+      // Assign brands to products that have them
+      const productsWithBrands = productsToImport.filter(p => {
+        const brandId = (p as any).metadata?._brand_id
+        return brandId && 
+          p.handle &&
+          handleToProductIdMap.has(p.handle)
+      })
+      
+      if (productsWithBrands.length > 0) {
+        logger.info(`Assigning ${productsWithBrands.length} products to brands after import`)
+        
+        const link = container.resolve(ContainerRegistrationKeys.LINK)
+        
+        for (const product of productsWithBrands) {
+          const productId = handleToProductIdMap.get(product.handle!)
+          if (!productId) {
+            logger.warn(`Could not find product ID for handle "${product.handle}" to assign brand`)
+            continue
+          }
+          
+          try {
+            const brandId = (product as any).metadata?._brand_id
+            if (!brandId) {
+              logger.warn(`Product "${product.handle}" has no brand ID in metadata`)
+              continue
+            }
+            
+            // Link brand to product using module link
+            await link.create([
+              {
+                [Modules.PRODUCT]: { id: productId },
+                [BRAND_MODULE]: { id: brandId },
+              },
+            ])
+            
+            logger.info(`Assigned product "${product.handle}" (ID: ${productId}) to brand (ID: ${brandId})`)
+          } catch (error) {
+            logger.error(`❌ Failed to assign brand to product "${product.handle}": ${error instanceof Error ? error.message : 'Unknown error'}`)
+            if (error instanceof Error && error.stack) {
+              logger.error(`Brand assignment error stack: ${error.stack}`)
+            }
+          }
+        }
+        
+        logger.info(`Completed brand assignments for ${productsWithBrands.length} products`)
+      }
+      
       return new StepResponse({
         success: true,
         imported: totalProcessed,
@@ -2022,11 +2169,17 @@ export const xmlProductImportWorkflow = createWorkflow<
     fieldMapping,
   })
 
+  // Step 5.6: Process brands - convert brand strings to brand IDs
+  const productsWithBrands = processBrandsStep({
+    products: productsWithCategories,
+    fieldMapping,
+  })
+
   // Step 6: Process all products in a single batch
   // Note: We process all products together instead of segmenting into batches
   // because steps cannot call other steps (processAllBatchesStep can't call importBatchStep)
   const batchResult = importBatchStep({
-    products: productsWithCategories,
+    products: productsWithBrands,
     updateExisting: options.updateExisting || false,
     updateBy: options.updateBy || 'sku',
     shippingProfileId: resolvedShippingProfileId,

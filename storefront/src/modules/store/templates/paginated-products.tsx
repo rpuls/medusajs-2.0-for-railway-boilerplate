@@ -1,5 +1,6 @@
 import { getProductsList, getProductsListWithSort, getProductsById } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { getProductIdsByBrands } from "@lib/data/brands"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/sort-dropdown"
 import { getProductPrice } from "@lib/util/get-product-price"
@@ -57,6 +58,7 @@ export default async function PaginatedProducts({
   page,
   collectionIds,
   categoryIds,
+  brandIds,
   priceRange,
   productsIds,
   countryCode,
@@ -65,6 +67,7 @@ export default async function PaginatedProducts({
   page: number
   collectionIds?: string[]
   categoryIds?: string[]
+  brandIds?: string[]
   priceRange?: string
   productsIds?: string[]
   countryCode: string
@@ -76,6 +79,21 @@ export default async function PaginatedProducts({
       products: <></>,
       totalCount: 0,
       pageSize: PRODUCT_LIMIT,
+    }
+  }
+
+  // If brand filtering is active, get product IDs for those brands
+  let brandFilteredProductIds: string[] = []
+  if (brandIds && brandIds.length > 0) {
+    brandFilteredProductIds = await getProductIdsByBrands(brandIds)
+    
+    // If no products found for brands, return empty result
+    if (brandFilteredProductIds.length === 0) {
+      return {
+        products: <></>,
+        totalCount: 0,
+        pageSize: PRODUCT_LIMIT,
+      }
     }
   }
 
@@ -92,8 +110,22 @@ export default async function PaginatedProducts({
     queryParams["category_id"] = categoryIds
   }
 
-  if (productsIds) {
-    queryParams["id"] = productsIds
+  // Combine brand-filtered product IDs with other product IDs
+  let finalProductIds = productsIds || []
+  if (brandFilteredProductIds.length > 0) {
+    if (finalProductIds.length > 0) {
+      // Intersection: only products that match both brand filter and other IDs
+      finalProductIds = finalProductIds.filter((id) =>
+        brandFilteredProductIds.includes(id)
+      )
+    } else {
+      // Use brand-filtered IDs
+      finalProductIds = brandFilteredProductIds
+    }
+  }
+
+  if (finalProductIds.length > 0) {
+    queryParams["id"] = finalProductIds
   }
 
   if (sortBy === "created_at") {

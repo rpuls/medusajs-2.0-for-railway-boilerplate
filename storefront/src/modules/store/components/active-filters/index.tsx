@@ -6,20 +6,25 @@ import { Chip } from '@mui/material'
 import { Close } from '@mui/icons-material'
 import { HttpTypes } from "@medusajs/types"
 import { useTranslation } from "@lib/i18n/hooks/use-translation"
+import { Brand } from "@lib/data/brands"
 
 type ActiveFiltersProps = {
   collections: HttpTypes.StoreCollection[]
   categories: HttpTypes.StoreProductCategory[]
+  brands?: Brand[]
   selectedCollectionIds?: string[]
   selectedCategoryIds?: string[]
+  selectedBrandIds?: string[]
   selectedPriceRange?: string
 }
 
 const ActiveFilters = ({
   collections,
   categories,
+  brands = [],
   selectedCollectionIds = [],
   selectedCategoryIds = [],
+  selectedBrandIds = [],
   selectedPriceRange,
 }: ActiveFiltersProps) => {
   const { t } = useTranslation()
@@ -67,6 +72,12 @@ const ActiveFilters = ({
     router.push(`${pathname}?${query}`, { scroll: false })
   }
 
+  const removeBrand = (brandId: string) => {
+    const newBrandIds = selectedBrandIds.filter((id) => id !== brandId)
+    const query = createQueryString("brand", newBrandIds)
+    router.push(`${pathname}?${query}`, { scroll: false })
+  }
+
   const removePrice = () => {
     const params = new URLSearchParams(searchParams)
     params.delete("price")
@@ -98,6 +109,19 @@ const ActiveFilters = ({
         id: categoryId,
         label: category.name || category.handle || "Category",
         onRemove: () => removeCategory(categoryId),
+      })
+    }
+  })
+
+  // Add brand filters
+  selectedBrandIds.forEach((brandId) => {
+    const brand = brands.find((b) => b.id === brandId)
+    if (brand) {
+      activeFilters.push({
+        type: "brand" as const,
+        id: brandId,
+        label: brand.name || t("filters.brand"),
+        onRemove: () => removeBrand(brandId),
       })
     }
   })
