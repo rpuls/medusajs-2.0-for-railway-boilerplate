@@ -6,7 +6,7 @@ import {
   useMutation,
   useQuery,
 } from "@tanstack/react-query"
-import { sdk } from "../../lib/client"
+import { backendUrl } from "../../lib/client"
 import { queryClient } from "../../lib/query-client"
 import { queryKeysFactory } from "../../lib/query-key-factory"
 
@@ -48,7 +48,9 @@ export const useBrand = (
   const { data, ...rest } = useQuery({
     queryKey: brandsQueryKeys.detail(id),
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/brands/${id}`)
+      const response = await fetch(`${backendUrl}/admin/brands/${id}`, {
+        credentials: "include",
+      })
       if (!response.ok) {
         throw new Error("Failed to fetch brand")
       }
@@ -69,7 +71,9 @@ export const useBrands = (
   const { data, ...rest } = useQuery({
     queryKey: brandsQueryKeys.lists(),
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/brands`)
+      const response = await fetch(`${backendUrl}/admin/brands`, {
+        credentials: "include",
+      })
       if (!response.ok) {
         throw new Error("Failed to fetch brands")
       }
@@ -86,11 +90,12 @@ export const useCreateBrand = (
 ) => {
   return useMutation({
     mutationFn: async (payload: CreateBrandInput) => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/brands`, {
+      const response = await fetch(`${backendUrl}/admin/brands`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       })
       if (!response.ok) {
@@ -112,11 +117,12 @@ export const useUpdateBrand = (
 ) => {
   return useMutation({
     mutationFn: async (payload: UpdateBrandInput) => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/brands/${id}`, {
+      const response = await fetch(`${backendUrl}/admin/brands/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       })
       if (!response.ok) {
@@ -139,8 +145,9 @@ export const useDeleteBrand = (
 ) => {
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/brands/${id}`, {
+      const response = await fetch(`${backendUrl}/admin/brands/${id}`, {
         method: "DELETE",
+        credentials: "include",
       })
       if (!response.ok) {
         throw new Error("Failed to delete brand")
@@ -167,7 +174,9 @@ export const useProductBrand = (
   const { data, ...rest } = useQuery({
     queryKey: ["product_brand", productId],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/products/${productId}/brand`)
+      const response = await fetch(`${backendUrl}/admin/products/${productId}/brand`, {
+        credentials: "include",
+      })
       if (!response.ok) {
         throw new Error("Failed to fetch product brand")
       }
@@ -188,11 +197,12 @@ export const useUpdateProductBrand = (
 ) => {
   return useMutation({
     mutationFn: async (payload: { brand_id: string | null }) => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://localhost:9000"}/admin/products/${productId}/brand`, {
+      const response = await fetch(`${backendUrl}/admin/products/${productId}/brand`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       })
       if (!response.ok) {

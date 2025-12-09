@@ -3,7 +3,7 @@ import { readFileSync } from "fs"
 import { join } from "path"
 
 /**
- * Startup script to ensure XML Importer and Econt Shipping tables exist
+ * Startup script to ensure XML Importer, Econt Shipping, and Brand tables exist
  * Runs automatically at startup via init-backend
  * Checks if tables exist, creates them if missing
  */
@@ -66,6 +66,47 @@ export default async function ensureMigrations() {
     } else {
       console.log("✅ econt_settings table already exists")
     }
+
+    // Check and create brand table if it doesn't exist
+    const brandExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'brand'
+      );
+    `)
+
+    if (!brandExists.rows[0]?.exists) {
+      console.log("📦 Creating brand table...")
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS "brand" (
+          "id" text NOT NULL,
+          "name" text NOT NULL,
+          "image_url" text NULL,
+          "created_at" timestamptz NOT NULL DEFAULT now(),
+          "updated_at" timestamptz NOT NULL DEFAULT now(),
+          "deleted_at" timestamptz NULL,
+          CONSTRAINT "brand_pkey" PRIMARY KEY ("id")
+        );
+      `)
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS "IDX_brand_name" 
+        ON "brand" (name) 
+        WHERE deleted_at IS NULL;
+      `)
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS "IDX_brand_deleted_at" 
+        ON "brand" (deleted_at) 
+        WHERE deleted_at IS NULL;
+      `)
+
+      console.log("✅ brand table created")
+    } else {
+      console.log("✅ brand table already exists")
+    }
+
     const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
     const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
     

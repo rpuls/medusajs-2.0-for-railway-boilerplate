@@ -1,5 +1,5 @@
 import { LoaderFunctionArgs } from "react-router-dom"
-import { sdk, backendUrl } from "../../../lib/client"
+import { backendUrl } from "../../../lib/client"
 
 export const brandLoader = async ({ params }: LoaderFunctionArgs) => {
   const { id } = params
@@ -9,7 +9,9 @@ export const brandLoader = async ({ params }: LoaderFunctionArgs) => {
   }
 
   try {
-    const response = await fetch(`${backendUrl}/admin/brands/${id}`)
+    const response = await fetch(`${backendUrl}/admin/brands/${id}`, {
+      credentials: "include",
+    })
     if (!response.ok) {
       throw new Error("Failed to fetch brand")
     }

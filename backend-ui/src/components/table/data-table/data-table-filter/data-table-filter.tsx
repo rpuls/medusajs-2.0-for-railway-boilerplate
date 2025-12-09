@@ -170,7 +170,7 @@ export const DataTableFilter = ({
                 />
               )
             default:
-              break
+              return null
           }
         })}
         {!readonly && availableFilters.length > 0 && (
