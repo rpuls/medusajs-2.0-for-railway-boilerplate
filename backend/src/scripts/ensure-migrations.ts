@@ -108,21 +108,23 @@ export default async function ensureMigrations() {
     }
 
     // Check if product-brand link table exists
+    // MedusaJS creates link tables with the pattern: {module1}_{entity1}_{module2}_{entity2}
+    // For product.brand link, it's: product_product_brand_brand
     const linkTableExists = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_name = 'link_product_brand'
+        AND table_name = 'product_product_brand_brand'
       );
     `)
 
     if (!linkTableExists.rows[0]?.exists) {
-      console.log("⚠️  link_product_brand table not found")
+      console.log("⚠️  product_product_brand_brand link table not found")
       console.log("   This table should be created by 'medusa db:sync-links'")
       console.log("   Run 'npx medusa db:sync-links' manually if needed")
       console.log("   Or ensure 'init-backend' runs successfully at startup")
     } else {
-      console.log("✅ link_product_brand table exists")
+      console.log("✅ product_product_brand_brand link table exists")
     }
 
     const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
