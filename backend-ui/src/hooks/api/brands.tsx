@@ -219,3 +219,66 @@ export const useUpdateProductBrand = (
   })
 }
 
+export interface UpdateBrandProductsInput {
+  add?: string[]
+  remove?: string[]
+}
+
+export interface BrandProductsResponse {
+  products: Array<{ id: string }>
+}
+
+export const useBrandProducts = (
+  brandId: string,
+  options?: Omit<
+    UseQueryOptions<BrandProductsResponse, FetchError, BrandProductsResponse, QueryKey>,
+    "queryFn" | "queryKey"
+  >
+) => {
+  const { data, ...rest } = useQuery({
+    queryKey: [...brandsQueryKeys.detail(brandId), "products"],
+    queryFn: async () => {
+      const response = await fetch(`${backendUrl}/admin/brands/${brandId}/products`, {
+        credentials: "include",
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch brand products")
+      }
+      return response.json()
+    },
+    ...options,
+  })
+
+  return { ...data, ...rest }
+}
+
+export const useUpdateBrandProducts = (
+  brandId: string,
+  options?: UseMutationOptions<BrandResponse, FetchError, UpdateBrandProductsInput>
+) => {
+  return useMutation({
+    mutationFn: async (payload: UpdateBrandProductsInput) => {
+      const response = await fetch(`${backendUrl}/admin/brands/${brandId}/products`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) {
+        throw new Error("Failed to update brand products")
+      }
+      return response.json()
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: brandsQueryKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: brandsQueryKeys.detail(brandId) })
+      queryClient.invalidateQueries({ queryKey: [...brandsQueryKeys.detail(brandId), "products"] })
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+      options?.onSuccess?.(data, variables, context)
+    },
+    ...options,
+  })
+}
+

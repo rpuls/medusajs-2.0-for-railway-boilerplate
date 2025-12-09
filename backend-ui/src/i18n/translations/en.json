@@ -94,7 +94,9 @@
   },
   "validation": {
     "mustBeInt": "The value must be a whole number.",
-    "mustBePositive": "The value must be a positive number."
+    "mustBePositive": "The value must be a positive number.",
+    "required": "is required",
+    "invalidUrl": "Invalid URL"
   },
   "actions": {
     "save": "Save",
@@ -916,11 +918,26 @@
       "confirmation": "You are about to delete the brand {{name}}. This action cannot be undone.",
       "successToast": "Brand {{name}} was successfully deleted."
     },
+    "organize": {
+      "header": "Organize",
+      "action": "Organize"
+    },
     "products": {
       "header": "Products",
       "assigned_one": "{{count}} product assigned to this brand",
       "assigned_other": "{{count}} products assigned to this brand",
-      "noRecordsMessage": "There are no products assigned to this brand."
+      "noRecordsMessage": "There are no products assigned to this brand.",
+      "list": {
+        "noRecordsMessage": "There are no products assigned to this brand."
+      },
+      "add": {
+        "successToast": "{{count}} product(s) were successfully added to this brand.",
+        "disabledTooltip": "This product is already assigned to this brand."
+      },
+      "remove": {
+        "confirmation": "Are you sure you want to remove {{count}} product(s) from this brand?",
+        "successToast": "{{count}} product(s) were successfully removed from this brand."
+      }
     },
     "fields": {
       "name": {
@@ -3084,6 +3101,7 @@
     "conditions": "Conditions",
     "category": "Category",
     "collection": "Collection",
+    "brand": "Brand",
     "discountable": "Discountable",
     "handle": "Handle",
     "subtitle": "Subtitle",

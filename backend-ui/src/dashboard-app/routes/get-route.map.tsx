@@ -292,28 +292,38 @@ export function getRouteMap({
                       lazy: () =>
                         import("../../routes/brands/brand-create"),
                     },
-                    {
-                      path: ":id",
-                      lazy: async () => {
-                        const { Component, loader } = await import(
-                          "../../routes/brands/brand-detail"
-                        )
+                  ],
+                },
+                {
+                  path: ":id",
+                  lazy: async () => {
+                    const { Component, loader } = await import(
+                      "../../routes/brands/brand-detail"
+                    )
 
-                        return {
-                          Component,
-                          loader,
-                          handle: {
-                            breadcrumb: (match: UIMatch<any>) => match.data?.brand?.name || t("brands.domain"),
-                          },
-                        }
+                    return {
+                      Component,
+                      loader,
+                      handle: {
+                        breadcrumb: (match: UIMatch<any>) => match.data?.brand?.name || t("brands.domain"),
                       },
-                      children: [
-                        {
-                          path: "edit",
-                          lazy: () =>
-                            import("../../routes/brands/brand-edit"),
-                        },
-                      ],
+                    }
+                  },
+                  children: [
+                    {
+                      path: "edit",
+                      lazy: () =>
+                        import("../../routes/brands/brand-edit"),
+                    },
+                    {
+                      path: "products",
+                      lazy: () =>
+                        import("../../routes/brands/brand-products"),
+                    },
+                    {
+                      path: "organize",
+                      lazy: () =>
+                        import("../../routes/brands/brand-organize"),
                     },
                   ],
                 },

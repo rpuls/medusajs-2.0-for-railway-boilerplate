@@ -54,7 +54,7 @@ export const BrandListTable = () => {
         count={brands?.length || 0}
         pageSize={PAGE_SIZE}
         isLoading={isLoading}
-        navigateTo={(row) => row.id}
+        navigateTo={(row) => `/brands/${row.id}`}
         search
         pagination
       />

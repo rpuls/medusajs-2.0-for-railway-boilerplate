@@ -3,6 +3,7 @@ import { Button, Input, toast } from "@medusajs/ui"
 import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
+import { Form } from "../../../../../components/common/form"
 import {
   RouteDrawer,
   useRouteModal,
@@ -10,23 +11,23 @@ import {
 import { KeyboundForm } from "../../../../../components/utilities/keybound-form"
 import { Brand, useUpdateBrand } from "../../../../../hooks/api/brands"
 
-const EditBrandSchema = (t: (key: string) => string) => z.object({
-  name: z.string().min(1, t("brands.fields.name.label") + " is required"),
-  image_url: z.string().url().optional().or(z.literal("")),
-})
-
-type EditBrandFormValues = z.infer<typeof EditBrandSchema>
-
 export const EditBrandForm = ({ brand }: { brand: Brand }) => {
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
+
+  const editBrandSchema = z.object({
+    name: z.string().min(1, t("brands.fields.name.label") + " " + t("validation.required")),
+    image_url: z.string().url(t("validation.invalidUrl") || "Invalid URL").optional().or(z.literal("")),
+  })
+
+  type EditBrandFormValues = z.infer<typeof editBrandSchema>
 
   const form = useForm<EditBrandFormValues>({
     defaultValues: {
       name: brand.name,
       image_url: brand.image_url || "",
     },
-    resolver: zodResolver(EditBrandSchema(t)),
+    resolver: zodResolver(editBrandSchema),
   })
 
   const { mutateAsync, isPending } = useUpdateBrand(brand.id)
@@ -46,24 +47,51 @@ export const EditBrandForm = ({ brand }: { brand: Brand }) => {
 
   return (
     <RouteDrawer.Form form={form}>
-      <form onSubmit={handleSubmit}>
+      <KeyboundForm
+        onSubmit={handleSubmit}
+        className="flex h-full flex-col overflow-hidden"
+      >
         <RouteDrawer.Body>
-          <KeyboundForm>
-            <div className="flex flex-col gap-y-4">
-              <Input
-                label={t("brands.fields.name.label")}
-                {...form.register("name")}
-                error={form.formState.errors.name?.message}
-                required
+          <div className="flex flex-col gap-y-6 px-6 py-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Form.Field
+                control={form.control}
+                name="name"
+                render={({ field }) => {
+                  return (
+                    <Form.Item>
+                      <Form.Label>{t("brands.fields.name.label")}</Form.Label>
+                      <Form.Control>
+                        <Input autoComplete="off" {...field} />
+                      </Form.Control>
+                      <Form.ErrorMessage />
+                    </Form.Item>
+                  )
+                }}
               />
-              <Input
-                label={t("brands.fields.image.url.label")}
-                {...form.register("image_url")}
-                error={form.formState.errors.image_url?.message}
-                placeholder={t("brands.fields.image.url.placeholder")}
+              <Form.Field
+                control={form.control}
+                name="image_url"
+                render={({ field }) => {
+                  return (
+                    <Form.Item>
+                      <Form.Label optional>
+                        {t("brands.fields.image.url.label")}
+                      </Form.Label>
+                      <Form.Control>
+                        <Input
+                          autoComplete="off"
+                          placeholder={t("brands.fields.image.url.placeholder")}
+                          {...field}
+                        />
+                      </Form.Control>
+                      <Form.ErrorMessage />
+                    </Form.Item>
+                  )
+                }}
               />
             </div>
-          </KeyboundForm>
+          </div>
         </RouteDrawer.Body>
         <RouteDrawer.Footer>
           <RouteDrawer.Close asChild>
@@ -75,7 +103,7 @@ export const EditBrandForm = ({ brand }: { brand: Brand }) => {
             {t("actions.save")}
           </Button>
         </RouteDrawer.Footer>
-      </form>
+      </KeyboundForm>
     </RouteDrawer.Form>
   )
 }
