@@ -34,7 +34,7 @@ export async function GET(
       try {
         const links = await link.list({
           [Modules.PRODUCT]: {},
-          [BRAND_MODULE]: { id: brandId },
+          [BRAND_MODULE]: { brand_id: brandId },
         })
 
         if (links && Array.isArray(links)) {

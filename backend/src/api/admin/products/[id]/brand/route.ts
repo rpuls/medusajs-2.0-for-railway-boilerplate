@@ -63,15 +63,15 @@ export async function PUT(
 
     // First, remove any existing brand links for this product
     const existingLinks = await link.list({
-      [Modules.PRODUCT]: { id },
+      [Modules.PRODUCT]: { product_id: id },
       [BRAND_MODULE]: {},
     })
 
     if (existingLinks && existingLinks.length > 0) {
       for (const existingLink of existingLinks) {
         await link.dismiss({
-          [Modules.PRODUCT]: { id },
-          [BRAND_MODULE]: { id: existingLink[BRAND_MODULE]?.id },
+          [Modules.PRODUCT]: { product_id: id },
+          [BRAND_MODULE]: { brand_id: existingLink[BRAND_MODULE]?.id },
         })
       }
     }
@@ -80,8 +80,8 @@ export async function PUT(
     if (body.brand_id) {
       await link.create([
         {
-          [Modules.PRODUCT]: { id },
-          [BRAND_MODULE]: { id: body.brand_id },
+          [Modules.PRODUCT]: { product_id: id },
+          [BRAND_MODULE]: { brand_id: body.brand_id },
         },
       ])
 

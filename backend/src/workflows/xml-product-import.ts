@@ -1937,8 +1937,8 @@ const importBatchStep = createStep(
             // Link brand to product using module link
             await link.create([
               {
-                [Modules.PRODUCT]: { id: productId },
-                [BRAND_MODULE]: { id: brandId },
+                [Modules.PRODUCT]: { product_id: productId },
+                [BRAND_MODULE]: { brand_id: brandId },
               },
             ])
             
