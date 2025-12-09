@@ -13,6 +13,14 @@ export async function GET(
 ): Promise<void> {
   try {
     const { id } = req.params
+
+    if (!id) {
+      res.status(400).json({
+        message: "Brand ID is required",
+      })
+      return
+    }
+
     const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
 
     // Query links to find products linked to this brand
@@ -24,14 +32,18 @@ export async function GET(
     const productIds: string[] = []
     if (links && Array.isArray(links)) {
       links.forEach((linkItem: any) => {
-        if (linkItem[Modules.PRODUCT]?.id) {
-          productIds.push(linkItem[Modules.PRODUCT].id)
+        const productId = linkItem?.[Modules.PRODUCT]?.id
+        if (productId) {
+          productIds.push(productId)
         }
       })
     }
 
     res.json({ products: productIds.map((id) => ({ id })) })
   } catch (error) {
+    const logger = req.scope.resolve("logger")
+    logger?.error("Error fetching brand products:", error)
+    
     res.status(500).json({
       message:
         error instanceof Error
@@ -71,12 +83,31 @@ export async function POST(
 
     // Add products if specified
     if (body.add && body.add.length > 0) {
-      const linksToCreate = body.add.map((productId) => ({
-        [Modules.PRODUCT]: { id: productId },
+      // Check which products are already linked to avoid duplicates
+      const existingLinks = await link.list({
+        [Modules.PRODUCT]: {},
         [BRAND_MODULE]: { id },
-      }))
+      })
 
-      await link.create(linksToCreate)
+      const existingProductIds = new Set(
+        existingLinks
+          ?.map((linkItem: any) => linkItem[Modules.PRODUCT]?.id)
+          .filter(Boolean) || []
+      )
+
+      // Filter out products that are already linked
+      const newProductIds = body.add.filter(
+        (productId) => !existingProductIds.has(productId)
+      )
+
+      if (newProductIds.length > 0) {
+        const linksToCreate = newProductIds.map((productId) => ({
+          [Modules.PRODUCT]: { id: productId },
+          [BRAND_MODULE]: { id },
+        }))
+
+        await link.create(linksToCreate)
+      }
     }
 
     // Get updated brand

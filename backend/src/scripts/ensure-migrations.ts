@@ -107,6 +107,24 @@ export default async function ensureMigrations() {
       console.log("✅ brand table already exists")
     }
 
+    // Check if product-brand link table exists
+    const linkTableExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'link_product_brand'
+      );
+    `)
+
+    if (!linkTableExists.rows[0]?.exists) {
+      console.log("⚠️  link_product_brand table not found")
+      console.log("   This table should be created by 'medusa db:sync-links'")
+      console.log("   Run 'npx medusa db:sync-links' manually if needed")
+      console.log("   Or ensure 'init-backend' runs successfully at startup")
+    } else {
+      console.log("✅ link_product_brand table exists")
+    }
+
     const requiredColumns = ['created_at', 'updated_at', 'deleted_at']
     const tables = ['xml_import_mapping', 'xml_import_config', 'xml_import_execution', 'xml_import_execution_log']
     
@@ -353,6 +371,13 @@ export default async function ensureMigrations() {
   } finally {
     await pool.end()
   }
+  
+  // Note: MedusaJS link tables are created by 'medusa db:sync-links' or 'medusa db:migrate'
+  // These should be run by 'init-backend', but if links are missing, run:
+  // npx medusa db:sync-links
+  // The link table for product-brand should be named: link_product_brand
+  console.log("ℹ️  MedusaJS link tables should be created by 'init-backend'")
+  console.log("   If you see link errors, ensure 'medusa db:sync-links' has been run")
 }
 
 

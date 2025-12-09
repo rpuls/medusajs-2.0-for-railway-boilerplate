@@ -110,15 +110,26 @@ export const EditBrandProductsForm = ({
     useUpdateBrandProducts(brandId)
 
   const handleSubmit = form.handleSubmit(async (data) => {
+    // Filter out products that are already assigned to this brand
+    const existingProductIds = products.map((p) => p.id)
+    const newProductIds = data.product_ids.filter(
+      (id) => !existingProductIds.includes(id)
+    )
+
+    if (newProductIds.length === 0) {
+      handleSuccess()
+      return
+    }
+
     await mutateAsync(
       {
-        add: data.product_ids,
+        add: newProductIds,
       },
       {
         onSuccess: () => {
           toast.success(
             t("brands.products.add.successToast", {
-              count: data.product_ids.length - products.length,
+              count: newProductIds.length,
             })
           )
 

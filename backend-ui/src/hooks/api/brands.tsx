@@ -242,7 +242,15 @@ export const useBrandProducts = (
         credentials: "include",
       })
       if (!response.ok) {
-        throw new Error("Failed to fetch brand products")
+        const errorText = await response.text()
+        let errorMessage = "Failed to fetch brand products"
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.message || errorMessage
+        } catch {
+          errorMessage = errorText || errorMessage
+        }
+        throw new Error(`${errorMessage} (${response.status})`)
       }
       return response.json()
     },
