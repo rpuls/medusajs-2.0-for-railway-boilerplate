@@ -15,8 +15,10 @@ export async function GET(
     const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
 
     // Query links to find brand linked to this product
+    // Order must match link definition: Product first, Brand second
+    // Use product_id as the key (from ProductModule.linkable.product.linkable)
     const links = await link.list({
-      [Modules.PRODUCT]: { id },
+      [Modules.PRODUCT]: { product_id: id },
       [BRAND_MODULE]: {},
     })
 

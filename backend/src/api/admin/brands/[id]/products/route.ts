@@ -22,24 +22,41 @@ export async function GET(
     }
 
     const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
+    const logger = req.scope.resolve("logger")
+
+    // Debug: Log the module keys being used
+    logger?.info(`Link query debug: productModule=${Modules.PRODUCT}, brandModule=${BRAND_MODULE}, brandId=${id}`)
 
     // Query links to find products linked to this brand
-    const links = await link.list({
-      [Modules.PRODUCT]: {},
-      [BRAND_MODULE]: { brand_id: id },
-    })
-
-    const productIds: string[] = []
-    if (links && Array.isArray(links)) {
-      links.forEach((linkItem: any) => {
-        const productId = linkItem?.[Modules.PRODUCT]?.id
-        if (productId) {
-          productIds.push(productId)
-        }
+    // Order must match link definition: Product first, Brand second
+    // Use brand_id as the key (from BrandModule.linkable.brand.linkable)
+    try {
+      const links = await link.list({
+        [Modules.PRODUCT]: {},
+        [BRAND_MODULE]: { brand_id: id },
       })
-    }
 
-    res.json({ products: productIds.map((id) => ({ id })) })
+      const productIds: string[] = []
+      if (links && Array.isArray(links)) {
+        links.forEach((linkItem: any) => {
+          const productId = linkItem?.[Modules.PRODUCT]?.id
+          if (productId) {
+            productIds.push(productId)
+          }
+        })
+      }
+
+      logger?.info(`Found ${productIds.length} products linked to brand ${id}`)
+      res.json({ products: productIds.map((id) => ({ id })) })
+    } catch (linkError) {
+      const errorMsg = linkError instanceof Error ? linkError.message : String(linkError)
+      const errorStack = linkError instanceof Error ? linkError.stack : undefined
+      logger?.error(`Link query error: ${errorMsg} (productModule=${Modules.PRODUCT}, brandModule=${BRAND_MODULE}, brandId=${id})`)
+      if (errorStack) {
+        logger?.error(`Error stack: ${errorStack}`)
+      }
+      throw linkError
+    }
   } catch (error) {
     const logger = req.scope.resolve("logger")
     logger?.error("Error fetching brand products:", error)
@@ -84,6 +101,8 @@ export async function POST(
     // Add products if specified
     if (body.add && body.add.length > 0) {
       // Check which products are already linked to avoid duplicates
+      // Order must match link definition: Product first, Brand second
+      // Use brand_id as the key (from BrandModule.linkable.brand.linkable)
       const existingLinks = await link.list({
         [Modules.PRODUCT]: {},
         [BRAND_MODULE]: { brand_id: id },
