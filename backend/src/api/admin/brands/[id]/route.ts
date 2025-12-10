@@ -23,7 +23,43 @@ export async function GET(
       return
     }
 
-    res.json({ brand })
+    // Calculate product count by querying the link table
+    let productCount = 0
+    let pool: any = null
+    try {
+      const databaseUrl = process.env.DATABASE_URL
+      if (databaseUrl) {
+        const { Pool } = await import("pg")
+        pool = new Pool({ connectionString: databaseUrl })
+        
+        const result = await pool.query(
+          `SELECT COUNT(*) as count FROM product_product_brand_brand WHERE brand_id = $1`,
+          [id]
+        )
+        
+        productCount = parseInt(result.rows[0]?.count || "0", 10)
+      }
+    } catch (countError) {
+      // Log error but don't fail the request
+      const logger = req.scope.resolve("logger")
+      logger?.error("Failed to calculate product count:", countError)
+    } finally {
+      // Always close the pool if it was created
+      if (pool) {
+        await pool.end().catch((err: any) => {
+          const logger = req.scope.resolve("logger")
+          logger?.error("Error closing database pool:", err)
+        })
+      }
+    }
+
+    // Add product_count to the brand object
+    const brandWithCount = {
+      ...brand,
+      product_count: productCount,
+    }
+
+    res.json({ brand: brandWithCount })
   } catch (error) {
     res.status(500).json({
       message: error instanceof Error ? error.message : "Failed to retrieve brand",
@@ -63,7 +99,43 @@ export async function PUT(
     const updated = await brandService.updateBrands({ id }, updateData)
     const brand = Array.isArray(updated) && updated.length > 0 ? updated[0] : updated
 
-    res.json({ brand })
+    // Calculate product count
+    let productCount = 0
+    let pool: any = null
+    try {
+      const databaseUrl = process.env.DATABASE_URL
+      if (databaseUrl) {
+        const { Pool } = await import("pg")
+        pool = new Pool({ connectionString: databaseUrl })
+        
+        const result = await pool.query(
+          `SELECT COUNT(*) as count FROM product_product_brand_brand WHERE brand_id = $1`,
+          [id]
+        )
+        
+        productCount = parseInt(result.rows[0]?.count || "0", 10)
+      }
+    } catch (countError) {
+      // Log error but don't fail the request
+      const logger = req.scope.resolve("logger")
+      logger?.error("Failed to calculate product count:", countError)
+    } finally {
+      // Always close the pool if it was created
+      if (pool) {
+        await pool.end().catch((err: any) => {
+          const logger = req.scope.resolve("logger")
+          logger?.error("Error closing database pool:", err)
+        })
+      }
+    }
+
+    // Add product_count to the brand object
+    const brandWithCount = {
+      ...brand,
+      product_count: productCount,
+    }
+
+    res.json({ brand: brandWithCount })
   } catch (error) {
     res.status(500).json({
       message: error instanceof Error ? error.message : "Failed to update brand",

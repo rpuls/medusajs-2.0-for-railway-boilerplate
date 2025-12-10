@@ -1,5 +1,4 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { BRAND_MODULE } from "../../../../../modules/brand"
 
 /**
@@ -12,35 +11,50 @@ export async function GET(
 ): Promise<void> {
   try {
     const { id } = req.params
-    const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
+    const logger = req.scope.resolve("logger")
 
-    // Query links to find brand linked to this product
-    // Order must match link definition: Product first, Brand second
-    // Use model name as the key (product) instead of id
-    const links = await link.list({
-      [Modules.PRODUCT]: { product: id },
-      [BRAND_MODULE]: {},
-    })
-
-    if (!links || links.length === 0) {
-      res.json({ brand: null })
-      return
+    // Query the link table directly using raw SQL
+    const databaseUrl = process.env.DATABASE_URL
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL not found in environment")
     }
+    
+    const { Pool } = await import("pg")
+    const pool = new Pool({ connectionString: databaseUrl })
+    const linkTableName = "product_product_brand_brand"
 
-    // Get the brand from the link
-    const brandLink = links[0]
-    const brandId = brandLink[BRAND_MODULE]?.id
+    try {
+      // Query the link table to find brand linked to this product
+      const result = await pool.query(
+        `SELECT brand_id FROM ${linkTableName} WHERE product_id = $1 LIMIT 1`,
+        [id]
+      )
 
-    if (!brandId) {
-      res.json({ brand: null })
-      return
+      if (!result.rows || result.rows.length === 0) {
+        res.json({ brand: null })
+        return
+      }
+
+      const brandId = result.rows[0].brand_id
+
+      if (!brandId) {
+        res.json({ brand: null })
+        return
+      }
+
+      const brandService = req.scope.resolve<import("../../../../../modules/brand/service").default>(BRAND_MODULE)
+      const brand = await brandService.retrieveBrand(brandId)
+
+      res.json({ brand })
+    } finally {
+      // Always close the pool if it was created
+      await pool.end().catch((err: any) => {
+        logger?.error("Error closing database pool:", err)
+      })
     }
-
-    const brandService = req.scope.resolve<import("../../../../../modules/brand/service").default>(BRAND_MODULE)
-    const brand = await brandService.retrieveBrand(brandId)
-
-    res.json({ brand })
   } catch (error) {
+    const logger = req.scope.resolve("logger")
+    logger?.error("Error fetching product brand:", error)
     res.status(500).json({
       message:
         error instanceof Error
@@ -61,41 +75,62 @@ export async function PUT(
   try {
     const { id } = req.params
     const body = req.body as { brand_id: string | null }
-    const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
+    const logger = req.scope.resolve("logger")
 
-    // First, remove any existing brand links for this product
-    const existingLinks = await link.list({
-      [Modules.PRODUCT]: { product: id },
-      [BRAND_MODULE]: {},
-    })
-
-    if (existingLinks && existingLinks.length > 0) {
-      for (const existingLink of existingLinks) {
-        await link.dismiss({
-          [Modules.PRODUCT]: { product: id },
-          [BRAND_MODULE]: { brand: existingLink[BRAND_MODULE]?.id },
-        })
-      }
+    // Get database connection
+    const databaseUrl = process.env.DATABASE_URL
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL not found in environment")
     }
+    
+    const { Pool } = await import("pg")
+    const pool = new Pool({ connectionString: databaseUrl })
+    const linkTableName = "product_product_brand_brand"
 
-    // If a brand_id is provided, create a new link
-    if (body.brand_id) {
-      await link.create([
-        {
-          [Modules.PRODUCT]: { product: id },
-          [BRAND_MODULE]: { brand: body.brand_id },
-        },
-      ])
+    try {
+      // First, remove any existing brand links for this product
+      await pool.query(
+        `DELETE FROM ${linkTableName} WHERE product_id = $1`,
+        [id]
+      )
 
-      const brandService = req.scope.resolve<import("../../../../../modules/brand/service").default>(BRAND_MODULE)
-      const brand = await brandService.retrieveBrand(body.brand_id)
+      // If a brand_id is provided, create a new link
+      if (body.brand_id) {
+        // Check if link already exists (shouldn't happen after delete, but just in case)
+        const existingResult = await pool.query(
+          `SELECT id FROM ${linkTableName} WHERE product_id = $1 AND brand_id = $2`,
+          [id, body.brand_id]
+        )
 
-      res.json({ brand })
-    } else {
-      // Brand was unlinked
-      res.json({ brand: null })
+        if (existingResult.rows.length === 0) {
+          // Generate a unique ID for the link row
+          const { randomUUID } = await import("crypto")
+          const linkId = randomUUID()
+
+          // Insert the new link
+          await pool.query(
+            `INSERT INTO ${linkTableName} (id, product_id, brand_id) VALUES ($1, $2, $3)`,
+            [linkId, id, body.brand_id]
+          )
+        }
+
+        const brandService = req.scope.resolve<import("../../../../../modules/brand/service").default>(BRAND_MODULE)
+        const brand = await brandService.retrieveBrand(body.brand_id)
+
+        res.json({ brand })
+      } else {
+        // Brand was unlinked
+        res.json({ brand: null })
+      }
+    } finally {
+      // Always close the pool if it was created
+      await pool.end().catch((err: any) => {
+        logger?.error("Error closing database pool:", err)
+      })
     }
   } catch (error) {
+    const logger = req.scope.resolve("logger")
+    logger?.error("Error updating product brand:", error)
     res.status(500).json({
       message:
         error instanceof Error

@@ -1,12 +1,22 @@
 import { defineLink } from "@medusajs/framework/utils"
-import BrandModule from "../modules/brand"
 import ProductModule from "@medusajs/medusa/product"
+import BrandModule from "../modules/brand"
 
-export default defineLink(
+// Use BrandModule.linkable.brand - the module exposes linkables when defined in Module()
+const brandLinkable = BrandModule.linkable?.brand
+
+if (!brandLinkable) {
+  const error = new Error("BrandModule.linkable.brand is undefined! Cannot create link.")
+  throw error
+}
+
+const linkDefinition = defineLink(
   {
     linkable: ProductModule.linkable.product,
     isList: true,
   },
-  BrandModule.linkable.brand
+  brandLinkable
 )
+
+export default linkDefinition
 

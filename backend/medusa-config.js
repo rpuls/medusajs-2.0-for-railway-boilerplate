@@ -173,6 +173,9 @@ const medusaConfig = {
     {
       key: BRAND_MODULE,
       resolve: "./src/modules/brand",
+      definition: {
+        isQueryable: true,
+      },
     }
   ],
   plugins: [

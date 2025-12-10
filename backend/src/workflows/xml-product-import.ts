@@ -1918,40 +1918,67 @@ const importBatchStep = createStep(
       if (productsWithBrands.length > 0) {
         logger.info(`Assigning ${productsWithBrands.length} products to brands after import`)
         
-        const link = container.resolve(ContainerRegistrationKeys.LINK)
-        
-        for (const product of productsWithBrands) {
-          const productId = handleToProductIdMap.get(product.handle!)
-          if (!productId) {
-            logger.warn(`Could not find product ID for handle "${product.handle}" to assign brand`)
-            continue
-          }
+        // Use raw SQL queries to link brands to products (workaround for MedusaJS link service issue)
+        const databaseUrl = process.env.DATABASE_URL
+        if (databaseUrl) {
+          const { Pool } = await import("pg")
+          const pool = new Pool({ connectionString: databaseUrl })
+          const linkTableName = "product_product_brand_brand"
           
           try {
-            const brandId = (product as any).metadata?._brand_id
-            if (!brandId) {
-              logger.warn(`Product "${product.handle}" has no brand ID in metadata`)
-              continue
+            for (const product of productsWithBrands) {
+              const productId = handleToProductIdMap.get(product.handle!)
+              if (!productId) {
+                logger.warn(`Could not find product ID for handle "${product.handle}" to assign brand`)
+                continue
+              }
+              
+              try {
+                const brandId = (product as any).metadata?._brand_id
+                if (!brandId) {
+                  logger.warn(`Product "${product.handle}" has no brand ID in metadata`)
+                  continue
+                }
+                
+                // Check if link already exists
+                const existingResult = await pool.query(
+                  `SELECT id FROM ${linkTableName} WHERE product_id = $1 AND brand_id = $2`,
+                  [productId, brandId]
+                )
+                
+                if (existingResult.rows.length === 0) {
+                  // Generate a unique ID for the link row
+                  const { randomUUID } = await import("crypto")
+                  const linkId = randomUUID()
+                  
+                  // Insert the new link
+                  await pool.query(
+                    `INSERT INTO ${linkTableName} (id, product_id, brand_id) VALUES ($1, $2, $3)`,
+                    [linkId, productId, brandId]
+                  )
+                  
+                  logger.info(`Assigned product "${product.handle}" (ID: ${productId}) to brand (ID: ${brandId})`)
+                } else {
+                  logger.info(`Product "${product.handle}" (ID: ${productId}) already linked to brand (ID: ${brandId})`)
+                }
+              } catch (error) {
+                logger.error(`❌ Failed to assign brand to product "${product.handle}": ${error instanceof Error ? error.message : 'Unknown error'}`)
+                if (error instanceof Error && error.stack) {
+                  logger.error(`Brand assignment error stack: ${error.stack}`)
+                }
+              }
             }
             
-            // Link brand to product using module link
-            await link.create([
-              {
-                [Modules.PRODUCT]: { product: productId },
-                [BRAND_MODULE]: { brand: brandId },
-              },
-            ])
-            
-            logger.info(`Assigned product "${product.handle}" (ID: ${productId}) to brand (ID: ${brandId})`)
-          } catch (error) {
-            logger.error(`❌ Failed to assign brand to product "${product.handle}": ${error instanceof Error ? error.message : 'Unknown error'}`)
-            if (error instanceof Error && error.stack) {
-              logger.error(`Brand assignment error stack: ${error.stack}`)
-            }
+            logger.info(`Completed brand assignments for ${productsWithBrands.length} products`)
+          } finally {
+            // Always close the pool
+            await pool.end().catch((err: any) => {
+              logger.error("Error closing database pool:", err)
+            })
           }
+        } else {
+          logger.warn("DATABASE_URL not found, skipping brand assignments")
         }
-        
-        logger.info(`Completed brand assignments for ${productsWithBrands.length} products`)
       }
       
       return new StepResponse({

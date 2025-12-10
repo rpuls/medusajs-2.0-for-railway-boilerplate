@@ -1,6 +1,10 @@
 import Medusa from "@medusajs/js-sdk"
 
-export const backendUrl = __BACKEND_URL__ ?? "/"
+// Normalize backendUrl to remove trailing slashes to prevent double slashes in URLs
+const rawBackendUrl = __BACKEND_URL__ ?? "/"
+export const backendUrl = rawBackendUrl.length > 1 && rawBackendUrl.endsWith("/")
+  ? rawBackendUrl.slice(0, -1)
+  : rawBackendUrl
 
 export const sdk = new Medusa({
   baseUrl: backendUrl,
