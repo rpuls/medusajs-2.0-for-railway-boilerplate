@@ -22,7 +22,7 @@ export async function GET(
           // Query links to find products linked to this brand
           const links = await link.list({
             [Modules.PRODUCT]: {},
-            [BRAND_MODULE]: { brand_id: brand.id },
+            [BRAND_MODULE]: { brand: brand.id },
           })
 
           const productCount = links?.length || 0

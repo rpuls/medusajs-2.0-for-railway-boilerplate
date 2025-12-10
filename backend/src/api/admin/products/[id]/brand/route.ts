@@ -16,9 +16,9 @@ export async function GET(
 
     // Query links to find brand linked to this product
     // Order must match link definition: Product first, Brand second
-    // Use product_id as the key (from ProductModule.linkable.product.linkable)
+    // Use model name as the key (product) instead of id
     const links = await link.list({
-      [Modules.PRODUCT]: { product_id: id },
+      [Modules.PRODUCT]: { product: id },
       [BRAND_MODULE]: {},
     })
 
@@ -65,15 +65,15 @@ export async function PUT(
 
     // First, remove any existing brand links for this product
     const existingLinks = await link.list({
-      [Modules.PRODUCT]: { product_id: id },
+      [Modules.PRODUCT]: { product: id },
       [BRAND_MODULE]: {},
     })
 
     if (existingLinks && existingLinks.length > 0) {
       for (const existingLink of existingLinks) {
         await link.dismiss({
-          [Modules.PRODUCT]: { product_id: id },
-          [BRAND_MODULE]: { brand_id: existingLink[BRAND_MODULE]?.id },
+          [Modules.PRODUCT]: { product: id },
+          [BRAND_MODULE]: { brand: existingLink[BRAND_MODULE]?.id },
         })
       }
     }
@@ -82,8 +82,8 @@ export async function PUT(
     if (body.brand_id) {
       await link.create([
         {
-          [Modules.PRODUCT]: { product_id: id },
-          [BRAND_MODULE]: { brand_id: body.brand_id },
+          [Modules.PRODUCT]: { product: id },
+          [BRAND_MODULE]: { brand: body.brand_id },
         },
       ])
 

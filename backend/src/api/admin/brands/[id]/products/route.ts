@@ -29,11 +29,11 @@ export async function GET(
 
     // Query links to find products linked to this brand
     // Order must match link definition: Product first, Brand second
-    // Use brand_id as the key (from BrandModule.linkable.brand.linkable)
+    // Try using the model name as the key (brand) instead of id
     try {
       const links = await link.list({
         [Modules.PRODUCT]: {},
-        [BRAND_MODULE]: { brand_id: id },
+        [BRAND_MODULE]: { brand: id },
       })
 
       const productIds: string[] = []
@@ -88,8 +88,8 @@ export async function POST(
       for (const productId of body.remove) {
         try {
           await link.dismiss({
-            [Modules.PRODUCT]: { product_id: productId },
-            [BRAND_MODULE]: { brand_id: id },
+            [Modules.PRODUCT]: { product: productId },
+            [BRAND_MODULE]: { brand: id },
           })
         } catch (error) {
           // Log but continue with other removals
@@ -102,10 +102,10 @@ export async function POST(
     if (body.add && body.add.length > 0) {
       // Check which products are already linked to avoid duplicates
       // Order must match link definition: Product first, Brand second
-      // Use brand_id as the key (from BrandModule.linkable.brand.linkable)
+      // Try using the model name as the key (brand) instead of id
       const existingLinks = await link.list({
         [Modules.PRODUCT]: {},
-        [BRAND_MODULE]: { brand_id: id },
+        [BRAND_MODULE]: { brand: id },
       })
 
       const existingProductIds = new Set(
@@ -121,8 +121,8 @@ export async function POST(
 
       if (newProductIds.length > 0) {
         const linksToCreate = newProductIds.map((productId) => ({
-          [Modules.PRODUCT]: { product_id: productId },
-          [BRAND_MODULE]: { brand_id: id },
+          [Modules.PRODUCT]: { product: productId },
+          [BRAND_MODULE]: { brand: id },
         }))
 
         await link.create(linksToCreate)
