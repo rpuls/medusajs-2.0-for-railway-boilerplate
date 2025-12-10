@@ -1942,19 +1942,15 @@ const importBatchStep = createStep(
                 
                 // Check if link already exists
                 const existingResult = await pool.query(
-                  `SELECT id FROM ${linkTableName} WHERE product_id = $1 AND brand_id = $2`,
+                  `SELECT product_id FROM ${linkTableName} WHERE product_id = $1 AND brand_id = $2`,
                   [productId, brandId]
                 )
                 
                 if (existingResult.rows.length === 0) {
-                  // Generate a unique ID for the link row
-                  const { randomUUID } = await import("crypto")
-                  const linkId = randomUUID()
-                  
-                  // Insert the new link
+                  // Insert the new link (link table has no id column, uses composite key)
                   await pool.query(
-                    `INSERT INTO ${linkTableName} (id, product_id, brand_id) VALUES ($1, $2, $3)`,
-                    [linkId, productId, brandId]
+                    `INSERT INTO ${linkTableName} (product_id, brand_id) VALUES ($1, $2)`,
+                    [productId, brandId]
                   )
                   
                   logger.info(`Assigned product "${product.handle}" (ID: ${productId}) to brand (ID: ${brandId})`)

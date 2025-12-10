@@ -144,24 +144,19 @@ export async function POST(
 
         if (newProductIds.length > 0) {
           // Insert new links using a single query with multiple values
-          // Build parameterized query: VALUES ($1, $2, $3), ($4, $5, $6), ...
-          // Include id, brand_id, and product_id columns
+          // Build parameterized query: VALUES ($1, $2), ($3, $4), ...
+          // Link table has brand_id and product_id columns (no id column)
           const values: string[] = []
           const params: string[] = []
           
-          // Import crypto for UUID generation
-          const { randomUUID } = await import("crypto")
-          
           newProductIds.forEach((productId, index) => {
-            const paramIndex = index * 3 + 1
-            // Generate a unique ID for each link row
-            const linkId = randomUUID()
-            values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2})`)
-            params.push(linkId, id, productId)
+            const paramIndex = index * 2 + 1
+            values.push(`($${paramIndex}, $${paramIndex + 1})`)
+            params.push(id, productId)
           })
           
           await pool.query(
-            `INSERT INTO ${linkTableName} (id, brand_id, product_id) VALUES ${values.join(", ")}`,
+            `INSERT INTO ${linkTableName} (brand_id, product_id) VALUES ${values.join(", ")}`,
             params
           )
           logger?.info(`Successfully added ${newProductIds.length} products to brand ${id}`)

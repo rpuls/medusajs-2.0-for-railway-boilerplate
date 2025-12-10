@@ -98,19 +98,15 @@ export async function PUT(
       if (body.brand_id) {
         // Check if link already exists (shouldn't happen after delete, but just in case)
         const existingResult = await pool.query(
-          `SELECT id FROM ${linkTableName} WHERE product_id = $1 AND brand_id = $2`,
+          `SELECT product_id FROM ${linkTableName} WHERE product_id = $1 AND brand_id = $2`,
           [id, body.brand_id]
         )
 
         if (existingResult.rows.length === 0) {
-          // Generate a unique ID for the link row
-          const { randomUUID } = await import("crypto")
-          const linkId = randomUUID()
-
-          // Insert the new link
+          // Insert the new link (link table has no id column, uses composite key)
           await pool.query(
-            `INSERT INTO ${linkTableName} (id, product_id, brand_id) VALUES ($1, $2, $3)`,
-            [linkId, id, body.brand_id]
+            `INSERT INTO ${linkTableName} (product_id, brand_id) VALUES ($1, $2)`,
+            [id, body.brand_id]
           )
         }
 
