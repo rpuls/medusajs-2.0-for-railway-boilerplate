@@ -63,7 +63,7 @@ export async function PUT(
 
     // First, remove any existing brand links for this product
     const existingLinks = await link.list({
-      [Modules.PRODUCT]: { id },
+      [Modules.PRODUCT]: { product_id: id },
       [BRAND_MODULE]: {},
     })
 
