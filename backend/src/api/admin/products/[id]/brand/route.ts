@@ -1,4 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { BRAND_MODULE } from "../../../../../modules/brand"
 
 /**
@@ -103,9 +104,10 @@ export async function PUT(
         )
 
         if (existingResult.rows.length === 0) {
-          // Insert the new link (link table has no id column, uses composite key)
+          // Insert the new link with generated UUID for id column
+          // PostgreSQL's gen_random_uuid() function generates UUIDs
           await pool.query(
-            `INSERT INTO ${linkTableName} (product_id, brand_id) VALUES ($1, $2)`,
+            `INSERT INTO ${linkTableName} (id, product_id, brand_id, created_at, updated_at) VALUES (gen_random_uuid(), $1, $2, now(), now())`,
             [id, body.brand_id]
           )
         }

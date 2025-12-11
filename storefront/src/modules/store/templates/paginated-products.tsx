@@ -1,6 +1,5 @@
 import { getProductsList, getProductsListWithSort, getProductsById } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
-import { getProductIdsByBrands } from "@lib/data/brands"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/sort-dropdown"
 import { getProductPrice } from "@lib/util/get-product-price"
@@ -49,6 +48,7 @@ type PaginatedProductsParams = {
   limit: number
   collection_id?: string[]
   category_id?: string[]
+  brand_id?: string[]
   id?: string[]
   order?: string
 }
@@ -82,22 +82,7 @@ export default async function PaginatedProducts({
     }
   }
 
-  // If brand filtering is active, get product IDs for those brands
-  let brandFilteredProductIds: string[] = []
-  if (brandIds && brandIds.length > 0) {
-    brandFilteredProductIds = await getProductIdsByBrands(brandIds)
-    
-    // If no products found for brands, return empty result
-    if (brandFilteredProductIds.length === 0) {
-      return {
-        products: <></>,
-        totalCount: 0,
-        pageSize: PRODUCT_LIMIT,
-      }
-    }
-  }
-
-  // Build query params for backend filtering
+  // Build query params for backend filtering (server-side handles brand filtering)
   const queryParams: PaginatedProductsParams = {
     limit: priceRange ? 100 : PRODUCT_LIMIT, // Fetch more if price filtering needed
   }
@@ -110,22 +95,14 @@ export default async function PaginatedProducts({
     queryParams["category_id"] = categoryIds
   }
 
-  // Combine brand-filtered product IDs with other product IDs
-  let finalProductIds = productsIds || []
-  if (brandFilteredProductIds.length > 0) {
-    if (finalProductIds.length > 0) {
-      // Intersection: only products that match both brand filter and other IDs
-      finalProductIds = finalProductIds.filter((id) =>
-        brandFilteredProductIds.includes(id)
-      )
-    } else {
-      // Use brand-filtered IDs
-      finalProductIds = brandFilteredProductIds
-    }
+  // Pass brand IDs for server-side filtering
+  if (brandIds && brandIds.length > 0) {
+    queryParams["brand_id"] = brandIds
   }
 
-  if (finalProductIds.length > 0) {
-    queryParams["id"] = finalProductIds
+  // Add explicit product IDs if provided (for other filtering scenarios)
+  if (productsIds && productsIds.length > 0) {
+    queryParams["id"] = productsIds
   }
 
   if (sortBy === "created_at") {

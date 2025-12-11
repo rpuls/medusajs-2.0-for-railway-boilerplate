@@ -7,6 +7,8 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "http://localhost:9000"
 
+const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
 export interface Brand {
   id: string
   name: string
@@ -19,7 +21,13 @@ export interface Brand {
  */
 export const getBrandsList = cache(async function (): Promise<Brand[]> {
   try {
+    const headers: HeadersInit = {}
+    if (PUBLISHABLE_API_KEY) {
+      headers["x-publishable-api-key"] = PUBLISHABLE_API_KEY
+    }
+
     const response = await fetch(`${BACKEND_URL}/store/brands`, {
+      headers,
       next: {
         tags: ["brands"],
         revalidate: 3600, // ISR: revalidate every hour
@@ -43,7 +51,13 @@ export const getBrandsList = cache(async function (): Promise<Brand[]> {
  */
 export const getActiveBrands = cache(async function (): Promise<Brand[]> {
   try {
+    const headers: HeadersInit = {}
+    if (PUBLISHABLE_API_KEY) {
+      headers["x-publishable-api-key"] = PUBLISHABLE_API_KEY
+    }
+
     const response = await fetch(`${BACKEND_URL}/store/brands/active`, {
+      headers,
       next: {
         tags: ["brands"],
         revalidate: 3600, // ISR: revalidate every hour
@@ -51,11 +65,15 @@ export const getActiveBrands = cache(async function (): Promise<Brand[]> {
     })
 
     if (!response.ok) {
-      throw new Error("Failed to fetch active brands")
+      const errorText = await response.text()
+      console.error(`Failed to fetch active brands: ${response.status} ${response.statusText}`, errorText)
+      throw new Error(`Failed to fetch active brands: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
-    return data.brands || []
+    const brands = data.brands || []
+    console.log(`[getActiveBrands] Fetched ${brands.length} active brands:`, brands.map((b: Brand) => ({ id: b.id, name: b.name, count: b.product_count })))
+    return brands
   } catch (error) {
     console.error("Error fetching active brands:", error)
     return []
@@ -69,7 +87,13 @@ export const getBrandById = cache(async function (
   id: string
 ): Promise<Brand | null> {
   try {
+    const headers: HeadersInit = {}
+    if (PUBLISHABLE_API_KEY) {
+      headers["x-publishable-api-key"] = PUBLISHABLE_API_KEY
+    }
+
     const response = await fetch(`${BACKEND_URL}/store/brands`, {
+      headers,
       next: {
         tags: ["brands"],
         revalidate: 3600,
@@ -100,9 +124,15 @@ export const getProductIdsByBrands = cache(async function (
   }
 
   try {
+    const headers: HeadersInit = {}
+    if (PUBLISHABLE_API_KEY) {
+      headers["x-publishable-api-key"] = PUBLISHABLE_API_KEY
+    }
+
     // Build query string with multiple brand_id parameters
     const queryParams = brandIds.map((id) => `brand_id=${encodeURIComponent(id)}`).join("&")
     const response = await fetch(`${BACKEND_URL}/store/products/by-brand?${queryParams}`, {
+      headers,
       next: {
         tags: ["brands", "products"],
         revalidate: 3600,

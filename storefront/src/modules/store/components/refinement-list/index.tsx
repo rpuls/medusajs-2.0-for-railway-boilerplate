@@ -76,12 +76,10 @@ const RefinementList = ({
         categories={categories}
         setQueryParamsArray={setQueryParamsArray}
       />
-      {brands && brands.length > 0 && (
-        <FilterBrand
-          brands={brands}
-          setQueryParamsArray={setQueryParamsArray}
-        />
-      )}
+      <FilterBrand
+        brands={brands || []}
+        setQueryParamsArray={setQueryParamsArray}
+      />
       <FilterPrice
         setQueryParams={setQueryParams}
       />

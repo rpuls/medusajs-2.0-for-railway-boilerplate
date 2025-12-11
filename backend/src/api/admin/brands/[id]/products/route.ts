@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { BRAND_MODULE } from "../../../../../modules/brand"
 import BrandModuleService from "../../../../../modules/brand/service"
 
@@ -143,20 +143,20 @@ export async function POST(
         )
 
         if (newProductIds.length > 0) {
-          // Insert new links using a single query with multiple values
-          // Build parameterized query: VALUES ($1, $2), ($3, $4), ...
-          // Link table has brand_id and product_id columns (no id column)
+          // Generate UUIDs for each link and insert with proper ID column
+          // PostgreSQL's gen_random_uuid() function generates UUIDs
           const values: string[] = []
           const params: string[] = []
           
           newProductIds.forEach((productId, index) => {
             const paramIndex = index * 2 + 1
-            values.push(`($${paramIndex}, $${paramIndex + 1})`)
+            // Use gen_random_uuid() to generate ID, then brand_id and product_id
+            values.push(`(gen_random_uuid(), $${paramIndex}, $${paramIndex + 1}, now(), now())`)
             params.push(id, productId)
           })
           
           await pool.query(
-            `INSERT INTO ${linkTableName} (brand_id, product_id) VALUES ${values.join(", ")}`,
+            `INSERT INTO ${linkTableName} (id, brand_id, product_id, created_at, updated_at) VALUES ${values.join(", ")}`,
             params
           )
           logger?.info(`Successfully added ${newProductIds.length} products to brand ${id}`)

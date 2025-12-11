@@ -34,12 +34,22 @@ const FilterBrand = ({
     setQueryParamsArray("brand", newValues)
   }
 
+  // Debug logging (remove in production)
+  if (typeof window !== 'undefined') {
+    console.log('[FilterBrand] Brands received:', brands?.length || 0, brands)
+  }
+
   const items = [
-    ...brands.map((brand) => ({
+    ...(brands || []).map((brand) => ({
       value: brand.id,
       label: brand.name,
     })),
   ]
+
+  // Don't render if no brands
+  if (!items || items.length === 0) {
+    return null
+  }
 
   return (
     <FilterCheckboxGroup

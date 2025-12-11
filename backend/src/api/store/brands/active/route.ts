@@ -1,5 +1,4 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { BRAND_MODULE } from "../../../../modules/brand"
 
 import BrandModuleService from "../../../../modules/brand/service"
@@ -9,45 +8,66 @@ export async function GET(
   res: MedusaResponse
 ): Promise<void> {
   const brandService = req.scope.resolve<BrandModuleService>(BRAND_MODULE)
-  const link = req.scope.resolve(ContainerRegistrationKeys.LINK)
 
   try {
     // Get all brands
     const allBrands = await brandService.listBrands({})
+    console.log(`[GET /store/brands/active] Found ${allBrands.length} total brands`)
 
-    // Count products per brand using link queries
-    const brandsWithCounts = await Promise.all(
-      allBrands.map(async (brand: any) => {
-        try {
-          // Query links to find products linked to this brand
-          const links = await link.list({
-            [Modules.PRODUCT]: {},
-            [BRAND_MODULE]: { id: brand.id },
-          })
+    // Count products per brand using raw SQL (more reliable than link.list)
+    const databaseUrl = process.env.DATABASE_URL
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL not found in environment")
+    }
 
-          const productCount = links?.length || 0
+    const { Pool } = await import("pg")
+    const pool = new Pool({ connectionString: databaseUrl })
+    const linkTableName = "product_product_brand_brand"
 
-          return {
-            ...brand,
-            product_count: productCount,
+    try {
+      // Count products per brand using raw SQL
+      const brandsWithCounts = await Promise.all(
+        allBrands.map(async (brand: any) => {
+          try {
+            // Query the link table directly to count products
+            const result = await pool.query(
+              `SELECT COUNT(*) as count FROM ${linkTableName} WHERE brand_id = $1`,
+              [brand.id]
+            )
+
+            const productCount = parseInt(result.rows[0]?.count || "0", 10)
+            console.log(`[GET /store/brands/active] Brand ${brand.id} (${brand.name}): ${productCount} products`)
+
+            return {
+              ...brand,
+              product_count: productCount,
+            }
+          } catch (error) {
+            // If query fails, return brand with 0 count
+            console.error(`Error counting products for brand ${brand.id}:`, error)
+            return {
+              ...brand,
+              product_count: 0,
+            }
           }
-        } catch (error) {
-          // If link query fails, return brand with 0 count
-          return {
-            ...brand,
-            product_count: 0,
-          }
-        }
+        })
+      )
+
+      // Filter to only brands with products (active brands)
+      const activeBrands = brandsWithCounts.filter(
+        (brand: any) => brand.product_count > 0
+      )
+
+      console.log(`[GET /store/brands/active] Returning ${activeBrands.length} active brands`)
+      res.json({ brands: activeBrands })
+    } finally {
+      // Always close the pool
+      await pool.end().catch((err: any) => {
+        console.error("Error closing database pool:", err)
       })
-    )
-
-    // Filter to only brands with products (active brands)
-    const activeBrands = brandsWithCounts.filter(
-      (brand: any) => brand.product_count > 0
-    )
-
-    res.json({ brands: activeBrands })
+    }
   } catch (error) {
+    console.error("Error in /store/brands/active:", error)
     res.status(500).json({
       message:
         error instanceof Error

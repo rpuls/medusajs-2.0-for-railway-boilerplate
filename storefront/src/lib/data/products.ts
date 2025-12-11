@@ -51,7 +51,7 @@ export const getProductsList = cache(async function ({
   countryCode,
 }: {
   pageParam?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams & { brand_id?: string[] }
   countryCode: string
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
@@ -69,7 +69,97 @@ export const getProductsList = cache(async function ({
       nextPage: null,
     }
   }
-  // Build the request params, ensuring collection_id and category_id are properly included
+
+  // If brand_id is provided, use custom endpoint for server-side brand filtering
+  if (queryParams?.brand_id && queryParams.brand_id.length > 0) {
+    const BACKEND_URL =
+      process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      "http://localhost:9000"
+
+    // Build query params for custom endpoint
+    const searchParams = new URLSearchParams()
+    searchParams.set("limit", limit.toString())
+    searchParams.set("offset", offset.toString())
+    searchParams.set("region_id", region.id)
+    searchParams.set("fields", "*variants.calculated_price,+variants.inventory_quantity")
+
+    // Add brand_id (can be multiple)
+    queryParams.brand_id.forEach((id) => {
+      searchParams.append("brand_id", id)
+    })
+
+    // Add other filters
+    if (queryParams.collection_id) {
+      const collectionIds = Array.isArray(queryParams.collection_id)
+        ? queryParams.collection_id
+        : [queryParams.collection_id]
+      collectionIds.forEach((id) => {
+        searchParams.append("collection_id", id)
+      })
+    }
+
+    if (queryParams.category_id) {
+      const categoryIds = Array.isArray(queryParams.category_id)
+        ? queryParams.category_id
+        : [queryParams.category_id]
+      categoryIds.forEach((id) => {
+        searchParams.append("category_id", id)
+      })
+    }
+
+    if (queryParams.id) {
+      const ids = Array.isArray(queryParams.id)
+        ? queryParams.id
+        : [queryParams.id]
+      ids.forEach((id) => {
+        searchParams.append("id", id)
+      })
+    }
+
+    if (queryParams.order) {
+      searchParams.set("order", queryParams.order)
+    }
+
+    // Call custom endpoint with publishable API key
+    const headers: HeadersInit = {}
+    const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+    if (publishableKey) {
+      headers["x-publishable-api-key"] = publishableKey
+    }
+
+    const response = await fetch(`${BACKEND_URL}/store/products/list?${searchParams.toString()}`, {
+      headers,
+      next: {
+        tags: ["products"],
+        revalidate: 3600, // ISR: revalidate every hour
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    const products = data.products || []
+    const count = data.count || 0
+
+    // Note: Products from custom endpoint may not have pricing calculated
+    // We'll need to fetch priced products separately if needed
+    // For now, return as-is and let the component handle pricing fetch
+    const nextPage = count > offset + limit ? pageParam + 1 : null
+
+    return {
+      response: {
+        products: products as HttpTypes.StoreProduct[],
+        count,
+      },
+      nextPage: nextPage,
+      queryParams,
+    }
+  }
+
+  // Build the request params for standard SDK call (no brand filtering)
   const requestParams: any = {
     limit,
     offset,
