@@ -86,6 +86,8 @@
     "price50to100": "50 - 100",
     "price100to200": "100 - 200",
     "price200Plus": "200+",
+    "minPrice": "Мин",
+    "maxPrice": "Макс",
     "noProductsFound": "Няма намерени продукти",
     "showingResults": "Показани {start}-{end} от {total} резултата"
   },

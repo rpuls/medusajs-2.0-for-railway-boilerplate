@@ -14,6 +14,7 @@ type RefinementListProps = {
   collections: HttpTypes.StoreCollection[]
   categories: HttpTypes.StoreProductCategory[]
   brands?: Brand[]
+  maxPrice?: number
   search?: boolean
   'data-testid'?: string
 }
@@ -22,6 +23,7 @@ const RefinementList = ({
   collections,
   categories,
   brands,
+  maxPrice,
   'data-testid': dataTestId,
 }: RefinementListProps) => {
   const router = useRouter()
@@ -82,6 +84,7 @@ const RefinementList = ({
       />
       <FilterPrice
         setQueryParams={setQueryParams}
+        maxPrice={maxPrice}
       />
     </div>
   )

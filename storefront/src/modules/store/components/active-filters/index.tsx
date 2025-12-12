@@ -32,13 +32,41 @@ const ActiveFilters = ({
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const priceRanges = useMemo(() => [
-    { value: "0-25", label: t("filters.under25") },
-    { value: "25-50", label: t("filters.price25to50") },
-    { value: "50-100", label: t("filters.price50to100") },
-    { value: "100-200", label: t("filters.price100to200") },
-    { value: "200+", label: t("filters.price200Plus") },
-  ], [t])
+  // Format price range label from URL parameter
+  const formatPriceRange = useCallback((priceRange: string): string => {
+    // Legacy format support
+    const legacyRanges: Record<string, string> = {
+      "0-25": t("filters.under25"),
+      "25-50": t("filters.price25to50"),
+      "50-100": t("filters.price50to100"),
+      "100-200": t("filters.price100to200"),
+      "200+": t("filters.price200Plus"),
+    }
+    
+    if (legacyRanges[priceRange]) {
+      return legacyRanges[priceRange]
+    }
+
+    // New format: "min-max" or "min-+"
+    const parts = priceRange.split("-")
+    if (parts.length === 2) {
+      const min = parseInt(parts[0], 10)
+      const max = parts[1]
+      
+      if (!isNaN(min)) {
+        if (max === "+") {
+          return `€${min}+`
+        } else {
+          const maxNum = parseInt(max, 10)
+          if (!isNaN(maxNum)) {
+            return `€${min} - €${maxNum}`
+          }
+        }
+      }
+    }
+    
+    return t("filters.price") || "Price"
+  }, [t])
 
   const createQueryString = useCallback(
     (name: string, values: string[]) => {
@@ -128,7 +156,7 @@ const ActiveFilters = ({
 
   // Add price filter
   if (selectedPriceRange) {
-    const priceLabel = priceRanges.find((p) => p.value === selectedPriceRange)?.label || "Price"
+    const priceLabel = formatPriceRange(selectedPriceRange)
     activeFilters.push({
       type: "price" as const,
       id: "price",

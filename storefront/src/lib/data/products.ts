@@ -4,6 +4,7 @@ import { cache } from "react"
 import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
+import { getProductPrice } from "@lib/util/get-product-price"
 
 export const getProductsById = cache(async function ({
   ids,
@@ -84,12 +85,10 @@ export const getProductsList = cache(async function ({
     searchParams.set("region_id", region.id)
     searchParams.set("fields", "*variants.calculated_price,+variants.inventory_quantity")
 
-    // Add brand_id (can be multiple)
     queryParams.brand_id.forEach((id) => {
       searchParams.append("brand_id", id)
     })
 
-    // Add other filters
     if (queryParams.collection_id) {
       const collectionIds = Array.isArray(queryParams.collection_id)
         ? queryParams.collection_id
@@ -121,7 +120,6 @@ export const getProductsList = cache(async function ({
       searchParams.set("order", queryParams.order)
     }
 
-    // Call custom endpoint with publishable API key
     const headers: HeadersInit = {}
     const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
     if (publishableKey) {
@@ -132,7 +130,7 @@ export const getProductsList = cache(async function ({
       headers,
       next: {
         tags: ["products"],
-        revalidate: 3600, // ISR: revalidate every hour
+        revalidate: 3600,
       },
     })
 
@@ -144,9 +142,6 @@ export const getProductsList = cache(async function ({
     const products = data.products || []
     const count = data.count || 0
 
-    // Note: Products from custom endpoint may not have pricing calculated
-    // We'll need to fetch priced products separately if needed
-    // For now, return as-is and let the component handle pricing fetch
     const nextPage = count > offset + limit ? pageParam + 1 : null
 
     return {
@@ -159,98 +154,119 @@ export const getProductsList = cache(async function ({
     }
   }
 
-  // Build the request params for standard SDK call (no brand filtering)
-  const requestParams: any = {
-    limit,
-    offset,
-    region_id: region.id,
-    fields: "*variants.calculated_price,+variants.inventory_quantity",
-  }
-
-  // Explicitly add filter params to ensure they're included
-  if (queryParams?.collection_id) {
-    requestParams.collection_id = queryParams.collection_id
-  }
-  if (queryParams?.category_id) {
-    requestParams.category_id = queryParams.category_id
-  }
-  if (queryParams?.id) {
-    requestParams.id = queryParams.id
-  }
-  if (queryParams?.order) {
-    requestParams.order = queryParams.order
-  }
-
-  return sdk.store.product
-    .list(
-      requestParams,
-      {
-        next: {
-          tags: ["products"],
-          revalidate: 3600, // ISR: revalidate every hour
-        } as { tags: string[]; revalidate?: number },
-      }
-    )
-    .then(({ products, count }) => {
-      const nextPage = count > offset + limit ? pageParam + 1 : null
-
-      return {
-        response: {
-          products,
-          count,
-        },
-        nextPage: nextPage,
-        queryParams,
-      }
-    })
-})
-
-/**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
- */
-export const getProductsListWithSort = cache(async function ({
-  page = 0,
-  queryParams,
-  sortBy = "created_at",
-  countryCode,
-}: {
-  page?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
-  sortBy?: SortOptions
-  countryCode: string
-}): Promise<{
-  response: { products: HttpTypes.StoreProduct[]; count: number }
-  nextPage: number | null
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
-}> {
-  const limit = queryParams?.limit || 12
-
-  const {
-    response: { products, count },
-  } = await getProductsList({
-    pageParam: 0,
-    queryParams: {
+  // Standard MedusaJS SDK call (no brand filtering)
+  const { products, count } = await sdk.store.product.list(
+    {
       ...queryParams,
-      limit: 100,
+      region_id: region.id,
+      limit,
+      offset,
+      fields: "*variants.calculated_price,+variants.inventory_quantity",
     },
-    countryCode,
-  })
+    {
+      next: {
+        tags: ["products"],
+        revalidate: 3600,
+      },
+    }
+  )
 
-  const sortedProducts = sortProducts(products, sortBy)
-
-  const pageParam = (page - 1) * limit
-
-  const nextPage = count > pageParam + limit ? pageParam + limit : null
-
-  const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit)
+  const nextPage = count > offset + limit ? pageParam + 1 : null
 
   return {
     response: {
-      products: paginatedProducts,
+      products,
       count,
     },
     nextPage,
     queryParams,
+  }
+})
+
+export const getProductsListWithSort = cache(async function ({
+  pageParam = 1,
+  queryParams,
+  countryCode,
+  sortBy,
+}: {
+  pageParam?: number
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams & { brand_id?: string[] }
+  countryCode: string
+  sortBy?: SortOptions
+}) {
+  const result = await getProductsList({
+    pageParam,
+    queryParams,
+    countryCode,
+  })
+
+  if (sortBy && result.response.products.length > 0) {
+    result.response.products = sortProducts(result.response.products, sortBy)
+  }
+
+  return result
+})
+
+/**
+ * Calculate the maximum price from products
+ * Fetches products matching current filters (excluding price filter) and calculates max price
+ */
+export const getMaxProductPrice = cache(async function ({
+  countryCode,
+  collectionIds,
+  categoryIds,
+  brandIds,
+}: {
+  countryCode: string
+  collectionIds?: string[]
+  categoryIds?: string[]
+  brandIds?: string[]
+}): Promise<number> {
+  const region = await getRegion(countryCode)
+  if (!region) {
+    return 500 // Default fallback
+  }
+
+  try {
+    // Fetch a larger sample of products to get accurate max price
+    // We'll fetch up to 100 products to calculate max price
+    const queryParams: HttpTypes.FindParams & HttpTypes.StoreProductParams & { brand_id?: string[] } = {
+      limit: 100, // Fetch more products to get accurate max
+      collection_id: collectionIds,
+      category_id: categoryIds,
+      brand_id: brandIds,
+    }
+
+    const result = await getProductsList({
+      pageParam: 1,
+      queryParams,
+      countryCode,
+    })
+
+    const products = result.response.products || []
+    
+    if (products.length === 0) {
+      return 500 // Default fallback if no products
+    }
+
+    // Calculate max price from all products
+    let maxPrice = 0
+    for (const product of products) {
+      const { cheapestPrice } = getProductPrice({ product })
+      if (cheapestPrice && cheapestPrice.calculated_price_number > maxPrice) {
+        maxPrice = cheapestPrice.calculated_price_number
+      }
+    }
+
+    // Round up to nearest 10 for better UX
+    const roundedMax = Math.ceil(maxPrice / 10) * 10
+    
+    // Ensure minimum of 100 and add some padding (20% or minimum 50)
+    const paddedMax = Math.max(100, roundedMax + Math.max(50, Math.ceil(roundedMax * 0.2)))
+    
+    return paddedMax
+  } catch (error) {
+    console.error("Error calculating max product price:", error)
+    return 500 // Default fallback on error
   }
 })

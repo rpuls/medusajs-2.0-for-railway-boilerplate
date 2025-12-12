@@ -86,6 +86,8 @@
     "price50to100": "50 - 100",
     "price100to200": "100 - 200",
     "price200Plus": "200+",
+    "minPrice": "Min",
+    "maxPrice": "Max",
     "noProductsFound": "No products found",
     "showingResults": "Showing {start}-{end} of {total} results"
   },

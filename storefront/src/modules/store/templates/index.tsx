@@ -8,6 +8,7 @@ import ProductCount from "@modules/store/components/product-count"
 import { getCollectionsList } from "@lib/data/collections"
 import { getCategoriesList } from "@lib/data/categories"
 import { getActiveBrands } from "@lib/data/brands"
+import { getMaxProductPrice } from "@lib/data/products"
 import { getTranslations, getTranslation } from "@lib/i18n/server"
 
 import PaginatedProducts from "./paginated-products"
@@ -88,11 +89,17 @@ const StoreTemplate = async ({
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
-  // Fetch filter data and translations server-side (optimized with caching)
-  const [{ collections }, { product_categories: categories }, brands, translations] = await Promise.all([
+  // Fetch filter data, max price, and translations server-side (optimized with caching)
+  const [{ collections }, { product_categories: categories }, brands, maxPrice, translations] = await Promise.all([
     getCollectionsList(0, 100),
     getCategoriesList(0, 100),
     getActiveBrands(),
+    getMaxProductPrice({
+      countryCode,
+      collectionIds,
+      categoryIds,
+      brandIds,
+    }),
     getTranslations(countryCode),
   ])
 
@@ -108,6 +115,7 @@ const StoreTemplate = async ({
         collections={collections}
         categories={categories}
         brands={brands}
+        maxPrice={maxPrice}
       />
       <div className="w-full">
         <div className="mb-6 flex items-center justify-between">

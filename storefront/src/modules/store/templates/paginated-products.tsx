@@ -10,12 +10,55 @@ const PRODUCT_LIMIT = 12
 /**
  * Filter products by price range
  * Price filtering happens after fetching priced products since MedusaJS doesn't support price filtering directly
+ * Supports format: "min-max" (e.g., "25-100") or "min-+" (e.g., "200-+") for max price
  */
 function filterProductsByPrice(
   products: any[],
   priceRange?: string
 ): any[] {
   if (!priceRange) {
+    return products
+  }
+
+  // Parse price range (format: "min-max" or "min-+")
+  const parts = priceRange.split("-")
+  if (parts.length !== 2) {
+    // Legacy format support (backward compatibility)
+    switch (priceRange) {
+      case "0-25":
+        return products.filter((product) => {
+          const { cheapestPrice } = getProductPrice({ product })
+          return cheapestPrice && cheapestPrice.calculated_price_number < 25
+        })
+      case "25-50":
+        return products.filter((product) => {
+          const { cheapestPrice } = getProductPrice({ product })
+          return cheapestPrice && cheapestPrice.calculated_price_number >= 25 && cheapestPrice.calculated_price_number < 50
+        })
+      case "50-100":
+        return products.filter((product) => {
+          const { cheapestPrice } = getProductPrice({ product })
+          return cheapestPrice && cheapestPrice.calculated_price_number >= 50 && cheapestPrice.calculated_price_number < 100
+        })
+      case "100-200":
+        return products.filter((product) => {
+          const { cheapestPrice } = getProductPrice({ product })
+          return cheapestPrice && cheapestPrice.calculated_price_number >= 100 && cheapestPrice.calculated_price_number < 200
+        })
+      case "200+":
+        return products.filter((product) => {
+          const { cheapestPrice } = getProductPrice({ product })
+          return cheapestPrice && cheapestPrice.calculated_price_number >= 200
+        })
+      default:
+        return products
+    }
+  }
+
+  const minPrice = parseInt(parts[0], 10)
+  const maxPrice = parts[1] === "+" ? Infinity : parseInt(parts[1], 10)
+
+  if (isNaN(minPrice) || (parts[1] !== "+" && isNaN(maxPrice))) {
     return products
   }
 
@@ -26,20 +69,13 @@ function filterProductsByPrice(
     }
 
     const price = cheapestPrice.calculated_price_number
-
-    switch (priceRange) {
-      case "0-25":
-        return price < 25
-      case "25-50":
-        return price >= 25 && price < 50
-      case "50-100":
-        return price >= 50 && price < 100
-      case "100-200":
-        return price >= 100 && price < 200
-      case "200+":
-        return price >= 200
-      default:
-        return true
+    
+    if (parts[1] === "+") {
+      // Format: "min-+" means minPrice and above
+      return price >= minPrice
+    } else {
+      // Format: "min-max" means price between min and max (inclusive)
+      return price >= minPrice && price <= maxPrice
     }
   })
 }
