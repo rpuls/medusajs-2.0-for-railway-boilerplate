@@ -143,14 +143,13 @@ export async function POST(
         )
 
         if (newProductIds.length > 0) {
-          // Generate UUIDs for each link and insert with proper ID column
+          // Insert links with generated UUID for id column
           // PostgreSQL's gen_random_uuid() function generates UUIDs
           const values: string[] = []
           const params: string[] = []
           
           newProductIds.forEach((productId, index) => {
             const paramIndex = index * 2 + 1
-            // Use gen_random_uuid() to generate ID, then brand_id and product_id
             values.push(`(gen_random_uuid(), $${paramIndex}, $${paramIndex + 1}, now(), now())`)
             params.push(id, productId)
           })

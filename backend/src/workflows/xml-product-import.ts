@@ -1947,9 +1947,10 @@ const importBatchStep = createStep(
                 )
                 
                 if (existingResult.rows.length === 0) {
-                  // Insert the new link (link table has no id column, uses composite key)
+                  // Insert the new link with generated UUID for id column
+                  // PostgreSQL's gen_random_uuid() function generates UUIDs
                   await pool.query(
-                    `INSERT INTO ${linkTableName} (product_id, brand_id) VALUES ($1, $2)`,
+                    `INSERT INTO ${linkTableName} (id, product_id, brand_id, created_at, updated_at) VALUES (gen_random_uuid(), $1, $2, now(), now())`,
                     [productId, brandId]
                   )
                   
