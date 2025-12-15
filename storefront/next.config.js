@@ -13,6 +13,10 @@ const nextConfig = {
   // Optimize for production
   compress: true,
   poweredByHeader: false,
+  // Experimental features for better performance
+  experimental: {
+    optimizePackageImports: ['@mui/material', '@mui/icons-material', '@medusajs/js-sdk'],
+  },
   // Transpile MUI packages for proper Next.js compatibility
   transpilePackages: ['@mui/material', '@mui/system', '@mui/icons-material', '@mui/material-nextjs'],
   

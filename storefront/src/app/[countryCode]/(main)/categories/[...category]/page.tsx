@@ -7,6 +7,11 @@ import { listRegions } from "@lib/data/regions"
 import { StoreProductCategory, StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { generateCategorySchema } from "@lib/seo/category-schema"
+import { generateCategoryBreadcrumb } from "@lib/seo/breadcrumb-schema"
+import { generateHreflangMetadata } from "@lib/seo/hreflang"
+import { getCanonicalUrl } from "@lib/seo/utils"
+import JsonLdScript from "components/seo/json-ld-script"
 
 type Props = {
   params: Promise<{ category: string[]; countryCode: string }>
@@ -80,6 +85,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
     }
 
+    const normalizedCountryCode = typeof resolvedParams.countryCode === 'string' 
+      ? resolvedParams.countryCode.toLowerCase() 
+      : 'us'
+
     const title = product_categories
       .map((category: StoreProductCategory) => category.name)
       .filter(Boolean)
@@ -89,11 +98,46 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       product_categories[product_categories.length - 1]?.description ??
       `${title} category.`
 
+    const categoryPath = `/categories/${resolvedParams.category.filter(Boolean).join("/")}`
+    const categoryUrl = getCanonicalUrl(categoryPath, normalizedCountryCode)
+
+    // Generate hreflang metadata
+    const hreflangAlternates = await generateHreflangMetadata(
+      categoryPath,
+      normalizedCountryCode
+    )
+
     return {
       title: `${title} | MS Store`,
       description,
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
+      },
       alternates: {
-        canonical: `${resolvedParams.category.filter(Boolean).join("/")}`,
+        canonical: categoryUrl,
+        languages: hreflangAlternates,
+      },
+      openGraph: {
+        title: `${title} | MS Store`,
+        description,
+        type: "website",
+        url: categoryUrl,
+        siteName: "MS Store",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${title} | MS Store`,
+        description,
+        site: "@msstore", // Add Twitter handle (update with actual handle)
+        creator: "@msstore", // Add Twitter creator (update with actual handle)
       },
     }
   } catch (error) {
@@ -114,6 +158,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     notFound()
   }
 
+  const normalizedCountryCode = typeof resolvedParams.countryCode === 'string' 
+    ? resolvedParams.countryCode.toLowerCase() 
+    : 'us'
+
   const { product_categories } = await getCategoryByHandle(
     resolvedParams.category
   )
@@ -122,14 +170,38 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     notFound()
   }
 
+  // Generate JSON-LD schemas
+  const categoryPath = `/categories/${resolvedParams.category.filter(Boolean).join("/")}`
+  const categoryUrl = getCanonicalUrl(categoryPath, normalizedCountryCode)
+
+  const categorySchema = generateCategorySchema({
+    categories: product_categories,
+    countryCode: normalizedCountryCode,
+    categoryUrl,
+  })
+
+  const breadcrumbSchema = generateCategoryBreadcrumb(
+    product_categories.map((cat: StoreProductCategory) => ({
+      name: cat.name || "",
+      handle: cat.handle || "",
+    })),
+    normalizedCountryCode
+  )
+
   return (
+    <>
+      {/* JSON-LD Structured Data */}
+      <JsonLdScript id="category-schema" data={categorySchema} />
+      <JsonLdScript id="breadcrumb-schema" data={breadcrumbSchema} />
+
     <Suspense fallback={<div>Loading category...</div>}>
       <CategoryTemplate
         categories={product_categories}
         sortBy={sortBy}
         page={page}
-        countryCode={resolvedParams.countryCode}
+          countryCode={normalizedCountryCode}
       />
     </Suspense>
+    </>
   )
 }

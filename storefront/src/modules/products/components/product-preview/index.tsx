@@ -45,6 +45,8 @@ export default async function ProductPreview({
           images={product.images}
           size="full"
           isFeatured={isFeatured}
+          productName={product.title || undefined}
+          categoryName={product.categories?.[0]?.name || undefined}
         />
         <div className="flex txt-compact-medium mt-4 justify-between">
           <Text className="text-text-secondary group-hover:text-text-primary transition-colors" data-testid="product-title">

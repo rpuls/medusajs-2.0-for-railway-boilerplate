@@ -117,7 +117,15 @@ export default function ProductTileContent({
           {thumbnail ? (
             <Image
               src={thumbnail}
-              alt={product.title || 'Product image'}
+              alt={(() => {
+                // Generate keyword-rich alt text with product name as main keyword
+                const parts = [product.title || 'Product']
+                // Add category if available for better SEO
+                if (product.categories && product.categories.length > 0) {
+                  parts.push(product.categories[0].name)
+                }
+                return parts.join(' - ')
+              })()}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

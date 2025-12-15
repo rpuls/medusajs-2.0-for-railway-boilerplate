@@ -33,6 +33,7 @@ const Hit = ({ hit }: HitProps) => {
           thumbnail={hit.thumbnail}
           size="square"
           className="group h-12 w-12 sm:h-full sm:w-full"
+          productName={hit.title}
         />
         <div className="flex flex-col justify-between group">
           <div className="flex flex-col">

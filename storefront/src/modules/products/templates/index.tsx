@@ -1,15 +1,29 @@
 import React, { Suspense } from "react"
+import dynamicImport from "next/dynamic"
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
-import ProductTabs from "@modules/products/components/product-tabs"
-import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import { HttpTypes } from "@medusajs/types"
+
+// Lazy load heavy components for better code splitting
+const ProductTabs = dynamicImport(
+  () => import("@modules/products/components/product-tabs"),
+  {
+    ssr: true, // Keep SSR for SEO
+  }
+)
+
+const RelatedProducts = dynamicImport(
+  () => import("@modules/products/components/related-products"),
+  {
+    ssr: true, // Keep SSR for SEO
+  }
+)
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -35,7 +49,12 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left Column: Image Gallery */}
           <div className="w-full">
-            <ImageGallery images={product?.images || []} productName={product.title} />
+            <ImageGallery 
+              images={product?.images || []} 
+              productName={product.title}
+              categoryName={product.categories?.[0]?.name}
+              brandName={(product as any).metadata?._brand_name}
+            />
           </div>
 
           {/* Right Column: Product Info & Actions */}
@@ -56,13 +75,15 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           </div>
         </div>
 
-        {/* Product Tabs Below */}
+        {/* Product Tabs Below - Lazy loaded */}
         <div className="mt-12 lg:mt-16">
-          <ProductTabs product={product} />
+          <Suspense fallback={<div className="h-64 bg-background-elevated animate-pulse rounded-lg" />}>
+            <ProductTabs product={product} />
+          </Suspense>
         </div>
       </div>
 
-      {/* Related Products */}
+      {/* Related Products - Lazy loaded */}
       <div
         className="content-container my-16 small:my-32"
         data-testid="related-products-container"

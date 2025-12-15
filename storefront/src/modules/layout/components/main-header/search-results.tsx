@@ -58,6 +58,7 @@ const SearchResults = ({
                 thumbnail={hit.thumbnail}
                 size="square"
                 className="w-full h-full object-cover"
+                productName={hit.title}
               />
             </div>
 

@@ -9,6 +9,11 @@ import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
 import NewsletterWrapper from "./newsletter-wrapper"
+import { generateOrganizationSchema } from "@lib/seo/organization-schema"
+import { generateWebsiteSchema } from "@lib/seo/website-schema"
+import { generateHreflangMetadata } from "@lib/seo/hreflang"
+import { getCanonicalUrl } from "@lib/seo/utils"
+import JsonLdScript from "components/seo/json-ld-script"
 
 // Lazy load banner slider for better performance
 const BannerSliderLazy = dynamicImport(
@@ -18,10 +23,62 @@ const BannerSliderLazy = dynamicImport(
   }
 )
 
-export const metadata: Metadata = {
-  title: "MS Storefront",
-  description:
-    "A performant frontend ecommerce storefront.",
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ countryCode: string }>
+}): Promise<Metadata> {
+  const resolvedParams = await params
+  const normalizedCountryCode =
+    typeof resolvedParams?.countryCode === "string"
+      ? resolvedParams.countryCode.toLowerCase()
+      : "us"
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+  const homepageUrl = getCanonicalUrl("", normalizedCountryCode)
+  const siteName = "MS Store"
+  const siteDescription =
+    "Discover quality products at MS Store. Shop the latest trends, best sellers, and exclusive collections with fast shipping and excellent customer service."
+
+  // Generate hreflang metadata for homepage
+  const hreflangAlternates = await generateHreflangMetadata(
+    "",
+    normalizedCountryCode
+  )
+
+  return {
+    title: `${siteName} - Quality Products & Fast Shipping`,
+    description: siteDescription,
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+    alternates: {
+      canonical: homepageUrl,
+      languages: hreflangAlternates,
+    },
+    openGraph: {
+      title: `${siteName} - Quality Products & Fast Shipping`,
+      description: siteDescription,
+      type: "website",
+      url: homepageUrl,
+      siteName: siteName,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${siteName} - Quality Products & Fast Shipping`,
+      description: siteDescription,
+      site: "@msstore", // Add Twitter handle (update with actual handle)
+      creator: "@msstore", // Add Twitter creator (update with actual handle)
+    },
+  }
 }
 
 // Enable ISR with 1 hour revalidation for homepage
@@ -65,8 +122,33 @@ export default async function Home({
     return null
   }
 
+  // Generate JSON-LD schemas for homepage
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+  const homepageUrl = getCanonicalUrl("", countryCode)
+
+  const organizationSchema = generateOrganizationSchema({
+    name: "MS Store",
+    url: baseUrl,
+    logo: `${baseUrl}/logo.png`,
+  })
+
+  const websiteSchema = generateWebsiteSchema({
+    name: "MS Store",
+    url: baseUrl,
+    description:
+      "Discover quality products at MS Store. Shop the latest trends, best sellers, and exclusive collections.",
+    potentialAction: {
+      target: `${baseUrl}/${countryCode}/search?q={search_term_string}`,
+      queryInput: "required name=search_term_string",
+    },
+  })
+
   return (
     <>
+      {/* JSON-LD Structured Data */}
+      <JsonLdScript id="organization-schema" data={organizationSchema} />
+      <JsonLdScript id="website-schema" data={websiteSchema} />
+
       {/* Hero Banner Slider */}
       <Suspense fallback={<div className="h-[400px] bg-background-elevated" />}>
         <BannerSliderLazy />

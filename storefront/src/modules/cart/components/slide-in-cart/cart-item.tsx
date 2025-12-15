@@ -51,6 +51,7 @@ const CartItem = ({ item }: CartItemProps) => {
           thumbnail={item.variant?.product?.thumbnail}
           images={item.variant?.product?.images}
           size="square"
+          productName={item.product_title || item.variant?.product?.title}
         />
       </LocalizedClientLink>
 

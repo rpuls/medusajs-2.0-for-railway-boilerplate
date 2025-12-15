@@ -10,6 +10,8 @@ type ThumbnailProps = {
   images?: any[] | null
   size?: "small" | "medium" | "large" | "full" | "square"
   isFeatured?: boolean
+  productName?: string // Product name for SEO-optimized alt text
+  categoryName?: string // Category name for better SEO
   className?: string
   "data-testid"?: string
 }
@@ -19,6 +21,8 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   images,
   size = "small",
   isFeatured,
+  productName,
+  categoryName,
   className,
   "data-testid": dataTestid,
 }) => {
@@ -41,7 +45,12 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
       )}
       data-testid={dataTestid}
     >
-      <ImageOrPlaceholder image={initialImage} size={size} />
+      <ImageOrPlaceholder 
+        image={initialImage} 
+        size={size} 
+        productName={productName}
+        categoryName={categoryName}
+      />
     </Container>
   )
 }
@@ -49,11 +58,25 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
 const ImageOrPlaceholder = ({
   image,
   size,
-}: Pick<ThumbnailProps, "size"> & { image?: string }) => {
+  productName,
+  categoryName,
+}: Pick<ThumbnailProps, "size" | "productName" | "categoryName"> & { image?: string }) => {
+  // Generate keyword-rich alt text with product name as main keyword
+  const generateAltText = (): string => {
+    if (productName) {
+      const parts = [productName] // Product name is the main keyword
+      if (categoryName) {
+        parts.push(categoryName)
+      }
+      return parts.join(' - ')
+    }
+    return "Product Image"
+  }
+  
   return image ? (
     <Image
       src={image}
-      alt="Thumbnail"
+      alt={generateAltText()}
       className="absolute inset-0 object-cover object-center"
       draggable={false}
       quality={75}

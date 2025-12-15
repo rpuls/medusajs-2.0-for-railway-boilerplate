@@ -8,11 +8,39 @@ import { useTranslation } from "@lib/i18n/hooks/use-translation"
 type ImageGalleryProps = {
   images: HttpTypes.StoreProductImage[]
   productName?: string
+  categoryName?: string
+  brandName?: string
 }
 
-const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
+const ImageGallery = ({ images, productName, categoryName, brandName }: ImageGalleryProps) => {
   const { t } = useTranslation()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  
+  // Generate keyword-rich alt text with product name as main keyword
+  const generateAltText = (imageType: 'main' | 'thumbnail', index?: number): string => {
+    if (!productName) return t("cart.product")
+    
+    const parts = [productName] // Product name is the main keyword
+    
+    // Add category for better SEO if available
+    if (categoryName) {
+      parts.push(categoryName)
+    }
+    
+    // Add brand if available
+    if (brandName) {
+      parts.push(brandName)
+    }
+    
+    // Add image type context
+    if (imageType === 'thumbnail' && index !== undefined) {
+      parts.push(`Image ${index + 1}`)
+    } else if (imageType === 'main') {
+      parts.push('Product Image')
+    }
+    
+    return parts.join(' - ')
+  }
 
   if (!images || images.length === 0) {
     return (
@@ -46,7 +74,7 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
                   src={image.url}
                   loading="lazy"
                   className="object-cover"
-                  alt={`${productName || t("cart.product")} - ${t("gallery.thumbnail")} ${index + 1}`}
+                  alt={generateAltText('thumbnail', index)}
                   fill
                   sizes="80px"
                   quality={60}
@@ -59,19 +87,20 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
         </div>
       )}
 
-      {/* Main Image */}
+      {/* Main Image - Optimized for LCP */}
       <div className="flex-1 relative aspect-square w-full overflow-hidden bg-background-elevated rounded-lg group">
         {selectedImage?.url && (
           <>
             <Image
               src={selectedImage.url}
               priority={selectedImageIndex === 0}
+              fetchPriority={selectedImageIndex === 0 ? "high" : "auto"}
               loading={selectedImageIndex === 0 ? "eager" : "lazy"}
               className="object-cover transition-opacity duration-300"
-              alt={`${productName || t("cart.product")} - ${t("gallery.mainImage")}`}
+              alt={generateAltText('main')}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              quality={90}
+              quality={selectedImageIndex === 0 ? 90 : 75}
               placeholder="blur"
               blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
             />
@@ -153,7 +182,7 @@ const ImageGallery = ({ images, productName }: ImageGalleryProps) => {
                   src={image.url}
                   loading="lazy"
                   className="object-cover"
-                  alt={`${productName || "Product"} - Thumbnail ${index + 1}`}
+                  alt={generateAltText('thumbnail', index)}
                   fill
                   sizes="80px"
                   quality={60}
