@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import {
   Card,
   CardContent,
@@ -20,6 +20,8 @@ import { HttpTypes } from '@medusajs/types'
 import { getProductPrice } from '@lib/util/get-product-price'
 import { addToCartAction } from '@modules/products/actions/add-to-cart'
 import { useTranslation } from '@lib/i18n/hooks/use-translation'
+import { useCartDrawer } from '@modules/cart/context/cart-context'
+import QuickViewModal from './quick-view-modal'
 
 /**
  * Client Component for Product Tile with interactive features
@@ -39,8 +41,11 @@ export default function ProductTileContent({
 }) {
   const { t } = useTranslation()
   const params = useParams()
+  const router = useRouter()
+  const { openCart } = useCartDrawer()
   const actualCountryCode = (params?.countryCode as string) || countryCode
   const [isAdding, setIsAdding] = useState(false)
+  const [quickViewOpen, setQuickViewOpen] = useState(false)
 
   const { cheapestPrice } = getProductPrice({
     product: pricedProduct,
@@ -48,6 +53,7 @@ export default function ProductTileContent({
 
   const thumbnail = product.thumbnail || product.images?.[0]?.url
   const hasVariants = product.variants && product.variants.length > 0
+  const hasMultipleVariants = (product.variants?.length ?? 0) > 1
 
   // Get the first available variant (or first variant if no inventory management)
   const defaultVariant = product.variants?.[0]
@@ -71,11 +77,23 @@ export default function ProductTileContent({
 
   const productUrl = `/${actualCountryCode}/products/${product.handle}`
 
-  // Handle add to cart
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  // Handle add to cart button click
+  const handleAddToCartClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     e.stopPropagation()
 
+    // If product has multiple variants, open quick view modal
+    if (hasMultipleVariants) {
+      setQuickViewOpen(true)
+      return
+    }
+
+    // Otherwise, add directly to cart
+    handleAddToCartDirect()
+  }
+
+  // Handle direct add to cart (for single variant products)
+  const handleAddToCartDirect = async () => {
     if (!defaultVariant?.id || !isInStock || isAdding) {
       return
     }
@@ -88,27 +106,34 @@ export default function ProductTileContent({
         quantity: 1,
         countryCode: actualCountryCode,
       })
-      
-      if (!result.success) {
+
+      if (result.success) {
+        router.refresh()
+        setTimeout(() => {
+          openCart()
+        }, 300)
+      } else {
         console.error('Failed to add to cart:', result.error)
+        alert(`Failed to add to cart: ${result.error}`)
       }
     } catch (error) {
       console.error('Failed to add to cart:', error)
+      alert(`Failed to add to cart: ${error}`)
     } finally {
       setIsAdding(false)
     }
   }
 
   return (
-    <Link href={productUrl} className="block h-full">
-      <Card 
-        className="h-full flex flex-col hover:shadow-lg transition-all duration-300 group cursor-pointer"
-        sx={{
-          '&:hover': {
-            transform: 'translateY(-4px)',
-          },
-        }}
-      >
+    <Card 
+      className="h-full flex flex-col hover:shadow-lg transition-all duration-300 group cursor-pointer"
+      sx={{
+        '&:hover': {
+          transform: 'translateY(-4px)',
+        },
+      }}
+    >
+      <Link href={productUrl} className="block flex-grow">
         {/* Image Section with Lazy Loading */}
         <CardMedia
           component="div"
@@ -231,27 +256,37 @@ export default function ProductTileContent({
                 )}
               </Box>
         </CardContent>
+      </Link>
 
-        {/* Actions */}
-        <CardActions className="p-4 pt-0" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="contained"
-              fullWidth
-              startIcon={isAdding ? <CircularProgress size={16} color="inherit" /> : <ShoppingCart />}
-              disabled={!isInStock || isAdding || !defaultVariant}
-              onClick={handleAddToCart}
-              className="transition-all duration-200"
-              sx={{
-                '&:hover': {
-                  transform: 'scale(1.02)',
-                },
-              }}
-            >
-              {isAdding ? t("product.adding") : isInStock ? t("product.addToCart") : t("product.outOfStock")}
-            </Button>
-        </CardActions>
-      </Card>
-    </Link>
+      {/* Actions - Outside Link to prevent navigation */}
+      <CardActions className="p-4 pt-0">
+        <Button
+          variant="contained"
+          fullWidth
+          startIcon={isAdding ? <CircularProgress size={16} color="inherit" /> : <ShoppingCart />}
+          disabled={!isInStock || isAdding || !defaultVariant}
+          onClick={handleAddToCartClick}
+          className="transition-all duration-200"
+          sx={{
+            '&:hover': {
+              transform: 'scale(1.02)',
+            },
+          }}
+        >
+          {isAdding ? t("product.adding") : isInStock ? t("product.addToCart") : t("product.outOfStock")}
+        </Button>
+      </CardActions>
+
+      {/* Quick View Modal for Variant Selection */}
+      {hasMultipleVariants && (
+        <QuickViewModal
+          product={product}
+          open={quickViewOpen}
+          onClose={() => setQuickViewOpen(false)}
+          countryCode={actualCountryCode}
+        />
+      )}
+    </Card>
   )
 }
 

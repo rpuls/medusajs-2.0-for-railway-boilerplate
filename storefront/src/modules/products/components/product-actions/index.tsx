@@ -2,7 +2,7 @@
 
 import { Button } from "@medusajs/ui"
 import { isEqual } from "@lib/utils/is-equal"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useIntersection } from "@lib/hooks/use-in-view"
@@ -15,6 +15,7 @@ import QuickBuy from "../quick-buy"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { useStorefrontConfig } from "@lib/hooks/use-storefront-config"
+import { useCartDrawer } from "@modules/cart/context/cart-context"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -39,6 +40,8 @@ export default function ProductActions({
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
+  const router = useRouter()
+  const { openCart } = useCartDrawer()
   const config = useStorefrontConfig()
 
   // If there is only 1 variant, preselect the options
@@ -102,13 +105,22 @@ export default function ProductActions({
 
     setIsAdding(true)
 
-    await addToCart({
-      variantId: selectedVariant.id,
-      quantity: 1,
-      countryCode,
-    })
-
-    setIsAdding(false)
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
+      
+      // Refresh the router to update cart data
+      router.refresh()
+      // Open the cart drawer
+      openCart()
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
+    } finally {
+      setIsAdding(false)
+    }
   }
 
   return (
