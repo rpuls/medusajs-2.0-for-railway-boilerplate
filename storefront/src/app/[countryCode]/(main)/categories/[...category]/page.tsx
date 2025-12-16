@@ -11,6 +11,8 @@ import { generateCategorySchema } from "@lib/seo/category-schema"
 import { generateCategoryBreadcrumb } from "@lib/seo/breadcrumb-schema"
 import { generateHreflangMetadata } from "@lib/seo/hreflang"
 import { getCanonicalUrl } from "@lib/seo/utils"
+import { stripHtml, htmlToMetaDescription } from "@lib/util/strip-html"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 import JsonLdScript from "components/seo/json-ld-script"
 
 type Props = {
@@ -66,11 +68,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params
   
   try {
+    const normalizedCountryCode = typeof resolvedParams.countryCode === 'string' 
+      ? resolvedParams.countryCode.toLowerCase() 
+      : 'us'
+    
+    // Get translations for metadata
+    const translations = await getTranslations(normalizedCountryCode)
+    const siteName = getTranslation(translations, "metadata.siteName")
+    
     // Validate params
     if (!resolvedParams.category || resolvedParams.category.length === 0) {
+      const fallbackTitle = getTranslation(translations, "metadata.category.fallbackTitle")
+      const fallbackDescription = getTranslation(translations, "metadata.category.fallbackDescription")
       return {
-        title: "Category | MS Store",
-        description: "Category page",
+        title: `${fallbackTitle} | ${siteName}`,
+        description: fallbackDescription,
       }
     }
 
@@ -79,24 +91,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     )
 
     if (!product_categories || product_categories.length === 0) {
+      const fallbackTitle = getTranslation(translations, "metadata.category.fallbackTitle")
+      const fallbackDescription = getTranslation(translations, "metadata.category.fallbackDescription")
       return {
-        title: "Category | MS Store",
-        description: "Category page",
+        title: `${fallbackTitle} | ${siteName}`,
+        description: fallbackDescription,
       }
     }
 
-    const normalizedCountryCode = typeof resolvedParams.countryCode === 'string' 
-      ? resolvedParams.countryCode.toLowerCase() 
-      : 'us'
-
+    const fallbackCategoryTitle = getTranslation(translations, "metadata.category.fallbackTitle")
     const title = product_categories
       .map((category: StoreProductCategory) => category.name)
       .filter(Boolean)
-      .join(" | ") || "Category"
+      .join(" | ") || fallbackCategoryTitle
 
-    const description =
-      product_categories[product_categories.length - 1]?.description ??
-      `${title} category.`
+    // Strip HTML from category description
+    const categorySuffix = getTranslation(translations, "metadata.category.categorySuffix")
+    let description = stripHtml(
+      product_categories[product_categories.length - 1]?.description
+    ) || `${title} ${categorySuffix}.`
+    
+    // Ensure description is meaningful and SEO-friendly (minimum 120 characters)
+    if (!description || description.length < 120) {
+      const shopProductsTemplate = getTranslation(translations, "metadata.category.shopProducts")
+      description = shopProductsTemplate
+        .replace("{title}", title)
+        .replace("{titleLower}", title.toLowerCase())
+    }
+    
+    // Ensure description is optimal length (max 160 characters)
+    description = htmlToMetaDescription(description, 160)
 
     const categoryPath = `/categories/${resolvedParams.category.filter(Boolean).join("/")}`
     const categoryUrl = getCanonicalUrl(categoryPath, normalizedCountryCode)
@@ -108,7 +132,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     )
 
     return {
-      title: `${title} | MS Store`,
+      title: `${title} | ${siteName}`,
       description,
       robots: {
         index: true,
@@ -126,24 +150,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         languages: hreflangAlternates,
       },
       openGraph: {
-        title: `${title} | MS Store`,
+        title: `${title} | ${siteName}`,
         description,
         type: "website",
         url: categoryUrl,
-        siteName: "MS Store",
+        siteName: siteName,
       },
       twitter: {
         card: "summary_large_image",
-        title: `${title} | MS Store`,
+        title: `${title} | ${siteName}`,
         description,
         site: "@msstore", // Add Twitter handle (update with actual handle)
         creator: "@msstore", // Add Twitter creator (update with actual handle)
       },
     }
   } catch (error) {
+    const normalizedCountryCode = typeof resolvedParams?.countryCode === 'string' 
+      ? resolvedParams.countryCode.toLowerCase() 
+      : 'us'
+    const translations = await getTranslations(normalizedCountryCode)
+    const siteName = getTranslation(translations, "metadata.siteName")
+    const fallbackTitle = getTranslation(translations, "metadata.category.fallbackTitle")
+    const fallbackDescription = getTranslation(translations, "metadata.category.fallbackDescription")
     return {
-      title: "Category | MS Store",
-      description: "Category page",
+      title: `${fallbackTitle} | ${siteName}`,
+      description: fallbackDescription,
     }
   }
 }

@@ -19,6 +19,7 @@ const CategoryMenuItem = ({ category }: CategoryMenuItemProps) => {
         return (
             <LocalizedClientLink
                 href={`/categories/${category.handle}`}
+                prefetch={false}
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors whitespace-nowrap font-medium"
             >
                 {category.name}
@@ -38,6 +39,7 @@ const CategoryMenuItem = ({ category }: CategoryMenuItemProps) => {
                 >
                     <LocalizedClientLink
                         href={`/categories/${category.handle}`}
+                        prefetch={false}
                         className="hover:text-text-primary"
                     >
                         {category.name}
@@ -61,6 +63,7 @@ const CategoryMenuItem = ({ category }: CategoryMenuItemProps) => {
                                 <LocalizedClientLink
                                     key={child.id}
                                     href={`/categories/${child.handle}`}
+                                    prefetch={false}
                                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                                 >
                                     {child.name}

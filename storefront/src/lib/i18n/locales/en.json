@@ -156,5 +156,44 @@
   "cartButton": {
     "items": "items",
     "currency": "BGN"
+  },
+  "metadata": {
+    "siteName": "MS Store",
+    "homepage": {
+      "title": "MS Store - Quality Products & Fast Shipping",
+      "description": "Discover quality products at MS Store. Shop the latest trends, best sellers, and exclusive collections with fast shipping and excellent customer service."
+    },
+    "product": {
+      "fallbackTitle": "Product",
+      "fallbackDescription": "Shop {productName} - {categoryName} at MS Store. Quality products with fast shipping and excellent customer service.",
+      "shopCategory": "Shop {categoryName} at MS Store.",
+      "authenticBrand": "Authentic {brandName} products.",
+      "shopOnline": "Shop online at MS Store with fast shipping and secure checkout.",
+      "shopOnlineShort": "Shop Online"
+    },
+    "category": {
+      "fallbackTitle": "Category",
+      "fallbackDescription": "Category page",
+      "categorySuffix": "category",
+      "shopProducts": "Shop {title} products at MS Store. Browse our curated selection of {titleLower} with fast shipping and excellent customer service."
+    },
+    "collection": {
+      "fallbackTitle": "Collection",
+      "fallbackDescription": "Shop {title} collection at MS Store. Discover curated products with fast shipping and excellent customer service."
+    },
+    "store": {
+      "title": "Store | MS Store",
+      "description": "Explore our complete catalog of quality products. Shop by category, collection, brand, or price range. Fast shipping and secure checkout available."
+    },
+    "search": {
+      "title": "Search Results",
+      "description": "Search results for your query",
+      "forQuery": "Search Results for \"{query}\"",
+      "findProducts": "Find products matching \"{query}\" at MS Store. Browse search results with filters, sorting options, and fast shipping available."
+    },
+    "cart": {
+      "title": "Cart",
+      "description": "View your cart"
+    }
   }
 }

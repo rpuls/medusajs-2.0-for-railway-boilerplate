@@ -4,10 +4,33 @@ import SearchResultsTemplate from "@modules/search/templates/search-results-temp
 
 import { search } from "@modules/search/actions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 
-export const metadata: Metadata = {
-  title: "Search",
-  description: "Explore all of our products.",
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const resolvedParams = await params
+  const { query, countryCode } = resolvedParams
+  
+  const normalizedCountryCode = typeof countryCode === 'string' 
+    ? countryCode.toLowerCase() 
+    : 'us'
+  
+  // Get translations for metadata
+  const translations = await getTranslations(normalizedCountryCode)
+  const siteName = getTranslation(translations, "metadata.siteName")
+  const searchForQuery = getTranslation(translations, "metadata.search.forQuery")
+  const findProducts = getTranslation(translations, "metadata.search.findProducts")
+  
+  const title = `${searchForQuery.replace("{query}", query)} | ${siteName}`
+  const description = findProducts.replace("{query}", query)
+  
+  return {
+    title,
+    description,
+    robots: {
+      index: true,
+      follow: true,
+    },
+  }
 }
 
 // Enable ISR with 1 hour revalidation for search results

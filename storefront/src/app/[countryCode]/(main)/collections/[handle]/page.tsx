@@ -10,6 +10,8 @@ import { listRegions } from "@lib/data/regions"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { stripHtml, htmlToMetaDescription } from "@lib/util/strip-html"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 
 type Props = {
   params: Promise<{ handle: string; countryCode: string }>
@@ -67,12 +69,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
-  const metadata = {
-    title: `${collection.title} | MS Store`,
-    description: `${collection.title} collection`,
-  } as Metadata
+  const normalizedCountryCode = typeof resolvedParams.countryCode === 'string' 
+    ? resolvedParams.countryCode.toLowerCase() 
+    : 'us'
+  
+  // Get translations for metadata
+  const translations = await getTranslations(normalizedCountryCode)
+  const siteName = getTranslation(translations, "metadata.siteName")
 
-  return metadata
+  // Generate meaningful description - strip HTML if present
+  const fallbackCollectionTitle = getTranslation(translations, "metadata.collection.fallbackTitle")
+  let description = stripHtml(
+    collection.metadata?.description as string
+  ) || collection.title || fallbackCollectionTitle
+  
+  // Ensure description is meaningful and SEO-friendly
+  if (!description || description.length < 50) {
+    const collectionTemplate = getTranslation(translations, "metadata.collection.fallbackDescription")
+    description = collectionTemplate.replace("{title}", collection.title)
+  }
+  
+  // Ensure description is optimal length (max 160 characters)
+  description = htmlToMetaDescription(description, 160)
+
+  return {
+    title: `${collection.title} | ${siteName}`,
+    description,
+    robots: {
+      index: true,
+      follow: true,
+    },
+  }
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {

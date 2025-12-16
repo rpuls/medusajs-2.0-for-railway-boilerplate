@@ -4,10 +4,28 @@ import CartTemplate from "@modules/cart/templates"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 
-export const metadata: Metadata = {
-  title: "Cart",
-  description: "View your cart",
+export async function generateMetadata({ params }: { params: Promise<{ countryCode: string }> }): Promise<Metadata> {
+  const resolvedParams = await params
+  const normalizedCountryCode = typeof resolvedParams?.countryCode === 'string' 
+    ? resolvedParams.countryCode.toLowerCase() 
+    : 'us'
+  
+  // Get translations for metadata
+  const translations = await getTranslations(normalizedCountryCode)
+  const siteName = getTranslation(translations, "metadata.siteName")
+  const cartTitle = getTranslation(translations, "metadata.cart.title")
+  const cartDescription = getTranslation(translations, "metadata.cart.description")
+  
+  return {
+    title: `${cartTitle} | ${siteName}`,
+    description: cartDescription,
+    robots: {
+      index: false, // Cart pages should not be indexed
+      follow: false,
+    },
+  }
 }
 
 const fetchCart = async () => {
@@ -25,7 +43,8 @@ const fetchCart = async () => {
   return cart
 }
 
-export default async function Cart() {
+export default async function Cart({ params }: { params: Promise<{ countryCode: string }> }) {
+  await params // Await params in Next.js 16 (even if not used)
   const cart = await fetchCart()
   const customer = await getCustomer()
 

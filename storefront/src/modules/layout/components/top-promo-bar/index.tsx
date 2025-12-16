@@ -13,7 +13,8 @@ const TopPromoBar = () => {
           {[1, 2, 3].map((index) => (
             <LocalizedClientLink
               key={index}
-              href="/promotions"
+              href="/store"
+              prefetch={false}
               className="flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity"
             >
               <svg

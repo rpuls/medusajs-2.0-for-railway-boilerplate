@@ -13,6 +13,8 @@ import { generateWebPageSchema } from "@lib/seo/webpage-schema"
 import { generateHreflangMetadata } from "@lib/seo/hreflang"
 import { getProductUrl, getProductImages } from "@lib/seo/utils"
 import { getProductPriceForSchema } from "@lib/seo/utils"
+import { stripHtml, htmlToMetaDescription } from "@lib/util/strip-html"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 import JsonLdScript from "components/seo/json-ld-script"
 import PreloadImage from "components/seo/preload-image"
 
@@ -86,16 +88,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const images = getProductImages(product)
   const priceData = getProductPriceForSchema(product)
   
+  // Get translations for metadata
+  const translations = await getTranslations(normalizedCountryCode)
+  const siteName = getTranslation(translations, "metadata.siteName")
+  
   // Generate keyword-rich description
   // Keywords are naturally integrated into descriptions (not separate meta tags)
   // This helps SEO by including relevant terms from categories, brands, etc.
-  let description = product.description || product.title || ""
+  // IMPORTANT: Strip HTML tags from product description for meta description
+  let description = stripHtml(product.description) || product.title || ""
+  
+  // If description is still empty or too short, create a meaningful fallback
+  if (!description || description.trim().length < 20) {
+    const productName = product.title || getTranslation(translations, "metadata.product.fallbackTitle")
+    const categoryName = product.categories?.[0]?.name || "products"
+    const fallbackTemplate = getTranslation(translations, "metadata.product.fallbackDescription")
+    description = fallbackTemplate
+      .replace("{productName}", productName)
+      .replace("{categoryName}", categoryName)
+  }
   
   // Enhance description with category context for better keyword optimization
   if (product.categories && product.categories.length > 0) {
     const categoryName = product.categories[0].name
     if (categoryName && !description.toLowerCase().includes(categoryName.toLowerCase())) {
-      description = `${description} Shop ${categoryName} at MS Store.`
+      const shopCategoryTemplate = getTranslation(translations, "metadata.product.shopCategory")
+      description = `${description} ${shopCategoryTemplate.replace("{categoryName}", categoryName)}`
     }
   }
   
@@ -104,13 +122,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (brandId) {
     const brand = await getBrandById(brandId)
     if (brand?.name && !description.toLowerCase().includes(brand.name.toLowerCase())) {
-      description = `${description} Authentic ${brand.name} products.`
+      const brandTemplate = getTranslation(translations, "metadata.product.authenticBrand")
+      description = `${description} ${brandTemplate.replace("{brandName}", brand.name)}`
     }
   }
   
   // Ensure description is optimal length (150-160 characters for best SEO)
-  if (description.length > 160) {
-    description = description.substring(0, 157) + "..."
+  // Use htmlToMetaDescription to ensure proper formatting
+  description = htmlToMetaDescription(description, 160)
+  
+  // Ensure minimum length
+  if (description.length < 120) {
+    // Pad with additional context if too short
+    const padding = getTranslation(translations, "metadata.product.shopOnline")
+    const maxPaddingLength = 160 - description.length
+    if (maxPaddingLength > padding.length) {
+      description = description + " " + padding
+    } else {
+      description = description + " " + padding.substring(0, maxPaddingLength - 3) + "..."
+    }
   }
 
   // Generate hreflang metadata
@@ -124,7 +154,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Generate SEO-optimized title (30-60 characters recommended)
   // Format: "Product Name - Category | MS Store" or "Product Name | MS Store"
-  let seoTitle = product.title || "Product"
+  let seoTitle = product.title || getTranslation(translations, "metadata.product.fallbackTitle")
   if (product.categories && product.categories.length > 0) {
     const categoryName = product.categories[0].name
     // Only add category if title is short enough
@@ -132,17 +162,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       seoTitle = `${seoTitle} - ${categoryName}`
     }
   }
-  seoTitle = `${seoTitle} | MS Store`
+  seoTitle = `${seoTitle} | ${siteName}`
   
   // Ensure title is within recommended range (30-60 characters)
   if (seoTitle.length < 30) {
     // Add descriptive text if too short
-    seoTitle = `${product.title} - Shop Online | MS Store`
+    const shopOnlineShort = getTranslation(translations, "metadata.product.shopOnlineShort")
+    seoTitle = `${product.title} - ${shopOnlineShort} | ${siteName}`
   }
   if (seoTitle.length > 60) {
     // Truncate if too long, keeping " | MS Store" suffix
-    const maxLength = 60 - 11 // 11 chars for " | MS Store"
-    seoTitle = `${seoTitle.substring(0, maxLength)}... | MS Store`
+    const suffixLength = siteName.length + 3 // " | " + siteName
+    const maxLength = 60 - suffixLength
+    seoTitle = `${seoTitle.substring(0, maxLength)}... | ${siteName}`
   }
 
   return {
@@ -169,7 +201,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: images.length > 0 ? images : [],
       url: productUrl,
-      siteName: "MS Store", // Add site name for better OpenGraph
+      siteName: siteName,
     },
     twitter: {
       card: "summary_large_image",

@@ -106,12 +106,12 @@ export default function ProductActions({
     setIsAdding(true)
 
     try {
-      await addToCart({
-        variantId: selectedVariant.id,
-        quantity: 1,
-        countryCode,
-      })
-      
+    await addToCart({
+      variantId: selectedVariant.id,
+      quantity: 1,
+      countryCode,
+    })
+
       // Refresh the router to update cart data
       router.refresh()
       // Open the cart drawer
@@ -119,7 +119,7 @@ export default function ProductActions({
     } catch (error) {
       console.error('Failed to add to cart:', error)
     } finally {
-      setIsAdding(false)
+    setIsAdding(false)
     }
   }
 

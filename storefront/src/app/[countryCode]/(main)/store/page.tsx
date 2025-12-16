@@ -3,17 +3,7 @@ import { Suspense } from "react"
 
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import StoreTemplate from "@modules/store/templates"
-
-export const metadata: Metadata = {
-  title: "Store",
-  description: "Explore all of our products.",
-}
-
-// Enable ISR with 1 hour revalidation
-export const revalidate = 3600
-
-// Allow dynamic rendering for filters (filters change via URL params)
-export const dynamic = "force-dynamic"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 
 type Params = {
   searchParams: Promise<{
@@ -28,6 +18,33 @@ type Params = {
     countryCode: string
   }>
 }
+
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const resolvedParams = await params
+  const normalizedCountryCode = typeof resolvedParams?.countryCode === 'string' 
+    ? resolvedParams.countryCode.toLowerCase() 
+    : 'us'
+  
+  // Get translations for metadata
+  const translations = await getTranslations(normalizedCountryCode)
+  const title = getTranslation(translations, "metadata.store.title")
+  const description = getTranslation(translations, "metadata.store.description")
+  
+  return {
+    title,
+    description,
+    robots: {
+      index: true,
+      follow: true,
+    },
+  }
+}
+
+// Enable ISR with 1 hour revalidation
+export const revalidate = 3600
+
+// Allow dynamic rendering for filters (filters change via URL params)
+export const dynamic = "force-dynamic"
 
 export default async function StorePage({ searchParams, params }: Params) {
   // Await both params and searchParams in Next.js 16

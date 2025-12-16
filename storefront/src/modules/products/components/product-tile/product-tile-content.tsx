@@ -106,7 +106,7 @@ export default function ProductTileContent({
         quantity: 1,
         countryCode: actualCountryCode,
       })
-
+      
       if (result.success) {
         router.refresh()
         setTimeout(() => {
@@ -125,14 +125,14 @@ export default function ProductTileContent({
   }
 
   return (
-    <Card 
-      className="h-full flex flex-col hover:shadow-lg transition-all duration-300 group cursor-pointer"
-      sx={{
-        '&:hover': {
-          transform: 'translateY(-4px)',
-        },
-      }}
-    >
+      <Card 
+        className="h-full flex flex-col hover:shadow-lg transition-all duration-300 group cursor-pointer"
+        sx={{
+          '&:hover': {
+            transform: 'translateY(-4px)',
+          },
+        }}
+      >
       <Link href={productUrl} className="block flex-grow">
         {/* Image Section with Lazy Loading */}
         <CardMedia
@@ -260,22 +260,22 @@ export default function ProductTileContent({
 
       {/* Actions - Outside Link to prevent navigation */}
       <CardActions className="p-4 pt-0">
-        <Button
-          variant="contained"
-          fullWidth
-          startIcon={isAdding ? <CircularProgress size={16} color="inherit" /> : <ShoppingCart />}
-          disabled={!isInStock || isAdding || !defaultVariant}
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={isAdding ? <CircularProgress size={16} color="inherit" /> : <ShoppingCart />}
+              disabled={!isInStock || isAdding || !defaultVariant}
           onClick={handleAddToCartClick}
-          className="transition-all duration-200"
-          sx={{
-            '&:hover': {
-              transform: 'scale(1.02)',
-            },
-          }}
-        >
-          {isAdding ? t("product.adding") : isInStock ? t("product.addToCart") : t("product.outOfStock")}
-        </Button>
-      </CardActions>
+              className="transition-all duration-200"
+              sx={{
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                },
+              }}
+            >
+              {isAdding ? t("product.adding") : isInStock ? t("product.addToCart") : t("product.outOfStock")}
+            </Button>
+        </CardActions>
 
       {/* Quick View Modal for Variant Selection */}
       {hasMultipleVariants && (
@@ -286,7 +286,7 @@ export default function ProductTileContent({
           countryCode={actualCountryCode}
         />
       )}
-    </Card>
+      </Card>
   )
 }
 

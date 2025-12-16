@@ -58,6 +58,7 @@ const CategoryIconsCarousel = async ({
               <LocalizedClientLink
                 key={category.id}
                 href={`/categories/${category.handle}`}
+                prefetch={false}
                 className="flex flex-col items-center gap-3 p-4 md:p-6 bg-background-elevated border border-border-base rounded-3xl hover:shadow-md transition-all min-w-[120px] md:min-w-[140px] group"
               >
                 {/* Icon Placeholder - Replace with actual icons */}

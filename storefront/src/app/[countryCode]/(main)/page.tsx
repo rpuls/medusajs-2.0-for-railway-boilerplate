@@ -13,6 +13,7 @@ import { generateOrganizationSchema } from "@lib/seo/organization-schema"
 import { generateWebsiteSchema } from "@lib/seo/website-schema"
 import { generateHreflangMetadata } from "@lib/seo/hreflang"
 import { getCanonicalUrl } from "@lib/seo/utils"
+import { getTranslations, getTranslation } from "@lib/i18n/server"
 import JsonLdScript from "components/seo/json-ld-script"
 
 // Lazy load banner slider for better performance
@@ -36,9 +37,12 @@ export async function generateMetadata({
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
   const homepageUrl = getCanonicalUrl("", normalizedCountryCode)
-  const siteName = "MS Store"
-  const siteDescription =
-    "Discover quality products at MS Store. Shop the latest trends, best sellers, and exclusive collections with fast shipping and excellent customer service."
+  
+  // Get translations for metadata
+  const translations = await getTranslations(normalizedCountryCode)
+  const siteName = getTranslation(translations, "metadata.siteName")
+  const siteDescription = getTranslation(translations, "metadata.homepage.description")
+  const siteTitle = getTranslation(translations, "metadata.homepage.title")
 
   // Generate hreflang metadata for homepage
   const hreflangAlternates = await generateHreflangMetadata(
@@ -47,7 +51,7 @@ export async function generateMetadata({
   )
 
   return {
-    title: `${siteName} - Quality Products & Fast Shipping`,
+    title: siteTitle,
     description: siteDescription,
     robots: {
       index: true,
@@ -65,7 +69,7 @@ export async function generateMetadata({
       languages: hreflangAlternates,
     },
     openGraph: {
-      title: `${siteName} - Quality Products & Fast Shipping`,
+      title: siteTitle,
       description: siteDescription,
       type: "website",
       url: homepageUrl,
@@ -73,7 +77,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${siteName} - Quality Products & Fast Shipping`,
+      title: siteTitle,
       description: siteDescription,
       site: "@msstore", // Add Twitter handle (update with actual handle)
       creator: "@msstore", // Add Twitter creator (update with actual handle)
@@ -126,17 +130,21 @@ export default async function Home({
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
   const homepageUrl = getCanonicalUrl("", countryCode)
 
+  // Get translations for schema (reuse from metadata generation)
+  const translations = await getTranslations(countryCode)
+  const siteName = getTranslation(translations, "metadata.siteName")
+  const siteDescription = getTranslation(translations, "metadata.homepage.description")
+
   const organizationSchema = generateOrganizationSchema({
-    name: "MS Store",
+    name: siteName,
     url: baseUrl,
     logo: `${baseUrl}/logo.png`,
   })
 
   const websiteSchema = generateWebsiteSchema({
-    name: "MS Store",
+    name: siteName,
     url: baseUrl,
-    description:
-      "Discover quality products at MS Store. Shop the latest trends, best sellers, and exclusive collections.",
+    description: siteDescription,
     potentialAction: {
       target: `${baseUrl}/${countryCode}/search?q={search_term_string}`,
       queryInput: "required name=search_term_string",
