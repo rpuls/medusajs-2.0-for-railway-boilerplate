@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-import { Suspense } from "react"
 
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import StoreTemplate from "@modules/store/templates"
@@ -72,16 +71,14 @@ export default async function StorePage({ searchParams, params }: Params) {
     : []
 
   return (
-    <Suspense fallback={<div>Loading store...</div>}>
-      <StoreTemplate
-        sortBy={sortBy}
-        page={page}
-        countryCode={resolvedParams.countryCode}
-        collectionIds={collectionIds}
-        categoryIds={categoryIds}
-        brandIds={brandIds}
-        priceRange={price}
-      />
-    </Suspense>
+    <StoreTemplate
+      sortBy={sortBy}
+      page={page}
+      countryCode={resolvedParams.countryCode}
+      collectionIds={collectionIds}
+      categoryIds={categoryIds}
+      brandIds={brandIds}
+      priceRange={price}
+    />
   )
 }
