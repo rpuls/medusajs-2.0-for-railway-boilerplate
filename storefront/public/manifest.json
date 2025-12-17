@@ -1,0 +1,44 @@
+{
+  "name": "MS Store",
+  "short_name": "MS Store",
+  "description": "Shop online with MS Store - Your trusted e-commerce platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#519717",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["shopping", "ecommerce"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Store",
+      "short_name": "Store",
+      "description": "Browse all products",
+      "url": "/store",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cart",
+      "short_name": "Cart",
+      "description": "View your cart",
+      "url": "/cart",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

@@ -3,6 +3,7 @@ import { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "styles/globals.css"
 import { MuiProviders } from "./mui-providers"
+import { PWAComponents } from "./pwa-components"
 
 const inter = Inter({
   weight: ['300', '400', '500', '600', '700'],
@@ -23,6 +24,13 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="en" data-mode="light" className={inter.variable}>
       <head>
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#519717" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="MS Store" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
         {/* Resource hints for faster connections */}
         {backendHost && (
           <>
@@ -43,6 +51,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       <body>
         <MuiProviders>
           <main className="relative">{props.children}</main>
+          <PWAComponents />
         </MuiProviders>
       </body>
     </html>

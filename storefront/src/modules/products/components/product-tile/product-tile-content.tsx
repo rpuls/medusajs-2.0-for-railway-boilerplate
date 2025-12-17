@@ -138,6 +138,7 @@ export default function ProductTileContent({
         <CardMedia
           component="div"
           className="relative h-48 bg-gray-100 overflow-hidden"
+          style={{ aspectRatio: '4/3' }} // Prevent CLS
         >
           {thumbnail ? (
             <Image
@@ -153,12 +154,10 @@ export default function ProductTileContent({
               })()}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 640px) 200px, (max-width: 1024px) 240px, 280px"
               priority={priority}
               loading={priority ? 'eager' : 'lazy'}
-              quality={85}
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+              quality={75}
             />
           ) : (
             <Box className="h-full flex items-center justify-center bg-gray-100">

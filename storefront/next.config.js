@@ -13,9 +13,51 @@ const nextConfig = {
   // Optimize for production
   compress: true,
   poweredByHeader: false,
+  // Headers for service worker and PWA
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/manifest+json',
+          },
+        ],
+      },
+    ]
+  },
   // Experimental features for better performance
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material', '@medusajs/js-sdk'],
+    // Enable server actions optimization
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  // Performance optimizations
+  // Note: swcMinify is default in Next.js 16+, no need to specify
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
   },
   // Transpile MUI packages for proper Next.js compatibility
   transpilePackages: ['@mui/material', '@mui/system', '@mui/icons-material', '@mui/material-nextjs'],

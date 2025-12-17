@@ -72,16 +72,18 @@ export function ProductTileSkeleton() {
     <Card 
       className="h-full flex flex-col hover:shadow-lg transition-all duration-300"
     >
-      {/* Image Skeleton - matches CardMedia h-48 (192px) */}
+      {/* Image Skeleton - matches CardMedia h-48 (192px) with aspect ratio */}
       <CardMedia
         component="div"
         className="relative h-48 bg-gray-100 overflow-hidden"
+        style={{ aspectRatio: '4/3' }}
       >
         <Skeleton 
           variant="rectangular" 
           height="100%" 
           width="100%"
           className="absolute inset-0"
+          animation="wave"
         />
       </CardMedia>
 

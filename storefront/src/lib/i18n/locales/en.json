@@ -30,7 +30,8 @@
     "blog": "Blog",
     "registration": "Registration",
     "searchPlaceholder": "Search in the store",
-    "allProducts": "All products"
+    "allProducts": "All products",
+    "enable": "Enable"
   },
   "cart": {
     "title": "Cart",
@@ -194,6 +195,17 @@
     "cart": {
       "title": "Cart",
       "description": "View your cart"
+    }
+  },
+  "pwa": {
+    "notifications": {
+      "enableTitle": "Enable Push Notifications",
+      "enableDescription": "Get notified about order updates, promotions, and new products."
+    },
+    "install": {
+      "title": "Install MS Store App",
+      "description": "Install our app for a better shopping experience with offline access.",
+      "installButton": "Install"
     }
   }
 }

@@ -93,6 +93,17 @@ async function getCountryCode(
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
+  // Skip middleware for service worker and PWA files
+  if (
+    request.nextUrl.pathname === '/sw.js' ||
+    request.nextUrl.pathname === '/manifest.json' ||
+    request.nextUrl.pathname.startsWith('/icon-') ||
+    request.nextUrl.pathname.startsWith('/_next/') ||
+    request.nextUrl.pathname.startsWith('/api/')
+  ) {
+    return NextResponse.next()
+  }
+
   const searchParams = request.nextUrl.searchParams
   const isOnboarding = searchParams.get("onboarding") === "true"
   const cartId = searchParams.get("cart_id")
@@ -147,5 +158,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)"], // prevents redirecting on static files and image optimization
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.json|icon-.*\\.png|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)"], // prevents redirecting on static files, PWA files, and image optimization
 }

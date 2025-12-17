@@ -28,7 +28,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 export function useCartDrawer() {
   const context = useContext(CartContext)
   if (context === undefined) {
-    throw new Error("useCartDrawer must be used within a CartProvider")
+    // Return a no-op implementation if outside CartProvider
+    // This allows components to be used in different contexts
+    console.warn('useCartDrawer is being used outside of CartProvider, returning no-op implementation')
+    return {
+      isOpen: false,
+      openCart: () => console.warn('openCart called outside CartProvider'),
+      closeCart: () => console.warn('closeCart called outside CartProvider'),
+      toggleCart: () => console.warn('toggleCart called outside CartProvider'),
+    }
   }
   return context
 }

@@ -21,10 +21,10 @@ export async function generateMetadata({ params }: { params: Promise<{ countryCo
   return {
     title: `${cartTitle} | ${siteName}`,
     description: cartDescription,
-    robots: {
-      index: false, // Cart pages should not be indexed
-      follow: false,
-    },
+  robots: {
+    index: false, // Cart pages should not be indexed
+    follow: false,
+  },
   }
 }
 

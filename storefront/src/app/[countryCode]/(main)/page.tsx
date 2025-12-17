@@ -2,25 +2,46 @@ import { Metadata } from "next"
 import { Suspense } from "react"
 import dynamicImport from "next/dynamic"
 
-import CategoryIconsCarousel from "@modules/home/components/category-icons"
-import AdvantageBoxes from "@modules/home/components/advantage-boxes"
-import FeaturedProducts from "@modules/home/components/featured-products"
 import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
-import NewsletterWrapper from "./newsletter-wrapper"
 import { generateOrganizationSchema } from "@lib/seo/organization-schema"
 import { generateWebsiteSchema } from "@lib/seo/website-schema"
 import { generateHreflangMetadata } from "@lib/seo/hreflang"
 import { getCanonicalUrl } from "@lib/seo/utils"
 import { getTranslations, getTranslation } from "@lib/i18n/server"
 import JsonLdScript from "components/seo/json-ld-script"
+import NewsletterWrapper from "./newsletter-wrapper"
 
-// Lazy load banner slider for better performance
+// Lazy load components for better performance and code splitting
 const BannerSliderLazy = dynamicImport(
   () => import("@modules/home/components/banner-slider"),
   {
     ssr: true, // Keep SSR for SEO
+    loading: () => <div className="h-[400px] bg-background-elevated animate-pulse" />
+  }
+)
+
+const CategoryIconsCarousel = dynamicImport(
+  () => import("@modules/home/components/category-icons"),
+  {
+    ssr: true,
+    loading: () => <div className="h-32 bg-background-base animate-pulse" />
+  }
+)
+
+const AdvantageBoxes = dynamicImport(
+  () => import("@modules/home/components/advantage-boxes"),
+  {
+    ssr: true,
+  }
+)
+
+const FeaturedProducts = dynamicImport(
+  () => import("@modules/home/components/featured-products"),
+  {
+    ssr: true,
+    loading: () => <div className="h-96 bg-background-base animate-pulse" />
   }
 )
 
@@ -157,47 +178,39 @@ export default async function Home({
       <JsonLdScript id="organization-schema" data={organizationSchema} />
       <JsonLdScript id="website-schema" data={websiteSchema} />
 
-      {/* Hero Banner Slider */}
-      <Suspense fallback={<div className="h-[400px] bg-background-elevated" />}>
-        <BannerSliderLazy />
-      </Suspense>
+      {/* Hero Banner Slider - Above the fold */}
+      <BannerSliderLazy />
 
       {/* Category Icons Carousel */}
-      <Suspense fallback={<div className="h-32 bg-background-base" />}>
-        <CategoryIconsCarousel countryCode={countryCode} />
-      </Suspense>
+      <CategoryIconsCarousel countryCode={countryCode} />
 
       {/* Advantage Boxes */}
       <AdvantageBoxes countryCode={countryCode} />
 
       {/* Trending Products */}
       {collections && collections.length > 0 && (
-        <Suspense fallback={<div className="h-96 bg-background-base" />}>
-          <FeaturedProducts
-            collections={collections}
-            region={region}
-            countryCode={countryCode}
-            titleKey="homepage.trending"
-          />
-        </Suspense>
+        <FeaturedProducts
+          collections={collections}
+          region={region}
+          countryCode={countryCode}
+          titleKey="homepage.trending"
+        />
       )}
 
       {/* Best Sellers - Create a collection-like object */}
       {bestSellers.response.products.length > 0 && (
-        <Suspense fallback={<div className="h-96 bg-background-base" />}>
-          <FeaturedProducts
-            collections={[
-              {
-                id: "bestsellers",
-                handle: "bestsellers",
-                products: bestSellers.response.products as any,
-              } as any,
-            ]}
-            region={region}
-            countryCode={countryCode}
-            titleKey="homepage.bestSellers"
-          />
-        </Suspense>
+        <FeaturedProducts
+          collections={[
+            {
+              id: "bestsellers",
+              handle: "bestsellers",
+              products: bestSellers.response.products as any,
+            } as any,
+          ]}
+          region={region}
+          countryCode={countryCode}
+          titleKey="homepage.bestSellers"
+        />
       )}
 
       {/* Newsletter Subscription */}
