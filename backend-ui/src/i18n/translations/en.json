@@ -11,6 +11,7 @@
     "apply": "Apply",
     "range": "Range",
     "search": "Search",
+    "original": "Original",
     "of": "of",
     "results": "results",
     "pages": "pages",
@@ -33,6 +34,7 @@
     "modified": "Modified",
     "added": "Added",
     "removed": "Removed",
+    "remaining": "Left",
     "admin": "Admin",
     "store": "Store",
     "details": "Details",
@@ -52,6 +54,7 @@
     "noSearchResultsFor": "No search results for <0>'{{query}}'</0>",
     "noRecordsTitle": "No records",
     "noRecordsMessage": "There are no records to show",
+    "noRecordsMessageFiltered": "There are no records to show matching the filters",
     "unsavedChangesTitle": "Are you sure you want to leave this form?",
     "unsavedChangesDescription": "You have unsaved changes that will be lost if you exit this form.",
     "includesTaxTooltip": "Prices in this column are tax inclusive.",
@@ -94,13 +97,13 @@
   },
   "validation": {
     "mustBeInt": "The value must be a whole number.",
-    "mustBePositive": "The value must be a positive number.",
-    "required": "is required",
-    "invalidUrl": "Invalid URL"
+    "mustBePositive": "The value must be a positive number."
   },
   "actions": {
     "save": "Save",
+    "saveChanges": "Save changes",
     "saveAsDraft": "Save as draft",
+    "saveAndClose": "Save and close",
     "copy": "Copy",
     "copied": "Copied",
     "duplicate": "Duplicate",
@@ -123,6 +126,8 @@
     "continue": "Continue",
     "continueWithEmail": "Continue with Email",
     "idCopiedToClipboard": "ID copied to clipboard",
+    "editVariantImages": "Edit variant images",
+    "editImages": "Edit images",
     "addReason": "Add Reason",
     "addNote": "Add Note",
     "reset": "Reset",
@@ -260,45 +265,7 @@
         "header": "Settings",
         "general": "General",
         "developer": "Developer",
-        "myAccount": "My Account",
-        "econt": {
-          "title": "Econt Shipping Settings",
-          "apiCredentials": {
-            "title": "API Credentials",
-            "username": "Username",
-            "password": "Password",
-            "liveMode": "Live Mode",
-            "liveModeHint": "Enable for production, disable for testing"
-          },
-          "senderAddress": {
-            "title": "Sender Address",
-            "city": "City",
-            "postCode": "Post Code",
-            "senderType": "Sender Type",
-            "office": "Office",
-            "address": "Address",
-            "officeCode": "Office Code",
-            "street": "Street",
-            "streetNumber": "Street Number",
-            "quarter": "Quarter (Optional)",
-            "buildingNumber": "Building Number (Optional)",
-            "entrance": "Entrance (Optional)",
-            "floor": "Floor (Optional)",
-            "apartment": "Apartment (Optional)"
-          },
-          "saveButton": "Save Settings",
-          "loading": "Loading settings...",
-          "saveSuccess": "Settings saved successfully",
-          "saveError": "Failed to save settings",
-          "loadError": "Failed to load settings",
-          "errorMessage": "You can still configure settings below.",
-          "validation": {
-            "usernameRequired": "Username is required",
-            "passwordRequired": "Password is required",
-            "cityRequired": "Sender city is required",
-            "postCodeRequired": "Sender post code is required"
-          }
-        }
+        "myAccount": "My Account"
       }
     }
   },
@@ -527,57 +494,6 @@
       }
     },
     "deleteWarning": "You are about to delete the product {{title}}. This action cannot be undone.",
-    "bulkEdit": {
-      "action": "Edit Status",
-      "selectAll": "Select All",
-      "deselectAll": "Deselect All",
-      "title_one": "Edit {{count}} Product",
-      "title_other": "Edit {{count}} Products",
-      "description_one": "Update the status for {{count}} selected product.",
-      "description_other": "Update the status for {{count}} selected products.",
-      "descriptionAll_one": "Update the status for all {{count}} product matching the current filters.",
-      "descriptionAll_other": "Update the status for all {{count}} products matching the current filters.",
-      "actionType": {
-        "label": "Action",
-        "update": "Update Status",
-        "delete": "Delete Products"
-      },
-      "success": {
-        "header_one": "Successfully updated {{count}} product",
-        "header_other": "Successfully updated {{count}} products",
-        "description_one": "The product status has been updated to {{status}}.",
-        "description_other": "The products status has been updated to {{status}}."
-      },
-      "error": {
-        "header": "Failed to update products",
-        "description": "An error occurred while updating the products."
-      },
-      "loading": "Loading {{count}} products..."
-    },
-    "bulkDelete": {
-      "confirm": {
-        "title_one": "Delete {{count}} Product?",
-        "title_other": "Delete {{count}} Products?",
-        "description_one": "This will permanently delete the product and all associated images. This action cannot be undone.",
-        "description_other": "This will permanently delete the products and all associated images. This action cannot be undone."
-      },
-      "warning_one": "This will permanently delete {{count}} product and all associated images. This action cannot be undone.",
-      "warning_other": "This will permanently delete {{count}} products and all associated images. This action cannot be undone.",
-      "success": {
-        "header_one": "Successfully deleted {{count}} product",
-        "header_other": "Successfully deleted {{count}} products",
-        "description_one": "The product and its images have been permanently deleted.",
-        "description_other": "The products and their images have been permanently deleted."
-      },
-      "error": {
-        "header": "Failed to delete products",
-        "description": "An error occurred while deleting the products."
-      }
-    },
-    "status": {
-      "draft": "Draft",
-      "published": "Published"
-    },
     "variants": {
       "header": "Variants",
       "empty": {
@@ -596,10 +512,12 @@
     "media": {
       "label": "Media",
       "editHint": "Add media to the product to showcase it in your storefront.",
+      "manageImageVariants": "Manage associated variants",
       "makeThumbnail": "Make thumbnail",
       "uploadImagesLabel": "Upload images",
       "uploadImagesHint": "Drag and drop images here or click to upload.",
       "invalidFileType": "'{{name}}' is not a supported file type. Supported file types are: {{types}}.",
+      "fileTooLarge": "One or more files exceed the maximum file size of {{size}}: {{name}}",
       "failedToUpload": "Failed to upload the added media. Please try again.",
       "deleteWarning_one": "You are about to delete {{count}} image. This action cannot be undone.",
       "deleteWarning_other": "You are about to delete {{count}} images. This action cannot be undone.",
@@ -611,10 +529,27 @@
       "deleteImageLabel": "Delete current image",
       "emptyState": {
         "header": "No media yet",
-        "description": "Add media to the product to showcase it in your storefront.",
+        "description": "Add media to showcase it in your storefront.",
         "action": "Add media"
       },
-      "successToast": "Media was successfully updated."
+      "successToast": "Media was successfully updated.",
+      "variantImages": "Variant images",
+      "showAvailableImages": "Show available images",
+      "availableImages": "Select images",
+      "selectToAdd": "Add product images to the variant. To add new images, add them to the product first.",
+      "removeSelected": "Remove Selected"
+    },
+    "variantMedia": {
+      "label": "Variant Media",
+      "manageVariants": "Manage variants",
+      "addToMultipleVariants": "Add to multiple variants",
+      "manageVariantsDescription": "Manage associated variants for the image",
+      "successToast": "Image variants successfully updated.",
+      "emptyState": {
+        "header": "No media yet",
+        "description": "Add media to the variant to showcase it in your storefront.",
+        "action": "Add media"
+      }
     },
     "discountableHint": "When unchecked, discounts will not be applied to this product.",
     "noSalesChannels": "Not available in any sales channels",
@@ -626,6 +561,18 @@
       "published": "Published",
       "proposed": "Proposed",
       "rejected": "Rejected"
+    },
+    "columns": {
+      "product_display": "Product",
+      "variants_count": "Variants",
+      "sales_channels_display": "Sales Channels",
+      "collection": "Collection",
+      "status": "Status",
+      "thumbnail": "Thumbnail",
+      "title": "Title",
+      "handle": "Handle",
+      "created_at": "Created",
+      "updated_at": "Updated"
     },
     "fields": {
       "title": {
@@ -654,9 +601,6 @@
       "shipping_profile": {
         "label": "Shipping profile",
         "hint": "Connect the product to a shipping profile"
-      },
-      "status": {
-        "label": "Status"
       },
       "type": {
         "label": "Type"
@@ -901,63 +845,6 @@
       }
     }
   },
-  "brands": {
-    "domain": "Brands",
-    "subtitle": "Manage product brands and assign them to products",
-    "create": {
-      "header": "Create Brand",
-      "description": "Create a new brand",
-      "successToast": "Brand was successfully created."
-    },
-    "edit": {
-      "header": "Edit Brand",
-      "description": "Edit brand details",
-      "successToast": "Brand was successfully updated."
-    },
-    "delete": {
-      "confirmation": "You are about to delete the brand {{name}}. This action cannot be undone.",
-      "successToast": "Brand {{name}} was successfully deleted."
-    },
-    "organize": {
-      "header": "Organize",
-      "action": "Organize"
-    },
-    "products": {
-      "header": "Products",
-      "assigned_one": "{{count}} product assigned to this brand",
-      "assigned_other": "{{count}} products assigned to this brand",
-      "noRecordsMessage": "There are no products assigned to this brand.",
-      "list": {
-        "noRecordsMessage": "There are no products assigned to this brand."
-      },
-      "add": {
-        "successToast": "{{count}} product(s) were successfully added to this brand.",
-        "disabledTooltip": "This product is already assigned to this brand."
-      },
-      "remove": {
-        "confirmation": "Are you sure you want to remove {{count}} product(s) from this brand?",
-        "successToast": "{{count}} product(s) were successfully removed from this brand."
-      }
-    },
-    "fields": {
-      "name": {
-        "label": "Name"
-      },
-      "image": {
-        "label": "Image",
-        "url": {
-          "label": "Image URL",
-          "placeholder": "https://example.com/image.jpg"
-        }
-      },
-      "productCount": {
-        "label": "Product Count"
-      },
-      "products": {
-        "label": "Products"
-      }
-    }
-  },
   "inventory": {
     "domain": "Inventory",
     "subtitle": "Manage your inventory items",
@@ -970,6 +857,7 @@
     "deleteWarning": "You are about to delete an inventory item. This action cannot be undone.",
     "editItemDetails": "Edit item details",
     "quantityAcrossLocations": "{{quantity}} across {{locations}} locations",
+    "levelDeleted": "Inventory level deleted successfully.",
     "create": {
       "title": "Create Inventory Item",
       "details": "Details",
@@ -1196,6 +1084,18 @@
     "list": {
       "noRecordsMessage": "Your orders will show up here."
     },
+    "export": {
+      "header": "Export Order List",
+      "description": "Export the order list to a CSV file.",
+      "success": {
+        "title": "Export started",
+        "description": "You will be notified when the export is ready."
+      },
+      "filters": {
+        "title": "Filters",
+        "description": "The following filters will be applied to the export."
+      }
+    },
     "status": {
       "not_paid": "Not paid",
       "pending": "Pending",
@@ -1421,6 +1321,9 @@
       "outboundShipping": "Outbound shipping",
       "outboundShippingHint": "Choose which method you want to use.",
       "refundAmount": "Estimated difference",
+      "carryOverPromotion": "Carry over promotions",
+      "carryOverPromotionHint": "Apply the order's promotions to the exchange items",
+      "carryOverPromotionTooltip": "Only fixed type promotions with EACH allocation and percentage type promotions with EACH or ACROSS allocation can be carried over to outbound exchange items.",
       "activeChangeError": "There is an active order change on this order. Please finish or discard the previous change.",
       "actions": {
         "cancelExchange": {
@@ -1467,6 +1370,8 @@
     "shipment": {
       "title": "Mark fulfillment shipped",
       "trackingNumber": "Tracking number",
+      "trackingUrl": "Tracking URL",
+      "labelUrl": "Label URL",
       "addTracking": "Add tracking number",
       "sendNotification": "Send notification",
       "sendNotificationHint": "Notify the customer about this shipment.",
@@ -1673,7 +1578,10 @@
   "stockLocations": {
     "domain": "Locations & Shipping",
     "list": {
-      "description": "Manage your store's stock locations and shipping options."
+      "description": "Manage your store's stock locations and shipping options.",
+      "noRecordsMessage": "No records",
+      "noRecordsMessageEmpty": "No locations found",
+      "noRecordsMessageFiltered": "No locations found matching the filters"
     },
     "create": {
       "header": "Create Stock Location",
@@ -1686,7 +1594,8 @@
       "successToast": "Location {{name}} was successfully updated."
     },
     "delete": {
-      "confirmation": "You are about to delete the stock location \"{{name}}\". This action cannot be undone."
+      "confirmation": "You are about to delete the stock location \"{{name}}\". This action cannot be undone.",
+      "successToast": "Location \"{{name}}\" was successfully deleted."
     },
     "fulfillmentProviders": {
       "header": "Fulfillment Providers",
@@ -2154,9 +2063,12 @@
       "campaign": "Campaign",
       "method": "Method",
       "allocation": "Allocation",
+      "allocationTooltip": "Each enforces the quantity limit per item, while Once enforces the quantity limit across the entire cart",
       "addCondition": "Add condition",
       "clearAll": "Clear all",
       "taxInclusive": "Tax Inclusive",
+      "usageLimit": "Usage Limit",
+      "usage": "Usage",
       "amount": {
         "tooltip": "Select the currency code to enable setting the amount"
       },
@@ -2295,6 +2207,10 @@
         "across": {
           "title": "Across",
           "description": "Applies value across items"
+        },
+        "once": {
+          "title": "Once",
+          "description": "Applies value to a limited number of items"
         }
       },
       "code": {
@@ -2314,6 +2230,10 @@
           "title": "Percentage",
           "description": "The percentage to discount off the amount. eg. 8%"
         }
+      },
+      "limit": {
+        "title": "Usage Limit",
+        "description": "Maximum number of times this promotion can be used across all orders. Leave empty for unlimited usage."
       }
     },
     "deleteWarning": "You are about to delete the promotion {{code}}. This action cannot be undone.",
@@ -2337,7 +2257,7 @@
     "delete": {
       "title": "Are you sure?",
       "description": "You are about to delete the campaign '{{name}}'. This action cannot be undone.",
-      "successToast": "Campaign '{{name}}' was successfully created."
+      "successToast": "Campaign '{{name}}' was successfully deleted."
     },
     "edit": {
       "header": "Edit Campaign",
@@ -2366,12 +2286,17 @@
       "end_date": "End date",
       "total_spend": "Budget spent",
       "total_used": "Budget used",
+      "totalUsedByAttribute": "Total used",
       "budget_limit": "Budget limit",
       "campaign_id": {
-        "hint": "Only campaigns with the same currency code as the promotion are shown in this list."
+        "hint": "Disabled campaigns have budget in a different currency than the promotion."
       }
     },
     "budget": {
+      "attribute": {
+        "customer_id": "customer",
+        "customer_email": "email"
+      },
       "create": {
         "hint": "Create a budget for the campaign.",
         "header": "Campaign Budget"
@@ -2381,7 +2306,12 @@
         "type": "Type",
         "currency": "Currency",
         "limit": "Limit",
-        "used": "Used"
+        "used": "Used",
+        "budgetAttribute": "Limit usage per",
+        "budgetAttributeTooltip": "Define how many times the promotion can be used by each customer or email.",
+        "totalUsedByAttribute": "Budget limit per: {{attribute}}",
+        "totalUsedByAttributeCustomerId": "Budget limit per customer",
+        "totalUsedByAttributeEmail": "Budget limit per email"
       },
       "type": {
         "spend": {
@@ -2391,6 +2321,12 @@
         "usage": {
           "title": "Usage",
           "description": "Set a limit on how many times the promotion can be used."
+        },
+        "useByAttribute": {
+          "title": "Usage by attribute (customer id, email, etc.)",
+          "titleCustomerId": "Usage per customer",
+          "titleEmail": "Usage per email",
+          "description": "Set a limit on how many times the promotion can be used by a specific attribute value."
         }
       },
       "edit": {
@@ -2572,31 +2508,71 @@
     "deleteUserSuccess": "User {{name}} deleted successfully",
     "invite": "Invite"
   },
+  "translations": {
+    "domain": "Translations",
+    "actions": {
+      "manage": "Manage translations",
+      "manageLocales": "Manage locales"
+    },
+    "subtitle": "Manage translations of your data in Medusa",
+    "list": {
+      "metrics": "{{translated}} of {{total}} fields translated"
+    },
+    "edit": {
+      "successToast": "Translations updated successfully",
+      "unsavedChanges": {
+        "title": "Unsaved translations",
+        "description": "Don't lose your work. You have changes that haven't been saved yet"
+      }
+    },
+    "bulk": {
+      "header": "Translations Bulk Editor",
+      "mainColumn": "Locale"
+    },
+    "activeLocales": {
+      "heading": "Languages",
+      "subtitle": "Activated translations",
+      "noLocalesTip": "Configure at least one locale to start translating your data"
+    },
+    "completion": {
+      "heading": "Translated fields",
+      "translated": "Translated",
+      "toTranslate": "Missing",
+      "footer": "Languages"
+    }
+  },
   "store": {
     "domain": "Store",
     "manageYourStoresDetails": "Manage your store's details",
     "editStore": "Edit store",
     "defaultCurrency": "Default currency",
+    "defaultLocale": "Default locale",
     "defaultRegion": "Default region",
     "defaultSalesChannel": "Default sales channel",
     "defaultLocation": "Default location",
     "swapLinkTemplate": "Swap link template",
     "paymentLinkTemplate": "Payment link template",
     "inviteLinkTemplate": "Invite link template",
+    "locales": "Locales",
     "currencies": "Currencies",
     "addCurrencies": "Add currencies",
     "enableTaxInclusivePricing": "Enable tax inclusive pricing",
     "disableTaxInclusivePricing": "Disable tax inclusive pricing",
     "removeCurrencyWarning_one": "You are about to remove {{count}} currency from your store. Ensure that you have removed all prices using the currency before proceeding.",
     "removeCurrencyWarning_other": "You are about to remove {{count}} currencies from your store. Ensure that you have removed all prices using the currencies before proceeding.",
+    "removeLocaleWarning_one": "You are about to remove {{count}} locale from your store. Any translation using this locale will be removed.",
+    "removeLocaleWarning_other": "You are about to remove {{count}} locales from your store. Any translation using these locales will be removed.",
     "currencyAlreadyAdded": "The currency has already been added to your store.",
+    "localeAlreadyAdded": "The locale has already been added to your store.",
     "edit": {
       "header": "Edit Store"
     },
     "toast": {
       "update": "Store successfully updated",
       "currenciesUpdated": "Currencies updated successfully",
+      "localesUpdated": "Locales updated successfully",
       "currenciesRemoved": "Removed currencies from the store successfully",
+      "localesRemoved": "Removed locales from the store successfully",
       "updatedTaxInclusivitySuccessfully": "Tax inclusive pricing updated successfully"
     }
   },
@@ -2879,13 +2855,48 @@
       }
     }
   },
+  "refundReasons": {
+    "domain": "Refund Reasons",
+    "subtitle": "Manage reasons for issuing refunds.",
+    "calloutHint": "Manage the reasons to categorize refunds.",
+    "editReason": "Edit Refund Reason",
+    "create": {
+      "header": "Add Refund Reason",
+      "subtitle": "Specify the most common reasons for refunds.",
+      "hint": "Create a new refund reason to categorize refunds.",
+      "successToast": "Refund reason {{label}} was successfully created."
+    },
+    "edit": {
+      "header": "Edit Refund Reason",
+      "subtitle": "Edit the value of the refund reason.",
+      "successToast": "Refund reason {{label}} was successfully updated."
+    },
+    "delete": {
+      "confirmation": "You are about to delete the refund reason \"{{label}}\". This action cannot be undone.",
+      "successToast": "Refund reason was successfully deleted."
+    },
+    "fields": {
+      "label": {
+        "label": "Label",
+        "placeholder": "Gesture of goodwill"
+      },
+      "code": {
+        "label": "Code",
+        "placeholder": "gesture_of_goodwill"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Customer had a bad shopping experience"
+      }
+    }
+  },
   "login": {
     "forgotPassword": "Forgot password? - <0>Reset</0>",
-    "title": "Welcome to MS Admin",
+    "title": "Welcome to Medusa",
     "hint": "Sign in to access the account area"
   },
   "invite": {
-    "title": "Welcome to MS Admin",
+    "title": "Welcome to Medusa",
     "hint": "Create your account below",
     "backToLogin": "Back to login",
     "createAccount": "Create account",
@@ -3101,8 +3112,8 @@
     "conditions": "Conditions",
     "category": "Category",
     "collection": "Collection",
-    "brand": "Brand",
     "discountable": "Discountable",
+    "promotionCode": "Promotion code",
     "handle": "Handle",
     "subtitle": "Subtitle",
     "by": "By",
@@ -3250,5 +3261,25 @@
     "minutes_other": "Minutes",
     "seconds_one": "Second",
     "seconds_other": "Seconds"
+  },
+  "views": {
+    "save": "Save",
+    "saveAsNew": "Save as new view",
+    "updateDefaultForEveryone": "Update default for everyone",
+    "updateViewName": "Update view",
+    "prompts": {
+      "updateDefault": {
+        "title": "Update default view",
+        "description": "This will update the default view for all users. Are you sure?",
+        "confirmText": "Update for everyone",
+        "cancelText": "Cancel"
+      },
+      "updateView": {
+        "title": "Update view",
+        "description": "Are you sure you want to update \"{{name}}\"?",
+        "confirmText": "Update",
+        "cancelText": "Cancel"
+      }
+    }
   }
 }

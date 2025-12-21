@@ -487,33 +487,6 @@
       }
     },
     "deleteWarning": "Uskoro ćete obrisati proizvod {{title}}. Ova radnja se ne može poništiti.",
-    "bulkEdit": {
-      "action": "Uredi status",
-      "selectAll": "Odaberi sve",
-      "deselectAll": "Poništi odabir",
-      "title_one": "Uredi {{count}} proizvod",
-      "title_few": "Uredi {{count}} proizvoda",
-      "title_other": "Uredi {{count}} proizvoda",
-      "description_one": "Ažuriraj status za {{count}} odabrani proizvod.",
-      "description_few": "Ažuriraj status za {{count}} odabrana proizvoda.",
-      "description_other": "Ažuriraj status za {{count}} odabranih proizvoda.",
-      "descriptionAll_one": "Ažuriraj status za sve {{count}} proizvod koji odgovara trenutnim filterima.",
-      "descriptionAll_few": "Ažuriraj status za sve {{count}} proizvoda koji odgovaraju trenutnim filterima.",
-      "descriptionAll_other": "Ažuriraj status za sve {{count}} proizvoda koji odgovaraju trenutnim filterima.",
-      "success": {
-        "header_one": "{{count}} proizvod je uspješno ažuriran",
-        "header_few": "{{count}} proizvoda su uspješno ažurirana",
-        "header_other": "{{count}} proizvoda je uspješno ažurirano",
-        "description_one": "Status proizvoda je ažuriran na {{status}}.",
-        "description_few": "Status proizvoda je ažuriran na {{status}}.",
-        "description_other": "Status proizvoda je ažuriran na {{status}}."
-      },
-      "error": {
-        "header": "Neuspješno ažuriranje proizvoda",
-        "description": "Došlo je do greške prilikom ažuriranja proizvoda."
-      },
-      "loading": "Učitavanje {{count}} proizvoda..."
-    },
     "variants": {
       "header": "Varijante",
       "empty": {

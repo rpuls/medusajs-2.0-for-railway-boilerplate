@@ -49,8 +49,15 @@ export const useLocationListTableColumns = () => {
         level.location_id
       )
 
+      toast.success(t("inventory.levelDeleted"))
+
       queryClient.invalidateQueries({
         queryKey: inventoryItemsQueryKeys.lists(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: inventoryItemLevelsQueryKeys.list({
+          inventoryItemId: level.inventory_item_id,
+        }),
       })
       queryClient.invalidateQueries({
         queryKey: inventoryItemsQueryKeys.detail(level.inventory_item_id),

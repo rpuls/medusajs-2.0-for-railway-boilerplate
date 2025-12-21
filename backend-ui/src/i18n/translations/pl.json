@@ -497,38 +497,6 @@
       }
     },
     "deleteWarning": "Zamierzasz usunąć produkt {{title}}. Ta akcja nie może zostać cofnięta.",
-    "bulkEdit": {
-      "action": "Edytuj status",
-      "selectAll": "Zaznacz wszystko",
-      "deselectAll": "Odznacz wszystko",
-      "title_one": "Edytuj {{count}} produkt",
-      "title_few": "Edytuj {{count}} produkty",
-      "title_many": "Edytuj {{count}} produktów",
-      "title_other": "Edytuj {{count}} produktów",
-      "description_one": "Zaktualizuj status dla {{count}} wybranego produktu.",
-      "description_few": "Zaktualizuj status dla {{count}} wybranych produktów.",
-      "description_many": "Zaktualizuj status dla {{count}} wybranych produktów.",
-      "description_other": "Zaktualizuj status dla {{count}} wybranych produktów.",
-      "descriptionAll_one": "Zaktualizuj status dla wszystkich {{count}} produktu pasującego do bieżących filtrów.",
-      "descriptionAll_few": "Zaktualizuj status dla wszystkich {{count}} produktów pasujących do bieżących filtrów.",
-      "descriptionAll_many": "Zaktualizuj status dla wszystkich {{count}} produktów pasujących do bieżących filtrów.",
-      "descriptionAll_other": "Zaktualizuj status dla wszystkich {{count}} produktów pasujących do bieżących filtrów.",
-      "success": {
-        "header_one": "{{count}} produkt został pomyślnie zaktualizowany",
-        "header_few": "{{count}} produkty zostały pomyślnie zaktualizowane",
-        "header_many": "{{count}} produktów zostało pomyślnie zaktualizowanych",
-        "header_other": "{{count}} produktów zostało pomyślnie zaktualizowanych",
-        "description_one": "Status produktu został zaktualizowany do {{status}}.",
-        "description_few": "Status produktów został zaktualizowany do {{status}}.",
-        "description_many": "Status produktów został zaktualizowany do {{status}}.",
-        "description_other": "Status produktów został zaktualizowany do {{status}}."
-      },
-      "error": {
-        "header": "Nie udało się zaktualizować produktów",
-        "description": "Wystąpił błąd podczas aktualizowania produktów."
-      },
-      "loading": "Ładowanie {{count}} produktów..."
-    },
     "variants": {
       "header": "Warianty",
       "empty": {

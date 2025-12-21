@@ -111,7 +111,7 @@ const PathDisplay = ({
             </button>
           </Tooltip>
           <div className="flex size-[15px] shrink-0 items-center justify-center">
-            <TriangleRightMini />
+            <TriangleRightMini className="rtl:rotate-180" />
           </div>
           <Text
             size="xsmall"

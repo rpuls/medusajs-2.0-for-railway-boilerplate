@@ -5,6 +5,7 @@ import { z } from "zod"
 import {
   FileType,
   FileUpload,
+  RejectedFile,
 } from "../../../../../components/common/file-upload"
 import { Form } from "../../../../../components/common/form"
 import { MediaSchema } from "../../../product-create/constants"
@@ -47,10 +48,12 @@ export const UploadMediaFormItem = ({
   const { t } = useTranslation()
 
   const hasInvalidFiles = useCallback(
-    (fileList: FileType[]) => {
+    (fileList: FileType[] = [], rejectedFiles: RejectedFile[] = []) => {
       const invalidFile = fileList.find(
-        (f) => !SUPPORTED_FORMATS.includes(f.file.type)
+        (f) => !SUPPORTED_FORMATS.includes(f?.file?.type)
       )
+
+      let hasInvalidFile = false;
 
       if (invalidFile) {
         form.setError("media", {
@@ -61,22 +64,37 @@ export const UploadMediaFormItem = ({
           }),
         })
 
-        return true
+        hasInvalidFile = true;
       }
 
-      return false
+      const fileSizeRejections = rejectedFiles.filter((f) => f?.reason === "size")
+
+      if (fileSizeRejections.length) {
+        const fileNames = "\n" + fileSizeRejections.slice(0, 5).map((f) => f.file.name).join("\n")
+        form.setError("media", {
+          type: "file_too_large",
+          message: t("products.media.fileTooLarge", {
+            name: fileNames,
+            size: "1MB",
+          }),
+        })
+
+        hasInvalidFile = true;
+      }
+
+      return hasInvalidFile;
     },
     [form, t]
   )
 
   const onUploaded = useCallback(
-    (files: FileType[]) => {
+    (files: FileType[] = [], rejectedFiles: RejectedFile[] = []) => {
       form.clearErrors("media")
-      if (hasInvalidFiles(files)) {
+      if (hasInvalidFiles(files, rejectedFiles)) {
         return
       }
 
-      files.forEach((f) => append({ ...f, isThumbnail: false }))
+      files?.forEach((f) => append({ ...f, isThumbnail: false }))
     },
     [form, append, hasInvalidFiles]
   )
@@ -106,7 +124,7 @@ export const UploadMediaFormItem = ({
                   onUploaded={onUploaded}
                 />
               </Form.Control>
-              <Form.ErrorMessage />
+              <Form.ErrorMessage className="whitespace-pre-line" />
             </div>
           </Form.Item>
         )

@@ -1,4 +1,10 @@
-import { Buildings, Component, PencilSquare, Trash } from "@medusajs/icons"
+import {
+  Buildings,
+  Component,
+  GlobeEurope,
+  PencilSquare,
+  Trash,
+} from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import {
   Badge,
@@ -18,7 +24,6 @@ import { useTranslation } from "react-i18next"
 import { CellContext } from "@tanstack/react-table"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { DataTable } from "../../../../../components/data-table"
-import { useDataTableDateColumns } from "../../../../../components/data-table/helpers/general/use-data-table-date-columns"
 import { useDataTableDateFilters } from "../../../../../components/data-table/helpers/general/use-data-table-date-filters"
 import {
   useDeleteVariantLazy,
@@ -26,6 +31,8 @@ import {
 } from "../../../../../hooks/api/products"
 import { useQueryParams } from "../../../../../hooks/use-query-params"
 import { PRODUCT_VARIANT_IDS_KEY } from "../../../common/constants"
+import { Thumbnail } from "../../../../../components/common/thumbnail"
+import { useFeatureFlag } from "../../../../../providers/feature-flag-provider"
 
 type ProductVariantSectionProps = {
   product: HttpTypes.AdminProduct
@@ -38,27 +45,13 @@ export const ProductVariantSection = ({
   product,
 }: ProductVariantSectionProps) => {
   const { t } = useTranslation()
+  const isTranslationsEnabled = useFeatureFlag("translation")
 
-  const {
-    q,
-    order,
-    offset,
-    allow_backorder,
-    manage_inventory,
-    created_at,
-    updated_at,
-  } = useQueryParams(
-    [
-      "q",
-      "order",
-      "offset",
-      "manage_inventory",
-      "allow_backorder",
-      "created_at",
-      "updated_at",
-    ],
-    PREFIX
-  )
+  const { q, order, offset, allow_backorder, manage_inventory } =
+    useQueryParams(
+      ["q", "order", "offset", "manage_inventory", "allow_backorder"],
+      PREFIX
+    )
 
   const columns = useColumns(product)
   const filters = useFilters()
@@ -77,15 +70,18 @@ export const ProductVariantSection = ({
       manage_inventory: manage_inventory
         ? JSON.parse(manage_inventory)
         : undefined,
-      created_at: created_at ? JSON.parse(created_at) : undefined,
-      updated_at: updated_at ? JSON.parse(updated_at) : undefined,
       fields:
-        "title,sku,*options,created_at,updated_at,*inventory_items.inventory.location_levels,inventory_quantity,manage_inventory",
+        "title,sku,thumbnail,*options,created_at,*inventory_items.inventory.location_levels,inventory_quantity,manage_inventory",
     },
     {
       placeholderData: keepPreviousData,
     }
   )
+
+  const translationParams = new URLSearchParams()
+  variants?.forEach((variant) => {
+    translationParams.append("reference_id", variant.id)
+  })
 
   if (isError) {
     throw error
@@ -103,6 +99,7 @@ export const ProductVariantSection = ({
         pageSize={PAGE_SIZE}
         isLoading={isPending}
         heading={t("products.variants.header")}
+        headingLevel="h2"
         emptyState={{
           empty: {
             heading: t("products.variants.empty.heading"),
@@ -131,6 +128,15 @@ export const ProductVariantSection = ({
                   to: `stock`,
                   icon: <Buildings />,
                 },
+                ...(isTranslationsEnabled
+                  ? [
+                      {
+                        icon: <GlobeEurope />,
+                        label: t("translations.actions.manage"),
+                        to: `/settings/translations/edit?reference=product_variant&${translationParams.toString()}`,
+                      },
+                    ]
+                  : []),
               ],
             },
           ],
@@ -161,8 +167,6 @@ const useColumns = (product: HttpTypes.AdminProduct) => {
     }
     return filtered
   }, [searchParams])
-
-  const dateColumns = useDataTableDateColumns<HttpTypes.AdminProductVariant>()
 
   const handleDelete = useCallback(
     async (id: string, title: string) => {
@@ -240,6 +244,15 @@ const useColumns = (product: HttpTypes.AdminProduct) => {
                   restore_params: tableSearchParams.toString(),
                 },
               }
+            )
+          },
+        },
+        {
+          icon: <GlobeEurope />,
+          label: t("translations.actions.manage"),
+          onClick: () => {
+            navigate(
+              `/settings/translations/edit?reference=product_variant&reference_id=${variant.id}`
             )
           },
         },
@@ -348,6 +361,18 @@ const useColumns = (product: HttpTypes.AdminProduct) => {
 
   return useMemo(() => {
     return [
+      columnHelper.accessor("thumbnail", {
+        header: "",
+        headerAlign: "center",
+        maxSize: 72,
+        cell: ({ row }) => {
+          return (
+            <div className="flex items-center pl-[1px]">
+              <Thumbnail src={row.original.thumbnail} />
+            </div>
+          )
+        },
+      }),
       columnHelper.accessor("title", {
         header: t("fields.title"),
         enableSorting: true,
@@ -386,12 +411,11 @@ const useColumns = (product: HttpTypes.AdminProduct) => {
         },
         maxSize: 250,
       }),
-      ...dateColumns,
       columnHelper.action({
         actions: getActions,
       }),
     ]
-  }, [t, optionColumns, dateColumns, getActions, getInventory])
+  }, [t, optionColumns, getActions, getInventory])
 }
 
 const filterHelper =

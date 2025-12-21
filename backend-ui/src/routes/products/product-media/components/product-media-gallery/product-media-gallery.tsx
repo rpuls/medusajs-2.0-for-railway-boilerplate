@@ -90,7 +90,7 @@ export const ProductMediaGallery = ({ product }: ProductMediaGalleryProps) => {
     const mediaToKeep =
       product.images
         ?.filter((i) => i.id !== current.id)
-        .map((i) => ({ url: i.url })) || []
+        .map((i) => ({ id: i.id, url: i.url })) || []
 
     if (curr === media.length - 1) {
       setCurr((prev) => prev - 1)
@@ -261,7 +261,7 @@ const Preview = ({
         type="button"
         onClick={prev}
       >
-        <TriangleLeftMini />
+        <TriangleLeftMini className="rtl:rotate-180" />
       </IconButton>
       <div className="flex items-center gap-x-2">
         {visibleItems.map((item) => {
@@ -292,7 +292,7 @@ const Preview = ({
         type="button"
         onClick={next}
       >
-        <TriangleRightMini />
+        <TriangleRightMini className="rtl:rotate-180" />
       </IconButton>
     </div>
   )

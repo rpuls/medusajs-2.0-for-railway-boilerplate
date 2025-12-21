@@ -119,6 +119,8 @@ export const CreateSalesChannelForm = () => {
                         <Form.Label>{t("general.enabled")}</Form.Label>
                         <Form.Control>
                           <Switch
+                            dir="ltr"
+                            className="rtl:rotate-180"
                             {...field}
                             checked={value}
                             onCheckedChange={onChange}

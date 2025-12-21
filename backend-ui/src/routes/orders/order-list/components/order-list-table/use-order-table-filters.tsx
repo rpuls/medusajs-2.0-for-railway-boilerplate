@@ -1,19 +1,14 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { createDataTableFilterHelper } from "@medusajs/ui"
-import { HttpTypes } from "@medusajs/types"
-import { useDataTableDateFilters } from "../../../../../components/data-table/helpers/general/use-data-table-date-filters"
+import { Filter } from "../../../../../components/table/data-table"
 import { useRegions } from "../../../../../hooks/api/regions"
 import { useSalesChannels } from "../../../../../hooks/api/sales-channels"
 
-const filterHelper = createDataTableFilterHelper<HttpTypes.AdminOrder>()
-
 /**
- * Hook to create filters in the format expected by @medusajs/ui DataTable
+ * Hook to create filters in the format expected by the deprecated DataTable component
  */
 export const useOrderTableFilters = () => {
   const { t } = useTranslation()
-  const dateFilters = useDataTableDateFilters()
 
   const { regions } = useRegions({
     limit: 1000,
@@ -25,38 +20,53 @@ export const useOrderTableFilters = () => {
     fields: "id,name",
   })
 
+  // Until we migrate to the new DataTable component, we can't use `createDataTableFilterHelper` filter structure, since th identifier there is `is` 
+  // while deprecated component expexts `key`. Will be ready to migrate once SUP-2651 is done
   return useMemo(() => {
-    const filters = [...dateFilters]
+    const filters: Filter[] = [
+      {
+        key: "created_at",
+        label: t("fields.createdAt"),
+        type: "date",
+      },
+      {
+        key: "updated_at",
+        label: t("fields.updatedAt"),
+        type: "date",
+      },
+    ]
 
     if (regions?.length) {
-      filters.push(
-        filterHelper.accessor("region_id", {
-          label: t("fields.region"),
-          type: "multiselect",
-          options: regions.map((r) => ({
-            label: r.name,
-            value: r.id,
-          })),
-        })
-      )
+      filters.push({
+        key: "region_id",
+        label: t("fields.region"),
+        type: "select",
+        multiple: true,
+        searchable: true,
+        options: regions.map((r) => ({
+          label: r.name,
+          value: r.id,
+        })),
+      })
     }
 
     if (sales_channels?.length) {
-      filters.push(
-        filterHelper.accessor("sales_channel_id", {
-          label: t("fields.salesChannel"),
-          type: "multiselect",
-          options: sales_channels.map((s) => ({
-            label: s.name,
-            value: s.id,
-          })),
-        })
-      )
+      filters.push({
+        key: "sales_channel_id",
+        label: t("fields.salesChannel"),
+        type: "select",
+        multiple: true,
+        searchable: true,
+        options: sales_channels.map((s) => ({
+          label: s.name,
+          value: s.id,
+        })),
+      })
     }
 
     // TODO: Add payment and fulfillment status filters when they are properly linked to orders
     // Note: These filters are commented out in the legacy implementation as well
 
     return filters
-  }, [regions, sales_channels, dateFilters, t])
+  }, [regions, sales_channels, t])
 }

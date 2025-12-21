@@ -320,6 +320,8 @@ const Fulfillment = ({
     throw error
   }
 
+  const isValidUrl = (url?: string) => url && url.length > 0 && url !== "#"
+
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
@@ -408,22 +410,37 @@ const Fulfillment = ({
           {fulfillment.labels && fulfillment.labels.length > 0 ? (
             <ul>
               {fulfillment.labels.map((tlink) => {
-                const hasUrl =
-                  tlink.url && tlink.url.length > 0 && tlink.url !== "#"
+                const hasTrackingUrl = isValidUrl(tlink.tracking_url)
+                const hasLabelUrl = isValidUrl(tlink.label_url)
 
-                if (hasUrl) {
+                if (hasTrackingUrl || hasLabelUrl) {
                   return (
                     <li key={tlink.tracking_number}>
-                      <a
-                        href={tlink.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover transition-fg"
-                      >
-                        <Text size="small" leading="compact">
-                          {tlink.tracking_number}
-                        </Text>
-                      </a>
+                      {hasTrackingUrl && (
+                        <a
+                          href={tlink.tracking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover transition-fg"
+                        >
+                          <Text size="small" leading="compact" as="span">
+                            {tlink.tracking_number}
+                          </Text>
+                        </a>
+                      )}
+                      {hasTrackingUrl && hasLabelUrl && " - "}
+                      {hasLabelUrl && (
+                        <a
+                          href={tlink.label_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover transition-fg"
+                        >
+                          <Text size="small" leading="compact" as="span">
+                            Label
+                          </Text>
+                        </a>
+                      )}
                     </li>
                   )
                 }

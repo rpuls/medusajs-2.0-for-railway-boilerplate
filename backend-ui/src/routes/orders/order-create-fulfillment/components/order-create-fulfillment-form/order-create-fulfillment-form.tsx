@@ -26,6 +26,7 @@ import { getReservationsLimitCount } from "../../../../../lib/orders"
 import { sdk } from "../../../../../lib/client"
 import { useComboboxData } from "../../../../../hooks/use-combobox-data"
 import { Combobox } from "../../../../../components/inputs/combobox"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type OrderCreateFulfillmentFormProps = {
   order: AdminOrder
@@ -38,7 +39,7 @@ export function OrderCreateFulfillmentForm({
 }: OrderCreateFulfillmentFormProps) {
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
-
+  const direction = useDocumentDirection()
   const { mutateAsync: createOrderFulfillment, isPending: isMutating } =
     useCreateOrderFulfillment(order.id)
 
@@ -288,6 +289,7 @@ export function OrderCreateFulfillmentForm({
                             <div className="flex-1">
                               <Form.Control>
                                 <Select
+                                  dir={direction}
                                   onValueChange={onChange}
                                   {...field}
                                   disabled={!selectedLocationId}
@@ -390,6 +392,8 @@ export function OrderCreateFulfillmentForm({
                             <Form.Control>
                               <Form.Control>
                                 <Switch
+                                  dir="ltr"
+                                  className="rtl:rotate-180"
                                   checked={!!value}
                                   onCheckedChange={onChange}
                                   {...field}

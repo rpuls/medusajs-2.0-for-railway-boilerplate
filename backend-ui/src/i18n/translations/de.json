@@ -473,28 +473,6 @@
       }
     },
     "deleteWarning": "Sie sind dabei, das Produkt {{title}} zu löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "bulkEdit": {
-      "action": "Status bearbeiten",
-      "selectAll": "Alle auswählen",
-      "deselectAll": "Auswahl aufheben",
-      "title_one": "{{count}} Produkt bearbeiten",
-      "title_other": "{{count}} Produkte bearbeiten",
-      "description_one": "Aktualisieren Sie den Status für {{count}} ausgewähltes Produkt.",
-      "description_other": "Aktualisieren Sie den Status für {{count}} ausgewählte Produkte.",
-      "descriptionAll_one": "Aktualisieren Sie den Status für alle {{count}} Produkt, die den aktuellen Filtern entsprechen.",
-      "descriptionAll_other": "Aktualisieren Sie den Status für alle {{count}} Produkte, die den aktuellen Filtern entsprechen.",
-      "success": {
-        "header_one": "{{count}} Produkt erfolgreich aktualisiert",
-        "header_other": "{{count}} Produkte erfolgreich aktualisiert",
-        "description_one": "Der Produktstatus wurde auf {{status}} aktualisiert.",
-        "description_other": "Der Produktstatus wurde auf {{status}} aktualisiert."
-      },
-      "error": {
-        "header": "Fehler beim Aktualisieren der Produkte",
-        "description": "Beim Aktualisieren der Produkte ist ein Fehler aufgetreten."
-      },
-      "loading": "{{count}} Produkte werden geladen..."
-    },
     "variants": {
       "header": "Varianten",
       "empty": {

@@ -485,33 +485,6 @@
       }
     },
     "deleteWarning": "Sunteți pe cale să ștergeți produsul {{title}}. ",
-    "bulkEdit": {
-      "action": "Editează statusul",
-      "selectAll": "Selectează tot",
-      "deselectAll": "Deselectează tot",
-      "title_one": "Editează {{count}} produs",
-      "title_few": "Editează {{count}} produse",
-      "title_other": "Editează {{count}} produse",
-      "description_one": "Actualizează statusul pentru {{count}} produs selectat.",
-      "description_few": "Actualizează statusul pentru {{count}} produse selectate.",
-      "description_other": "Actualizează statusul pentru {{count}} produse selectate.",
-      "descriptionAll_one": "Actualizează statusul pentru toate {{count}} produsul care se potrivește cu filtrele curente.",
-      "descriptionAll_few": "Actualizează statusul pentru toate {{count}} produsele care se potrivesc cu filtrele curente.",
-      "descriptionAll_other": "Actualizează statusul pentru toate {{count}} produsele care se potrivesc cu filtrele curente.",
-      "success": {
-        "header_one": "{{count}} produs actualizat cu succes",
-        "header_few": "{{count}} produse actualizate cu succes",
-        "header_other": "{{count}} produse actualizate cu succes",
-        "description_one": "Statusul produsului a fost actualizat la {{status}}.",
-        "description_few": "Statusul produselor a fost actualizat la {{status}}.",
-        "description_other": "Statusul produselor a fost actualizat la {{status}}."
-      },
-      "error": {
-        "header": "Eșec la actualizarea produselor",
-        "description": "A apărut o eroare la actualizarea produselor."
-      },
-      "loading": "Se încarcă {{count}} produse..."
-    },
     "variants": {
       "header": "Variante",
       "empty": {

@@ -12,6 +12,7 @@ import { KeyboundForm } from "../../../../../components/utilities/keybound-form"
 import { useUpdateStore } from "../../../../../hooks/api/store"
 import { useComboboxData } from "../../../../../hooks/use-combobox-data"
 import { sdk } from "../../../../../lib/client"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type EditStoreFormProps = {
   store: HttpTypes.AdminStore
@@ -28,7 +29,7 @@ const EditStoreSchema = z.object({
 export const EditStoreForm = ({ store }: EditStoreFormProps) => {
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
-
+  const direction = useDocumentDirection()
   const form = useForm<z.infer<typeof EditStoreSchema>>({
     defaultValues: {
       name: store.name,
@@ -94,7 +95,10 @@ export const EditStoreForm = ({ store }: EditStoreFormProps) => {
 
   return (
     <RouteDrawer.Form form={form}>
-      <KeyboundForm onSubmit={handleSubmit} className="flex h-full flex-col overflow-hidden">
+      <KeyboundForm
+        onSubmit={handleSubmit}
+        className="flex h-full flex-col overflow-hidden"
+      >
         <RouteDrawer.Body className="overflow-y-auto">
           <div className="flex flex-col gap-y-8">
             <Form.Field
@@ -118,7 +122,11 @@ export const EditStoreForm = ({ store }: EditStoreFormProps) => {
                   <Form.Item>
                     <Form.Label>{t("store.defaultCurrency")}</Form.Label>
                     <Form.Control>
-                      <Select {...field} onValueChange={onChange}>
+                      <Select
+                        dir={direction}
+                        {...field}
+                        onValueChange={onChange}
+                      >
                         <Select.Trigger ref={field.ref}>
                           <Select.Value />
                         </Select.Trigger>

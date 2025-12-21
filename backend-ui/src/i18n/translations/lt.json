@@ -487,38 +487,6 @@
       }
     },
     "deleteWarning": "Ketinate pašalinti prekę {{title}}. Šis veiksmas neatstatomas.",
-    "bulkEdit": {
-      "action": "Redaguoti būseną",
-      "selectAll": "Pasirinkti viską",
-      "deselectAll": "Atšaukti pasirinkimą",
-      "title_one": "Redaguoti {{count}} prekę",
-      "title_few": "Redaguoti {{count}} prekes",
-      "title_many": "Redaguoti {{count}} prekių",
-      "title_other": "Redaguoti {{count}} prekių",
-      "description_one": "Atnaujinti būseną {{count}} pasirinktai prekei.",
-      "description_few": "Atnaujinti būseną {{count}} pasirinktoms prekėms.",
-      "description_many": "Atnaujinti būseną {{count}} pasirinktoms prekėms.",
-      "description_other": "Atnaujinti būseną {{count}} pasirinktoms prekėms.",
-      "descriptionAll_one": "Atnaujinti būseną visoms {{count}} prekėms, atitinkančioms dabartinius filtrus.",
-      "descriptionAll_few": "Atnaujinti būseną visoms {{count}} prekėms, atitinkančioms dabartinius filtrus.",
-      "descriptionAll_many": "Atnaujinti būseną visoms {{count}} prekėms, atitinkančioms dabartinius filtrus.",
-      "descriptionAll_other": "Atnaujinti būseną visoms {{count}} prekėms, atitinkančioms dabartinius filtrus.",
-      "success": {
-        "header_one": "{{count}} prekė sėkmingai atnaujinta",
-        "header_few": "{{count}} prekės sėkmingai atnaujintos",
-        "header_many": "{{count}} prekių sėkmingai atnaujinta",
-        "header_other": "{{count}} prekių sėkmingai atnaujinta",
-        "description_one": "Prekės būsena atnaujinta į {{status}}.",
-        "description_few": "Prekių būsena atnaujinta į {{status}}.",
-        "description_many": "Prekių būsena atnaujinta į {{status}}.",
-        "description_other": "Prekių būsena atnaujinta į {{status}}."
-      },
-      "error": {
-        "header": "Nepavyko atnaujinti prekių",
-        "description": "Įvyko klaida atnaujinant prekes."
-      },
-      "loading": "Įkeliama {{count}} prekių..."
-    },
     "variants": {
       "header": "Variantai",
       "empty": {

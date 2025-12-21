@@ -14,6 +14,7 @@ import {
   usePromotionRuleAttributes,
   usePromotionRules,
 } from "../../../../../../hooks/api/promotions"
+import { useDocumentDirection } from "../../../../../../hooks/use-document-direction"
 import { CreatePromotionSchemaType } from "../../../../promotion-create/components/create-promotion-form/form-schema"
 import { generateRuleAttributes } from "../edit-rules-form/utils"
 import { RuleValueFormField } from "../rule-value-form-field"
@@ -44,6 +45,7 @@ export const RulesFormField = ({
   const initialRulesSet = useRef(false)
 
   const { t } = useTranslation()
+  const direction = useDocumentDirection()
   const formData = form.getValues()
   const { attributes } = usePromotionRuleAttributes(
     ruleType,
@@ -224,6 +226,7 @@ export const RulesFormField = ({
                         <Form.Control>
                           {!disabled ? (
                             <Select
+                              dir={direction}
                               {...fieldProps}
                               onValueChange={onValueChange}
                               disabled={fieldRule.required}
@@ -294,6 +297,7 @@ export const RulesFormField = ({
                           <Form.Control>
                             {!disabled ? (
                               <Select
+                                dir= {direction}
                                 {...fieldProps}
                                 disabled={!fieldRule.attribute}
                                 onValueChange={onChange}

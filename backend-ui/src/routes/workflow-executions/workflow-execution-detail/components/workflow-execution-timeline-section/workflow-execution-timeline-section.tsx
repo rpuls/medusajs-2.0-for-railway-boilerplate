@@ -18,6 +18,7 @@ import {
   STEP_OK_STATES,
   STEP_SKIPPED_STATES,
 } from "../../../constants"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type WorkflowExecutionTimelineSectionProps = {
   execution: HttpTypes.AdminWorkflowExecutionResponse["workflow_execution"]
@@ -87,7 +88,7 @@ const Canvas = ({
 }) => {
   const [zoom, setZoom] = useState<number>(1)
   const [isDragging, setIsDragging] = useState(false)
-
+  const direction = useDocumentDirection()
   const scale = useMotionValue(defaultState.scale)
   const x = useMotionValue(defaultState.x)
   const y = useMotionValue(defaultState.y)
@@ -217,7 +218,7 @@ const Canvas = ({
               <PlusMini />
             </button>
             <div>
-              <DropdownMenu>
+              <DropdownMenu dir={direction}>
                 <DropdownMenu.Trigger className="disabled:text-ui-fg-disabled transition-fg hover:bg-ui-bg-base-hover active:bg-ui-bg-base-pressed focus-visible:bg-ui-bg-base-pressed flex w-[50px] items-center justify-center border-r p-1 outline-none">
                   <Text
                     as="span"

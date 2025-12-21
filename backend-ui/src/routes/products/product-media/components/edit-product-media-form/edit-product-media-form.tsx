@@ -128,6 +128,7 @@ export const EditProductMediaForm = ({ product }: ProductMediaViewProps) => {
       }
       return entry
     })
+
     const thumbnail = withUpdatedUrls.find((m) => m.isThumbnail)?.url
 
     await mutateAsync(

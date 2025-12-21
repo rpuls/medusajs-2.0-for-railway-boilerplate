@@ -10,6 +10,7 @@ import { RouteDrawer, useRouteModal } from "../../../../../components/modals"
 import { KeyboundForm } from "../../../../../components/utilities/keybound-form"
 import { useUpdateUser } from "../../../../../hooks/api/users"
 import { languages } from "../../../../../i18n/languages"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type EditProfileProps = {
   user: HttpTypes.AdminUser
@@ -26,7 +27,7 @@ const EditProfileSchema = zod.object({
 export const EditProfileForm = ({ user }: EditProfileProps) => {
   const { t, i18n } = useTranslation()
   const { handleSuccess } = useRouteModal()
-
+  const direction = useDocumentDirection()
   const form = useForm<zod.infer<typeof EditProfileSchema>>({
     defaultValues: {
       first_name: user.first_name ?? "",
@@ -111,7 +112,11 @@ export const EditProfileForm = ({ user }: EditProfileProps) => {
                   </div>
                   <div>
                     <Form.Control>
-                      <Select {...field} onValueChange={field.onChange}>
+                      <Select
+                        dir={direction}
+                        {...field}
+                        onValueChange={field.onChange}
+                      >
                         <Select.Trigger ref={ref} className="py-1 text-[13px]">
                           <Select.Value
                             placeholder={t("profile.edit.languagePlaceholder")}
@@ -151,7 +156,8 @@ export const EditProfileForm = ({ user }: EditProfileProps) => {
                       {t("profile.fields.usageInsightsLabel")}
                     </Form.Label>
                     <Form.Control>
-                      <Switch
+                      <Switch dir="ltr"
+                        className="rtl:rotate-180"
                         {...rest}
                         checked={value}
                         onCheckedChange={onChange}

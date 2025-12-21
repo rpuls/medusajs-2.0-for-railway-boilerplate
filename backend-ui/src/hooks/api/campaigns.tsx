@@ -130,6 +130,7 @@ export const useAddOrRemoveCampaignPromotions = (
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: campaignsQueryKeys.details() })
       queryClient.invalidateQueries({ queryKey: promotionsQueryKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: promotionsQueryKeys.details() })
       options?.onSuccess?.(data, variables, context)
     },
     ...options,

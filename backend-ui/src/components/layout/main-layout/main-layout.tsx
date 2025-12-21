@@ -29,6 +29,7 @@ import { queryClient } from "../../../lib/query-client"
 import { useExtension } from "../../../providers/extension-provider"
 import { useSearch } from "../../../providers/search-provider"
 import { UserMenu } from "../user-menu"
+import { useDocumentDirection } from "../../../hooks/use-document-direction"
 
 export const MainLayout = () => {
   return (
@@ -94,7 +95,7 @@ const Logout = () => {
 const Header = () => {
   const { t } = useTranslation()
   const { store, isPending, isError, error } = useStore()
-
+  const direction = useDocumentDirection()
   const name = store?.name
   const fallback = store?.name?.slice(0, 1).toUpperCase()
 
@@ -106,11 +107,12 @@ const Header = () => {
 
   return (
     <div className="w-full p-3">
-      <DropdownMenu>
+    <DropdownMenu
+          dir={direction}>
         <DropdownMenu.Trigger
           disabled={!isLoaded}
           className={clx(
-            "bg-ui-bg-subtle transition-fg grid w-full grid-cols-[24px_1fr_15px] items-center gap-x-3 rounded-md p-0.5 pr-2 outline-none",
+            "bg-ui-bg-subtle transition-fg grid w-full grid-cols-[24px_1fr_15px] items-center gap-x-3 rounded-md p-0.5 pe-2 outline-none",
             "hover:bg-ui-bg-subtle-hover",
             "data-[state=open]:bg-ui-bg-subtle-hover",
             "focus-visible:shadow-borders-focus"
@@ -121,7 +123,7 @@ const Header = () => {
           ) : (
             <Skeleton className="h-6 w-6 rounded-md" />
           )}
-          <div className="block overflow-hidden text-left">
+          <div className="block overflow-hidden text-start">
             {name ? (
               <Text
                 size="small"
@@ -204,10 +206,6 @@ const useCoreRoutes = (): Omit<INavItem, "pathname">[] => {
           label: t("categories.domain"),
           to: "/categories",
         },
-        {
-          label: t("brands.domain"),
-          to: "/brands",
-        },
         // TODO: Enable when domin is introduced
         // {
         //   label: t("giftCards.domain"),
@@ -271,7 +269,7 @@ const Searchbar = () => {
         )}
       >
         <MagnifyingGlass />
-        <div className="flex-1 text-left">
+        <div className="flex-1 text-start">
           <Text size="small" leading="compact" weight="plus">
             {t("app.search.label")}
           </Text>
@@ -350,6 +348,7 @@ const ExtensionRouteSection = () => {
                     label={item.label}
                     icon={item.icon ? item.icon : <SquaresPlus />}
                     items={item.items}
+                    translationNs={item.translationNs}
                     type="extension"
                   />
                 )

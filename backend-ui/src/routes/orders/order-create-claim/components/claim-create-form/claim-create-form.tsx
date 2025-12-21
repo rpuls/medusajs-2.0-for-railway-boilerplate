@@ -568,6 +568,16 @@ export const ClaimCreateForm = ({
     }
   }, [])
 
+  /**
+   * For estimated difference show pending difference and subtract the total of inbound items (assume all items will be returned correctly)
+   * We don't include inbound total in the pending difference because it will be considered returned when the receive flow is completed
+   */
+  const estimatedDifference =
+    preview.summary.pending_difference -
+    inboundPreviewItems.reduce((acc, item) => {
+      return acc + item.total
+    }, 0)
+
   const inboundShippingTotal = useMemo(() => {
     const method = preview.shipping_methods.find(
       (sm) =>
@@ -1010,10 +1020,7 @@ export const ClaimCreateForm = ({
                   {t("orders.claims.refundAmount")}
                 </span>
                 <span className="txt-small font-medium">
-                  {getStylizedAmount(
-                    preview.summary.pending_difference,
-                    order.currency_code
-                  )}
+                  {getStylizedAmount(estimatedDifference, order.currency_code)}
                 </span>
               </div>
             </div>
@@ -1028,7 +1035,8 @@ export const ClaimCreateForm = ({
                       <div className="flex items-center">
                         <Form.Control className="mr-4 self-start">
                           <Switch
-                            className="mt-[2px]"
+                            dir="ltr"
+                            className="mt-[2px] rtl:rotate-180"
                             checked={!!value}
                             onCheckedChange={onChange}
                             {...field}

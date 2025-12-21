@@ -125,6 +125,13 @@ export function getRouteMap({
                             import("../../routes/products/product-media"),
                         },
                         {
+                          path: "images/:image_id/variants",
+                          lazy: () =>
+                            import(
+                              "../../routes/products/product-image-variants-edit"
+                            ),
+                        },
+                        {
                           path: "prices",
                           lazy: () =>
                             import("../../routes/products/product-prices"),
@@ -196,6 +203,13 @@ export function getRouteMap({
                           lazy: () =>
                             import(
                               "../../routes/product-variants/product-variant-manage-inventory-items"
+                            ),
+                        },
+                        {
+                          path: "media",
+                          lazy: () =>
+                            import(
+                              "../../routes/product-variants/product-variant-media"
                             ),
                         },
                         {
@@ -277,59 +291,6 @@ export function getRouteMap({
               ],
             },
             {
-              path: "/brands",
-              errorElement: <ErrorBoundary />,
-              handle: {
-                breadcrumb: () => t("brands.domain"),
-              },
-              children: [
-                {
-                  path: "",
-                  lazy: () => import("../../routes/brands/brand-list"),
-                  children: [
-                    {
-                      path: "create",
-                      lazy: () =>
-                        import("../../routes/brands/brand-create"),
-                    },
-                  ],
-                },
-                {
-                  path: ":id",
-                  lazy: async () => {
-                    const { Component, loader } = await import(
-                      "../../routes/brands/brand-detail"
-                    )
-
-                    return {
-                      Component,
-                      loader,
-                      handle: {
-                        breadcrumb: (match: UIMatch<any>) => match.data?.brand?.name || t("brands.domain"),
-                      },
-                    }
-                  },
-                  children: [
-                    {
-                      path: "edit",
-                      lazy: () =>
-                        import("../../routes/brands/brand-edit"),
-                    },
-                    {
-                      path: "products",
-                      lazy: () =>
-                        import("../../routes/brands/brand-products"),
-                    },
-                    {
-                      path: "organize",
-                      lazy: () =>
-                        import("../../routes/brands/brand-organize"),
-                    },
-                  ],
-                },
-              ],
-            },
-            {
               path: "/orders",
               errorElement: <ErrorBoundary />,
               handle: {
@@ -339,6 +300,12 @@ export function getRouteMap({
                 {
                   path: "",
                   lazy: () => import("../../routes/orders/order-list"),
+                  children: [
+                    {
+                      path: "export",
+                      lazy: () => import("../../routes/orders/order-export"),
+                    },
+                  ],
                 },
                 {
                   path: ":id",
@@ -1049,18 +1016,14 @@ export function getRouteMap({
                   lazy: () => import("../../routes/store/store-add-currencies"),
                 },
                 {
+                  path: "locales",
+                  lazy: () => import("../../routes/store/store-add-locales"),
+                },
+                {
                   path: "metadata/edit",
                   lazy: () => import("../../routes/store/store-metadata"),
                 },
               ],
-            },
-            {
-              path: "econt",
-              errorElement: <ErrorBoundary />,
-              lazy: () => import("../../routes/settings/econt"),
-              handle: {
-                breadcrumb: () => "Econt Shipping",
-              },
             },
             {
               path: "users",
@@ -1838,6 +1801,65 @@ export function getRouteMap({
                       ],
                     },
                   ],
+                },
+              ],
+            },
+            {
+              path: "refund-reasons",
+              element: <Outlet />,
+              handle: {
+                breadcrumb: () => t("refundReasons.domain"),
+              },
+              children: [
+                {
+                  path: "",
+                  lazy: () =>
+                    import("../../routes/refund-reasons/refund-reason-list"),
+                  children: [
+                    {
+                      path: "create",
+                      lazy: () =>
+                        import(
+                          "../../routes/refund-reasons/refund-reason-create"
+                        ),
+                    },
+
+                    {
+                      path: ":id",
+                      children: [
+                        {
+                          path: "edit",
+                          lazy: () =>
+                            import(
+                              "../../routes/refund-reasons/refund-reason-edit"
+                            ),
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              path: "translations",
+              errorElement: <ErrorBoundary />,
+              handle: {
+                breadcrumb: () => t("translations.domain"),
+              },
+              children: [
+                {
+                  path: "",
+                  lazy: () =>
+                    import("../../routes/translations/translation-list"),
+                },
+                {
+                  path: "edit",
+                  lazy: () =>
+                    import("../../routes/translations/translations-edit"),
+                },
+                {
+                  path: "add-locales",
+                  lazy: () => import("../../routes/translations/add-locales"),
                 },
               ],
             },

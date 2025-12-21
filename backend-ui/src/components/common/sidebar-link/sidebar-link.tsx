@@ -37,7 +37,7 @@ export const SidebarLink = ({
               </Text>
             </div>
             <div className="flex size-7 items-center justify-center">
-              <TriangleRightMini className="text-ui-fg-muted" />
+              <TriangleRightMini className="text-ui-fg-muted rtl:rotate-180" />
             </div>
           </div>
         </div>

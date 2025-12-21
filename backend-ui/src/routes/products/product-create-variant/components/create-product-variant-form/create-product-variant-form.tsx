@@ -26,6 +26,7 @@ import {
 import DetailsTab from "./details-tab"
 import InventoryKitTab from "./inventory-kit-tab"
 import PricingTab from "./pricing-tab"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 enum Tab {
   DETAIL = "detail",
@@ -50,7 +51,7 @@ export const CreateProductVariantForm = ({
 }: CreateProductVariantFormProps) => {
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
-
+  const direction = useDocumentDirection()
   const [tab, setTab] = useState<Tab>(Tab.DETAIL)
   const [tabState, setTabState] = useState<TabState>(initialTabState)
 
@@ -75,10 +76,13 @@ export const CreateProductVariantForm = ({
       return {}
     }
 
-    return regions.reduce((acc, reg) => {
-      acc[reg.id] = reg.currency_code
-      return acc
-    }, {} as Record<string, string>)
+    return regions.reduce(
+      (acc, reg) => {
+        acc[reg.id] = reg.currency_code
+        return acc
+      },
+      {} as Record<string, string>
+    )
   }, [regions])
 
   const isManageInventoryEnabled = useWatch({
@@ -257,6 +261,7 @@ export const CreateProductVariantForm = ({
   return (
     <RouteFocusModal.Form form={form}>
       <ProgressTabs
+        dir={direction}
         value={tab}
         onValueChange={(tab) => handleChangeTab(tab as Tab)}
         className="flex h-full flex-col overflow-hidden"

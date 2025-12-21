@@ -508,28 +508,6 @@
       }
     },
     "deleteWarning": "أنت على وشك حذف المنتج {{title}}. لا يمكن التراجع عن هذا الإجراء.",
-    "bulkEdit": {
-      "action": "تعديل الحالة",
-      "selectAll": "تحديد الكل",
-      "deselectAll": "إلغاء تحديد الكل",
-      "title_one": "تعديل {{count}} منتج",
-      "title_other": "تعديل {{count}} منتجات",
-      "description_one": "تحديث الحالة لـ {{count}} منتج محدد.",
-      "description_other": "تحديث الحالة لـ {{count}} منتجات محددة.",
-      "descriptionAll_one": "تحديث الحالة لجميع {{count}} منتج المطابق للفلاتر الحالية.",
-      "descriptionAll_other": "تحديث الحالة لجميع {{count}} منتجات المطابقة للفلاتر الحالية.",
-      "success": {
-        "header_one": "تم تحديث {{count}} منتج بنجاح",
-        "header_other": "تم تحديث {{count}} منتجات بنجاح",
-        "description_one": "تم تحديث حالة المنتج إلى {{status}}.",
-        "description_other": "تم تحديث حالة المنتجات إلى {{status}}."
-      },
-      "error": {
-        "header": "فشل تحديث المنتجات",
-        "description": "حدث خطأ أثناء تحديث المنتجات."
-      },
-      "loading": "جاري تحميل {{count}} منتجات..."
-    },
     "variants": {
       "empty": {
         "description": "لا يوجد بدائل لهذا المنتج.",

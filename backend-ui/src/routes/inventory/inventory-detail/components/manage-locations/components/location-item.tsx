@@ -1,11 +1,11 @@
 import { Checkbox, Text, clx } from "@medusajs/ui"
 
-import { StockLocationDTO } from "@medusajs/types"
+import { HttpTypes } from "@medusajs/types"
 
 type LocationItemProps = {
   selected: boolean
   onSelect: (selected: boolean) => void
-  location: StockLocationDTO
+  location: HttpTypes.AdminStockLocation
 }
 
 export const LocationItem = ({

@@ -16,6 +16,7 @@ import {
   getCurrencySymbol,
 } from "../../../../../lib/data/currencies"
 import { SwitchBox } from "../../../../../components/common/switch-box"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type EditPromotionFormProps = {
   promotion: AdminPromotion
@@ -28,8 +29,9 @@ const EditPromotionSchema = zod.object({
   status: zod.enum(["active", "inactive", "draft"]),
   value_type: zod.enum(["fixed", "percentage"]),
   value: zod.number().min(0).or(zod.string().min(1)),
-  allocation: zod.enum(["each", "across"]),
+  allocation: zod.enum(["each", "across", "once"]),
   target_type: zod.enum(["order", "shipping_methods", "items"]),
+  max_quantity: zod.number().min(1).optional().nullable(),
 })
 
 export const EditPromotionDetailsForm = ({
@@ -48,6 +50,7 @@ export const EditPromotionDetailsForm = ({
       allocation: promotion.application_method!.allocation,
       value_type: promotion.application_method!.type,
       target_type: promotion.application_method!.target_type,
+      max_quantity: promotion.application_method!.max_quantity,
     },
     resolver: zodResolver(EditPromotionSchema),
   })
@@ -57,7 +60,13 @@ export const EditPromotionDetailsForm = ({
     name: "value_type",
   })
 
+  const watchAllocation = useWatch({
+    control: form.control,
+    name: "allocation",
+  })
+
   const isFixedValueType = watchValueType === "fixed"
+  const originalAllocation = promotion.application_method!.allocation
 
   const { mutateAsync, isPending } = useUpdatePromotion(promotion.id)
 
@@ -79,6 +88,7 @@ export const EditPromotionDetailsForm = ({
           value: parseFloat(data.value),
           type: data.value_type as any,
           allocation: data.allocation as any,
+          max_quantity: data.max_quantity,
         },
       },
       {
@@ -99,7 +109,7 @@ export const EditPromotionDetailsForm = ({
       form.setValue("is_tax_inclusive", false)
     }
   }, [allocationWatchValue, form, promotion])
-
+  const direction = useDocumentDirection()
   return (
     <RouteDrawer.Form form={form}>
       <KeyboundForm
@@ -117,6 +127,7 @@ export const EditPromotionDetailsForm = ({
                     <Form.Label>{t("promotions.form.status.label")}</Form.Label>
                     <Form.Control>
                       <RadioGroup
+                        dir={direction}
                         className="flex-col gap-y-3"
                         {...field}
                         value={field.value}
@@ -162,6 +173,7 @@ export const EditPromotionDetailsForm = ({
                     <Form.Label>{t("promotions.form.method.label")}</Form.Label>
                     <Form.Control>
                       <RadioGroup
+                        dir={direction}
                         className="flex-col gap-y-3"
                         {...field}
                         value={field.value}
@@ -242,6 +254,7 @@ export const EditPromotionDetailsForm = ({
                         </Form.Label>
                         <Form.Control>
                           <RadioGroup
+                            dir={direction}
                             className="flex-col gap-y-3"
                             {...field}
                             onValueChange={field.onChange}
@@ -331,11 +344,14 @@ export const EditPromotionDetailsForm = ({
                   render={({ field }) => {
                     return (
                       <Form.Item>
-                        <Form.Label>
+                        <Form.Label
+                          tooltip={t("promotions.fields.allocationTooltip")}
+                        >
                           {t("promotions.fields.allocation")}
                         </Form.Label>
                         <Form.Control>
                           <RadioGroup
+                            dir={direction}
                             className="flex-col gap-y-3"
                             {...field}
                             onValueChange={field.onChange}
@@ -346,6 +362,7 @@ export const EditPromotionDetailsForm = ({
                               description={t(
                                 "promotions.form.allocation.each.description"
                               )}
+                              disabled={originalAllocation === "across"}
                             />
 
                             <RadioGroup.ChoiceBox
@@ -356,6 +373,19 @@ export const EditPromotionDetailsForm = ({
                               description={t(
                                 "promotions.form.allocation.across.description"
                               )}
+                              disabled={
+                                originalAllocation === "each" ||
+                                originalAllocation === "once"
+                              }
+                            />
+
+                            <RadioGroup.ChoiceBox
+                              value={"once"}
+                              label={t("promotions.form.allocation.once.title")}
+                              description={t(
+                                "promotions.form.allocation.once.description"
+                              )}
+                              disabled={originalAllocation === "across"}
                             />
                           </RadioGroup>
                         </Form.Control>
@@ -364,6 +394,43 @@ export const EditPromotionDetailsForm = ({
                     )
                   }}
                 />
+                {(watchAllocation === "each" || watchAllocation === "once") && (
+                  <Form.Field
+                    control={form.control}
+                    name="max_quantity"
+                    render={({ field }) => {
+                      return (
+                        <Form.Item>
+                          <Form.Label>
+                            {t("promotions.form.max_quantity.title")}
+                          </Form.Label>
+                          <Form.Control>
+                            <Input
+                              {...form.register("max_quantity", {
+                                valueAsNumber: true,
+                              })}
+                              type="number"
+                              min={1}
+                              placeholder="3"
+                            />
+                          </Form.Control>
+                          <Text
+                            size="small"
+                            leading="compact"
+                            className="text-ui-fg-subtle"
+                          >
+                            <Trans
+                              t={t}
+                              i18nKey="promotions.form.max_quantity.description"
+                              components={[<br key="break" />]}
+                            />
+                          </Text>
+                          <Form.ErrorMessage />
+                        </Form.Item>
+                      )
+                    }}
+                  />
+                )}
               </>
             )}
           </div>

@@ -46,7 +46,7 @@ export const useOrderTableQuery = ({
     created_at: created_at ? JSON.parse(created_at) : undefined,
     updated_at: updated_at ? JSON.parse(updated_at) : undefined,
     region_id: region_id?.split(","),
-    order: order ? order : "-display_id",
+    order: order ? order : "-created_at",
     q,
   }
 

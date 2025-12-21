@@ -11,22 +11,33 @@ type CampaignBudgetProps = {
 export const CampaignBudget = ({ campaign }: CampaignBudgetProps) => {
   const { t } = useTranslation()
 
+  const getTranslation = () => {
+    const budget = campaign.budget
+
+    if (budget?.type === "use_by_attribute") {
+      if (budget?.attribute === "customer_id") {
+        return t(`campaigns.budget.fields.totalUsedByAttributeCustomerId`)
+      } else if (budget?.attribute === "customer_email") {
+        return t(`campaigns.budget.fields.totalUsedByAttributeEmail`)
+      }
+      return t(`campaigns.budget.fields.totalUsedByAttribute`, {
+        attribute: budget?.attribute,
+      })
+    }
+    return t(`campaigns.fields.budget_limit`)
+  }
+
   return (
     <Container className="flex flex-col gap-y-4 px-6 py-4">
       <div className="flex justify-between">
-        <div className="flex-grow">
-          <div className="bg-ui-bg-base shadow-borders-base float-left flex size-7 items-center justify-center rounded-md">
+        <div className="mb-2 grid flex-grow grid-cols-[28px_1fr] items-center gap-x-3">
+          <div className="bg-ui-bg-base shadow-borders-base flex size-7 items-center justify-center rounded-md">
             <div className="bg-ui-bg-component flex size-6 items-center justify-center rounded-[4px]">
               <ChartPie className="text-ui-fg-subtle" />
             </div>
           </div>
 
-          <Heading
-            className="text-ui-fg-subtle ml-10 mt-[1.5px] font-normal"
-            level="h3"
-          >
-            {t("campaigns.fields.budget_limit")}
-          </Heading>
+          <Heading level="h2">{getTranslation()}</Heading>
         </div>
 
         <ActionMenu
@@ -46,7 +57,7 @@ export const CampaignBudget = ({ campaign }: CampaignBudgetProps) => {
 
       <div>
         <Text
-          className="text-ui-fg-subtle border-ui-border-strong border-l-4 pl-3"
+          className="text-ui-fg-subtle border-ui-border-strong border-l-4 ps-3"
           size="small"
           leading="compact"
         >

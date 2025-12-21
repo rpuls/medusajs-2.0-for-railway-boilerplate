@@ -487,28 +487,6 @@
       }
     },
     "deleteWarning": "A {{title}} termék törlésére készül. Ez a művelet nem vonható vissza.",
-    "bulkEdit": {
-      "action": "Állapot szerkesztése",
-      "selectAll": "Összes kijelölése",
-      "deselectAll": "Kijelölés megszüntetése",
-      "title_one": "{{count}} termék szerkesztése",
-      "title_other": "{{count}} termék szerkesztése",
-      "description_one": "Állapot frissítése {{count}} kiválasztott termékhez.",
-      "description_other": "Állapot frissítése {{count}} kiválasztott termékhez.",
-      "descriptionAll_one": "Állapot frissítése minden {{count}} termékhez, amely megfelel az aktuális szűrőknek.",
-      "descriptionAll_other": "Állapot frissítése minden {{count}} termékhez, amely megfelel az aktuális szűrőknek.",
-      "success": {
-        "header_one": "{{count}} termék sikeresen frissítve",
-        "header_other": "{{count}} termék sikeresen frissítve",
-        "description_one": "A termék állapota frissítve lett {{status}} értékre.",
-        "description_other": "A termékek állapota frissítve lett {{status}} értékre."
-      },
-      "error": {
-        "header": "A termékek frissítése sikertelen",
-        "description": "Hiba történt a termékek frissítése során."
-      },
-      "loading": "{{count}} termék betöltése..."
-    },
     "variants": {
       "header": "Variánsok",
       "empty": {

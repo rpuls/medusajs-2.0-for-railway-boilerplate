@@ -16,7 +16,6 @@ import { useComboboxData } from "../../../../../hooks/use-combobox-data"
 import { sdk } from "../../../../../lib/client"
 import { useExtension } from "../../../../../providers/extension-provider"
 import { CategoryCombobox } from "../../../common/components/category-combobox"
-import { useBrands, useProductBrand, useUpdateProductBrand } from "../../../../../hooks/api/brands"
 
 type ProductOrganizationFormProps = {
   product: HttpTypes.AdminProduct
@@ -27,7 +26,6 @@ const ProductOrganizationSchema = zod.object({
   collection_id: zod.string().nullable(),
   category_ids: zod.array(zod.string()),
   tag_ids: zod.array(zod.string()),
-  brand_id: zod.string().nullable(),
 })
 
 export const ProductOrganizationForm = ({
@@ -70,21 +68,12 @@ export const ProductOrganizationForm = ({
       })),
   })
 
-  const { brand } = useProductBrand(product.id)
-  const { brands } = useBrands()
-
-  const brandOptions = brands?.map((b) => ({
-    label: b.name,
-    value: b.id,
-  })) || []
-
   const form = useExtendableForm({
     defaultValues: {
       type_id: product.type_id ?? "",
       collection_id: product.collection_id ?? "",
       category_ids: product.categories?.map((c) => c.id) || [],
       tag_ids: product.tags?.map((t) => t.id) || [],
-      brand_id: brand?.id ?? "",
     },
     schema: ProductOrganizationSchema,
     configs: configs,
@@ -92,39 +81,29 @@ export const ProductOrganizationForm = ({
   })
 
   const { mutateAsync, isPending } = useUpdateProduct(product.id)
-  const { mutateAsync: updateBrand, isPending: isUpdatingBrand } = useUpdateProductBrand(product.id)
 
   const handleSubmit = form.handleSubmit(async (data) => {
-    try {
-      // Update product organization fields
-      await mutateAsync({
+    await mutateAsync(
+      {
         type_id: data.type_id || null,
         collection_id: data.collection_id || null,
         categories: data.category_ids.map((c) => ({ id: c })),
         tags: data.tag_ids?.map((t) => ({ id: t })),
-      })
-
-      // Update brand link separately
-      await updateBrand({
-        brand_id: data.brand_id || null,
-      })
-
-      // Only show success and close drawer if both mutations succeeded
-      toast.success(
-        t("products.organization.edit.toasts.success", {
-          title: product.title,
-        })
-      )
-      handleSuccess()
-    } catch (error) {
-      // Error handling is done by the mutation's onError callbacks
-      // Don't close the drawer or show success if either mutation fails
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("products.organization.edit.toasts.error")
-      )
-    }
+      },
+      {
+        onSuccess: ({ product }) => {
+          toast.success(
+            t("products.organization.edit.toasts.success", {
+              title: product.title,
+            })
+          )
+          handleSuccess()
+        },
+        onError: (error) => {
+          toast.error(error.message)
+        },
+      }
+    )
   })
 
   return (
@@ -218,29 +197,6 @@ export const ProductOrganizationForm = ({
                 )
               }}
             />
-            <Form.Field
-              control={form.control}
-              name="brand_id"
-              render={({ field }) => {
-                return (
-                  <Form.Item>
-                    <Form.Label optional>
-                      {t("fields.brand")}
-                    </Form.Label>
-                    <Form.Control>
-                      <Combobox
-                        {...field}
-                        multiple={false}
-                        options={brandOptions}
-                        searchValue=""
-                        onSearchValueChange={() => {}}
-                      />
-                    </Form.Control>
-                    <Form.ErrorMessage />
-                  </Form.Item>
-                )
-              }}
-            />
             <FormExtensionZone fields={fields} form={form} />
           </div>
         </RouteDrawer.Body>
@@ -251,7 +207,7 @@ export const ProductOrganizationForm = ({
                 {t("actions.cancel")}
               </Button>
             </RouteDrawer.Close>
-            <Button size="small" type="submit" isLoading={isPending || isUpdatingBrand}>
+            <Button size="small" type="submit" isLoading={isPending}>
               {t("actions.save")}
             </Button>
           </div>

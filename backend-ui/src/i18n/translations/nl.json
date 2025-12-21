@@ -487,28 +487,6 @@
       }
     },
     "deleteWarning": "U staat op het punt het product {{title}} te verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
-    "bulkEdit": {
-      "action": "Status bewerken",
-      "selectAll": "Alles selecteren",
-      "deselectAll": "Selectie opheffen",
-      "title_one": "{{count}} product bewerken",
-      "title_other": "{{count}} producten bewerken",
-      "description_one": "Werk de status bij voor {{count}} geselecteerd product.",
-      "description_other": "Werk de status bij voor {{count}} geselecteerde producten.",
-      "descriptionAll_one": "Werk de status bij voor alle {{count}} product dat overeenkomt met de huidige filters.",
-      "descriptionAll_other": "Werk de status bij voor alle {{count}} producten die overeenkomen met de huidige filters.",
-      "success": {
-        "header_one": "{{count}} product succesvol bijgewerkt",
-        "header_other": "{{count}} producten succesvol bijgewerkt",
-        "description_one": "De productstatus is bijgewerkt naar {{status}}.",
-        "description_other": "De productstatus is bijgewerkt naar {{status}}."
-      },
-      "error": {
-        "header": "Fout bij bijwerken van producten",
-        "description": "Er is een fout opgetreden bij het bijwerken van de producten."
-      },
-      "loading": "{{count}} producten laden..."
-    },
     "variants": {
       "header": "Varianten",
       "empty": {

@@ -30,3 +30,16 @@ export function cleanNonValues(obj: Record<string, any>) {
 
   return ret
 }
+
+/**
+ * Convert a string to camel case
+ * @param str
+ * @returns camel case string
+ */
+export function toCamelCase(str: string): string {
+  return /^([a-zA-Z]+)(([A-Z]([a-z]+))+)$/.test(str)
+    ? str
+    : str
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase())
+}

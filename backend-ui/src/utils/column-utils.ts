@@ -11,7 +11,7 @@ const DEFAULT_COLUMN_ORDER = 500
 /**
  * Determines the appropriate column alignment based on the column metadata
  */
-export function getColumnAlignment(column: HttpTypes.AdminViewColumn): ColumnAlignment {
+export function getColumnAlignment(column: HttpTypes.AdminColumn): ColumnAlignment {
   // Currency columns should be right-aligned
   if (column.semantic_type === "currency" || column.data_type === "currency") {
     return ColumnAlignment.RIGHT
@@ -44,7 +44,7 @@ export function getColumnAlignment(column: HttpTypes.AdminViewColumn): ColumnAli
  * Gets the initial column visibility state from API columns
  */
 export function getInitialColumnVisibility(
-  apiColumns: HttpTypes.AdminViewColumn[]
+  apiColumns: HttpTypes.AdminColumn[]
 ): Record<string, boolean> {
   const visibility: Record<string, boolean> = {}
   
@@ -59,7 +59,7 @@ export function getInitialColumnVisibility(
  * Gets the initial column order from API columns
  */
 export function getInitialColumnOrder(
-  apiColumns: HttpTypes.AdminViewColumn[]
+  apiColumns: HttpTypes.AdminColumn[]
 ): string[] {
   const sortedColumns = [...apiColumns].sort((a, b) => {
     const orderA = a.default_order ?? DEFAULT_COLUMN_ORDER

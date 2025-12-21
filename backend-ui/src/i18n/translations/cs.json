@@ -487,38 +487,6 @@
         }
       },
       "deleteWarning": "Chystáte se smazat produkt {{title}}. Tuto akci nelze vrátit zpět.",
-      "bulkEdit": {
-        "action": "Upravit stav",
-        "selectAll": "Vybrat vše",
-        "deselectAll": "Zrušit výběr",
-        "title_one": "Upravit {{count}} produkt",
-        "title_few": "Upravit {{count}} produkty",
-        "title_many": "Upravit {{count}} produktů",
-        "title_other": "Upravit {{count}} produktů",
-        "description_one": "Aktualizovat stav pro {{count}} vybraný produkt.",
-        "description_few": "Aktualizovat stav pro {{count}} vybrané produkty.",
-        "description_many": "Aktualizovat stav pro {{count}} vybraných produktů.",
-        "description_other": "Aktualizovat stav pro {{count}} vybraných produktů.",
-        "descriptionAll_one": "Aktualizovat stav pro všechny {{count}} produkt odpovídající aktuálním filtrům.",
-        "descriptionAll_few": "Aktualizovat stav pro všechny {{count}} produkty odpovídající aktuálním filtrům.",
-        "descriptionAll_many": "Aktualizovat stav pro všechny {{count}} produktů odpovídající aktuálním filtrům.",
-        "descriptionAll_other": "Aktualizovat stav pro všechny {{count}} produktů odpovídající aktuálním filtrům.",
-        "success": {
-          "header_one": "{{count}} produkt byl úspěšně aktualizován",
-          "header_few": "{{count}} produkty byly úspěšně aktualizovány",
-          "header_many": "{{count}} produktů bylo úspěšně aktualizováno",
-          "header_other": "{{count}} produktů bylo úspěšně aktualizováno",
-          "description_one": "Stav produktu byl aktualizován na {{status}}.",
-          "description_few": "Stav produktů byl aktualizován na {{status}}.",
-          "description_many": "Stav produktů byl aktualizován na {{status}}.",
-          "description_other": "Stav produktů byl aktualizován na {{status}}."
-        },
-        "error": {
-          "header": "Nepodařilo se aktualizovat produkty",
-          "description": "Při aktualizaci produktů došlo k chybě."
-        },
-        "loading": "Načítání {{count}} produktů..."
-      },
       "variants": {
         "header": "Varianty",
         "empty": {

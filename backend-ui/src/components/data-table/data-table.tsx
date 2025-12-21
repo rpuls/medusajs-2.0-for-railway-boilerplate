@@ -31,26 +31,26 @@ type DataTableActionProps = {
   label: string
   disabled?: boolean
 } & (
-    | {
+  | {
       to: string
     }
-    | {
+  | {
       onClick: () => void
     }
-  )
+)
 
 type DataTableActionMenuActionProps = {
   label: string
   icon: ReactNode
   disabled?: boolean
 } & (
-    | {
+  | {
       to: string
     }
-    | {
+  | {
       onClick: () => void
     }
-  )
+)
 
 type DataTableActionMenuGroupProps = {
   actions: DataTableActionMenuActionProps[]
@@ -66,15 +66,18 @@ interface DataTableProps<TData> {
   filters?: DataTableFilter[]
   commands?: DataTableCommand[]
   action?: DataTableActionProps
+  actions?: DataTableActionProps[]
   actionMenu?: DataTableActionMenuProps
   rowCount?: number
   getRowId: (row: TData) => string
   enablePagination?: boolean
   enableSearch?: boolean
   autoFocusSearch?: boolean
+  enableFilterMenu?: boolean
   rowHref?: (row: TData) => string
   emptyState?: DataTableEmptyStateProps
   heading?: string
+  headingLevel?: "h1" | "h2" | "h3"
   subHeading?: string
   prefix?: string
   pageSize?: number
@@ -105,14 +108,17 @@ export const DataTable = <TData,>({
   filters,
   commands,
   action,
+  actions,
   actionMenu,
   getRowId,
   rowCount = 0,
   enablePagination = true,
   enableSearch = true,
   autoFocusSearch = false,
+  enableFilterMenu,
   rowHref,
   heading,
+  headingLevel = "h1",
   subHeading,
   prefix,
   pageSize = 10,
@@ -134,14 +140,18 @@ export const DataTable = <TData,>({
   const isViewConfigEnabled = useFeatureFlag("view_configurations")
 
   // If view config is disabled, don't use column visibility features
-  const effectiveEnableColumnVisibility = isViewConfigEnabled && enableColumnVisibility
+  const effectiveEnableColumnVisibility =
+    isViewConfigEnabled && enableColumnVisibility
   const effectiveEnableViewSelector = isViewConfigEnabled && enableViewSelector
 
   const enableFiltering = filters && filters.length > 0
+  const showFilterMenu =
+    enableFilterMenu !== undefined ? enableFilterMenu : enableFiltering
   const enableCommands = commands && commands.length > 0
   const enableSorting = columns.some((column) => column.enableSorting)
 
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(initialColumnVisibility)
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>(initialColumnVisibility)
 
   // Update column visibility when initial visibility changes
   React.useEffect(() => {
@@ -149,9 +159,12 @@ export const DataTable = <TData,>({
     const currentKeys = Object.keys(columnVisibility).sort()
     const newKeys = Object.keys(initialColumnVisibility).sort()
 
-    const hasChanged = currentKeys.length !== newKeys.length ||
+    const hasChanged =
+      currentKeys.length !== newKeys.length ||
       currentKeys.some((key, index) => key !== newKeys[index]) ||
-      Object.entries(initialColumnVisibility).some(([key, value]) => columnVisibility[key] !== value)
+      Object.entries(initialColumnVisibility).some(
+        ([key, value]) => columnVisibility[key] !== value
+      )
 
     if (hasChanged) {
       setColumnVisibility(initialColumnVisibility)
@@ -159,10 +172,13 @@ export const DataTable = <TData,>({
   }, [initialColumnVisibility])
 
   // Wrapper function to handle column visibility changes
-  const handleColumnVisibilityChange = React.useCallback((visibility: VisibilityState) => {
-    setColumnVisibility(visibility)
-    onColumnVisibilityChange?.(visibility)
-  }, [onColumnVisibilityChange])
+  const handleColumnVisibilityChange = React.useCallback(
+    (visibility: VisibilityState) => {
+      setColumnVisibility(visibility)
+      onColumnVisibilityChange?.(visibility)
+    },
+    [onColumnVisibilityChange]
+  )
 
   // Extract filter IDs for query param management
   const filterIds = useMemo(() => filters?.map((f) => f.id) ?? [], [filters])
@@ -226,7 +242,7 @@ export const DataTable = <TData,>({
       Array.from(prev.keys()).forEach((key) => {
         if (prefixedFilterIds.includes(key)) {
           // Extract the unprefixed key
-          const unprefixedKey = prefix ? key.replace(`${prefix}_`, '') : key
+          const unprefixedKey = prefix ? key.replace(`${prefix}_`, "") : key
           if (!(unprefixedKey in value)) {
             prev.delete(key)
           }
@@ -252,11 +268,14 @@ export const DataTable = <TData,>({
   }, [order])
 
   // Memoize current configuration to prevent infinite loops
-  const currentConfiguration = useMemo(() => ({
-    filters: filtering,
-    sorting: sorting,
-    search: search,
-  }), [filtering, sorting, search])
+  const currentConfiguration = useMemo(
+    () => ({
+      filters: filtering,
+      sorting: sorting,
+      search: search,
+    }),
+    [filtering, sorting, search]
+  )
 
   const handleSortingChange = (value: DataTableSortingState) => {
     setSearchParams((prev) => {
@@ -310,42 +329,43 @@ export const DataTable = <TData,>({
     onRowClick: rowHref ? onRowClick : undefined,
     pagination: enablePagination
       ? {
-        state: pagination,
-        onPaginationChange: handlePaginationChange,
-      }
+          state: pagination,
+          onPaginationChange: handlePaginationChange,
+        }
       : undefined,
     filtering: enableFiltering
       ? {
-        state: filtering,
-        onFilteringChange: handleFilteringChange,
-      }
+          state: filtering,
+          onFilteringChange: handleFilteringChange,
+        }
       : undefined,
     sorting: enableSorting
       ? {
-        state: sorting,
-        onSortingChange: handleSortingChange,
-      }
+          state: sorting,
+          onSortingChange: handleSortingChange,
+        }
       : undefined,
     search: enableSearch
       ? {
-        state: search,
-        onSearchChange: handleSearchChange,
-      }
+          state: search,
+          onSearchChange: handleSearchChange,
+        }
       : undefined,
     rowSelection,
     isLoading,
     columnVisibility: effectiveEnableColumnVisibility
       ? {
-        state: columnVisibility,
-        onColumnVisibilityChange: handleColumnVisibilityChange,
-      }
+          state: columnVisibility,
+          onColumnVisibilityChange: handleColumnVisibilityChange,
+        }
       : undefined,
-    columnOrder: effectiveEnableColumnVisibility && columnOrder && onColumnOrderChange
-      ? {
-        state: columnOrder,
-        onColumnOrderChange: onColumnOrderChange,
-      }
-      : undefined,
+    columnOrder:
+      effectiveEnableColumnVisibility && columnOrder && onColumnOrderChange
+        ? {
+            state: columnOrder,
+            onColumnOrderChange: onColumnOrderChange,
+          }
+        : undefined,
   })
 
   const shouldRenderHeading = heading || subHeading
@@ -353,7 +373,9 @@ export const DataTable = <TData,>({
   return (
     <UiDataTable
       instance={instance}
-      className={layout === "fill" ? "h-full [&_tr]:last-of-type:!border-b" : undefined}
+      className={
+        layout === "fill" ? "h-full [&_tr]:last-of-type:!border-b" : undefined
+      }
     >
       <UiDataTable.Toolbar
         className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center"
@@ -364,7 +386,7 @@ export const DataTable = <TData,>({
           <div className="flex items-center gap-x-4">
             {shouldRenderHeading && (
               <div>
-                {heading && <Heading>{heading}</Heading>}
+                {heading && <Heading level={headingLevel}>{heading}</Heading>}
                 {subHeading && (
                   <Text size="small" className="text-ui-fg-subtle">
                     {subHeading}
@@ -381,7 +403,7 @@ export const DataTable = <TData,>({
             )}
           </div>
           <div className="flex items-center gap-x-2">
-            {enableFiltering && <UiDataTable.FilterMenu />}
+            {showFilterMenu && <UiDataTable.FilterMenu />}
             {enableSorting && <UiDataTable.SortingMenu />}
             {enableSearch && (
               <div className="w-full md:w-auto">
@@ -392,7 +414,10 @@ export const DataTable = <TData,>({
               </div>
             )}
             {actionMenu && <ActionMenu variant="primary" {...actionMenu} />}
-            {action && <DataTableAction {...action} />}
+            {actions && actions.length > 0 && (
+              <DataTableActions actions={actions} />
+            )}
+            {!actions && action && <DataTableAction {...action} />}
           </div>
         </div>
       </UiDataTable.Toolbar>
@@ -401,7 +426,9 @@ export const DataTable = <TData,>({
         <UiDataTable.Pagination translations={paginationTranslations} />
       )}
       {enableCommands && (
-        <UiDataTable.CommandBar selectedLabel={(count) => `${count} selected`} />
+        <UiDataTable.CommandBar
+          selectedLabel={(count) => `${count} selected`}
+        />
       )}
     </UiDataTable>
   )
@@ -505,3 +532,12 @@ const DataTableAction = ({
   )
 }
 
+const DataTableActions = ({ actions }: { actions: DataTableActionProps[] }) => {
+  return (
+    <div className="flex items-center gap-x-2">
+      {actions.map((action, index) => (
+        <DataTableAction key={index} {...action} />
+      ))}
+    </div>
+  )
+}

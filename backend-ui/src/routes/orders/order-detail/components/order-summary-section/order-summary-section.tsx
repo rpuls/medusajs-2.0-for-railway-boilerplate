@@ -10,6 +10,7 @@ import {
   DocumentText,
   ExclamationCircle,
   PencilSquare,
+  ReceiptPercent,
   TriangleDownMini,
 } from "@medusajs/icons"
 import {
@@ -38,7 +39,6 @@ import {
 } from "@medusajs/ui"
 
 import { AdminReservation } from "@medusajs/types/src/http"
-import { format } from "date-fns"
 import { ActionMenu } from "../../../../../components/common/action-menu"
 import DisplayId from "../../../../../components/common/display-id/display-id"
 import { Thumbnail } from "../../../../../components/common/thumbnail"
@@ -403,29 +403,49 @@ const Item = ({
       item.variant?.inventory_items?.some((i) => i.required_quantity > 1))
   const hasUnfulfilledItems = item.quantity - item.detail.fulfilled_quantity > 0
 
+  const appliedPromoCodes = (item.adjustments || []).map((a) => a.code)
+
   return (
     <>
       <div
         key={item.id}
         className="text-ui-fg-subtle grid grid-cols-2 items-center gap-x-4 px-6 py-4"
       >
-        <div className="flex items-start gap-x-4">
-          <Thumbnail src={item.thumbnail} />
-          <div>
-            <Text size="small" leading="compact" className="text-ui-fg-base">
-              {item.title}
-            </Text>
+        <div className=" flex justify-between gap-x-2 ">
+          <div className=" group flex items-start gap-x-4">
+            <Thumbnail src={item.thumbnail} />
+            <div>
+              <Text size="small" leading="compact" className="text-ui-fg-base">
+                {item.title}
+              </Text>
 
-            {item.variant_sku && (
-              <div className="flex items-center gap-x-1">
-                <Text size="small">{item.variant_sku}</Text>
-                <Copy content={item.variant_sku} className="text-ui-fg-muted" />
-              </div>
-            )}
-            <Text size="small">
-              {item.variant?.options?.map((o) => o.value).join(" · ")}
-            </Text>
+              {item.variant_sku && (
+                <div className="flex items-center gap-x-1">
+                  <Text size="small">{item.variant_sku}</Text>
+                  <Copy
+                    content={item.variant_sku}
+                    className="text-ui-fg-muted hidden group-hover:block"
+                  />
+                </div>
+              )}
+              <Text size="small">
+                {item.variant?.options?.map((o) => o.value).join(" · ")}
+              </Text>
+            </div>
           </div>
+          {appliedPromoCodes.length > 0 && (
+            <Tooltip
+              content={
+                <span className="text-pretty">
+                  {appliedPromoCodes.map((code) => (
+                    <div key={code}>{code}</div>
+                  ))}
+                </span>
+              }
+            >
+              <ReceiptPercent className="text-ui-fg-subtle flex-shrink self-center " />
+            </Tooltip>
+          )}
         </div>
 
         <div className="grid grid-cols-3 items-center gap-x-4">
@@ -575,9 +595,10 @@ const CostBreakdown = ({
 
     order.items.forEach((item) => {
       item.tax_lines?.forEach((line) => {
+        const currTotal = line.subtotal || 0
         const prevTotal = taxCodeMap[line.code]?.total || 0
         taxCodeMap[line.code] = {
-          total: prevTotal + line.subtotal,
+          total: prevTotal + currTotal,
           rate: line.rate,
         }
       })
@@ -585,9 +606,10 @@ const CostBreakdown = ({
 
     order.shipping_methods.forEach((sm) => {
       sm.tax_lines?.forEach((line) => {
+        const currTotal = line.subtotal || 0
         const prevTotal = taxCodeMap[line.code]?.total || 0
         taxCodeMap[line.code] = {
-          total: prevTotal + line.subtotal,
+          total: prevTotal + currTotal,
           rate: line.rate,
         }
       })
@@ -853,10 +875,6 @@ const DiscountAndTotalBreakdown = ({
                   .split("-")
                   .join(" ")
 
-                const prettyReferenceId = creditLine.reference_id ? (
-                  <DisplayId id={creditLine.reference_id} />
-                ) : null
-
                 return (
                   <div
                     key={creditLine.id}
@@ -874,32 +892,12 @@ const DiscountAndTotalBreakdown = ({
                       <span className="txt-small text-ui-fg-subtle mx-1">
                         -
                       </span>
-                      <Tooltip
-                        content={format(
-                          new Date(creditLine.created_at),
-                          "dd MMM, yyyy, HH:mm:ss"
-                        )}
-                      >
-                        <Text
-                          size="small"
-                          leading="compact"
-                          className="txt-small text-ui-fg-subtle"
-                        >
-                          {format(
-                            new Date(creditLine.created_at),
-                            "dd MMM, yyyy"
-                          )}
-                        </Text>
-                      </Tooltip>
-                      <span className="txt-small text-ui-fg-subtle mx-1">
-                        -
-                      </span>
                       <Text
                         size="small"
                         leading="compact"
                         className="txt-small text-ui-fg-subtle capitalize"
                       >
-                        ({prettyReference} {prettyReferenceId})
+                        ({prettyReference})
                       </Text>
                     </div>
                     <div className="relative flex-1">

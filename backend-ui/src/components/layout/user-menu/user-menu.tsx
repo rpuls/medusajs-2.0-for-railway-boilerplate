@@ -29,10 +29,12 @@ import { useLogout, useMe } from "../../../hooks/api"
 import { queryClient } from "../../../lib/query-client"
 import { useGlobalShortcuts } from "../../../providers/keybind-provider/hooks"
 import { useTheme } from "../../../providers/theme-provider"
+import { useDocumentDirection } from "../../../hooks/use-document-direction"
 
 export const UserMenu = () => {
   const { t } = useTranslation()
   const location = useLocation()
+  const direction = useDocumentDirection()
 
   const [openMenu, setOpenMenu] = useState(false)
   const [openModal, setOpenModal] = useState(false)
@@ -44,33 +46,33 @@ export const UserMenu = () => {
 
   return (
     <div>
-      <DropdownMenu open={openMenu} onOpenChange={setOpenMenu}>
+      <DropdownMenu dir={direction} open={openMenu} onOpenChange={setOpenMenu}>
         <UserBadge />
         <DropdownMenu.Content className="min-w-[var(--radix-dropdown-menu-trigger-width)] max-w-[var(--radix-dropdown-menu-trigger-width)]">
           <UserItem />
           <DropdownMenu.Separator />
           <DropdownMenu.Item asChild>
             <Link to="/settings/profile" state={{ from: location.pathname }}>
-              <UserIcon className="text-ui-fg-subtle mr-2" />
+              <UserIcon className="text-ui-fg-subtle me-2" />
               {t("app.menus.user.profileSettings")}
             </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
           <DropdownMenu.Item asChild>
             <Link to="https://docs.medusajs.com" target="_blank">
-              <BookOpen className="text-ui-fg-subtle mr-2" />
+              <BookOpen className="text-ui-fg-subtle me-2" />
               {t("app.menus.user.documentation")}
             </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Item asChild>
             <Link to="https://medusajs.com/changelog/" target="_blank">
-              <TimelineVertical className="text-ui-fg-subtle mr-2" />
+              <TimelineVertical className="text-ui-fg-subtle me-2" />
               {t("app.menus.user.changelog")}
             </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
           <DropdownMenu.Item onClick={toggleModal}>
-            <Keyboard className="text-ui-fg-subtle mr-2" />
+            <Keyboard className="text-ui-fg-subtle me-2" />
             {t("app.menus.user.shortcuts")}
           </DropdownMenu.Item>
           <ThemeToggle />
@@ -93,7 +95,7 @@ const UserBadge = () => {
 
   if (isPending) {
     return (
-      <button className="shadow-borders-base flex max-w-[192px] select-none items-center gap-x-2 overflow-hidden text-ellipsis whitespace-nowrap rounded-full py-1 pl-1 pr-2.5">
+      <button className="shadow-borders-base flex max-w-[192px] select-none items-center gap-x-2 overflow-hidden text-ellipsis whitespace-nowrap rounded-full py-1 ps-1 pe-2.5">
         <Skeleton className="h-5 w-5 rounded-full" />
         <Skeleton className="h-[9px] w-[70px]" />
       </button>
@@ -109,7 +111,7 @@ const UserBadge = () => {
       <DropdownMenu.Trigger
         disabled={!user}
         className={clx(
-          "bg-ui-bg-subtle grid w-full cursor-pointer grid-cols-[24px_1fr_15px] items-center gap-2 rounded-md py-1 pl-0.5 pr-2 outline-none",
+          "bg-ui-bg-subtle grid w-full cursor-pointer grid-cols-[24px_1fr_15px] items-center gap-2 rounded-md py-1 ps-0.5 pe-2 outline-none",
           "hover:bg-ui-bg-subtle-hover",
           "data-[state=open]:bg-ui-bg-subtle-hover",
           "focus-visible:shadow-borders-focus"
@@ -148,9 +150,9 @@ const ThemeToggle = () => {
 
   return (
     <DropdownMenu.SubMenu>
-      <DropdownMenu.SubMenuTrigger className="rounded-md">
-        <CircleHalfSolid className="text-ui-fg-subtle mr-2" />
-        {t("app.menus.user.theme.label")}
+      <DropdownMenu.SubMenuTrigger dir="ltr" className="rounded-md rtl:rotate-180">
+        <CircleHalfSolid className="text-ui-fg-subtle me-2" />
+        <span className="rtl:rotate-180">{t("app.menus.user.theme.label")}</span>
       </DropdownMenu.SubMenuTrigger>
       <DropdownMenu.SubMenuContent>
         <DropdownMenu.RadioGroup value={theme}>

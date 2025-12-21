@@ -9,6 +9,7 @@ import { useExtension } from "../../../providers/extension-provider"
 import { INavItem, NavItem } from "../nav-item"
 import { Shell } from "../shell"
 import { UserMenu } from "../user-menu"
+import { useFeatureFlag } from "../../../providers/feature-flag-provider"
 
 export const SettingsLayout = () => {
   return (
@@ -19,6 +20,7 @@ export const SettingsLayout = () => {
 }
 
 const useSettingRoutes = (): INavItem[] => {
+  const isTranslationsEnabled = useFeatureFlag("translation")
   const { t } = useTranslation()
 
   return useMemo(
@@ -44,6 +46,10 @@ const useSettingRoutes = (): INavItem[] => {
         to: "/settings/return-reasons",
       },
       {
+        label: t("refundReasons.domain"),
+        to: "/settings/refund-reasons",
+      },
+      {
         label: t("salesChannels.domain"),
         to: "/settings/sales-channels",
       },
@@ -59,12 +65,16 @@ const useSettingRoutes = (): INavItem[] => {
         label: t("stockLocations.domain"),
         to: "/settings/locations",
       },
-      {
-        label: "Econt Shipping",
-        to: "/settings/econt",
-      },
+      ...(isTranslationsEnabled
+        ? [
+            {
+              label: t("translations.domain"),
+              to: "/settings/translations",
+            },
+          ]
+        : []),
     ],
-    [t]
+    [t, isTranslationsEnabled]
   )
 }
 

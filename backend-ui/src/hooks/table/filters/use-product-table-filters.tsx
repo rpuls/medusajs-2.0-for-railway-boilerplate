@@ -84,6 +84,7 @@ export const useProductTableFilters = (
       label: t("fields.type"),
       type: "select",
       multiple: true,
+      searchable: true,
       options: product_types.map((t) => ({
         label: t.value,
         value: t.id,
@@ -99,6 +100,7 @@ export const useProductTableFilters = (
       label: t("fields.tag"),
       type: "select",
       multiple: true,
+      searchable: true,
       options: product_tags.map((t) => ({
         label: t.value,
         value: t.id,
@@ -114,6 +116,7 @@ export const useProductTableFilters = (
       label: t("fields.salesChannel"),
       type: "select",
       multiple: true,
+      searchable: true,
       options: sales_channels.map((s) => ({
         label: s.name,
         value: s.id,

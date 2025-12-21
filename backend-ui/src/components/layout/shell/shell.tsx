@@ -156,7 +156,7 @@ const Breadcrumbs = () => {
             )}
             {!isLast && (
               <span className="mx-2">
-                <TriangleRightMini />
+                <TriangleRightMini className="rtl:rotate-180" />
               </span>
             )}
           </li>
@@ -177,7 +177,7 @@ const ToggleSidebar = () => {
         onClick={() => toggle("desktop")}
         size="small"
       >
-        <SidebarLeft className="text-ui-fg-muted" />
+        <SidebarLeft className="text-ui-fg-muted rtl:rotate-180" />
       </IconButton>
       <IconButton
         className="hidden max-lg:flex"
@@ -185,7 +185,7 @@ const ToggleSidebar = () => {
         onClick={() => toggle("mobile")}
         size="small"
       >
-        <SidebarLeft className="text-ui-fg-muted" />
+        <SidebarLeft className="text-ui-fg-muted rtl:rotate-180" />
       </IconButton>
     </div>
   )
@@ -210,7 +210,7 @@ const DesktopSidebarContainer = ({ children }: PropsWithChildren) => {
 
   return (
     <div
-      className={clx("hidden h-screen w-[220px] border-r", {
+      className={clx("hidden h-screen w-[220px] border-e", {
         "lg:flex": desktop,
       })}
     >
@@ -234,8 +234,8 @@ const MobileSidebarContainer = ({ children }: PropsWithChildren) => {
         />
         <RadixDialog.Content
           className={clx(
-            "bg-ui-bg-subtle shadow-elevation-modal fixed inset-y-2 left-2 flex w-full max-w-[304px] flex-col overflow-hidden rounded-lg border-r",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-left-1/2 data-[state=open]:slide-in-from-left-1/2 duration-200"
+            "bg-ui-bg-subtle shadow-elevation-modal fixed inset-y-2 start-2 flex w-full max-w-[304px] flex-col overflow-hidden rounded-lg border-r",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-start-1/2 data-[state=open]:slide-in-from-start-1/2 duration-200"
           )}
         >
           <div className="p-3">

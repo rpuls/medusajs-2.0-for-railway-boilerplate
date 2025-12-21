@@ -58,6 +58,7 @@ interface ComboboxProps<T extends Value = Value>
   onCreateOption?: (value: string) => void
   noResultsPlaceholder?: ReactNode
   allowClear?: boolean
+  forceHideInput?: boolean // always hide input -> used for singe value select that don't have query/filter
 }
 
 const ComboboxImpl = <T extends Value = string>(
@@ -74,6 +75,7 @@ const ComboboxImpl = <T extends Value = string>(
     onCreateOption,
     noResultsPlaceholder,
     allowClear,
+    forceHideInput,
     ...inputProps
   }: ComboboxProps<T>,
   ref: ForwardedRef<HTMLInputElement>
@@ -152,10 +154,15 @@ const ComboboxImpl = <T extends Value = string>(
       return []
     }
 
+    // do not use `matcher` if the input is hidden
+    if (forceHideInput) {
+      return options
+    }
+
     return matchSorter(options, defferedSearchValue, {
       keys: ["label"],
     })
-  }, [options, defferedSearchValue, isSearchControlled])
+  }, [options, defferedSearchValue, isSearchControlled, forceHideInput])
 
   const observer = useRef(
     new IntersectionObserver(
@@ -197,7 +204,7 @@ const ComboboxImpl = <T extends Value = string>(
   const showTag = hasValue && isArrayValue
   const showSelected = showTag && !searchValue && !open
 
-  const hideInput = !isArrayValue && hasValue && !open
+  const hideInput = forceHideInput || (!isArrayValue && hasValue && !open)
   const selectedLabel = options.find((o) => o.value === selectedValues)?.label
 
   const hidePlaceholder = showSelected || open
@@ -251,7 +258,7 @@ const ComboboxImpl = <T extends Value = string>(
               e.preventDefault()
               handleValueChange(isArrayValue ? ([] as unknown as T) : undefined)
             }}
-            className="bg-ui-bg-base hover:bg-ui-bg-base-hover txt-compact-small-plus text-ui-fg-subtle focus-within:border-ui-fg-interactive transition-fg absolute left-0.5 top-0.5 z-[1] flex h-[28px] items-center rounded-[4px] border py-[3px] pl-1.5 pr-1 outline-none"
+            className="bg-ui-bg-base hover:bg-ui-bg-base-hover txt-compact-small-plus text-ui-fg-subtle focus-within:border-ui-fg-interactive transition-fg absolute start-0.5 top-0.5 z-[1] flex h-[28px] items-center rounded-[4px] border py-[3px] pe-1 ps-1.5 outline-none"
           >
             <span className="tabular-nums">{selectedValues.length}</span>
             <XMarkMini className="text-ui-fg-muted" />
@@ -263,8 +270,8 @@ const ComboboxImpl = <T extends Value = string>(
               className={clx(
                 "pointer-events-none absolute inset-y-0 flex size-full items-center",
                 {
-                  "left-[calc(var(--tag-width)+8px)]": showTag,
-                  "left-2": !showTag,
+                  "start-[calc(var(--tag-width)+8px)]": showTag,
+                  "start-2": !showTag,
                 }
               )}
             >
@@ -278,8 +285,8 @@ const ComboboxImpl = <T extends Value = string>(
               className={clx(
                 "pointer-events-none absolute inset-y-0 flex size-full items-center overflow-hidden",
                 {
-                  "left-[calc(var(--tag-width)+8px)]": showTag,
-                  "left-2": !showTag,
+                  "start-[calc(var(--tag-width)+8px)]": showTag,
+                  "start-2": !showTag,
                 }
               )}
             >
@@ -293,12 +300,12 @@ const ComboboxImpl = <T extends Value = string>(
             ref={comboboxRef}
             onFocus={() => setOpen(true)}
             className={clx(
-              "txt-compact-small text-ui-fg-base !placeholder:text-ui-fg-muted transition-fg size-full cursor-pointer bg-transparent pl-2 pr-8 outline-none focus:cursor-text",
+              "txt-compact-small text-ui-fg-base !placeholder:text-ui-fg-muted transition-fg size-full cursor-pointer bg-transparent pe-8 ps-2 outline-none focus:cursor-text",
               "hover:bg-ui-bg-field-hover",
               {
                 "opacity-0": hideInput,
-                "pl-2": !showTag,
-                "pl-[calc(var(--tag-width)+8px)]": showTag,
+                "ps-2": !showTag,
+                "ps-[calc(var(--tag-width)+8px)]": showTag,
               }
             )}
             placeholder={hidePlaceholder ? undefined : placeholder}
@@ -312,7 +319,7 @@ const ComboboxImpl = <T extends Value = string>(
               e.preventDefault()
               handleValueChange(undefined)
             }}
-            className="bg-ui-bg-base hover:bg-ui-bg-base-hover txt-compact-small-plus text-ui-fg-subtle focus-within:border-ui-fg-interactive transition-fg absolute right-[28px] top-0.5 z-[1] flex h-[28px] items-center rounded-[4px] border px-1.5 py-[2px] outline-none"
+            className="bg-ui-bg-base hover:bg-ui-bg-base-hover txt-compact-small-plus text-ui-fg-subtle focus-within:border-ui-fg-interactive transition-fg absolute end-[28px] top-0.5 z-[1] flex h-[28px] items-center rounded-[4px] border px-1.5 py-[2px] outline-none"
           >
             <XMarkMini className="text-ui-fg-muted" />
           </button>
@@ -323,7 +330,7 @@ const ComboboxImpl = <T extends Value = string>(
               <button
                 {...props}
                 type="button"
-                className="text-ui-fg-muted transition-fg hover:bg-ui-bg-field-hover absolute right-0 flex size-8 items-center justify-center rounded-r outline-none"
+                className="text-ui-fg-muted transition-fg hover:bg-ui-bg-field-hover absolute end-0 flex size-8 items-center justify-center rounded-r outline-none"
               >
                 <TrianglesMini />
               </button>
@@ -341,7 +348,7 @@ const ComboboxImpl = <T extends Value = string>(
           "max-h-[200px] overflow-y-auto",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-          "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          "data-[side=bottom]:slide-in-from-top-2 data-[side=start]:slide-in-from-end-2 data-[side=end]:slide-in-from-start-2 data-[side=top]:slide-in-from-bottom-2"
         )}
         style={{
           pointerEvents: open ? "auto" : "none",

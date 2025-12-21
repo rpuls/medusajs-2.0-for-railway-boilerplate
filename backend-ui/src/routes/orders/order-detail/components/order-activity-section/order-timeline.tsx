@@ -1,4 +1,4 @@
-import { Button, Text, Tooltip, clx, usePrompt } from "@medusajs/ui"
+import { Button, Text, Tooltip, clx, toast, usePrompt } from "@medusajs/ui"
 import { Collapsible as RadixCollapsible } from "radix-ui"
 
 import { PropsWithChildren, ReactNode, useMemo, useState } from "react"
@@ -18,6 +18,7 @@ import { By } from "../../../../../components/common/user-link"
 import {
   useCancelOrderTransfer,
   useCustomer,
+  useOrder,
   useOrderChanges,
   useOrderLineItems,
 } from "../../../../../hooks/api"
@@ -122,6 +123,11 @@ type Activity = {
 
 const useActivityItems = (order: AdminOrder): Activity[] => {
   const { t } = useTranslation()
+
+  const { order: initialOrder = order } = useOrder(order.id, {
+    version: 1,
+    fields: "created_at,total,currency_code",
+  }, { enabled: order.version !== 1})
 
   const { order_changes: orderChanges = [] } = useOrderChanges(order.id, {
     change_type: [
@@ -520,19 +526,23 @@ const useActivityItems = (order: AdminOrder): Activity[] => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     })
 
-    const createdAt = {
-      title: t("orders.activity.events.placed.title"),
-      timestamp: order.created_at,
-      children: (
-        <Text size="small" className="text-ui-fg-subtle">
-          {getStylizedAmount(order.total, order.currency_code)}
-        </Text>
-      ),
+    if (initialOrder.created_at) {
+        const createdAt = {
+          title: t("orders.activity.events.placed.title"),
+          timestamp: initialOrder.created_at,
+          children: (
+            <Text size="small" className="text-ui-fg-subtle">
+              {getStylizedAmount(initialOrder.total, initialOrder.currency_code)}
+            </Text>
+          ),
+        }
+        sortedActivities.push(createdAt)
     }
 
-    return [...sortedActivities, createdAt]
+    return [...sortedActivities]
   }, [
     order,
+    initialOrder,
     payments,
     returns,
     exchanges,
@@ -785,7 +795,9 @@ const ReturnBody = ({
       return
     }
 
-    await cancelReturnRequest()
+    await cancelReturnRequest().catch((error) => {
+      toast.error(error.message)
+    })
   }
 
   const numberOfItems = orderReturn.items.reduce((acc, item) => {
@@ -842,7 +854,9 @@ const ClaimBody = ({
       return
     }
 
-    await cancelClaim()
+    await cancelClaim().catch((error) => {
+      toast.error(error.message)
+    })
   }
 
   const outboundItems = (claim.additional_items || []).reduce(
@@ -916,7 +930,9 @@ const ExchangeBody = ({
       return
     }
 
-    await cancelExchange()
+    await cancelExchange().catch((error) => {
+      toast.error(error.message)
+    })
   }
 
   const outboundItems = (exchange.additional_items || []).reduce(
@@ -1015,7 +1031,9 @@ const TransferOrderRequestBody = ({
       return
     }
 
-    await cancelTransfer()
+    await cancelTransfer().catch((error) => {
+      toast.error(error.message)
+    })
   }
 
   /**

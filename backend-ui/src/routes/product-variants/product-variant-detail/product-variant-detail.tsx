@@ -10,6 +10,7 @@ import {
   InventorySectionPlaceholder,
   VariantInventorySection,
 } from "./components/variant-inventory-section"
+import { VariantMediaSection } from "./components/variant-media-section"
 import { VariantPricesSection } from "./components/variant-prices-section"
 import { VARIANT_DETAIL_FIELDS } from "./constants"
 import { variantLoader } from "./loader"
@@ -61,6 +62,7 @@ export const ProductVariantDetail = () => {
     >
       <TwoColumnPage.Main>
         <VariantGeneralSection variant={variant} />
+        <VariantMediaSection variant={variant} />
         {!variant.manage_inventory ? (
           <InventorySectionPlaceholder />
         ) : (

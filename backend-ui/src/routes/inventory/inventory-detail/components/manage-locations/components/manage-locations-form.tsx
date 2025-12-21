@@ -1,111 +1,75 @@
-import * as zod from "zod"
-
-import { zodResolver } from "@hookform/resolvers/zod"
-import { AdminInventoryItem, AdminStockLocation } from "@medusajs/types"
+import {
+  AdminInventoryItem,
+  AdminStockLocation,
+  HttpTypes,
+} from "@medusajs/types"
 import { Button, Text, toast } from "@medusajs/ui"
-import { useFieldArray, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
-import { z } from "zod"
 import { RouteDrawer, useRouteModal } from "../../../../../../components/modals"
 import { useBatchInventoryItemLocationLevels } from "../../../../../../hooks/api/inventory"
+import { sdk } from "../../../../../../lib/client"
 
-import { useEffect, useMemo } from "react"
-import { KeyboundForm } from "../../../../../../components/utilities/keybound-form"
+import { useMemo, useState } from "react"
 import { LocationItem } from "./location-item"
+import { LocationSearchInput } from "./location-search-input"
+import { InfiniteList } from "../../../../../../components/common/infinite-list/infinite-list"
+import { useStockLocations } from "../../../../../../hooks/api/stock-locations"
 
 type EditInventoryItemAttributeFormProps = {
   item: AdminInventoryItem
   locations: AdminStockLocation[]
 }
 
-const EditInventoryItemAttributesSchema = z.object({
-  locations: z.array(
-    z.object({
-      id: z.string(),
-      location_id: z.string(),
-      selected: z.boolean(),
-    })
-  ),
-})
-
-const getDefaultValues = (
-  allLocations: AdminStockLocation[],
-  existingLevels: Set<string>
-) => {
-  return {
-    locations: allLocations.map((location) => ({
-      ...location,
-      location_id: location.id,
-      selected: existingLevels.has(location.id),
-    })),
-  }
-}
-
 export const ManageLocationsForm = ({
   item,
-  locations,
 }: EditInventoryItemAttributeFormProps) => {
   const existingLocationLevels = useMemo(
     () => new Set(item.location_levels?.map((l) => l.location_id) ?? []),
-    item.location_levels
+    [item.location_levels]
   )
 
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(
+    existingLocationLevels
+  )
 
-  const form = useForm<zod.infer<typeof EditInventoryItemAttributesSchema>>({
-    defaultValues: getDefaultValues(locations, existingLocationLevels),
-    resolver: zodResolver(EditInventoryItemAttributesSchema),
-  })
+  const { count } = useStockLocations({ limit: 1, fields: "id" })
 
-  const { fields: locationFields, update: updateField } = useFieldArray({
-    control: form.control,
-    name: "locations",
-  })
-
-  useEffect(() => {
-    form.setValue(
-      "locations",
-      getDefaultValues(locations, existingLocationLevels).locations
-    )
-  }, [existingLocationLevels, locations])
+  const handleLocationSelect = (locationId: string, selected: boolean) => {
+    setSelectedLocationIds((prev) => {
+      const newSet = new Set(prev)
+      if (selected) {
+        newSet.add(locationId)
+      } else {
+        newSet.delete(locationId)
+      }
+      return newSet
+    })
+  }
 
   const { mutateAsync } = useBatchInventoryItemLocationLevels(item.id)
 
-  const handleSubmit = form.handleSubmit(async ({ locations }) => {
-    // Changes in selected locations
-    const [selectedLocations, unselectedLocations] = locations.reduce(
-      (acc, location) => {
-        // If the location is not changed do nothing
-        if (
-          (!location.selected &&
-            !existingLocationLevels.has(location.location_id)) ||
-          (location.selected &&
-            existingLocationLevels.has(location.location_id))
-        ) {
-          return acc
-        }
-
-        if (location.selected) {
-          acc[0].push(location.location_id)
-        } else {
-          acc[1].push(location.location_id)
-        }
-        return acc
-      },
-      [[], []] as [string[], string[]]
+  const handleSubmit = async () => {
+    const toCreate = Array.from(selectedLocationIds).filter(
+      (id) => !existingLocationLevels.has(id)
     )
 
-    if (selectedLocations.length === 0 && unselectedLocations.length === 0) {
-      return handleSuccess()
-    }
+    const toDeleteLocations = Array.from(existingLocationLevels).filter(
+      (id) => !selectedLocationIds.has(id)
+    )
+
+    const toDelete = toDeleteLocations
+      .map((id) => item.location_levels?.find((l) => l.location_id === id)?.id)
+      .filter(Boolean) as unknown as string[]
 
     await mutateAsync(
       {
-        create: selectedLocations.map((location_id) => ({
+        create: toCreate.map((location_id) => ({
           location_id,
         })),
-        delete: unselectedLocations,
+        delete: toDelete,
       },
       {
         onSuccess: () => {
@@ -117,80 +81,103 @@ export const ManageLocationsForm = ({
         },
       }
     )
-  })
+  }
 
   return (
-    <RouteDrawer.Form form={form}>
-      <KeyboundForm
-        onSubmit={handleSubmit}
-        className="flex flex-1 flex-col overflow-hidden"
-      >
-        <RouteDrawer.Body className="flex flex-1 flex-col gap-y-4 overflow-auto">
-          <div className="text-ui-fg-subtle shadow-elevation-card-rest grid grid-rows-2 divide-y rounded-lg border">
-            <div className="grid grid-cols-2 divide-x">
-              <Text className="px-2 py-1.5" size="small" leading="compact">
-                {t("fields.title")}
-              </Text>
-              <Text className="px-2 py-1.5" size="small" leading="compact">
-                {item.title ?? "-"}
-              </Text>
-            </div>
-            <div className="grid grid-cols-2 divide-x">
-              <Text className="px-2 py-1.5" size="small" leading="compact">
-                {t("fields.sku")}
-              </Text>
-              <Text className="px-2 py-1.5" size="small" leading="compact">
-                {item.sku}
-              </Text>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <Text size="small" weight="plus" leading="compact">
-              {t("locations.domain")}
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <RouteDrawer.Body className="flex flex-1 flex-col gap-y-4 overflow-auto">
+        <div className="text-ui-fg-subtle shadow-elevation-card-rest grid grid-rows-2 divide-y rounded-lg border">
+          <div className="grid grid-cols-2 divide-x">
+            <Text className="px-2 py-1.5" size="small" leading="compact">
+              {t("fields.title")}
             </Text>
-            <div className="text-ui-fg-subtle flex w-full justify-between">
-              <Text size="small" leading="compact">
-                {t("locations.selectLocations")}
-              </Text>
-              <Text size="small" leading="compact">
-                {"("}
-                {t("general.countOfTotalSelected", {
-                  count: locationFields.filter((l) => l.selected).length,
-                  total: locations.length,
-                })}
-                {")"}
-              </Text>
-            </div>
+            <Text className="px-2 py-1.5" size="small" leading="compact">
+              {item.title ?? "-"}
+            </Text>
           </div>
-          {locationFields.map((location, idx) => {
-            return (
+          <div className="grid grid-cols-2 divide-x">
+            <Text className="px-2 py-1.5" size="small" leading="compact">
+              {t("fields.sku")}
+            </Text>
+            <Text className="px-2 py-1.5" size="small" leading="compact">
+              {item.sku}
+            </Text>
+          </div>
+        </div>
+        <div className="flex flex-col">
+          <Text size="small" weight="plus" leading="compact">
+            {t("locations.domain")}
+          </Text>
+          <div className="text-ui-fg-subtle flex w-full justify-between">
+            <Text size="small" leading="compact">
+              {t("locations.selectLocations")}
+            </Text>
+            <Text size="small" leading="compact">
+              {"("}
+              {t("general.countOfTotalSelected", {
+                count: selectedLocationIds.size,
+                total: count,
+              })}
+              {")"}
+            </Text>
+          </div>
+        </div>
+
+        <LocationSearchInput
+          onSearchChange={setSearchQuery}
+          placeholder={t("general.search")}
+        />
+
+        <div className="min-h-0 flex-1">
+          <InfiniteList<
+            HttpTypes.AdminStockLocationListResponse,
+            HttpTypes.AdminStockLocation,
+            HttpTypes.AdminStockLocationListParams
+          >
+            queryKey={["stock-locations", searchQuery]}
+            queryFn={async (params) => {
+              const response = await sdk.admin.stockLocation.list({
+                limit: params.limit,
+                offset: params.offset,
+                ...(searchQuery && { q: searchQuery }),
+              })
+              return response
+            }}
+            responseKey="stock_locations"
+            renderItem={(location) => (
               <LocationItem
-                selected={location.selected}
-                location={location as any}
-                onSelect={() =>
-                  updateField(idx, {
-                    ...location,
-                    selected: !location.selected,
-                  })
+                selected={selectedLocationIds.has(location.id)}
+                location={location}
+                onSelect={(selected) =>
+                  handleLocationSelect(location.id, selected)
                 }
-                key={location.id}
               />
-            )
-          })}
-        </RouteDrawer.Body>
-        <RouteDrawer.Footer>
-          <div className="flex items-center justify-end gap-x-2">
-            <RouteDrawer.Close asChild>
-              <Button variant="secondary" size="small">
-                {t("actions.cancel")}
-              </Button>
-            </RouteDrawer.Close>
-            <Button type="submit" size="small" isLoading={false}>
-              {t("actions.save")}
+            )}
+            renderEmpty={() => (
+              <div className="flex items-center justify-center py-8">
+                <Text size="small" className="text-ui-fg-subtle">
+                  {searchQuery
+                    ? t("locations.noLocationsFound")
+                    : t("locations.noLocationsFound")}
+                </Text>
+              </div>
+            )}
+            pageSize={20}
+          />
+        </div>
+      </RouteDrawer.Body>
+      <RouteDrawer.Footer>
+        <div className="flex items-center justify-end gap-x-2">
+          <RouteDrawer.Close asChild>
+            <Button variant="secondary" size="small">
+              {t("actions.cancel")}
             </Button>
-          </div>
-        </RouteDrawer.Footer>
-      </KeyboundForm>
-    </RouteDrawer.Form>
+          </RouteDrawer.Close>
+          <Button onClick={handleSubmit} size="small" isLoading={false}>
+            {t("actions.save")}
+          </Button>
+        </div>
+      </RouteDrawer.Footer>
+    </div>
   )
 }

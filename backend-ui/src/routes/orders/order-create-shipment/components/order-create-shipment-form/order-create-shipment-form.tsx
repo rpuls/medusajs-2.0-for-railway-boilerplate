@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import * as zod from "zod"
 
 import { AdminFulfillment, AdminOrder } from "@medusajs/types"
-import { Button, Heading, Input, Switch, toast } from "@medusajs/ui"
+import { Button, clx, Heading, Input, Switch, toast } from "@medusajs/ui"
 import { useFieldArray, useForm } from "react-hook-form"
 
 import { Form } from "../../../../../components/common/form"
@@ -44,11 +44,11 @@ export function OrderCreateShipmentForm({
 
   const handleSubmit = form.handleSubmit(async (data) => {
     const addedLabels = data.labels
-      .filter((l) => !!l.tracking_number)
+      .filter((l) => !!l.tracking_number || !!l.tracking_url || !!l.label_url)
       .map((l) => ({
         tracking_number: l.tracking_number,
-        tracking_url: "#",
-        label_url: "#",
+        tracking_url: l.tracking_url || "#",
+        label_url: l.label_url || "#",
       }))
 
     await createShipment(
@@ -89,33 +89,93 @@ export function OrderCreateShipmentForm({
                     {t("orders.shipment.title")}
                   </Heading>
 
-                  {labels.map((label, index) => (
-                    <Form.Field
-                      key={label.id}
-                      control={form.control}
-                      name={`labels.${index}.tracking_number`}
-                      render={({ field }) => {
-                        return (
-                          <Form.Item className="mb-4">
-                            {index === 0 && (
-                              <Form.Label>
-                                {t("orders.shipment.trackingNumber")}
-                              </Form.Label>
-                            )}
-                            <Form.Control>
-                              <Input {...field} placeholder="123-456-789" />
-                            </Form.Control>
-                            <Form.ErrorMessage />
-                          </Form.Item>
-                        )
-                      }}
-                    />
-                  ))}
+                  <div className="flex flex-col max-md:gap-y-2 max-md:divide-y">
+                    {labels.map((label, index) => (
+                      <div
+                        key={label.id}
+                        className={clx(
+                          "grid grid-cols-1 gap-x-4 md:grid-cols-3",
+                          { "max-md:pt-4": index > 0 }
+                        )}
+                      >
+                        <Form.Field
+                          control={form.control}
+                          name={`labels.${index}.tracking_number`}
+                          render={({ field }) => {
+                            return (
+                              <Form.Item className="mb-2">
+                                <Form.Label
+                                  className={clx({ "md:hidden": index > 0 })}
+                                >
+                                  {t("orders.shipment.trackingNumber")}
+                                </Form.Label>
+
+                                <Form.Control>
+                                  <Input {...field} placeholder="123-456-789" />
+                                </Form.Control>
+                                <Form.ErrorMessage />
+                              </Form.Item>
+                            )
+                          }}
+                        />
+                        <Form.Field
+                          control={form.control}
+                          name={`labels.${index}.tracking_url`}
+                          render={({ field }) => {
+                            return (
+                              <Form.Item className="mb-2">
+                                <Form.Label
+                                  className={clx({ "md:hidden": index > 0 })}
+                                >
+                                  {t("orders.shipment.trackingUrl")}
+                                </Form.Label>
+                                <Form.Control>
+                                  <Input
+                                    {...field}
+                                    placeholder="https://example.com/tracking/123"
+                                  />
+                                </Form.Control>
+                                <Form.ErrorMessage />
+                              </Form.Item>
+                            )
+                          }}
+                        />
+                        <Form.Field
+                          control={form.control}
+                          name={`labels.${index}.label_url`}
+                          render={({ field }) => {
+                            return (
+                              <Form.Item className="mb-2">
+                                <Form.Label
+                                  className={clx({ "md:hidden": index > 0 })}
+                                >
+                                  {t("orders.shipment.labelUrl")}
+                                </Form.Label>
+                                <Form.Control>
+                                  <Input
+                                    {...field}
+                                    placeholder="https://example.com/label/123"
+                                  />
+                                </Form.Control>
+                                <Form.ErrorMessage />
+                              </Form.Item>
+                            )
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
 
                   <Button
                     type="button"
-                    onClick={() => append({ tracking_number: "" })}
-                    className="self-end"
+                    onClick={() =>
+                      append({
+                        tracking_number: "",
+                        label_url: "",
+                        tracking_url: "",
+                      })
+                    }
+                    className="mt-2 self-end"
                     variant="secondary"
                   >
                     {t("orders.shipment.addTracking")}
@@ -136,6 +196,8 @@ export function OrderCreateShipmentForm({
                             <Form.Control>
                               <Form.Control>
                                 <Switch
+                                  dir="ltr"
+                                  className="rtl:rotate-180"
                                   checked={!!value}
                                   onCheckedChange={onChange}
                                   {...field}

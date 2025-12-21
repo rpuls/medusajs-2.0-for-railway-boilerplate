@@ -487,28 +487,6 @@
       }
     },
     "deleteWarning": "אתה עומד למחוק את המוצר {{title}}. פעולה זו אינה ניתנת לביטול.",
-    "bulkEdit": {
-      "action": "ערוך סטטוס",
-      "selectAll": "בחר הכל",
-      "deselectAll": "בטל בחירה",
-      "title_one": "ערוך {{count}} מוצר",
-      "title_other": "ערוך {{count}} מוצרים",
-      "description_one": "עדכן את הסטטוס עבור {{count}} מוצר שנבחר.",
-      "description_other": "עדכן את הסטטוס עבור {{count}} מוצרים שנבחרו.",
-      "descriptionAll_one": "עדכן את הסטטוס עבור כל {{count}} המוצר התואם את המסננים הנוכחיים.",
-      "descriptionAll_other": "עדכן את הסטטוס עבור כל {{count}} המוצרים התואמים את המסננים הנוכחיים.",
-      "success": {
-        "header_one": "{{count}} מוצר עודכן בהצלחה",
-        "header_other": "{{count}} מוצרים עודכנו בהצלחה",
-        "description_one": "סטטוס המוצר עודכן ל-{{status}}.",
-        "description_other": "סטטוס המוצרים עודכן ל-{{status}}."
-      },
-      "error": {
-        "header": "עדכון המוצרים נכשל",
-        "description": "אירעה שגיאה בעת עדכון המוצרים."
-      },
-      "loading": "טוען {{count}} מוצרים..."
-    },
     "variants": {
       "header": "וריאנטים",
       "empty": {

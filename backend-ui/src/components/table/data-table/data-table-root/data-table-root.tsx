@@ -262,7 +262,7 @@ export const DataTableRoot = <TData,>({
                         <Table.Cell
                           key={cell.id}
                           className={clx({
-                            "!pl-0 !pr-0": shouldRenderAsLink,
+                            "!ps-0 !pe-0": shouldRenderAsLink,
                             "bg-ui-bg-base group-data-[selected=true]/row:bg-ui-bg-highlight group-data-[selected=true]/row:group-hover/row:bg-ui-bg-highlight-hover group-hover/row:bg-ui-bg-base-hover transition-fg group-has-[[data-row-link]:focus-visible]:bg-ui-bg-base-hover sticky left-0 after:absolute after:inset-y-0 after:right-0 after:h-full after:w-px after:bg-transparent after:content-['']":
                               isStickyCell,
                             "bg-ui-bg-subtle group-hover/row:bg-ui-bg-subtle-hover":
@@ -288,9 +288,9 @@ export const DataTableRoot = <TData,>({
                             >
                               <div
                                 className={clx(
-                                  "flex size-full items-center pr-6",
+                                  "flex size-full items-center pe-6",
                                   {
-                                    "pl-6": isTabableLink && !hasLeftOffset,
+                                    "ps-6": isTabableLink && !hasLeftOffset,
                                   }
                                 )}
                               >

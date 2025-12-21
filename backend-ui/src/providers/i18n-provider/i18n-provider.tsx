@@ -1,5 +1,5 @@
 import { I18nProvider as Provider } from "@medusajs/ui"
-import { PropsWithChildren } from "react"
+import { PropsWithChildren, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { languages } from "../../i18n/languages"
 
@@ -12,9 +12,14 @@ const formatLocaleCode = (code: string) => {
 export const I18nProvider = ({ children }: I18nProviderProps) => {
   const { i18n } = useTranslation()
 
-  const locale =
-    languages.find((lan) => lan.code === i18n.language)?.code ||
-    languages[0].code
+  const currentLanguage =
+    languages.find((lan) => lan.code === i18n.language) || languages[0]
+  const locale = currentLanguage.code
+  const direction = currentLanguage.ltr ? "ltr" : "rtl"
+
+  useEffect(() => {
+    document.documentElement.setAttribute("dir", direction)
+  }, [direction])
 
   return <Provider locale={formatLocaleCode(locale)}>{children}</Provider>
 }

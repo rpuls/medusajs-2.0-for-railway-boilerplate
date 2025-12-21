@@ -241,6 +241,9 @@ export const useBatchInventoryItemLocationLevels = (
       queryClient.invalidateQueries({
         queryKey: inventoryItemLevelsQueryKeys.detail(inventoryItemId),
       })
+      queryClient.invalidateQueries({
+        queryKey: inventoryItemLevelsQueryKeys.list({ inventoryItemId }),
+      })
       options?.onSuccess?.(data, variables, context)
     },
     ...options,

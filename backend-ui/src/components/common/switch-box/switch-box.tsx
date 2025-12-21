@@ -50,6 +50,8 @@ export const SwitchBox = <
             <div className="bg-ui-bg-component shadow-elevation-card-rest flex items-start gap-x-3 rounded-lg p-3">
               <Form.Control>
                 <Switch
+                  className="rtl:rotate-180"
+                  dir="ltr"
                   {...field}
                   checked={value}
                   onCheckedChange={(e) => {

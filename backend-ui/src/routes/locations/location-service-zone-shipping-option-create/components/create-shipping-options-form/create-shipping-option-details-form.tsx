@@ -12,6 +12,7 @@ import { sdk } from "../../../../../lib/client"
 import { formatProvider } from "../../../../../lib/format-provider"
 import { FulfillmentSetType, ShippingOptionPriceType, } from "../../../common/constants"
 import { CreateShippingOptionSchema } from "./schema"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type CreateShippingOptionDetailsFormProps = {
   form: UseFormReturn<CreateShippingOptionSchema>
@@ -33,7 +34,7 @@ export const CreateShippingOptionDetailsForm = ({
   type,
 }: CreateShippingOptionDetailsFormProps) => {
   const { t } = useTranslation()
-
+  const direction = useDocumentDirection()
   const isPickup = type === FulfillmentSetType.Pickup
 
   const shippingProfiles = useComboboxData({
@@ -105,6 +106,7 @@ export const CreateShippingOptionDetailsForm = ({
                   </Form.Label>
                   <Form.Control>
                     <RadioGroup
+                      dir={direction}
                       className="grid grid-cols-1 gap-4 md:grid-cols-2"
                       {...field}
                       onValueChange={field.onChange}
@@ -252,6 +254,7 @@ export const CreateShippingOptionDetailsForm = ({
                   </Form.Label>
                   <Form.Control>
                     <Select
+                      dir={direction}
                       {...field}
                       onValueChange={field.onChange}
                       disabled={!selectedProviderId}

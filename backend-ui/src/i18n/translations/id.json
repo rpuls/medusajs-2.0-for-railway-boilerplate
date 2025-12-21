@@ -487,28 +487,6 @@
             }
         },
         "deleteWarning": "Anda akan menghapus produk {{title}}. Tindakan ini tidak dapat dibatalkan.",
-        "bulkEdit": {
-          "action": "Edit Status",
-          "selectAll": "Pilih Semua",
-          "deselectAll": "Batalkan Pilihan",
-          "title_one": "Edit {{count}} Produk",
-          "title_other": "Edit {{count}} Produk",
-          "description_one": "Perbarui status untuk {{count}} produk yang dipilih.",
-          "description_other": "Perbarui status untuk {{count}} produk yang dipilih.",
-          "descriptionAll_one": "Perbarui status untuk semua {{count}} produk yang sesuai dengan filter saat ini.",
-          "descriptionAll_other": "Perbarui status untuk semua {{count}} produk yang sesuai dengan filter saat ini.",
-          "success": {
-            "header_one": "{{count}} produk berhasil diperbarui",
-            "header_other": "{{count}} produk berhasil diperbarui",
-            "description_one": "Status produk telah diperbarui menjadi {{status}}.",
-            "description_other": "Status produk telah diperbarui menjadi {{status}}."
-          },
-          "error": {
-            "header": "Gagal memperbarui produk",
-            "description": "Terjadi kesalahan saat memperbarui produk."
-          },
-          "loading": "Memuat {{count}} produk..."
-        },
         "variants": {
             "header": "Varian",
             "empty": {

@@ -56,6 +56,7 @@ export const ApiKeySalesChannelSection = ({
         filters={filters}
         commands={commands}
         heading={t("salesChannels.domain")}
+        headingLevel="h2"
         getRowId={(row) => row.id}
         rowCount={count}
         isLoading={isPending}

@@ -13,6 +13,7 @@ import { transformNullableFormData } from "../../../../../lib/form-helpers"
 import { KeyboundForm } from "../../../../../components/utilities/keybound-form"
 import { FormExtensionZone } from "../../../../../dashboard-app"
 import { useExtension } from "../../../../../providers/extension-provider"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type EditProductFormProps = {
   product: HttpTypes.AdminProduct
@@ -31,7 +32,7 @@ const EditProductSchema = zod.object({
 export const EditProductForm = ({ product }: EditProductFormProps) => {
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
-
+  const direction = useDocumentDirection()
   const { getFormFields, getFormConfigs } = useExtension()
   const fields = getFormFields("product", "edit")
   const configs = getFormConfigs("product", "edit")
@@ -97,7 +98,11 @@ export const EditProductForm = ({ product }: EditProductFormProps) => {
                     <Form.Item>
                       <Form.Label>{t("fields.status")}</Form.Label>
                       <Form.Control>
-                        <Select {...field} onValueChange={onChange}>
+                        <Select
+                          dir={direction}
+                          {...field}
+                          onValueChange={onChange}
+                        >
                           <Select.Trigger ref={ref}>
                             <Select.Value />
                           </Select.Trigger>

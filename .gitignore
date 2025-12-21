@@ -1,2 +1,5 @@
 .idea/
 wp-plugins/
+
+# Backup directories
+.backup/

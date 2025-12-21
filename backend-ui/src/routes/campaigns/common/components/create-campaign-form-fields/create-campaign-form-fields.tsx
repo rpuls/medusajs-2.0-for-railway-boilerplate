@@ -14,15 +14,17 @@ import { useTranslation } from "react-i18next"
 
 import { Form } from "../../../../../components/common/form"
 import { useStore } from "../../../../../hooks/api/store"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 import {
   currencies,
   getCurrencySymbol,
 } from "../../../../../lib/data/currencies"
+import { Combobox } from "../../../../../components/inputs/combobox"
 
 export const CreateCampaignFormFields = ({ form, fieldScope = "" }) => {
   const { t } = useTranslation()
   const { store } = useStore()
-
+  const direction = useDocumentDirection()
   const watchValueType = useWatch({
     control: form.control,
     name: `${fieldScope}budget.type`,
@@ -207,17 +209,20 @@ export const CreateCampaignFormFields = ({ form, fieldScope = "" }) => {
 
               <Form.Control>
                 <RadioGroup
-                  className="flex gap-y-3"
+                  dir={direction}
+                  className="flex gap-x-4 gap-y-3"
                   {...field}
                   onValueChange={field.onChange}
                 >
                   <RadioGroup.ChoiceBox
+                    className="flex-1"
                     value={"usage"}
                     label={t("campaigns.budget.type.usage.title")}
                     description={t("campaigns.budget.type.usage.description")}
                   />
 
                   <RadioGroup.ChoiceBox
+                    className="flex-1"
                     value={"spend"}
                     label={t("campaigns.budget.type.spend.title")}
                     description={t("campaigns.budget.type.spend.description")}
@@ -250,6 +255,7 @@ export const CreateCampaignFormFields = ({ form, fieldScope = "" }) => {
                   </Form.Label>
                   <Form.Control>
                     <Select
+                      dir={direction}
                       {...field}
                       onValueChange={onChange}
                       disabled={!!fieldScope.length}
@@ -339,6 +345,57 @@ export const CreateCampaignFormFields = ({ form, fieldScope = "" }) => {
             )
           }}
         />
+
+        {!isTypeSpend && (
+          <Form.Field
+            control={form.control}
+            name={`${fieldScope}budget.attribute`}
+            render={({ field }) => {
+              return (
+                <Form.Item className="basis-1/2">
+                  <Form.Label
+                    tooltip={t(
+                      "campaigns.budget.fields.budgetAttributeTooltip"
+                    )}
+                  >
+                    {t("campaigns.budget.fields.budgetAttribute")}
+                  </Form.Label>
+
+                  <Form.Control>
+                    <Combobox
+                      key="attribute"
+                      {...field}
+                      onChange={(e) => {
+                        if (typeof e === "undefined") {
+                          field.onChange(null)
+                        } else {
+                          field.onChange(e)
+                        }
+                      }}
+                      allowClear
+                      options={[
+                        {
+                          label: t("fields.customer"),
+                          value: "customer_id",
+                        },
+                        {
+                          label: t("fields.email"),
+                          value: "customer_email",
+                        },
+                        // TEMP disable promotion code for now
+                        // {
+                        //   label: t("fields.promotionCode"),
+                        //   value: "promotion_code",
+                        // },
+                      ]}
+                    ></Combobox>
+                  </Form.Control>
+                  <Form.ErrorMessage />
+                </Form.Item>
+              )
+            }}
+          />
+        )}
       </div>
     </div>
   )

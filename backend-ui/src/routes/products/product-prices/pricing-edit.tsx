@@ -41,38 +41,32 @@ export const PricingEdit = ({
   const { regions } = useRegions({ limit: 9999 })
   const regionsCurrencyMap = useMemo(() => {
     if (!regions?.length) {
-      return {} as Record<string, string>
+      return {}
     }
 
-    return regions.reduce((acc: Record<string, string>, reg) => {
+    return regions.reduce((acc, reg) => {
       acc[reg.id] = reg.currency_code
       return acc
-    }, {} as Record<string, string>)
+    }, {})
   }, [regions])
 
   const variants = variantId
-    ? product.variants?.filter((v) => v.id === variantId) || []
-    : product.variants || []
+    ? product.variants?.filter((v) => v.id === variantId)
+    : product.variants
 
   const form = useForm<UpdateVariantPricesSchemaType>({
     defaultValues: {
-      variants: Array.isArray(variants) && variants.length > 0
-        ? variants.map((variant: any) => ({
-            title: variant?.title || '',
-            prices: Array.isArray(variant?.prices) && variant.prices.length > 0
-              ? variant.prices.reduce((acc: any, price: any) => {
-                  if (price && price.amount !== undefined && price.amount !== null) {
-                    if (price.rules?.region_id) {
-                      acc[price.rules.region_id] = price.amount
-                    } else if (price.currency_code) {
-                      acc[price.currency_code] = price.amount
-                    }
-                  }
-                  return acc
-                }, {})
-              : {},
-          }))
-        : [],
+      variants: variants?.map((variant: any) => ({
+        title: variant.title,
+        prices: variant.prices.reduce((acc: any, price: any) => {
+          if (price.rules?.region_id) {
+            acc[price.rules.region_id] = price.amount
+          } else {
+            acc[price.currency_code] = price.amount
+          }
+          return acc
+        }, {}),
+      })) as any,
     },
 
     resolver: zodResolver(UpdateVariantPricesSchema, {}),
@@ -97,11 +91,11 @@ export const PricingEdit = ({
 
           if (regionId) {
             existingId = variants?.[ind]?.prices?.find(
-              (p: any) => p.rules?.["region_id"] === regionId
+              (p) => p.rules["region_id"] === regionId
             )?.id
           } else {
             existingId = variants?.[ind]?.prices?.find(
-              (p: any) =>
+              (p) =>
                 p.currency_code === currencyCode &&
                 Object.keys(p.rules ?? {}).length === 0
             )?.id

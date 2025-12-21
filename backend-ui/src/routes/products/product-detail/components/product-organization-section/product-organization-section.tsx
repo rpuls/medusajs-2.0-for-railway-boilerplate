@@ -6,7 +6,6 @@ import { Link } from "react-router-dom"
 import { ActionMenu } from "../../../../../components/common/action-menu"
 import { SectionRow } from "../../../../../components/common/section"
 import { useExtension } from "../../../../../providers/extension-provider"
-import { useProductBrand } from "../../../../../hooks/api/brands"
 
 type ProductOrganizationSectionProps = {
   product: HttpTypes.AdminProduct
@@ -17,7 +16,6 @@ export const ProductOrganizationSection = ({
 }: ProductOrganizationSectionProps) => {
   const { t } = useTranslation()
   const { getDisplays } = useExtension()
-  const { brand } = useProductBrand(product.id)
 
   return (
     <Container className="divide-y p-0">
@@ -88,18 +86,6 @@ export const ProductOrganizationSection = ({
                 />
               ))
             : undefined
-        }
-      />
-
-      <SectionRow
-        title={t("fields.brand")}
-        value={
-          brand ? (
-            <OrganizationTag
-              label={brand.name}
-              to={`/brands/${brand.id}`}
-            />
-          ) : undefined
         }
       />
 

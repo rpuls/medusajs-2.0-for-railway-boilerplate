@@ -1,6 +1,6 @@
 import { EllipseMiniSolid } from "@medusajs/icons"
 import { Input, Label, clx } from "@medusajs/ui"
-import { debounce } from "lodash"
+import debounce from "lodash.debounce"
 import {
   Popover as RadixPopover,
   RadioGroup as RadixRadioGroup,

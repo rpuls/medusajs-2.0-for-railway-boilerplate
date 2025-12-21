@@ -487,28 +487,6 @@
       }
     },
     "deleteWarning": "您即将删除产品 {{title}}。此操作无法撤销。",
-    "bulkEdit": {
-      "action": "编辑状态",
-      "selectAll": "全选",
-      "deselectAll": "取消全选",
-      "title_one": "编辑 {{count}} 个产品",
-      "title_other": "编辑 {{count}} 个产品",
-      "description_one": "更新 {{count}} 个选定产品的状态。",
-      "description_other": "更新 {{count}} 个选定产品的状态。",
-      "descriptionAll_one": "更新所有与当前筛选器匹配的 {{count}} 个产品的状态。",
-      "descriptionAll_other": "更新所有与当前筛选器匹配的 {{count}} 个产品的状态。",
-      "success": {
-        "header_one": "成功更新 {{count}} 个产品",
-        "header_other": "成功更新 {{count}} 个产品",
-        "description_one": "产品状态已更新为 {{status}}。",
-        "description_other": "产品状态已更新为 {{status}}。"
-      },
-      "error": {
-        "header": "更新产品失败",
-        "description": "更新产品时发生错误。"
-      },
-      "loading": "正在加载 {{count}} 个产品..."
-    },
     "variants": {
       "header": "变体",
       "empty": {

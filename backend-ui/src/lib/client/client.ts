@@ -1,15 +1,14 @@
 import Medusa from "@medusajs/js-sdk"
 
-// Normalize backendUrl to remove trailing slashes to prevent double slashes in URLs
-const rawBackendUrl = __BACKEND_URL__ ?? "/"
-export const backendUrl = rawBackendUrl.length > 1 && rawBackendUrl.endsWith("/")
-  ? rawBackendUrl.slice(0, -1)
-  : rawBackendUrl
+export const backendUrl = __BACKEND_URL__ ?? "/"
+const authType = __AUTH_TYPE__ ?? "session"
+const jwtTokenStorageKey = __JWT_TOKEN_STORAGE_KEY__ || undefined
 
 export const sdk = new Medusa({
   baseUrl: backendUrl,
   auth: {
-    type: "session",
+    type: authType,
+    jwtTokenStorageKey,
   },
 })
 

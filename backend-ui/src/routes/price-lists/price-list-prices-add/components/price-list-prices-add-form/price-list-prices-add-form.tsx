@@ -21,6 +21,7 @@ import {
   PriceListPricesAddProductsIdsFields,
   PriceListPricesAddSchema,
 } from "./schema"
+import { useDocumentDirection } from "../../../../../hooks/use-document-direction"
 
 type PriceListPricesAddFormProps = {
   priceList: HttpTypes.AdminPriceList
@@ -54,7 +55,7 @@ export const PriceListPricesAddForm = ({
 
   const { t } = useTranslation()
   const { handleSuccess } = useRouteModal()
-
+  const direction = useDocumentDirection()
   const form = useForm<PriceListPricesAddSchema>({
     defaultValues: {
       products: {},
@@ -90,10 +91,13 @@ export const PriceListPricesAddForm = ({
   ) => {
     form.clearErrors(fields)
 
-    const values = fields.reduce((acc, key) => {
-      acc[key] = form.getValues(key)
-      return acc
-    }, {} as Record<string, unknown>)
+    const values = fields.reduce(
+      (acc, key) => {
+        acc[key] = form.getValues(key)
+        return acc
+      },
+      {} as Record<string, unknown>
+    )
 
     const validationResult = schema.safeParse(values)
 
@@ -196,6 +200,7 @@ export const PriceListPricesAddForm = ({
   return (
     <RouteFocusModal.Form form={form}>
       <ProgressTabs
+        dir={direction}
         value={tab}
         onValueChange={(tab) => handleChangeTab(tab as Tab)}
         className="flex h-full flex-col overflow-hidden"

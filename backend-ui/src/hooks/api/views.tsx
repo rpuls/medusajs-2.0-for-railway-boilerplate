@@ -28,7 +28,11 @@ _viewsKeys.active = function(entity: string) {
 }
 
 _viewsKeys.configurations = function(entity: string, query?: any) {
-  return [this.all, "configurations", entity, query]
+  const key = [this.all, "configurations", entity]
+  if (query !== undefined) {
+    key.push(query)
+  }
+  return key
 }
 
 export const viewsQueryKeys = _viewsKeys
@@ -176,6 +180,8 @@ export const useUpdateViewConfiguration = (
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: viewsQueryKeys.configurations(entity) })
       queryClient.invalidateQueries({ queryKey: viewsQueryKeys.detail(id) })
+      // Also invalidate active configuration if this view is currently active
+      queryClient.invalidateQueries({ queryKey: viewsQueryKeys.active(entity) })
       options?.onSuccess?.(data, variables, context)
     },
   })

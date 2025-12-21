@@ -11,6 +11,7 @@
     "apply": "Aplicar",
     "range": "Rango",
     "search": "Buscar",
+    "original": "Original",
     "of": "de",
     "results": "resultados",
     "pages": "páginas",
@@ -33,6 +34,7 @@
     "modified": "Modificado",
     "added": "Agregado",
     "removed": "Eliminado",
+    "remaining": "Restantes",
     "admin": "Administrador",
     "store": "Tienda",
     "details": "Detalles",
@@ -120,7 +122,9 @@
   },
   "actions": {
     "save": "Guardar",
+    "saveChanges": "Guardar cambios",
     "saveAsDraft": "Guardar como borrador",
+    "saveAndClose": "Guardar y cerrar",
     "copy": "Copiar",
     "copied": "Copiado",
     "duplicate": "Duplicar",
@@ -509,28 +513,6 @@
       }
     },
     "deleteWarning": "Estás a punto de eliminar el producto {{title}}. Esta acción no puede deshacerse.",
-    "bulkEdit": {
-      "action": "Editar estado",
-      "selectAll": "Seleccionar todo",
-      "deselectAll": "Deseleccionar todo",
-      "title_one": "Editar {{count}} producto",
-      "title_other": "Editar {{count}} productos",
-      "description_one": "Actualizar el estado para {{count}} producto seleccionado.",
-      "description_other": "Actualizar el estado para {{count}} productos seleccionados.",
-      "descriptionAll_one": "Actualizar el estado para todos los {{count}} producto que coinciden con los filtros actuales.",
-      "descriptionAll_other": "Actualizar el estado para todos los {{count}} productos que coinciden con los filtros actuales.",
-      "success": {
-        "header_one": "{{count}} producto actualizado correctamente",
-        "header_other": "{{count}} productos actualizados correctamente",
-        "description_one": "El estado del producto se ha actualizado a {{status}}.",
-        "description_other": "El estado de los productos se ha actualizado a {{status}}."
-      },
-      "error": {
-        "header": "Error al actualizar los productos",
-        "description": "Ocurrió un error al actualizar los productos."
-      },
-      "loading": "Cargando {{count}} productos..."
-    },
     "variants": {
       "header": "Variantes",
       "empty": {
@@ -2465,31 +2447,72 @@
     "deleteUserSuccess": "Usuario {{name}} eliminado correctamente",
     "invite": "Invitar"
   },
+  "translations": {
+    "domain": "Traducciones",
+    "list": {
+      "metrics": "{{translated}} de {{total}} textos traducidos"
+    },
+    "actions": {
+      "manage": "Gestionar traducciones",
+      "manageLocales": "Gestionar idiomas"
+    },
+    "title": "Traducción de dominios",
+    "subtitle": "Gestiona las traducciones de tus datos en Medusa",
+    "bulk": {
+      "header": "Editor de Traducciones en Masa",
+      "locale": "Idioma"
+    },
+    "edit": {
+      "successToast": "Traducciones actualizadas exitosamente",
+      "unsavedChanges": {
+        "title": "Traducciones sin guardar",
+        "description": "No pierdas tu trabajo. Tienes cambios que no han sido guardados aún"
+      }
+    },
+    "activeLocales": {
+      "heading": "Idiomas",
+      "subtitle": "Traducciones activas",
+      "noLocalesTip": "Configura al menos un idioma para empezar a traducir tu información"
+    },
+    "completion": {
+      "heading": "Textos traducidos",
+      "translated": "Traducidos",
+      "toTranslate": "Faltantes",
+      "footer": "Idiomas"
+    }
+  },
   "store": {
     "domain": "Tienda",
     "manageYourStoresDetails": "Gestiona los detalles de tu tienda",
     "editStore": "Editar tienda",
     "defaultCurrency": "Moneda por defecto",
+    "defaultLocale": "Idioma por defecto",
     "defaultRegion": "Región por defecto",
     "defaultSalesChannel": "Canal de ventas predeterminado",
     "defaultLocation": "Ubicación predeterminada",
     "swapLinkTemplate": "Plantilla de enlace de cambio",
     "paymentLinkTemplate": "Plantilla de enlace de pago",
     "inviteLinkTemplate": "Plantilla de enlace de invitación",
+    "locales": "Idiomas",
     "currencies": "Monedas",
     "addCurrencies": "Agregar monedas",
     "enableTaxInclusivePricing": "Habilitar precios con impuestos incluidos",
     "disableTaxInclusivePricing": "Deshabilitar precios con impuestos incluidos",
     "removeCurrencyWarning_one": "Estás a punto de eliminar {{count}} moneda de tu tienda. Asegúrate de haber eliminado todos los precios que usen esta moneda antes de continuar.",
     "removeCurrencyWarning_other": "Estás a punto de eliminar {{count}} monedas de tu tienda. Asegúrate de haber eliminado todos los precios que usen estas monedas antes de continuar.",
+    "removeLocaleWarning_one": "Estás a punto de eliminar {{count}} idioma de tu tienda. Cualquier traducción que use este idioma será eliminada.",
+    "removeLocaleWarning_other": "Estás a punto de eliminar {{count}} idiomas de tu tienda. Cualquier traducción que use estos idiomas será eliminada.",
     "currencyAlreadyAdded": "La moneda ya ha sido agregada a tu tienda.",
+    "localeAlreadyAdded": "El idioma ya ha sido agregado a tu tienda.",
     "edit": {
       "header": "Editar Tienda"
     },
     "toast": {
       "update": "Tienda actualizada exitosamente",
       "currenciesUpdated": "Monedas actualizadas exitosamente",
+      "localesUpdated": "Idiomas actualizados exitosamente",
       "currenciesRemoved": "Monedas eliminadas de la tienda exitosamente",
+      "localesRemoved": "Idiomas eliminados de la tienda exitosamente",
       "updatedTaxInclusivitySuccessfully": "Precios con impuestos incluidos actualizados exitosamente"
     }
   },

@@ -48,10 +48,6 @@ export const RegionEdit = () => {
   const storeCurrencies = (store?.supported_currencies ?? []).map(
     (c) => currencies[c.currency_code.toUpperCase()]
   )
-  const { payment_providers: paymentProviders = [] } = usePaymentProviders({
-    limit: 999,
-    is_enabled: true,
-  })
 
   if (isRegionError) {
     throw regionError
@@ -74,7 +70,6 @@ export const RegionEdit = () => {
         <EditRegionForm
           region={region}
           currencies={storeCurrencies}
-          paymentProviders={paymentProviders}
           pricePreferences={pricePreferences}
         />
       )}

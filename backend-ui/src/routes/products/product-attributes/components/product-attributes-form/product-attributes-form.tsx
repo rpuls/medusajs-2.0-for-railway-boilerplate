@@ -101,6 +101,7 @@ export const ProductAttributesForm = ({
                         <Input
                           type="number"
                           min={0}
+                          step="any"
                           value={value || ""}
                           onChange={(e) => {
                             const value = e.target.value
@@ -130,6 +131,7 @@ export const ProductAttributesForm = ({
                         <Input
                           type="number"
                           min={0}
+                          step="any"
                           value={value || ""}
                           onChange={(e) => {
                             const value = e.target.value
@@ -159,6 +161,7 @@ export const ProductAttributesForm = ({
                         <Input
                           type="number"
                           min={0}
+                          step="any"
                           value={value || ""}
                           onChange={(e) => {
                             const value = e.target.value
@@ -188,6 +191,7 @@ export const ProductAttributesForm = ({
                         <Input
                           type="number"
                           min={0}
+                          step="any"
                           value={value || ""}
                           onChange={(e) => {
                             const value = e.target.value

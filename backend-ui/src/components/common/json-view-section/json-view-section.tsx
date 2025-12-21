@@ -46,7 +46,10 @@ export const JsonViewSection = ({ data }: JsonViewSectionProps) => {
             <ArrowUpRightOnBox />
           </IconButton>
         </Drawer.Trigger>
-        <Drawer.Content className="bg-ui-contrast-bg-base text-ui-code-fg-subtle !shadow-elevation-commandbar overflow-hidden border border-none max-md:inset-x-2 max-md:max-w-[calc(100%-16px)]">
+        <Drawer.Content
+          dir="ltr"
+          className="bg-ui-contrast-bg-base text-ui-code-fg-subtle !shadow-elevation-commandbar overflow-hidden border border-none max-md:inset-x-2 max-md:max-w-[calc(100%-16px)]"
+        >
           <div className="bg-ui-code-bg-base flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-x-4">
               <Drawer.Title asChild>

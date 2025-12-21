@@ -44,6 +44,7 @@ import {
 } from "./constants"
 import { SearchArea } from "./types"
 import { useSearchResults } from "./use-search-results"
+import { useDocumentDirection } from "../../hooks/use-document-direction"
 
 export const Search = () => {
   const [area, setArea] = useState<SearchArea>("all")
@@ -53,6 +54,7 @@ export const Search = () => {
   const location = useLocation()
   const { t } = useTranslation()
   const navigate = useNavigate()
+
 
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -367,7 +369,7 @@ const CommandInput = forwardRef<
   ) => {
     const { t } = useTranslation()
     const innerRef = useRef<HTMLInputElement>(null)
-
+    const direction = useDocumentDirection()
     useImperativeHandle<HTMLInputElement | null, HTMLInputElement | null>(
       ref,
       () => innerRef.current
@@ -376,7 +378,7 @@ const CommandInput = forwardRef<
     return (
       <div className="flex flex-col border-b">
         <div className="px-4 pt-4">
-          <DropdownMenu>
+          <DropdownMenu dir={direction}>
             <DropdownMenu.Trigger asChild>
               <Badge
                 size="2xsmall"
@@ -432,7 +434,7 @@ const CommandInput = forwardRef<
             )}
             {...props}
           />
-          <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center justify-end gap-x-2">
+          <div className="absolute end-4 top-1/2 flex -translate-y-1/2 items-center justify-end gap-x-2">
             {isFetching && (
               <Spinner className="text-ui-fg-muted animate-spin" />
             )}

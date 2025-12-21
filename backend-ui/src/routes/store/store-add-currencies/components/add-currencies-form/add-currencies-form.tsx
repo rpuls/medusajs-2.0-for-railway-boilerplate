@@ -287,6 +287,8 @@ const useColumns = (
           return (
             <div className="flex items-center justify-end">
               <Switch
+                dir="ltr"
+                className="rtl:rotate-180"
                 disabled={isPreSelected}
                 checked={isTaxInclusive ?? false}
                 onCheckedChange={(val) => {

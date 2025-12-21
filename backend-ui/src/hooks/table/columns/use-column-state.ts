@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
-// import { HttpTypes } from "@medusajs/types"
-import type { ViewConfiguration } from "../../../hooks/use-view-configurations"
+import { HttpTypes } from "@medusajs/types"
+
+type ViewConfiguration =
+  HttpTypes.AdminViewConfigurationResponse["view_configuration"]
 
 interface ColumnState {
   visibility: Record<string, boolean>
@@ -20,13 +22,13 @@ interface UseColumnStateReturn {
   handleColumnVisibilityChange: (visibility: Record<string, boolean>) => void
   handleViewChange: (
     view: ViewConfiguration | null,
-    apiColumns: HttpTypes.AdminViewColumn[]
+    apiColumns: HttpTypes.AdminColumn[]
   ) => void
-  initializeColumns: (apiColumns: HttpTypes.AdminViewColumn[]) => void
+  initializeColumns: (apiColumns: HttpTypes.AdminColumn[]) => void
 }
 
 export function useColumnState(
-  apiColumns: HttpTypes.AdminViewColumn[] | undefined,
+  apiColumns: HttpTypes.AdminColumn[] | undefined,
   activeView?: ViewConfiguration | null
 ): UseColumnStateReturn {
   // Initialize state lazily to avoid unnecessary re-renders
@@ -85,10 +87,7 @@ export function useColumnState(
   )
 
   const handleViewChange = useCallback(
-    (
-      view: ViewConfiguration | null,
-      apiColumns: HttpTypes.AdminViewColumn[]
-    ) => {
+    (view: ViewConfiguration | null, apiColumns: HttpTypes.AdminColumn[]) => {
       if (view?.configuration) {
         // Apply view configuration
         const newVisibility: Record<string, boolean> = {}
@@ -108,7 +107,7 @@ export function useColumnState(
   )
 
   const initializeColumns = useCallback(
-    (apiColumns: HttpTypes.AdminViewColumn[]) => {
+    (apiColumns: HttpTypes.AdminColumn[]) => {
       // Only initialize if we don't already have column state
       if (Object.keys(visibleColumns).length === 0) {
         setVisibleColumns(getInitialColumnVisibility(apiColumns))
@@ -177,7 +176,7 @@ const DEFAULT_COLUMN_ORDER = 500
  * Gets the initial column visibility state from API columns
  */
 function getInitialColumnVisibility(
-  apiColumns: HttpTypes.AdminViewColumn[]
+  apiColumns: HttpTypes.AdminColumn[]
 ): Record<string, boolean> {
   if (!apiColumns || apiColumns.length === 0) {
     return {}
@@ -195,9 +194,7 @@ function getInitialColumnVisibility(
 /**
  * Gets the initial column order from API columns
  */
-function getInitialColumnOrder(
-  apiColumns: HttpTypes.AdminViewColumn[]
-): string[] {
+function getInitialColumnOrder(apiColumns: HttpTypes.AdminColumn[]): string[] {
   if (!apiColumns || apiColumns.length === 0) {
     return []
   }

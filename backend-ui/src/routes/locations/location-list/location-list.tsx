@@ -1,34 +1,46 @@
 import { ShoppingBag, TruckFast } from "@medusajs/icons"
 import { Container, Heading } from "@medusajs/ui"
 import { useTranslation } from "react-i18next"
-import { useLoaderData } from "react-router-dom"
 
 import { useStockLocations } from "../../../hooks/api/stock-locations"
-import LocationListItem from "./components/location-list-item/location-list-item"
 import { LOCATION_LIST_FIELDS } from "./constants"
-import { shippingListLoader } from "./loader"
+import { useLocationListTableColumns } from "./use-location-list-table-columns"
+import { useLocationListTableQuery } from "./use-location-list-table-query"
 
+import { DataTable } from "../../../components/data-table"
 import { SidebarLink } from "../../../components/common/sidebar-link/sidebar-link"
 import { TwoColumnPage } from "../../../components/layout/pages"
 import { useExtension } from "../../../providers/extension-provider"
-import { LocationListHeader } from "./components/location-list-header"
+import { keepPreviousData } from "@tanstack/react-query"
+
+const PAGE_SIZE = 20
+const PREFIX = "loc"
 
 export function LocationList() {
-  const initialData = useLoaderData() as Awaited<
-    ReturnType<typeof shippingListLoader>
-  >
+  const { t } = useTranslation()
+
+  const searchParams = useLocationListTableQuery({
+    pageSize: PAGE_SIZE,
+    prefix: PREFIX,
+  })
 
   const {
     stock_locations: stockLocations = [],
+    count,
     isError,
     error,
+    isLoading,
   } = useStockLocations(
     {
       fields: LOCATION_LIST_FIELDS,
+      ...searchParams,
     },
-    { initialData }
+    {
+      placeholderData: keepPreviousData,
+    }
   )
 
+  const columns = useLocationListTableColumns()
   const { getWidgets } = useExtension()
 
   if (isError) {
@@ -46,12 +58,38 @@ export function LocationList() {
       showJSON
     >
       <TwoColumnPage.Main>
-        <LocationListHeader />
-        <div className="flex flex-col gap-3 lg:col-span-2">
-          {stockLocations.map((location) => (
-            <LocationListItem key={location.id} location={location} />
-          ))}
-        </div>
+        <Container className="flex flex-col divide-y p-0">
+          <DataTable
+            data={stockLocations}
+            columns={columns}
+            rowCount={count}
+            pageSize={PAGE_SIZE}
+            getRowId={(row) => row.id}
+            heading={t("stockLocations.domain")}
+            subHeading={t("stockLocations.list.description")}
+            emptyState={{
+              empty: {
+                heading: t("stockLocations.list.noRecordsMessage"),
+                description: t("stockLocations.list.noRecordsMessageEmpty"),
+              },
+              filtered: {
+                heading: t("stockLocations.list.noRecordsMessage"),
+                description: t("stockLocations.list.noRecordsMessageFiltered"),
+              },
+            }}
+            actions={[
+              {
+                label: t("actions.create"),
+                to: "create",
+              },
+            ]}
+            isLoading={isLoading}
+            rowHref={(row) => `/settings/locations/${row.id}`}
+            enableSearch={true}
+            prefix={PREFIX}
+            layout="fill"
+          />
+        </Container>
       </TwoColumnPage.Main>
       <TwoColumnPage.Sidebar>
         <LinksSection />

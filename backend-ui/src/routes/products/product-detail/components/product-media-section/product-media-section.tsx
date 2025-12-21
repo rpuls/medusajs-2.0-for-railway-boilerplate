@@ -12,7 +12,7 @@ import {
 } from "@medusajs/ui"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { ActionMenu } from "../../../../../components/common/action-menu"
 import { useUpdateProduct } from "../../../../../hooks/api/products"
 import { HttpTypes } from "@medusajs/types"
@@ -24,6 +24,8 @@ type ProductMedisaSectionProps = {
 export const ProductMediaSection = ({ product }: ProductMedisaSectionProps) => {
   const { t } = useTranslation()
   const prompt = usePrompt()
+  const navigate = useNavigate()
+
   const [selection, setSelection] = useState<Record<string, boolean>>({})
 
   const media = getMedia(product)
@@ -66,7 +68,7 @@ export const ProductMediaSection = ({ product }: ProductMedisaSectionProps) => {
 
     const mediaToKeep = product.images
       .filter((i) => !ids.includes(i.id))
-      .map((i) => ({ url: i.url}))
+      .map((i) => ({ id: i.id, url: i.url }))
 
     await mutateAsync(
       {
@@ -90,7 +92,7 @@ export const ProductMediaSection = ({ product }: ProductMedisaSectionProps) => {
             {
               actions: [
                 {
-                  label: t("actions.edit"),
+                  label: t("actions.editImages"),
                   to: "media?view=edit",
                   icon: <PencilSquare />,
                 },
@@ -175,6 +177,16 @@ export const ProductMediaSection = ({ product }: ProductMedisaSectionProps) => {
             label={t("actions.delete")}
             shortcut="d"
           />
+          {Object.keys(selection).length === 1 && (
+            <CommandBar.Command
+              action={() => {
+                navigate(`images/${Object.keys(selection)[0]}/variants`)
+                setSelection({})
+              }}
+              label={t("products.media.manageImageVariants")}
+              shortcut="m"
+            />
+          )}
         </CommandBar.Bar>
       </CommandBar>
     </Container>

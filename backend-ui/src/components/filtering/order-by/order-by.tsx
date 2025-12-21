@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
+import { useDocumentDirection } from "../../../hooks/use-document-direction"
+
 type OrderByProps = {
   keys: string[]
 }
@@ -56,6 +58,7 @@ export const OrderBy = ({ keys }: OrderByProps) => {
   }>(initState(searchParams))
 
   const { t } = useTranslation()
+  const direction = useDocumentDirection()
 
   const handleDirChange = (dir: string) => {
     setState((prev) => ({
@@ -99,7 +102,7 @@ export const OrderBy = ({ keys }: OrderByProps) => {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu dir={direction}>
       <DropdownMenu.Trigger asChild>
         <IconButton size="small">
           <ArrowUpDown />

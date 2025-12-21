@@ -15,6 +15,11 @@ import { FetchError } from "@medusajs/js-sdk"
 const PAYMENT_QUERY_KEY = "payment" as const
 export const paymentQueryKeys = queryKeysFactory(PAYMENT_QUERY_KEY)
 
+const PAYMENT_PROVIDERS_QUERY_KEY = "payment_providers" as const
+export const paymentProvidersQueryKeys = queryKeysFactory(
+  PAYMENT_PROVIDERS_QUERY_KEY
+)
+
 export const usePaymentProviders = (
   query?: HttpTypes.AdminGetPaymentProvidersParams,
   options?: Omit<
@@ -29,7 +34,7 @@ export const usePaymentProviders = (
 ) => {
   const { data, ...rest } = useQuery({
     queryFn: async () => sdk.admin.payment.listPaymentProviders(query),
-    queryKey: [],
+    queryKey: paymentProvidersQueryKeys.list(query),
     ...options,
   })
 
