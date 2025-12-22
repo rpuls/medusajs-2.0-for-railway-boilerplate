@@ -485,6 +485,28 @@
       }
     },
     "deleteWarning": "Stai per eliminare il prodotto {{title}}. Questa azione non può essere annullata.",
+    "bulkEdit": {
+      "action": "Modifica stato",
+      "selectAll": "Seleziona tutto",
+      "deselectAll": "Deseleziona tutto",
+      "title_one": "Modifica {{count}} prodotto",
+      "title_other": "Modifica {{count}} prodotti",
+      "description_one": "Aggiorna lo stato per {{count}} prodotto selezionato.",
+      "description_other": "Aggiorna lo stato per {{count}} prodotti selezionati.",
+      "descriptionAll_one": "Aggiorna lo stato per tutti i {{count}} prodotto che corrispondono ai filtri attuali.",
+      "descriptionAll_other": "Aggiorna lo stato per tutti i {{count}} prodotti che corrispondono ai filtri attuali.",
+      "success": {
+        "header_one": "{{count}} prodotto aggiornato con successo",
+        "header_other": "{{count}} prodotti aggiornati con successo",
+        "description_one": "Lo stato del prodotto è stato aggiornato a {{status}}.",
+        "description_other": "Lo stato dei prodotti è stato aggiornato a {{status}}."
+      },
+      "error": {
+        "header": "Errore nell'aggiornamento dei prodotti",
+        "description": "Si è verificato un errore durante l'aggiornamento dei prodotti."
+      },
+      "loading": "Caricamento di {{count}} prodotti..."
+    },
     "variants": {
       "header": "Varianti",
       "empty": {

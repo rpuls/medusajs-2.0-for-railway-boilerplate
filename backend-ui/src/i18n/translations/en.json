@@ -97,7 +97,9 @@
   },
   "validation": {
     "mustBeInt": "The value must be a whole number.",
-    "mustBePositive": "The value must be a positive number."
+    "mustBePositive": "The value must be a positive number.",
+    "required": "is required",
+    "invalidUrl": "Invalid URL"
   },
   "actions": {
     "save": "Save",
@@ -265,7 +267,45 @@
         "header": "Settings",
         "general": "General",
         "developer": "Developer",
-        "myAccount": "My Account"
+        "myAccount": "My Account",
+        "econt": {
+          "title": "Econt Shipping Settings",
+          "apiCredentials": {
+            "title": "API Credentials",
+            "username": "Username",
+            "password": "Password",
+            "liveMode": "Live Mode",
+            "liveModeHint": "Enable for production, disable for testing"
+          },
+          "senderAddress": {
+            "title": "Sender Address",
+            "city": "City",
+            "postCode": "Post Code",
+            "senderType": "Sender Type",
+            "office": "Office",
+            "address": "Address",
+            "officeCode": "Office Code",
+            "street": "Street",
+            "streetNumber": "Street Number",
+            "quarter": "Quarter (Optional)",
+            "buildingNumber": "Building Number (Optional)",
+            "entrance": "Entrance (Optional)",
+            "floor": "Floor (Optional)",
+            "apartment": "Apartment (Optional)"
+          },
+          "saveButton": "Save Settings",
+          "loading": "Loading settings...",
+          "saveSuccess": "Settings saved successfully",
+          "saveError": "Failed to save settings",
+          "loadError": "Failed to load settings",
+          "errorMessage": "You can still configure settings below.",
+          "validation": {
+            "usernameRequired": "Username is required",
+            "passwordRequired": "Password is required",
+            "cityRequired": "Sender city is required",
+            "postCodeRequired": "Sender post code is required"
+          }
+        }
       }
     }
   },
@@ -494,6 +534,57 @@
       }
     },
     "deleteWarning": "You are about to delete the product {{title}}. This action cannot be undone.",
+    "bulkEdit": {
+      "action": "Edit Status",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "title_one": "Edit {{count}} Product",
+      "title_other": "Edit {{count}} Products",
+      "description_one": "Update the status for {{count}} selected product.",
+      "description_other": "Update the status for {{count}} selected products.",
+      "descriptionAll_one": "Update the status for all {{count}} product matching the current filters.",
+      "descriptionAll_other": "Update the status for all {{count}} products matching the current filters.",
+      "actionType": {
+        "label": "Action",
+        "update": "Update Status",
+        "delete": "Delete Products"
+      },
+      "success": {
+        "header_one": "Successfully updated {{count}} product",
+        "header_other": "Successfully updated {{count}} products",
+        "description_one": "The product status has been updated to {{status}}.",
+        "description_other": "The products status has been updated to {{status}}."
+      },
+      "error": {
+        "header": "Failed to update products",
+        "description": "An error occurred while updating the products."
+      },
+      "loading": "Loading {{count}} products..."
+    },
+    "bulkDelete": {
+      "confirm": {
+        "title_one": "Delete {{count}} Product?",
+        "title_other": "Delete {{count}} Products?",
+        "description_one": "This will permanently delete the product and all associated images. This action cannot be undone.",
+        "description_other": "This will permanently delete the products and all associated images. This action cannot be undone."
+      },
+      "warning_one": "This will permanently delete {{count}} product and all associated images. This action cannot be undone.",
+      "warning_other": "This will permanently delete {{count}} products and all associated images. This action cannot be undone.",
+      "success": {
+        "header_one": "Successfully deleted {{count}} product",
+        "header_other": "Successfully deleted {{count}} products",
+        "description_one": "The product and its images have been permanently deleted.",
+        "description_other": "The products and their images have been permanently deleted."
+      },
+      "error": {
+        "header": "Failed to delete products",
+        "description": "An error occurred while deleting the products."
+      }
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published"
+    },
     "variants": {
       "header": "Variants",
       "empty": {
@@ -601,6 +692,9 @@
       "shipping_profile": {
         "label": "Shipping profile",
         "hint": "Connect the product to a shipping profile"
+      },
+      "status": {
+        "label": "Status"
       },
       "type": {
         "label": "Type"
@@ -716,7 +810,8 @@
       "edit": {
         "header": "Edit Organization",
         "toasts": {
-          "success": "Successfully updated the organization of {{title}}."
+          "success": "Successfully updated the organization of {{title}}.",
+          "error": "Failed to update the organization of {{title}}."
         }
       }
     },
@@ -842,6 +937,63 @@
       },
       "new": {
         "label": "New"
+      }
+    }
+  },
+  "brands": {
+    "domain": "Brands",
+    "subtitle": "Manage product brands and assign them to products",
+    "create": {
+      "header": "Create Brand",
+      "description": "Create a new brand",
+      "successToast": "Brand was successfully created."
+    },
+    "edit": {
+      "header": "Edit Brand",
+      "description": "Edit brand details",
+      "successToast": "Brand was successfully updated."
+    },
+    "delete": {
+      "confirmation": "You are about to delete the brand {{name}}. This action cannot be undone.",
+      "successToast": "Brand {{name}} was successfully deleted."
+    },
+    "organize": {
+      "header": "Organize",
+      "action": "Organize"
+    },
+    "products": {
+      "header": "Products",
+      "assigned_one": "{{count}} product assigned to this brand",
+      "assigned_other": "{{count}} products assigned to this brand",
+      "noRecordsMessage": "There are no products assigned to this brand.",
+      "list": {
+        "noRecordsMessage": "There are no products assigned to this brand."
+      },
+      "add": {
+        "successToast": "{{count}} product(s) were successfully added to this brand.",
+        "disabledTooltip": "This product is already assigned to this brand."
+      },
+      "remove": {
+        "confirmation": "Are you sure you want to remove {{count}} product(s) from this brand?",
+        "successToast": "{{count}} product(s) were successfully removed from this brand."
+      }
+    },
+    "fields": {
+      "name": {
+        "label": "Name"
+      },
+      "image": {
+        "label": "Image",
+        "url": {
+          "label": "Image URL",
+          "placeholder": "https://example.com/image.jpg"
+        }
+      },
+      "productCount": {
+        "label": "Product Count"
+      },
+      "products": {
+        "label": "Products"
       }
     }
   },
@@ -2892,11 +3044,11 @@
   },
   "login": {
     "forgotPassword": "Forgot password? - <0>Reset</0>",
-    "title": "Welcome to Medusa",
+    "title": "Welcome to MS Admin",
     "hint": "Sign in to access the account area"
   },
   "invite": {
-    "title": "Welcome to Medusa",
+    "title": "Welcome to MS Admin",
     "hint": "Create your account below",
     "backToLogin": "Back to login",
     "createAccount": "Create account",
@@ -3112,6 +3264,7 @@
     "conditions": "Conditions",
     "category": "Category",
     "collection": "Collection",
+    "brand": "Brand",
     "discountable": "Discountable",
     "promotionCode": "Promotion code",
     "handle": "Handle",

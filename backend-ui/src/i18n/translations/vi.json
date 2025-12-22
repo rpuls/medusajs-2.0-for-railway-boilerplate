@@ -487,6 +487,28 @@
       }
     },
     "deleteWarning": "Bạn sắp xóa sản phẩm {{title}}. Hành động này không thể hoàn tác.",
+    "bulkEdit": {
+      "action": "Chỉnh sửa trạng thái",
+      "selectAll": "Chọn tất cả",
+      "deselectAll": "Bỏ chọn",
+      "title_one": "Chỉnh sửa {{count}} sản phẩm",
+      "title_other": "Chỉnh sửa {{count}} sản phẩm",
+      "description_one": "Cập nhật trạng thái cho {{count}} sản phẩm đã chọn.",
+      "description_other": "Cập nhật trạng thái cho {{count}} sản phẩm đã chọn.",
+      "descriptionAll_one": "Cập nhật trạng thái cho tất cả {{count}} sản phẩm khớp với bộ lọc hiện tại.",
+      "descriptionAll_other": "Cập nhật trạng thái cho tất cả {{count}} sản phẩm khớp với bộ lọc hiện tại.",
+      "success": {
+        "header_one": "Đã cập nhật thành công {{count}} sản phẩm",
+        "header_other": "Đã cập nhật thành công {{count}} sản phẩm",
+        "description_one": "Trạng thái sản phẩm đã được cập nhật thành {{status}}.",
+        "description_other": "Trạng thái sản phẩm đã được cập nhật thành {{status}}."
+      },
+      "error": {
+        "header": "Cập nhật sản phẩm thất bại",
+        "description": "Đã xảy ra lỗi khi cập nhật sản phẩm."
+      },
+      "loading": "Đang tải {{count}} sản phẩm..."
+    },
     "variants": {
       "header": "Biến thể",
       "empty": {

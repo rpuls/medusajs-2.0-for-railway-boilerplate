@@ -487,6 +487,28 @@
       }
     },
     "deleteWarning": "제품 {{title}}을(를) 삭제하려고 합니다. 이 작업은 취소할 수 없습니다.",
+    "bulkEdit": {
+      "action": "상태 편집",
+      "selectAll": "모두 선택",
+      "deselectAll": "선택 해제",
+      "title_one": "{{count}}개 제품 편집",
+      "title_other": "{{count}}개 제품 편집",
+      "description_one": "선택된 {{count}}개 제품의 상태를 업데이트합니다.",
+      "description_other": "선택된 {{count}}개 제품의 상태를 업데이트합니다.",
+      "descriptionAll_one": "현재 필터와 일치하는 모든 {{count}}개 제품의 상태를 업데이트합니다.",
+      "descriptionAll_other": "현재 필터와 일치하는 모든 {{count}}개 제품의 상태를 업데이트합니다.",
+      "success": {
+        "header_one": "{{count}}개 제품이 성공적으로 업데이트되었습니다",
+        "header_other": "{{count}}개 제품이 성공적으로 업데이트되었습니다",
+        "description_one": "제품 상태가 {{status}}로 업데이트되었습니다.",
+        "description_other": "제품 상태가 {{status}}로 업데이트되었습니다."
+      },
+      "error": {
+        "header": "제품 업데이트 실패",
+        "description": "제품을 업데이트하는 중 오류가 발생했습니다."
+      },
+      "loading": "{{count}}개 제품 로드 중..."
+    },
     "variants": {
       "header": "변형",
       "empty": {

@@ -291,6 +291,59 @@ export function getRouteMap({
               ],
             },
             {
+              path: "/brands",
+              errorElement: <ErrorBoundary />,
+              handle: {
+                breadcrumb: () => t("brands.domain"),
+              },
+              children: [
+                {
+                  path: "",
+                  lazy: () => import("../../routes/brands/brand-list"),
+                  children: [
+                    {
+                      path: "create",
+                      lazy: () =>
+                        import("../../routes/brands/brand-create"),
+                    },
+                  ],
+                },
+                {
+                  path: ":id",
+                  lazy: async () => {
+                    const { Component, loader } = await import(
+                      "../../routes/brands/brand-detail"
+                    )
+
+                    return {
+                      Component,
+                      loader,
+                      handle: {
+                        breadcrumb: (match: UIMatch<any>) => match.data?.brand?.name || t("brands.domain"),
+                      },
+                    }
+                  },
+                  children: [
+                    {
+                      path: "edit",
+                      lazy: () =>
+                        import("../../routes/brands/brand-edit"),
+                    },
+                    {
+                      path: "products",
+                      lazy: () =>
+                        import("../../routes/brands/brand-products"),
+                    },
+                    {
+                      path: "organize",
+                      lazy: () =>
+                        import("../../routes/brands/brand-organize"),
+                    },
+                  ],
+                },
+              ],
+            },
+            {
               path: "/orders",
               errorElement: <ErrorBoundary />,
               handle: {
@@ -1024,6 +1077,14 @@ export function getRouteMap({
                   lazy: () => import("../../routes/store/store-metadata"),
                 },
               ],
+            },
+            {
+              path: "econt",
+              errorElement: <ErrorBoundary />,
+              lazy: () => import("../../routes/settings/econt"),
+              handle: {
+                breadcrumb: () => "Econt Shipping",
+              },
             },
             {
               path: "users",

@@ -9,7 +9,7 @@ import {
   UseQueryOptions,
 } from "@tanstack/react-query"
 import { InfiniteData } from "@tanstack/query-core"
-import { sdk } from "../../lib/client"
+import { sdk, backendUrl } from "../../lib/client"
 import { queryClient } from "../../lib/query-client"
 import { queryKeysFactory } from "../../lib/query-key-factory"
 import { inventoryItemsQueryKeys } from "./inventory.tsx"
@@ -501,6 +501,79 @@ export const useBatchVariantImages = (
         queryKey: variantsQueryKeys.detail(variantId),
       })
 
+      options?.onSuccess?.(data, variables, context)
+    },
+    ...options,
+  })
+}
+
+export const useBulkUpdateProducts = (
+  options?: UseMutationOptions<
+    HttpTypes.AdminProductResponse[],
+    FetchError,
+    { productIds: string[]; data: Partial<HttpTypes.AdminUpdateProduct> }
+  >
+) => {
+  return useMutation({
+    mutationFn: async ({ productIds, data }) => {
+      // Update all products in parallel
+      const updatePromises = productIds.map((id) =>
+        sdk.admin.product.update(id, data)
+      )
+      const results = await Promise.all(updatePromises)
+      return results
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate all product queries
+      queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists() })
+      // Invalidate each updated product's detail query
+      variables.productIds.forEach((id) => {
+        queryClient.invalidateQueries({
+          queryKey: productsQueryKeys.detail(id),
+        })
+      })
+      options?.onSuccess?.(data, variables, context)
+    },
+    ...options,
+  })
+}
+
+export const useBulkDeleteProducts = (
+  options?: UseMutationOptions<
+    { message: string; deletedCount: number; deletedProductIds: string[] },
+    FetchError,
+    { productIds: string[] }
+  >
+) => {
+  return useMutation({
+    mutationFn: async ({ productIds }) => {
+      // Use fetch with backend URL and proper headers
+      const url = `${backendUrl.replace(/\/$/, "")}/admin/products/bulk-delete`
+      const response = await fetch(url, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ productIds }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Failed to delete products" }))
+        throw new Error(error.message || "Failed to delete products")
+      }
+
+      return response.json()
+    },
+    onSuccess: (data, variables, context) => {
+      // Invalidate all product queries
+      queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists() })
+      // Invalidate each deleted product's detail query
+      variables.productIds.forEach((id) => {
+        queryClient.invalidateQueries({
+          queryKey: productsQueryKeys.detail(id),
+        })
+      })
       options?.onSuccess?.(data, variables, context)
     },
     ...options,
