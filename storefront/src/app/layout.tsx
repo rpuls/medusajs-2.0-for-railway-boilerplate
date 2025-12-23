@@ -1,6 +1,7 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
 import { Inter } from "next/font/google"
+import { Suspense } from "react"
 import "styles/globals.css"
 import { MuiProviders } from "./mui-providers"
 import { PWAComponents } from "./pwa-components"
@@ -50,8 +51,14 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       </head>
       <body>
         <MuiProviders>
-          <main className="relative">{props.children}</main>
-          <PWAComponents />
+          <main className="relative">
+            <Suspense fallback={<div className="min-h-screen animate-pulse bg-background-base" />}>
+              {props.children}
+            </Suspense>
+          </main>
+          <Suspense fallback={null}>
+            <PWAComponents />
+          </Suspense>
         </MuiProviders>
       </body>
     </html>

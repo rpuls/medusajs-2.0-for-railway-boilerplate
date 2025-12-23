@@ -34,7 +34,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 // Enable ISR with 1 hour revalidation for search results
-export const revalidate = 3600
+// MIGRATED: Removed export const revalidate = 3600 (incompatible with Cache Components)
+// TODO: Will add "use cache" + cacheLife() or <Suspense> after analyzing build errors
 
 type Params = {
   params: Promise<{ query: string; countryCode: string }>

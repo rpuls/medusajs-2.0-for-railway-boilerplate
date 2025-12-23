@@ -10,6 +10,8 @@ import { getAuthHeaders, getCartId, removeCartId, setCartId } from "./cookies"
 import { getProductsById } from "./products"
 import { getRegion } from "./regions"
 
+// Cart is user-specific and should NOT be cached - always dynamic
+// DO NOT add "use cache" - cart must be fresh per request
 export async function retrieveCart() {
   const cartId = await getCartId()
 
@@ -18,6 +20,7 @@ export async function retrieveCart() {
   }
 
   const authHeaders = await getAuthHeaders()
+  // No caching - cart is user-specific and must be fresh
   return await sdk.store.cart
     .retrieve(cartId, {}, { next: { tags: ["cart"] }, ...authHeaders })
     .then(({ cart }) => cart)

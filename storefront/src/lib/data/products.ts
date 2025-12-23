@@ -6,13 +6,16 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import { sortProducts } from "@lib/util/sort-products"
 import { getProductPrice } from "@lib/util/get-product-price"
 
-export const getProductsById = cache(async function ({
+// Product prices are region-specific and should NOT be cached - always dynamic
+// DO NOT add "use cache" - prices must be fresh per request/region
+export async function getProductsById({
   ids,
   regionId,
 }: {
   ids: string[]
   regionId: string
 }) {
+  // No caching - prices are region-specific and must be fresh
   return sdk.store.product
     .list(
       {
@@ -23,12 +26,15 @@ export const getProductsById = cache(async function ({
       { next: { tags: ["products"] } }
     )
     .then(({ products }) => products)
-})
+}
 
-export const getProductByHandle = cache(async function (
+// Product prices are region-specific and should NOT be cached - always dynamic
+// DO NOT add "use cache" - prices must be fresh per request/region
+export async function getProductByHandle(
   handle: string,
   regionId: string
 ) {
+  // No caching - prices are region-specific and must be fresh
   return sdk.store.product
     .list(
       {
@@ -39,14 +45,16 @@ export const getProductByHandle = cache(async function (
       {
         next: {
           tags: ["products", `product-${handle}`],
-          revalidate: 3600, // ISR: revalidate every hour
-        } as { tags: string[]; revalidate?: number },
+          // No revalidate - always fetch fresh prices
+        } as { tags: string[] },
       }
     )
     .then(({ products }) => products[0])
-})
+}
 
-export const getProductsList = cache(async function ({
+// Product prices are region-specific and should NOT be cached - always dynamic
+// DO NOT add "use cache" - prices must be fresh per request/region
+export async function getProductsList({
   pageParam = 1,
   queryParams,
   countryCode,
@@ -126,11 +134,12 @@ export const getProductsList = cache(async function ({
       headers["x-publishable-api-key"] = publishableKey
     }
 
+    // No caching - product prices are region-specific and must be fresh
     const response = await fetch(`${BACKEND_URL}/store/products/list?${searchParams.toString()}`, {
       headers,
       next: {
         tags: ["products"],
-        revalidate: 3600,
+        // No revalidate - always fetch fresh prices
       },
     })
 
@@ -155,6 +164,7 @@ export const getProductsList = cache(async function ({
   }
 
   // Standard MedusaJS SDK call (no brand filtering)
+  // No caching - product prices are region-specific and must be fresh
   const { products, count } = await sdk.store.product.list(
     {
       ...queryParams,
@@ -166,7 +176,7 @@ export const getProductsList = cache(async function ({
     {
       next: {
         tags: ["products"],
-        revalidate: 3600,
+        // No revalidate - always fetch fresh prices
       },
     }
   )
@@ -181,9 +191,11 @@ export const getProductsList = cache(async function ({
     nextPage,
     queryParams,
   }
-})
+}
 
-export const getProductsListWithSort = cache(async function ({
+// Product prices are region-specific and should NOT be cached - always dynamic
+// DO NOT add "use cache" - prices must be fresh per request/region
+export async function getProductsListWithSort({
   pageParam = 1,
   queryParams,
   countryCode,
@@ -194,6 +206,7 @@ export const getProductsListWithSort = cache(async function ({
   countryCode: string
   sortBy?: SortOptions
 }) {
+  // No caching - prices are region-specific and must be fresh
   const result = await getProductsList({
     pageParam,
     queryParams,
@@ -205,13 +218,14 @@ export const getProductsListWithSort = cache(async function ({
   }
 
   return result
-})
+}
 
 /**
  * Calculate the maximum price from products
  * Fetches products matching current filters (excluding price filter) and calculates max price
+ * Product prices are region-specific and should NOT be cached - always dynamic
  */
-export const getMaxProductPrice = cache(async function ({
+export async function getMaxProductPrice({
   countryCode,
   collectionIds,
   categoryIds,
@@ -269,4 +283,4 @@ export const getMaxProductPrice = cache(async function ({
     console.error("Error calculating max product price:", error)
     return 500 // Default fallback on error
   }
-})
+}

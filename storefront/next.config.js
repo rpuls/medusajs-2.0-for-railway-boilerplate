@@ -44,6 +44,8 @@ const nextConfig = {
       },
     ]
   },
+  // Enable Cache Components (Next.js 16.0.7 - moved to root level per warning)
+  cacheComponents: true,
   // Experimental features for better performance
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material', '@medusajs/js-sdk'],

@@ -1,63 +1,63 @@
+"use server"
+
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
-import { cache } from "react"
+import { cacheLife } from "next/cache"
 import { HttpTypes } from "@medusajs/types"
 
-export const listRegions = cache(async function () {
+// Regions metadata can be cached - doesn't include prices
+export async function listRegions() {
+  "use cache"
+  cacheLife("hours") // Cache for 1 hour
+  
   return sdk.store.region
     .list(
       {},
       {
         next: {
           tags: ["regions"],
-          revalidate: 3600, // ISR: revalidate every hour
         },
       }
     )
     .then(({ regions }) => regions)
     .catch(medusaError)
-})
+}
 
-export const retrieveRegion = cache(async function (id: string) {
+// Regions metadata can be cached - doesn't include prices
+export async function retrieveRegion(id: string) {
+  "use cache"
+  cacheLife("hours") // Cache for 1 hour
+  
   return sdk.store.region
     .retrieve(id, {}, { next: { tags: ["regions"] } })
     .then(({ region }) => region)
     .catch(medusaError)
-})
+}
 
-const regionMap = new Map<string, HttpTypes.StoreRegion>()
-
-export const getRegion = cache(async function (countryCode: string) {
+// Regions metadata can be cached - doesn't include prices
+export async function getRegion(countryCode: string) {
+  "use cache"
+  cacheLife("hours") // Cache for 1 hour
+  
   try {
     // Normalize country code to lowercase for consistent lookup
     const normalizedCode = countryCode?.toLowerCase() || ""
     
-    if (regionMap.has(normalizedCode)) {
-      return regionMap.get(normalizedCode)
-    }
-
     const regions = await listRegions()
 
     if (!regions) {
       return null
     }
 
-    // Populate region map with normalized country codes
-    regions.forEach((region) => {
-      region.countries?.forEach((c) => {
-        const iso2 = c?.iso_2?.toLowerCase() ?? ""
-        if (iso2) {
-          regionMap.set(iso2, region)
-        }
-      })
-    })
+    // Find region by country code
+    const region = regions.find((region) =>
+      region.countries?.some((c) => c?.iso_2?.toLowerCase() === normalizedCode)
+    )
 
-    const region = normalizedCode
-      ? regionMap.get(normalizedCode)
-      : regionMap.get("us")
-
-    return region
+    return region || regions.find((region) =>
+      region.countries?.some((c) => c?.iso_2?.toLowerCase() === "us")
+    ) || null
   } catch (e: any) {
     return null
   }
-})
+}

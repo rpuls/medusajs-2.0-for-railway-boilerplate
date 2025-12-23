@@ -22,11 +22,9 @@ type Props = {
   params: Promise<{ countryCode: string; handle: string }>
 }
 
-// Enable ISR with 1 hour revalidation
-export const revalidate = 3600
-
-// Force static generation where possible
-export const dynamicParams = false
+// MIGRATED: Removed export const revalidate = 3600 (incompatible with Cache Components)
+// MIGRATED: Removed export const dynamicParams = false (incompatible with Cache Components)
+// TODO: Will add generateStaticParams and "use cache" + cacheLife() after analyzing build errors
 
 export async function generateStaticParams() {
   const countryCodes = await listRegions().then(

@@ -7,10 +7,12 @@ import { getLocale } from "./config"
 
 /**
  * Get translations for a country code (server component)
+ * Translations are static files - can be cached
  */
 export async function getTranslations(
   countryCode: string
 ): Promise<TranslationKeys> {
+  "use cache"
   const locale = getLocale(countryCode)
   return await loadTranslations(locale)
 }

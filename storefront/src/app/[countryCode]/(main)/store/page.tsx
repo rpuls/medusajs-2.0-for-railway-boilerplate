@@ -39,11 +39,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   }
 }
 
-// Enable ISR with 1 hour revalidation
-export const revalidate = 3600
-
-// Allow dynamic rendering for filters (filters change via URL params)
-export const dynamic = "force-dynamic"
+// MIGRATED: Removed export const revalidate = 3600 (incompatible with Cache Components)
+// MIGRATED: Removed export const dynamic = "force-dynamic" (incompatible with Cache Components)
+// TODO: Will add <Suspense> boundary or "use cache" after analyzing build errors
 
 export default async function StorePage({ searchParams, params }: Params) {
   // Await both params and searchParams in Next.js 16

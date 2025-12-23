@@ -42,6 +42,8 @@ export const getCollectionByHandle = cache(async function (
     .then(({ collections }) => collections[0])
 })
 
+// Collections metadata can be cached, but product prices inside are NOT cached
+// Collections structure is cacheable, but prices are fetched fresh per request
 export const getCollectionsWithProducts = cache(
   async (countryCode: string): Promise<HttpTypes.StoreCollection[] | null> => {
     const { collections } = await getCollectionsList(0, 3)
@@ -54,6 +56,7 @@ export const getCollectionsWithProducts = cache(
       .map((collection) => collection.id)
       .filter(Boolean) as string[]
 
+    // Product prices are NOT cached - always fetch fresh (region-specific)
     const { response } = await getProductsList({
       queryParams: { collection_id: collectionIds },
       countryCode,

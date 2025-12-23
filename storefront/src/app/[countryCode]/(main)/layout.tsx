@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { Suspense } from "react"
 
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
@@ -21,9 +22,16 @@ export default async function PageLayout(props: {
     ? resolvedParams.countryCode.toLowerCase() 
     : 'us' // Fallback to 'us' if countryCode is missing
 
+  // Nav includes CartButton which accesses cookies - wrap in Suspense
+  // CartProvider is a client component that just manages state - no Suspense needed
+  // Children are already wrapped in Suspense in root layout - don't double-wrap to avoid hydration errors
   return (
     <CartProvider>
-      <Nav countryCode={countryCode} />
+      <Suspense fallback={
+        <div className="sticky top-0 inset-x-0 z-50 h-20 bg-background-base animate-pulse" />
+      }>
+        <Nav countryCode={countryCode} />
+      </Suspense>
       {props.children}
       <Footer />
     </CartProvider>

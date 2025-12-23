@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { Suspense } from "react"
+import { connection } from "next/server"
 import dynamicImport from "next/dynamic"
 
 import { getCollectionsWithProducts } from "@lib/data/collections"
@@ -50,6 +51,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ countryCode: string }>
 }): Promise<Metadata> {
+  "use cache"
   const resolvedParams = await params
   const normalizedCountryCode =
     typeof resolvedParams?.countryCode === "string"
@@ -59,13 +61,13 @@ export async function generateMetadata({
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
   const homepageUrl = getCanonicalUrl("", normalizedCountryCode)
   
-  // Get translations for metadata
+  // Get translations for metadata (cached)
   const translations = await getTranslations(normalizedCountryCode)
   const siteName = getTranslation(translations, "metadata.siteName")
   const siteDescription = getTranslation(translations, "metadata.homepage.description")
   const siteTitle = getTranslation(translations, "metadata.homepage.title")
 
-  // Generate hreflang metadata for homepage
+  // Generate hreflang metadata for homepage (cached)
   const hreflangAlternates = await generateHreflangMetadata(
     "",
     normalizedCountryCode
@@ -106,46 +108,36 @@ export async function generateMetadata({
   }
 }
 
-// Enable ISR with 1 hour revalidation for homepage
-export const revalidate = 3600
-
-// Force static generation
-export const dynamic = "force-static"
-
-export default async function Home({
-  params,
+// MIGRATED: Removed export const revalidate = 3600 (incompatible with Cache Components)
+// Homepage content - collections can be cached, but product prices should NOT be cached
+// Collections metadata is cacheable, but product prices are region-specific and dynamic
+async function HomeContent({
+  countryCode,
 }: {
-  params: Promise<{ countryCode: string }>
+  countryCode: string
 }) {
-  // Await params in Next.js 16
-  const resolvedParams = await params
-  
-  // Validate params
-  if (!resolvedParams?.countryCode || typeof resolvedParams.countryCode !== 'string') {
-    return null
-  }
-
-  const countryCode = resolvedParams.countryCode.toLowerCase()
+  // Collections metadata can be cached (doesn't include prices)
   const collections = await getCollectionsWithProducts(countryCode)
   const region = await getRegion(countryCode)
 
-  // Fetch trending products (currently available)
+  // Early return if region is not found - region is required for product prices
+  if (!region) {
+    return null
+  }
+
+  // Product prices are NOT cached - always fetch fresh (region-specific)
   const trendingProducts = await getProductsList({
     pageParam: 1,
     queryParams: { limit: 8 },
     countryCode,
   })
 
-  // Fetch best sellers
+  // Product prices are NOT cached - always fetch fresh (region-specific)
   const bestSellers = await getProductsList({
     pageParam: 1,
     queryParams: { limit: 8 },
     countryCode,
   })
-
-  if (!region) {
-    return null
-  }
 
   // Generate JSON-LD schemas for homepage
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
@@ -216,5 +208,31 @@ export default async function Home({
       {/* Newsletter Subscription */}
       <NewsletterWrapper />
     </>
+  )
+}
+
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ countryCode: string }>
+}) {
+  // Homepage accesses product prices (uncached) - defer to request time
+  // Call connection() early to prevent prerendering
+  await connection()
+  
+  // Await params in Next.js 16
+  const resolvedParams = await params
+  
+  // Validate params
+  if (!resolvedParams?.countryCode || typeof resolvedParams.countryCode !== 'string') {
+    return null
+  }
+
+  const countryCode = resolvedParams.countryCode.toLowerCase()
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent countryCode={countryCode} />
+    </Suspense>
   )
 }

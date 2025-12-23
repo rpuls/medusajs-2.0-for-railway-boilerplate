@@ -1,27 +1,38 @@
 import { sdk } from "@lib/config"
-import { cache } from "react"
+import { cacheLife } from "next/cache"
 
-export const listCategories = cache(async function () {
+// Categories metadata can be cached - doesn't include prices
+export async function listCategories() {
+  "use cache"
+  cacheLife("hours") // Cache for 1 hour
+  
   return sdk.store.category
     .list({ fields: "+category_children" }, { next: { tags: ["categories"] } })
     .then(({ product_categories }) => product_categories)
-})
+}
 
-export const getCategoriesList = cache(async function (
+// Categories metadata can be cached - doesn't include prices
+export async function getCategoriesList(
   offset: number = 0,
   limit: number = 100
 ) {
+  "use cache"
+  cacheLife("hours") // Cache for 1 hour
+  
   return sdk.store.category.list(
     // TODO: Look into fixing the type
     // @ts-ignore
     { limit, offset, fields: "+category_children" },
     { next: { tags: ["categories"] } }
   )
-})
+}
 
-export const getCategoryByHandle = cache(async function (
+// Categories metadata can be cached - doesn't include prices
+export async function getCategoryByHandle(
   categoryHandle: string[]
 ) {
+  "use cache"
+  cacheLife("hours") // Cache for 1 hour
 
   return sdk.store.category.list(
     // TODO: Look into fixing the type
@@ -29,4 +40,4 @@ export const getCategoryByHandle = cache(async function (
     { handle: categoryHandle },
     { next: { tags: ["categories"] } }
   )
-})
+}

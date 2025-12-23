@@ -27,7 +27,8 @@ export const metadata: Metadata = {
 }
 
 // Checkout is dynamic (requires cart data)
-export const dynamic = "force-dynamic"
+// MIGRATED: Removed export const dynamic = "force-dynamic" (incompatible with Cache Components)
+// TODO: Will add <Suspense> boundary after analyzing build errors (checkout is dynamic by default)
 
 const fetchCart = async () => {
   const cart = await retrieveCart()
@@ -43,7 +44,8 @@ const fetchCart = async () => {
   return cart
 }
 
-export default async function Checkout() {
+// Checkout content - user-specific, should NOT be cached
+async function CheckoutContent() {
   const cart = await fetchCart()
   const customer = await getCustomer()
 
@@ -63,5 +65,21 @@ export default async function Checkout() {
         <CheckoutSummary cart={cart} />
       </Suspense>
     </div>
+  )
+}
+
+export default async function Checkout() {
+  // Checkout is always dynamic - wrap in Suspense to defer rendering
+  return (
+    <Suspense fallback={
+      <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   )
 }

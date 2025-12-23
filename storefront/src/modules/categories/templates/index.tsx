@@ -4,18 +4,72 @@ import { Suspense } from "react"
 import InteractiveLink from "@modules/common/components/interactive-link"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import SortDropdown, { SortOptions } from "@modules/store/components/sort-dropdown"
+import ActiveFilters from "@modules/store/components/active-filters"
+import ProductCount from "@modules/store/components/product-count"
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
+import { getActiveBrands } from "@lib/data/brands"
+import { getMaxProductPrice } from "@lib/data/products"
 
-export default function CategoryTemplate({
+// Wrapper to handle PaginatedProducts result object - matches store page design
+async function PaginatedProductsWrapper({
+  sortBy,
+  page,
+  categoryIds,
+  countryCode,
+  collections,
   categories,
+  brands,
+}: {
+  sortBy: SortOptions
+  page: number
+  categoryIds: string[]
+  countryCode: string
+  collections: HttpTypes.StoreCollection[]
+  categories: HttpTypes.StoreProductCategory[]
+  brands: any[]
+}) {
+  const result = await PaginatedProducts({
+    sortBy,
+    page,
+    countryCode,
+    categoryIds,
+  })
+
+  return (
+    <>
+      <div className="mb-4 flex flex-col gap-3">
+        <ProductCount
+          currentPage={page}
+          pageSize={result.pageSize}
+          totalCount={result.totalCount}
+        />
+        <ActiveFilters
+          collections={collections}
+          categories={categories}
+          brands={brands}
+          selectedCollectionIds={[]}
+          selectedCategoryIds={categoryIds}
+          selectedBrandIds={[]}
+          selectedPriceRange={undefined}
+        />
+      </div>
+      {result.products}
+    </>
+  )
+}
+
+export default async function CategoryTemplate({
+  categories,
+  collections,
   sortBy,
   page,
   countryCode,
 }: {
   categories: HttpTypes.StoreProductCategory[]
+  collections: HttpTypes.StoreCollection[]
   sortBy?: SortOptions
   page?: string
   countryCode: string
@@ -28,30 +82,55 @@ export default function CategoryTemplate({
 
   if (!category || !countryCode) notFound()
 
+  // Fetch brands and maxPrice for filters (matches store page)
+  const [brands, maxPrice] = await Promise.all([
+    getActiveBrands(),
+    getMaxProductPrice({
+      countryCode,
+      categoryIds: [category.id],
+    }),
+  ])
+
+  // Create key for Suspense based on filters (matches store page pattern)
+  const filterKey = `${JSON.stringify([category.id])}-${sort}-${pageNumber}`
+
   return (
     <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
+      className="flex flex-col small:flex-row small:items-start small:gap-x-8 py-6 content-container"
       data-testid="category-container"
     >
-      <RefinementList sortBy={sort} data-testid="sort-by-container" />
+      <RefinementList 
+        collections={collections || []} 
+        categories={categories}
+        brands={brands}
+        maxPrice={maxPrice}
+        sortBy={sort} 
+        data-testid="sort-by-container" 
+      />
       <div className="w-full">
-        <div className="flex flex-row mb-8 text-2xl-semi gap-4">
-          {parents &&
-            parents.map((parent) => (
-              <span key={parent.id} className="text-ui-fg-subtle">
-                <LocalizedClientLink
-                  className="mr-4 hover:text-black"
-                  href={`/categories/${parent.handle}`}
-                  prefetch={false}
-                  data-testid="sort-by-link"
-                >
-                  {parent.name}
-                </LocalizedClientLink>
-                /
-              </span>
-            ))}
-          <h1 data-testid="category-page-title">{category.name}</h1>
+        {/* Header with breadcrumbs and sort dropdown - matches store page layout */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex flex-row text-2xl-semi gap-4">
+            {parents &&
+              parents.map((parent) => (
+                <span key={parent.id} className="text-ui-fg-subtle">
+                  <LocalizedClientLink
+                    className="mr-4 hover:text-black"
+                    href={`/categories/${parent.handle}`}
+                    prefetch={false}
+                    data-testid="sort-by-link"
+                  >
+                    {parent.name}
+                  </LocalizedClientLink>
+                  /
+                </span>
+              ))}
+            <h1 data-testid="category-page-title">{category.name}</h1>
+          </div>
+          <SortDropdown />
         </div>
+        
+        {/* Category description and children - category-specific content */}
         {category.description && (
           <div className="mb-8 text-base-regular">
             <p>{category.description}</p>
@@ -70,12 +149,27 @@ export default function CategoryTemplate({
             </ul>
           </div>
         )}
-        <Suspense fallback={<SkeletonProductGrid />}>
-          <PaginatedProducts
+        
+        {/* Products with ProductCount and ActiveFilters - matches store page */}
+        <Suspense 
+          key={filterKey}
+          fallback={
+            <>
+              <div className="mb-4">
+                <div className="h-6 w-48 bg-gray-200 animate-pulse rounded" />
+              </div>
+              <SkeletonProductGrid />
+            </>
+          }
+        >
+          <PaginatedProductsWrapper
             sortBy={sort}
             page={pageNumber}
-            categoryId={category.id}
+            categoryIds={[category.id]}
             countryCode={countryCode}
+            collections={collections || []}
+            categories={categories}
+            brands={brands}
           />
         </Suspense>
       </div>

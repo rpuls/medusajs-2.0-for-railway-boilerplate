@@ -3,18 +3,21 @@
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
-import { revalidateTag } from "next/cache"
+import { revalidateTag, cacheLife } from "next/cache"
 import { redirect } from "next/navigation"
 import { cache } from "react"
 import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 
-export const getCustomer = cache(async function () {
+// User-specific data - accesses cookies, should NOT be cached
+// Always dynamic - must be wrapped in Suspense when used
+// DO NOT add "use cache" - customer data is user-specific and must be fresh
+export async function getCustomer() {
   const authHeaders = await getAuthHeaders()
   return await sdk.store.customer
     .retrieve({}, { next: { tags: ["customer"] }, ...authHeaders })
     .then(({ customer }) => customer)
     .catch(() => null)
-})
+}
 
 export const updateCustomer = cache(async function (
   body: HttpTypes.StoreUpdateCustomer

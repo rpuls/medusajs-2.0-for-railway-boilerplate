@@ -1,9 +1,11 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
+import { connection } from "next/server"
 
 import { getCategoryByHandle, listCategories } from "@lib/data/categories"
 import { listRegions } from "@lib/data/regions"
+import { getCollectionsList } from "@lib/data/collections"
 import { StoreProductCategory, StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -17,17 +19,15 @@ import JsonLdScript from "components/seo/json-ld-script"
 
 type Props = {
   params: Promise<{ category: string[]; countryCode: string }>
-  searchParams: {
+  searchParams: Promise<{
     sortBy?: SortOptions
     page?: string
-  }
+  }>
 }
 
-// Enable ISR with 1 hour revalidation
-export const revalidate = 3600
-
-// Force static generation where possible
-export const dynamicParams = false
+// MIGRATED: Removed export const revalidate = 3600 (incompatible with Cache Components)
+// MIGRATED: Removed export const dynamicParams = false (incompatible with Cache Components)
+// TODO: Will add generateStaticParams and "use cache" + cacheLife() after analyzing build errors
 
 export async function generateStaticParams() {
   const product_categories = await listCategories()
@@ -64,6 +64,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  "use cache"
   // Await params in Next.js 16
   const resolvedParams = await params
   
@@ -72,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? resolvedParams.countryCode.toLowerCase() 
       : 'us'
     
-    // Get translations for metadata
+    // Get translations for metadata (cached)
     const translations = await getTranslations(normalizedCountryCode)
     const siteName = getTranslation(translations, "metadata.siteName")
     
@@ -86,6 +87,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
     }
 
+    // Get category data (cached)
     const { product_categories } = await getCategoryByHandle(
       resolvedParams.category
     )
@@ -125,7 +127,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const categoryPath = `/categories/${resolvedParams.category.filter(Boolean).join("/")}`
     const categoryUrl = getCanonicalUrl(categoryPath, normalizedCountryCode)
 
-    // Generate hreflang metadata
+    // Generate hreflang metadata (cached)
     const hreflangAlternates = await generateHreflangMetadata(
       categoryPath,
       normalizedCountryCode
@@ -179,10 +181,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function CategoryPage({ params, searchParams }: Props) {
-  // Await params in Next.js 16
+// Category page content - CategoryTemplate may access product prices (NOT cached)
+async function CategoryPageContent({ params, searchParams }: Props) {
+  // Explicitly defer to request time since CategoryTemplate accesses product prices (uncached)
+  await connection()
+  
+  // Await params and searchParams in Next.js 16
   const resolvedParams = await params
-  const { sortBy, page } = searchParams
+  const resolvedSearchParams = await searchParams
+  const { sortBy, page } = resolvedSearchParams
 
   // Validate params
   if (!resolvedParams.countryCode || !resolvedParams.category || resolvedParams.category.length === 0) {
@@ -200,6 +207,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!product_categories || product_categories.length === 0) {
     notFound()
   }
+
+  // Fetch collections for RefinementList (cached)
+  const { collections } = await getCollectionsList(0, 100)
 
   // Generate JSON-LD schemas
   const categoryPath = `/categories/${resolvedParams.category.filter(Boolean).join("/")}`
@@ -225,14 +235,25 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <JsonLdScript id="category-schema" data={categorySchema} />
       <JsonLdScript id="breadcrumb-schema" data={breadcrumbSchema} />
 
-    <Suspense fallback={<div>Loading category...</div>}>
-      <CategoryTemplate
-        categories={product_categories}
-        sortBy={sortBy}
-        page={page}
+      {/* CategoryTemplate may access product prices (NOT cached) - wrap in Suspense */}
+      <Suspense fallback={<div>Loading category...</div>}>
+        <CategoryTemplate
+          categories={product_categories}
+          collections={collections || []}
+          sortBy={sortBy}
+          page={page}
           countryCode={normalizedCountryCode}
-      />
-    </Suspense>
+        />
+      </Suspense>
     </>
+  )
+}
+
+export default async function CategoryPage({ params, searchParams }: Props) {
+  // Category page may access product prices (NOT cached) - wrap in Suspense
+  return (
+    <Suspense fallback={<div className="min-h-screen animate-pulse bg-background-base" />}>
+      <CategoryPageContent params={params} searchParams={searchParams} />
+    </Suspense>
   )
 }

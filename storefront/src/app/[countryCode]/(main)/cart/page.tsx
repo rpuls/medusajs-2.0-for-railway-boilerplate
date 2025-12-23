@@ -43,10 +43,26 @@ const fetchCart = async () => {
   return cart
 }
 
-export default async function Cart({ params }: { params: Promise<{ countryCode: string }> }) {
-  await params // Await params in Next.js 16 (even if not used)
+// Cart content - user-specific, should NOT be cached
+async function CartContent() {
   const cart = await fetchCart()
   const customer = await getCustomer()
 
   return <CartTemplate cart={cart} customer={customer} />
+}
+
+export default async function Cart({ params }: { params: Promise<{ countryCode: string }> }) {
+  await params // Await params in Next.js 16 (even if not used)
+  
+  // Cart is always dynamic - wrap in Suspense to defer rendering
+  return (
+    <Suspense fallback={
+      <div className="animate-pulse">
+        <div className="h-8 bg-gray-200 rounded mb-4"></div>
+        <div className="h-64 bg-gray-200 rounded"></div>
+      </div>
+    }>
+      <CartContent />
+    </Suspense>
+  )
 }
