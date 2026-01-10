@@ -11,7 +11,7 @@ version: "3.8"
 # Environment Variables for backend/.env:
 #   DATABASE_URL=postgres://postgres:postgres@localhost:5432/medusa
 #   REDIS_URL=redis://localhost:6379 (optional but recommended)
-#   MINIO_ENDPOINT=http://localhost:9002
+#   MINIO_ENDPOINT=http://localhost:9004
 #   MINIO_ACCESS_KEY=minioadmin
 #   MINIO_SECRET_KEY=minioadmin
 #   MINIO_BUCKET=medusa-media (optional - defaults to 'medusa-media')
@@ -19,9 +19,9 @@ version: "3.8"
 #   MEILISEARCH_MASTER_KEY=masterKey (or MEILISEARCH_ADMIN_KEY)
 #
 # Web UIs:
-#   PostgreSQL Adminer: http://localhost:8080
-#   Redis Commander: http://localhost:8081
-#   MinIO Console: http://localhost:9001
+#   PostgreSQL Adminer: http://localhost:9001
+#   Redis Commander: http://localhost:9002
+#   MinIO Console: http://localhost:9003
 
 services:
   postgres:
@@ -88,7 +88,7 @@ services:
     image: minio/minio:latest
     container_name: vela-minio
     ports:
-      - "9002:9000"
+      - "9004:9000"
       - "9003:9001"
     environment:
       MINIO_ROOT_USER: minioadmin

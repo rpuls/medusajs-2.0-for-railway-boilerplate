@@ -1,5 +1,4 @@
 #!/bin/sh
-docker compose down
 for port in 9000 8000; do
   pid=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
   if [ -n "$pid" ] && [ "$pid" != "0" ]; then

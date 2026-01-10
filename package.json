@@ -2,7 +2,11 @@
   "name": "vela",
   "version": "1.0.0",
   "scripts": {
-    "start": "sh start.sh",
-    "stop": "sh stop.sh"
+    "start": "npm run infra && npm run dev",
+    "stop": "npm run infra:stop && npm run dev:stop",
+    "infra": "docker compose up -d",
+    "infra:stop": "docker compose down",
+    "dev": "sh start.sh",
+    "dev:stop": "sh stop.sh"
   }
 }
