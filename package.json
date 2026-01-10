@@ -1,0 +1,8 @@
+{
+  "name": "vela",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "sh start.sh",
+    "stop": "sh stop.sh"
+  }
+}
