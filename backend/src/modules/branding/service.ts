@@ -7,9 +7,9 @@ const DEFAULT_BRANDING_CONFIG = {
   site_title: "",
   copyright_text: "",
   logos: null,
-  social_links: {} as Record<string, unknown>,
+  social_links: null,
   contact_info: null,
-  carousel_slides: {} as Record<string, unknown>,
+  carousel_slides: null,
   seo_defaults: null,
 };
 
