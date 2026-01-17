@@ -19,7 +19,11 @@ import { z } from "zod";
 import { sdk, brandingFetcher } from "../../../lib/sdk";
 import { BrandingResponse, CarouselSlide } from "../../../lib/types";
 import { Form } from "../common/form";
-import { FileUpload, FileType } from "../../../components/common/file-upload";
+import {
+  FileUpload,
+  FileType,
+  RejectedFile,
+} from "../../../components/common/file-upload";
 
 const SUPPORTED_IMAGE_FORMATS = [
   "image/jpeg",
@@ -106,7 +110,9 @@ export const EditCarouselDrawer = () => {
     setIsSubmitting(true);
     try {
       // Upload all files first
-      const filesToUpload = Array.from(uploadedFiles.values()).map((f) => f.file);
+      const filesToUpload = Array.from(uploadedFiles.values()).map(
+        (f) => f.file
+      );
       let uploadedUrls: string[] = [];
       if (filesToUpload.length > 0) {
         const { files } = await sdk.admin.upload.create({
@@ -118,14 +124,15 @@ export const EditCarouselDrawer = () => {
       // Map uploaded files to their indices and create a URL map
       const fileUrlMap = new Map<number, string>();
       let urlIndex = 0;
-      uploadedFiles.forEach((file, slideIndex) => {
+      uploadedFiles.forEach((_file, slideIndex) => {
         fileUrlMap.set(slideIndex, uploadedUrls[urlIndex++]);
       });
 
       const slides = values.carousel_slides
         .map((slide, index) => {
           // Use uploaded file URL if available, otherwise use manual URL
-          const imageUrl = fileUrlMap.get(index) || slide.image_url || undefined;
+          const imageUrl =
+            fileUrlMap.get(index) || slide.image_url || undefined;
           return {
             image_url: imageUrl,
             title: slide.title || undefined,
@@ -329,11 +336,21 @@ export const EditCarouselDrawer = () => {
                                         className="w-16 h-16 object-cover rounded"
                                       />
                                       <div className="flex-1 min-w-0">
-                                        <Text size="small" className="text-ui-fg-base truncate">
+                                        <Text
+                                          size="small"
+                                          className="text-ui-fg-base truncate"
+                                        >
                                           {uploadedFiles.get(index)!.file.name}
                                         </Text>
-                                        <Text size="xsmall" className="text-ui-fg-muted">
-                                          {(uploadedFiles.get(index)!.file.size / 1024).toFixed(2)} KB
+                                        <Text
+                                          size="xsmall"
+                                          className="text-ui-fg-muted"
+                                        >
+                                          {(
+                                            uploadedFiles.get(index)!.file
+                                              .size / 1024
+                                          ).toFixed(2)}{" "}
+                                          KB
                                         </Text>
                                       </div>
                                       <Button
@@ -345,7 +362,9 @@ export const EditCarouselDrawer = () => {
                                         Remove
                                       </Button>
                                     </div>
-                                    <Form.Hint>Uploaded file will replace URL input</Form.Hint>
+                                    <Form.Hint>
+                                      Uploaded file will replace URL input
+                                    </Form.Hint>
                                   </div>
                                 ) : (
                                   <>
@@ -355,7 +374,9 @@ export const EditCarouselDrawer = () => {
                                         {...field}
                                       />
                                     </Form.Control>
-                                    <Form.Hint>Or upload a file below</Form.Hint>
+                                    <Form.Hint>
+                                      Or upload a file below
+                                    </Form.Hint>
                                   </>
                                 )}
                                 <Form.ErrorMessage />
@@ -369,7 +390,38 @@ export const EditCarouselDrawer = () => {
                               formats={SUPPORTED_IMAGE_FORMATS}
                               multiple={false}
                               maxFileSize={10 * 1024 * 1024} // 10MB for carousel images
-                              onUploaded={(files) => {
+                              onUploaded={(files, rejectedFiles) => {
+                                // Handle rejected files first
+                                if (rejectedFiles && rejectedFiles.length > 0) {
+                                  const sizeRejected = rejectedFiles.filter(
+                                    (f: RejectedFile) => f.reason === "size"
+                                  );
+                                  const formatRejected = rejectedFiles.filter(
+                                    (f: RejectedFile) => f.reason === "format"
+                                  );
+
+                                  if (sizeRejected.length > 0) {
+                                    const file = sizeRejected[0];
+                                    const fileSizeMB = (
+                                      file.file.size /
+                                      (1024 * 1024)
+                                    ).toFixed(2);
+                                    toast.error(
+                                      `File "${file.file.name}" is too large (${fileSizeMB} MB). Maximum file size is 10 MB.`
+                                    );
+                                  }
+
+                                  if (formatRejected.length > 0) {
+                                    const file = formatRejected[0];
+                                    toast.error(
+                                      `File "${file.file.name}" is not a supported image format.`
+                                    );
+                                  }
+
+                                  return; // Don't process files if there are rejections
+                                }
+
+                                // Process valid files
                                 if (files.length > 0) {
                                   handleFileUpload(index)(files[0]);
                                 }

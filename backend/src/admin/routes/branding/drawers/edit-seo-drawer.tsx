@@ -1,5 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Heading, Input, Textarea, toast, Drawer, Text } from "@medusajs/ui";
+import {
+  Button,
+  Heading,
+  Input,
+  Textarea,
+  toast,
+  Drawer,
+  Text,
+} from "@medusajs/ui";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
 import useSWR, { useSWRConfig } from "swr";
@@ -9,7 +17,11 @@ import { z } from "zod";
 import { sdk, brandingFetcher } from "../../../lib/sdk";
 import { BrandingResponse, SeoDefaults } from "../../../lib/types";
 import { Form } from "../common/form";
-import { FileUpload, FileType } from "../../../components/common/file-upload";
+import {
+  FileUpload,
+  FileType,
+  RejectedFile,
+} from "../../../components/common/file-upload";
 
 const SUPPORTED_IMAGE_FORMATS = [
   "image/jpeg",
@@ -33,7 +45,10 @@ export const EditSeoDrawer = () => {
   const [open, setOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<FileType | null>(null);
 
-  const { data, isLoading } = useSWR<BrandingResponse>("branding", brandingFetcher);
+  const { data, isLoading } = useSWR<BrandingResponse>(
+    "branding",
+    brandingFetcher
+  );
   const seoDefaults = data?.branding?.seo_defaults as SeoDefaults | undefined;
 
   const form = useForm<EditSeoFormValues>({
@@ -49,15 +64,19 @@ export const EditSeoDrawer = () => {
     setOpen(true);
   }, []);
 
-  useEffect(function updateFormData() {
-    if (seoDefaults && !form.formState.isDirty) {
-      form.reset({
-        site_tagline: seoDefaults.site_tagline || "",
-        meta_description_template: seoDefaults.meta_description_template || "",
-        default_og_image_url: seoDefaults.default_og_image_url || "",
-      });
-    }
-  }, [seoDefaults, form]);
+  useEffect(
+    function updateFormData() {
+      if (seoDefaults && !form.formState.isDirty) {
+        form.reset({
+          site_tagline: seoDefaults.site_tagline || "",
+          meta_description_template:
+            seoDefaults.meta_description_template || "",
+          default_og_image_url: seoDefaults.default_og_image_url || "",
+        });
+      }
+    },
+    [seoDefaults, form]
+  );
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -87,7 +106,8 @@ export const EditSeoDrawer = () => {
           seo_defaults: hasContent
             ? {
                 site_tagline: values.site_tagline || undefined,
-                meta_description_template: values.meta_description_template || undefined,
+                meta_description_template:
+                  values.meta_description_template || undefined,
                 default_og_image_url: ogImageUrl || undefined,
               }
             : null,
@@ -128,7 +148,10 @@ export const EditSeoDrawer = () => {
           </Drawer.Body>
         ) : (
           <Form {...form}>
-            <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-1 flex-col overflow-hidden"
+            >
               <Drawer.Body className="flex flex-col gap-y-8 overflow-y-auto">
                 <Form.Field
                   control={form.control}
@@ -137,9 +160,14 @@ export const EditSeoDrawer = () => {
                     <Form.Item>
                       <Form.Label optional>Site Tagline</Form.Label>
                       <Form.Control>
-                        <Input placeholder="Your trusted online store" {...field} />
+                        <Input
+                          placeholder="Your trusted online store"
+                          {...field}
+                        />
                       </Form.Control>
-                      <Form.Hint>A short tagline describing your store</Form.Hint>
+                      <Form.Hint>
+                        A short tagline describing your store
+                      </Form.Hint>
                       <Form.ErrorMessage />
                     </Form.Item>
                   )}
@@ -149,7 +177,9 @@ export const EditSeoDrawer = () => {
                   name="meta_description_template"
                   render={({ field }) => (
                     <Form.Item>
-                      <Form.Label optional>Meta Description Template</Form.Label>
+                      <Form.Label optional>
+                        Meta Description Template
+                      </Form.Label>
                       <Form.Control>
                         <Textarea
                           placeholder="{{product}} - Buy {{title}} at My Store. Free shipping on orders over $50."
@@ -158,8 +188,8 @@ export const EditSeoDrawer = () => {
                         />
                       </Form.Control>
                       <Form.Hint>
-                        Template for generating meta descriptions. Use {"{{product}}"}, {"{{title}}"}{" "}
-                        as placeholders.
+                        Template for generating meta descriptions. Use{" "}
+                        {"{{product}}"}, {"{{title}}"} as placeholders.
                       </Form.Hint>
                       <Form.ErrorMessage />
                     </Form.Item>
@@ -180,7 +210,10 @@ export const EditSeoDrawer = () => {
                               className="w-16 h-16 object-cover rounded"
                             />
                             <div className="flex-1 min-w-0">
-                              <Text size="small" className="text-ui-fg-base truncate">
+                              <Text
+                                size="small"
+                                className="text-ui-fg-base truncate"
+                              >
                                 {uploadedFile.file.name}
                               </Text>
                               <Text size="xsmall" className="text-ui-fg-muted">
@@ -196,14 +229,22 @@ export const EditSeoDrawer = () => {
                               Remove
                             </Button>
                           </div>
-                          <Form.Hint>Uploaded file will replace URL input</Form.Hint>
+                          <Form.Hint>
+                            Uploaded file will replace URL input
+                          </Form.Hint>
                         </div>
                       ) : (
                         <>
                           <Form.Control>
-                            <Input placeholder="https://example.com/og-image.jpg" {...field} />
+                            <Input
+                              placeholder="https://example.com/og-image.jpg"
+                              {...field}
+                            />
                           </Form.Control>
-                          <Form.Hint>Default image used when sharing on social media. Or upload a file below.</Form.Hint>
+                          <Form.Hint>
+                            Default image used when sharing on social media. Or
+                            upload a file below.
+                          </Form.Hint>
                         </>
                       )}
                       <Form.ErrorMessage />
@@ -217,7 +258,38 @@ export const EditSeoDrawer = () => {
                     formats={SUPPORTED_IMAGE_FORMATS}
                     multiple={false}
                     maxFileSize={5 * 1024 * 1024} // 5MB
-                    onUploaded={(files) => {
+                    onUploaded={(files, rejectedFiles) => {
+                      // Handle rejected files first
+                      if (rejectedFiles && rejectedFiles.length > 0) {
+                        const sizeRejected = rejectedFiles.filter(
+                          (f: RejectedFile) => f.reason === "size"
+                        );
+                        const formatRejected = rejectedFiles.filter(
+                          (f: RejectedFile) => f.reason === "format"
+                        );
+
+                        if (sizeRejected.length > 0) {
+                          const file = sizeRejected[0];
+                          const fileSizeMB = (
+                            file.file.size /
+                            (1024 * 1024)
+                          ).toFixed(2);
+                          toast.error(
+                            `File "${file.file.name}" is too large (${fileSizeMB} MB). Maximum file size is 5 MB.`
+                          );
+                        }
+
+                        if (formatRejected.length > 0) {
+                          const file = formatRejected[0];
+                          toast.error(
+                            `File "${file.file.name}" is not a supported image format.`
+                          );
+                        }
+
+                        return; // Don't process files if there are rejections
+                      }
+
+                      // Process valid files
                       if (files.length > 0) {
                         handleFileUpload(files[0]);
                       }
@@ -244,4 +316,3 @@ export const EditSeoDrawer = () => {
     </Drawer>
   );
 };
-

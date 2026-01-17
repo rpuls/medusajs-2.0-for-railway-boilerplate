@@ -9,7 +9,11 @@ import { z } from "zod";
 import { sdk, brandingFetcher } from "../../../lib/sdk";
 import { BrandingResponse, Logos } from "../../../lib/types";
 import { Form } from "../common/form";
-import { FileUpload, FileType } from "../../../components/common/file-upload";
+import {
+  FileUpload,
+  FileType,
+  RejectedFile,
+} from "../../../components/common/file-upload";
 
 const SUPPORTED_IMAGE_FORMATS = [
   "image/jpeg",
@@ -34,6 +38,39 @@ const EditLogosSchema = z.object({
 
 type EditLogosFormValues = z.infer<typeof EditLogosSchema>;
 
+const getRatioRecommendation = (
+  prefix: "main" | "footer" | "favicon"
+): string => {
+  switch (prefix) {
+    case "main":
+    case "footer":
+      return "Recommended aspect ratio: 4:1 or 3:1 (horizontal logo)";
+    case "favicon":
+      return "Recommended: 1:1 (square), ideally 32×32px or 64×64px";
+    default:
+      return "";
+  }
+};
+
+const getImageDimensions = (
+  file: File
+): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      // Default to 0 if image can't be loaded
+      resolve({ width: 0, height: 0 });
+    };
+    img.src = url;
+  });
+};
+
 const LogoFields = ({
   prefix,
   label,
@@ -53,8 +90,8 @@ const LogoFields = ({
     <Heading level="h3" className="text-ui-fg-base">
       {label}
     </Heading>
-    <div className="grid grid-cols-2 gap-4">
-      <div className="col-span-2">
+    <div className="space-y-4">
+      <div>
         <Form.Field
           control={control}
           name={`${prefix}.url`}
@@ -104,23 +141,56 @@ const LogoFields = ({
           )}
         />
       </div>
-      <div className="col-span-2">
-        {!uploadedFile && (
+      {!uploadedFile && (
+        <div className="space-y-2">
           <FileUpload
             label="Upload Image"
             hint="Drag and drop an image here or click to upload"
             formats={SUPPORTED_IMAGE_FORMATS}
             multiple={false}
             maxFileSize={5 * 1024 * 1024} // 5MB
-            onUploaded={(files) => {
+            onUploaded={(files, rejectedFiles) => {
+              // Handle rejected files first
+              if (rejectedFiles && rejectedFiles.length > 0) {
+                const sizeRejected = rejectedFiles.filter(
+                  (f: RejectedFile) => f.reason === "size"
+                );
+                const formatRejected = rejectedFiles.filter(
+                  (f: RejectedFile) => f.reason === "format"
+                );
+
+                if (sizeRejected.length > 0) {
+                  const file = sizeRejected[0];
+                  const fileSizeMB = (file.file.size / (1024 * 1024)).toFixed(
+                    2
+                  );
+                  toast.error(
+                    `File "${file.file.name}" is too large (${fileSizeMB} MB). Maximum file size is 5 MB.`
+                  );
+                }
+
+                if (formatRejected.length > 0) {
+                  const file = formatRejected[0];
+                  toast.error(
+                    `File "${file.file.name}" is not a supported image format.`
+                  );
+                }
+
+                return; // Don't process files if there are rejections
+              }
+
+              // Process valid files
               if (files.length > 0) {
                 onFileUpload(files[0]);
               }
             }}
           />
-        )}
-      </div>
-      <div className="col-span-2">
+          <Text size="xsmall" className="text-ui-fg-muted">
+            {getRatioRecommendation(prefix)}
+          </Text>
+        </div>
+      )}
+      <div>
         <Form.Field
           control={control}
           name={`${prefix}.alt`}
@@ -135,32 +205,6 @@ const LogoFields = ({
           )}
         />
       </div>
-      <Form.Field
-        control={control}
-        name={`${prefix}.width`}
-        render={({ field }) => (
-          <Form.Item>
-            <Form.Label optional>Width (px)</Form.Label>
-            <Form.Control>
-              <Input type="number" placeholder="200" {...field} />
-            </Form.Control>
-            <Form.ErrorMessage />
-          </Form.Item>
-        )}
-      />
-      <Form.Field
-        control={control}
-        name={`${prefix}.height`}
-        render={({ field }) => (
-          <Form.Item>
-            <Form.Label optional>Height (px)</Form.Label>
-            <Form.Control>
-              <Input type="number" placeholder="50" {...field} />
-            </Form.Control>
-            <Form.ErrorMessage />
-          </Form.Item>
-        )}
-      />
     </div>
   </div>
 );
@@ -206,20 +250,20 @@ export const EditLogosDrawer = () => {
           main: {
             url: logos?.main?.url || "",
             alt: logos?.main?.alt || "",
-            width: logos?.main?.width || "",
-            height: logos?.main?.height || "",
+            width: (logos?.main?.width?.toString() || "") as any,
+            height: (logos?.main?.height?.toString() || "") as any,
           },
           footer: {
             url: logos?.footer?.url || "",
             alt: logos?.footer?.alt || "",
-            width: logos?.footer?.width || "",
-            height: logos?.footer?.height || "",
+            width: (logos?.footer?.width?.toString() || "") as any,
+            height: (logos?.footer?.height?.toString() || "") as any,
           },
           favicon: {
             url: logos?.favicon?.url || "",
             alt: logos?.favicon?.alt || "",
-            width: logos?.favicon?.width || "",
-            height: logos?.favicon?.height || "",
+            width: (logos?.favicon?.width?.toString() || "") as any,
+            height: (logos?.favicon?.height?.toString() || "") as any,
           },
         });
       }
@@ -294,8 +338,17 @@ export const EditLogosDrawer = () => {
   });
 
   const handleFileUpload =
-    (prefix: "main" | "footer" | "favicon") => (file: FileType) => {
+    (prefix: "main" | "footer" | "favicon") => async (file: FileType) => {
       setUploadedFiles((prev) => ({ ...prev, [prefix]: file }));
+
+      // Auto-detect and set dimensions from uploaded image
+      try {
+        const { width, height } = await getImageDimensions(file.file);
+        form.setValue(`${prefix}.width`, width.toString() as any);
+        form.setValue(`${prefix}.height`, height.toString() as any);
+      } catch (error) {
+        // Fail silently, dimensions will remain 0
+      }
     };
 
   const handleFileRemove = (prefix: "main" | "footer" | "favicon") => () => {
@@ -304,6 +357,9 @@ export const EditLogosDrawer = () => {
       URL.revokeObjectURL(file.url);
     }
     setUploadedFiles((prev) => ({ ...prev, [prefix]: null }));
+    // Reset dimensions when file is removed
+    form.setValue(`${prefix}.width`, "" as any);
+    form.setValue(`${prefix}.height`, "" as any);
   };
 
   return (
