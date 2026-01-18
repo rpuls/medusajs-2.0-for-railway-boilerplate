@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import useEmblaCarousel from "embla-carousel-react"
-import { clx, Heading, Text } from "@medusajs/ui"
+import { clx } from "@medusajs/ui"
 import type { CarouselSlide } from "@lib/data/branding"
 import Fade from "embla-carousel-fade"
 import Autoplay from "embla-carousel-autoplay"
@@ -12,6 +12,7 @@ import { MediaPlay, MediaStopSolid } from "@medusajs/icons"
 import { PrevButton, NextButton, usePrevNextButtons } from "./carousel-arrow-buttons"
 import { useAutoplay } from "./carousel-autoplay"
 import { useAutoplayProgress } from "./carousel-autoplay-progress"
+import CarouselSlideContent from "./carousel-slide-content"
 
 type CarouselProps = {
     carouselSlides: CarouselSlide[]
@@ -50,39 +51,7 @@ const Carousel = ({ carouselSlides }: CarouselProps) => {
                 <div className="embla__container flex touch-pan-y touch-pinch-zoom">
                     {sortedSlides.map((slide, index) => (
                         <div key={index} className="embla__slide translate-x-0 flex-[0_0_100%] min-w-0 relative h-[75vh]">
-                            {slide.image_url ? (
-                                <img
-                                    src={slide.image_url}
-                                    alt={slide.title || `Slide ${index + 1}`}
-                                    className="embla__slide__img block h-full w-full object-cover select-none"
-                                />
-                            ) : (
-                                <div className="h-full w-full bg-ui-bg-subtle" />
-                            )}
-                            {(slide.title || slide.description || slide.link_url) && (
-                                <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center small:p-32 gap-6 bg-black/10">
-                                    {slide.title && (
-                                        <Heading
-                                            level="h1"
-                                            className="text-3xl leading-10 text-ui-fg-base font-normal"
-                                        >
-                                            {slide.title}
-                                        </Heading>
-                                    )}
-                                    {slide.description && (
-                                        <Text className="text-ui-fg-subtle text-lg max-w-2xl">
-                                            {slide.description}
-                                        </Text>
-                                    )}
-                                    {slide.link_url && (
-                                        <a href={slide.link_url}>
-                                            <Text className="text-ui-fg-interactive underline hover:text-ui-fg-interactive-hover">
-                                                {slide.link_text || slide.link_url}
-                                            </Text>
-                                        </a>
-                                    )}
-                                </div>
-                            )}
+                            <CarouselSlideContent slide={slide} index={index} />
                         </div>
                     ))}
                 </div>
