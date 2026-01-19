@@ -16,7 +16,7 @@ type CarouselProps = {
 const Carousel = ({ carouselSlides }: CarouselProps) => {
     const [emblaRef, emblaApi] = useEmblaCarousel(
         { loop: true, duration: 30 },
-        [Fade(), Autoplay({ playOnInit: false, delay: 5000 })]
+        [Fade(), Autoplay({ playOnInit: true, delay: 5000 })]
     )
 
     const progressRef = useRef<HTMLDivElement>(null)
@@ -42,8 +42,8 @@ const Carousel = ({ carouselSlides }: CarouselProps) => {
     )
 
     return (
-        <div className="embla border-b border-ui-border-base bg-ui-bg-base relative" style={{ '--slide-height': '75vh' } as React.CSSProperties}>
-            <div className="embla__viewport overflow-hidden" ref={emblaRef}>
+        <div className="embla bg-ui-bg-base relative" style={{ '--slide-height': '75vh' } as React.CSSProperties}>
+            <div className="embla__viewport overflow-hidden rounded-2xl" ref={emblaRef}>
                 <div className="embla__container flex touch-pan-y touch-pinch-zoom">
                     {sortedSlides.map((slide, index) => (
                         <div key={index} className="embla__slide translate-x-0 flex-[0_0_100%] min-w-0 relative h-[75vh]">

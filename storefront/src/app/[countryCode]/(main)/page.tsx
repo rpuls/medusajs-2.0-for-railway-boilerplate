@@ -34,7 +34,8 @@ export default async function Home({
 
   return (
     <>
-      {carouselSlides && <Carousel carouselSlides={carouselSlides} />}
+
+      {carouselSlides && <div className="content-container py-8"> <Carousel carouselSlides={carouselSlides} /> </div>}
       <Hero />
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">

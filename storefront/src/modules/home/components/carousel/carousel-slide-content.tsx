@@ -1,6 +1,6 @@
 "use client"
 
-import { Heading, Text } from "@medusajs/ui"
+import { Button, Heading, Text } from "@medusajs/ui"
 import type { CarouselSlide } from "@lib/data/branding"
 
 type CarouselSlideContentProps = {
@@ -21,11 +21,11 @@ const CarouselSlideContent = ({ slide, index }: CarouselSlideContentProps) => {
                 <div className="h-full w-full bg-ui-bg-subtle" />
             )}
             {(slide.title || slide.description || slide.link_url) && (
-                <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center small:p-32 gap-6">
+                <div className="absolute inset-0 z-10 flex flex-col justify-end items-start text-start small:p-12 gap-6 bg-black/10">
                     {slide.title && (
                         <Heading
                             level="h1"
-                            className="text-3xl leading-10 text-ui-fg-base font-normal"
+                            className="text-7xl font-bold text-ui-fg-base max-w-lg"
                         >
                             {slide.title}
                         </Heading>
@@ -37,9 +37,9 @@ const CarouselSlideContent = ({ slide, index }: CarouselSlideContentProps) => {
                     )}
                     {slide.link_url && (
                         <a href={slide.link_url}>
-                            <Text className="text-ui-fg-interactive underline hover:text-ui-fg-interactive-hover">
+                            <Button size="large">
                                 {slide.link_text || slide.link_url}
-                            </Text>
+                            </Button>
                         </a>
                     )}
                 </div>

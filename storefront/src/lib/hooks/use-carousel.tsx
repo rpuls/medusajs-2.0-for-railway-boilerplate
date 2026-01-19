@@ -101,6 +101,7 @@ export const useAutoplay = (
 ): UseAutoplayType => {
     const [autoplayIsPlaying, setAutoplayIsPlaying] = useState(false)
 
+
     const onAutoplayButtonClick = useCallback(
         (callback: () => void) => {
             const autoplay = emblaApi?.plugins()?.autoplay
