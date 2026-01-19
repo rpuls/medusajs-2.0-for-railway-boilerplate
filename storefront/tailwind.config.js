@@ -144,6 +144,26 @@ module.exports = {
           "0%": { transform: "translate3d(0, 0, 0)" },
           "100%": { transform: "translate3d(100%, 0, 0)" },
         },
+        "time-loader": {
+          "0%": {
+            "clip-path": "polygon(50% 50%,0 0,0 0,0 0,0 0,0 0)",
+            "border-color": "rgba(0,0,0,0)",
+          },
+          "25%": {
+            "clip-path": "polygon(50% 50%,0 0,100% 0,100% 0,100% 0,100% 0)",
+          },
+          "50%": {
+            "clip-path": "polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)",
+            "border-color": "rgba(0,0,0,0.2)",
+          },
+          "75%": {
+            "clip-path": "polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 100%)",
+          },
+          "100%": {
+            "clip-path": "polygon(50% 50%,0 0,100% 0,100% 100%,0 100%,0 0)",
+            "border-color": "rgba(0,0,0,0)",
+          },
+        },
       },
       animation: {
         ring: "ring 2.2s cubic-bezier(0.5, 0, 0.5, 1) infinite",
@@ -159,7 +179,7 @@ module.exports = {
         enter: "enter 200ms ease-out",
         "slide-in": "slide-in 1.2s cubic-bezier(.41,.73,.51,1.02)",
         leave: "leave 150ms ease-in forwards",
-        "autoplay-progress": "autoplay-progress 3s linear infinite",
+        "time-loader": "time-loader 3s linear infinite",
       },
     },
   },
