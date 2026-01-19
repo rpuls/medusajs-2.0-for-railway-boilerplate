@@ -28,14 +28,21 @@ export const useAutoplayProgress = <ProgressElement extends HTMLElement>(
             animationName.current = style.animationName
         }
 
+        // Record when the timer was set with high precision
+        const timerStartTime = performance.now()
+
         node.style.animationName = 'none'
         node.style.transform = 'translate3d(0,0,0)'
 
-
         rafId.current = window.requestAnimationFrame(() => {
             timeoutId.current = window.setTimeout(() => {
+                // Calculate elapsed time with high precision
+                const elapsedTime = performance.now() - timerStartTime
+                // Adjust duration to account for elapsed time
+                const remainingTime = Math.max(0, timeUntilNext - elapsedTime)
+
                 node.style.animationName = animationName.current
-                node.style.animationDuration = `${timeUntilNext}ms`
+                node.style.animationDuration = `${remainingTime}ms`
             }, 0)
         })
 
