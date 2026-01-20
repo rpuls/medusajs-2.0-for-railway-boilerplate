@@ -1,5 +1,5 @@
 import { clx, IconButton } from '@medusajs/ui'
-import { ChevronLeft, ChevronRight, MediaPlay, Pause } from '@medusajs/icons'
+import { ChevronLeft, ChevronRight, PauseSolid, PlaySolid } from '@medusajs/icons'
 import React, { forwardRef } from 'react'
 
 
@@ -46,7 +46,7 @@ const CarouselControls = forwardRef<HTMLDivElement, CarouselControlsProps>(({ cu
                 }} className={clx("absolute inset-0.5 rounded-full border-[16px] border-ui-fg-interactive/30 rotate-45 animate-time-loader transition-opacity", showAutoplayProgress ? "" : "opacity-0")} ref={progressRef} />
 
                 <div className="relative">
-                    {isPlaying ? <Pause /> : <MediaPlay />}
+                    {isPlaying ? <PauseSolid /> : <PlaySolid />}
                 </div>
             </IconButton>
         </div>

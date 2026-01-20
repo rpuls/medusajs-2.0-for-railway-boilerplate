@@ -31,7 +31,7 @@ const CarouselSlideContent = ({ slide, index }: CarouselSlideContentProps) => {
                         </Heading>
                     )}
                     {slide.description && (
-                        <Text className="text-ui-fg-subtle text-lg max-w-2xl">
+                        <Text className="text-lg font-semibold max-w-2xl">
                             {slide.description}
                         </Text>
                     )}
