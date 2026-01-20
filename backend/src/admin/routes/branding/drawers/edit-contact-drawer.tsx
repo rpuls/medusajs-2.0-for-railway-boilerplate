@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { phone } from "phone";
 
 import { sdk, brandingFetcher } from "../../../lib/sdk";
 import { BrandingResponse, ContactInfo } from "../../../lib/types";
@@ -12,7 +13,21 @@ import { Form } from "../common/form";
 
 const EditContactSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().optional(),
+  phone: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        // If empty or undefined, validation passes (field is optional)
+        if (!val || val.trim() === "") return true;
+        // Validate phone number using the phone package
+        const validation = phone(val);
+        return validation.isValid;
+      },
+      {
+        message: "Please enter a valid international phone number (e.g., +1-555-123-4567)",
+      }
+    ),
   address: z.string().optional(),
 });
 
@@ -66,10 +81,10 @@ export const EditContactDrawer = () => {
         body: {
           contact_info: hasContent
             ? {
-                email: values.email || undefined,
-                phone: values.phone || undefined,
-                address: values.address || undefined,
-              }
+              email: values.email || undefined,
+              phone: values.phone || undefined,
+              address: values.address || undefined,
+            }
             : null,
         },
       });

@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@hookform/resolvers':
         specifier: ^5.2.2
-        version: 5.2.2(react-hook-form@7.55.0(react@18.3.1))
+        version: 5.2.2(react-hook-form@7.49.1(react@18.3.1))
       '@medusajs/admin-sdk':
         specifier: 2.10.2
         version: 2.10.2
@@ -65,12 +65,15 @@ importers:
       minio:
         specifier: ^8.0.6
         version: 8.0.6
+      phone:
+        specifier: ^3.1.69
+        version: 3.1.69
       radix-ui:
         specifier: 1.1.2
         version: 1.1.2(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-hook-form:
         specifier: 7.55.0
-        version: 7.55.0(react@18.3.1)
+        version: 7.49.1(react@18.3.1)
       react-router-dom:
         specifier: 6.20.1
         version: 6.20.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -6523,6 +6526,10 @@ packages:
   pgpass@1.0.5:
     resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
 
+  phone@3.1.69:
+    resolution: {integrity: sha512-Nc6lY9p4bbdYdmHewuIC5lZdLOnu5r0Vm9imL4leZCz0tUD5RFPqRtdGmYR6VMpFT5oP+8ty2nu6lxVV3Jzprw==}
+    engines: {node: '>=12'}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -6776,12 +6783,6 @@ packages:
     engines: {node: '>=18', pnpm: '8'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18
-
-  react-hook-form@7.55.0:
-    resolution: {integrity: sha512-XRnjsH3GVMQz1moZTW53MxfoWN7aDpUg/GpVNc4A3eXRVNdGXfbzJ4vM4aLQ8g6XCUh1nIbx70aaNCl7kxnjog==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      react: ^16.8.0 || ^17 || ^18 || ^19
 
   react-i18next@13.5.0:
     resolution: {integrity: sha512-CFJ5NDGJ2MUyBohEHxljOq/39NQ972rh1ajnadG9BjTk+UXbHLq4z5DKEbEQBDoIhUmmbuS/fIMJKo6VOax1HA==}
@@ -8844,10 +8845,10 @@ snapshots:
     dependencies:
       react-hook-form: 7.49.1(react@18.3.1)
 
-  '@hookform/resolvers@5.2.2(react-hook-form@7.55.0(react@18.3.1))':
+  '@hookform/resolvers@5.2.2(react-hook-form@7.49.1(react@18.3.1))':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.55.0(react@18.3.1)
+      react-hook-form: 7.49.1(react@18.3.1)
 
   '@img/colour@1.0.0':
     optional: true
@@ -15735,6 +15736,8 @@ snapshots:
     dependencies:
       split2: 4.2.0
 
+  phone@3.1.69: {}
+
   picocolors@1.1.1: {}
 
   picomatch@2.3.1: {}
@@ -16057,10 +16060,6 @@ snapshots:
       shallowequal: 1.1.0
 
   react-hook-form@7.49.1(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-
-  react-hook-form@7.55.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 

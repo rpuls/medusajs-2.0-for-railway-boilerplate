@@ -40,6 +40,7 @@
     "@tanstack/react-query": "^5.90.16",
     "medusajs-launch-utils": "0.0.18",
     "minio": "^8.0.6",
+    "phone": "^3.1.69",
     "resend": "4.0.1",
     "swr": "^2.3.8",
     "ulid": "^2.4.0",
@@ -64,9 +65,9 @@
     "vite": "^5.4.21"
   },
   "peerDependencies": {
-    "react-router-dom": "6.20.1",
+    "radix-ui": "1.1.2",
     "react-hook-form": "7.55.0",
-    "radix-ui": "1.1.2"
+    "react-router-dom": "6.20.1"
   },
   "packageManager": "pnpm@9.10.0",
   "engines": {
