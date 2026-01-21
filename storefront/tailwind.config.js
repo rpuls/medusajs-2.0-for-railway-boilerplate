@@ -69,6 +69,7 @@ module.exports = {
           "Ubuntu",
           "sans-serif",
         ],
+        heading: ["var(--font-bricolage-grotesque)", "sans-serif"],
       },
       keyframes: {
         ring: {

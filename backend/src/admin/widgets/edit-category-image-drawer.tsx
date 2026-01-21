@@ -260,7 +260,7 @@ export const EditCategoryImageDrawer = ({
                                         hint="Drag and drop an image here or click to upload"
                                         formats={SUPPORTED_IMAGE_FORMATS}
                                         multiple={false}
-                                        maxFileSize={5 * 1024 * 1024} // 5MB
+                                        maxFileSize={20 * 1024 * 1024} // 20MB
                                         onUploaded={handleFileUpload}
                                     />
                                     {uploadedFile && (
