@@ -6,14 +6,12 @@ import { EmblaCarouselType } from 'embla-carousel'
 // useCarouselIndex hook
 type UseCarouselInfoType = {
     currentSlide: number
-    totalSlides: number
 }
 
 export const useCarouselIndex = (
     emblaApi: EmblaCarouselType | undefined
 ): UseCarouselInfoType => {
     const [currentSlide, setCurrentSlide] = useState(0)
-    const [totalSlides, setTotalSlides] = useState(0)
 
     const onSelect = useCallback(() => {
         if (!emblaApi) return
@@ -22,7 +20,6 @@ export const useCarouselIndex = (
 
     const onInit = useCallback(() => {
         if (!emblaApi) return
-        setTotalSlides(emblaApi.scrollSnapList().length)
         setCurrentSlide(emblaApi.selectedScrollSnap())
     }, [emblaApi])
 
@@ -41,7 +38,6 @@ export const useCarouselIndex = (
 
     return {
         currentSlide,
-        totalSlides
     }
 }
 
