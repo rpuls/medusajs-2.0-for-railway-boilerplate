@@ -19,7 +19,7 @@ type CarouselControlsProps = {
 
 const CarouselControls = forwardRef<HTMLDivElement, CarouselControlsProps>(({ currentIndex, totalSlides, onPrev, onNext, isPrevDisabled, isNextDisabled, isPlaying, showAutoplayProgress, toggleAutoplay }, progressRef) => {
     return (
-        <div className="flex gap-4 h-9">
+        <div className="flex gap-2 sm:gap-4 h-9">
             {/* Previous and Next Buttons */}
             <div className="rounded-full flex divide-x bg-ui-bg-base h-full overflow-hidden shadow border border-ui-border-base">
                 <IconButton type='button' variant='transparent' size='base' className='rounded-none h-full w-9' onClick={onPrev} disabled={isPrevDisabled}>
