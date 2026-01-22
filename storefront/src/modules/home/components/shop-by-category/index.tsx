@@ -16,8 +16,8 @@ const ShopByCategorySection = ({
     }
 
     return (
-        <section className="flex flex-col gap-8">
-            <Heading level="h2" className="text-ui-fg-base font-heading text-3xl font-bold">
+        <section className="flex flex-col gap-6 sm:gap-10">
+            <Heading level="h2" className="text-ui-fg-base font-heading text-2xl sm:text-4xl font-bold">
                 Shop by Category
             </Heading>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
