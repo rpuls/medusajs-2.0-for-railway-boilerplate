@@ -41,13 +41,15 @@ export default async function Home({
 
   return (
     <>
-      {carouselSlides && <div className="content-container py-8">
+      {carouselSlides && <div className="container pt-8">
         <Carousel carouselSlides={carouselSlides} />
       </div>}
       {categories.length > 0 && (
-        <div className="content-container py-8">
-          <ShopByCategory countryCode={countryCode} categories={categories} />
-        </div>
+        <section className="bg-ui-bg-subtle">
+          <div className="container">
+            <ShopByCategory countryCode={countryCode} categories={categories} />
+          </div>
+        </section>
       )}
       <Hero />
       <div className="py-12">
