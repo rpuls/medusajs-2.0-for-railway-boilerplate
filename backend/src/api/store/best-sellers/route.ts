@@ -3,12 +3,13 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const query = req.scope.resolve("query");
     const logger = req.scope.resolve("logger");
-    const { category_id, collection_id } = req.validatedQuery;
+    const { category_ids, collection_id } = req.validatedQuery;
 
-    // Build filters: category_id takes priority over collection_id
+    // Build filters: category_ids takes priority over collection_id
     const filters: any = {};
-    if (category_id) {
-        filters.category_id = category_id;
+    if (category_ids && Array.isArray(category_ids) && category_ids.length > 0) {
+        // Filter by multiple category IDs - products matching any of the categories
+        filters.category_id = category_ids;
     } else if (collection_id) {
         filters.collection_id = collection_id;
     }

@@ -8,6 +8,7 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
+import TrackCategoryVisit from "@modules/categories/components/track-category-visit"
 
 export default function CategoryTemplate({
   categories,
@@ -29,11 +30,13 @@ export default function CategoryTemplate({
   if (!category || !countryCode) notFound()
 
   return (
-    <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
-      data-testid="category-container"
-    >
-      <RefinementList sortBy={sort} data-testid="sort-by-container" />
+    <>
+      <TrackCategoryVisit categoryId={category.id} />
+      <div
+        className="flex flex-col small:flex-row small:items-start py-6 content-container"
+        data-testid="category-container"
+      >
+        <RefinementList sortBy={sort} data-testid="sort-by-container" />
       <div className="w-full">
         <div className="flex flex-row mb-8 text-2xl-semi gap-4">
           {parents &&
@@ -79,5 +82,6 @@ export default function CategoryTemplate({
         </Suspense>
       </div>
     </div>
+    </>
   )
 }

@@ -10,6 +10,8 @@ import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getBrandingConfig } from "@lib/data/branding"
 import { getCategoriesList } from "@lib/data/categories"
+import { getPersonalizationCategoryIds } from "@lib/data/cookies"
+import { getBestSellers } from "@lib/data/best-sellers"
 
 export const metadata: Metadata = {
   title: "Medusa Next.js Starter Template",
@@ -40,23 +42,52 @@ export default async function Home({
       ? branding.carousel_slides
       : null
 
+  // Check if category_ids cookie exists for personalization
+  const categoryIds = await getPersonalizationCategoryIds()
+  const hasPersonalizedCategories = categoryIds.length > 0
+
+  // Fetch best sellers to check if we should show the section
+  const bestSellersProducts = await getBestSellers({
+    category_ids: hasPersonalizedCategories ? categoryIds : undefined,
+    regionId: region.id,
+    limit: 4,
+  })
+
   return (
     <>
       {carouselSlides && <div className="container pt-8">
         <Carousel carouselSlides={carouselSlides} />
       </div>}
-      {categories.length > 0 && (
-        <section className="bg-ui-bg-subtle">
-          <div className="container">
-            <ShopByCategory countryCode={countryCode} categories={categories} />
-          </div>
-        </section>
+
+      {hasPersonalizedCategories ? (
+        // If category_ids cookie exists, show Best Sellers before Shop By Category
+        <>
+          {bestSellersProducts.length > 0 && (
+            <div className="container">
+              <BestSellers region={region} limit={12} />
+            </div>
+          )}
+          {categories.length > 0 && (
+            <div className="container">
+              <ShopByCategory countryCode={countryCode} categories={categories} />
+            </div>
+          )}
+        </>
+      ) : (
+        // If no category_ids cookie, maintain original order
+        <>
+          {categories.length > 0 && (
+            <div className="container">
+              <ShopByCategory countryCode={countryCode} categories={categories} />
+            </div>
+          )}
+          {bestSellersProducts.length > 1 && (
+            <div className="container">
+              <BestSellers region={region} limit={12} />
+            </div>
+          )}
+        </>
       )}
-      {/* <section className="bg-ui-bg-subtle"> */}
-      <div className="container">
-        <BestSellers region={region} limit={12} />
-      </div>
-      {/* </section> */}
       {/* <Hero />
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">

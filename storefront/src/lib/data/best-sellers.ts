@@ -19,13 +19,13 @@ export type BestSellersResponse = {
 }
 
 export const getBestSellers = cache(async function ({
-    category_id,
+    category_ids,
     collection_id,
     regionId,
     limit = 12,
     offset = 0,
 }: {
-    category_id?: string
+    category_ids?: string[]
     collection_id?: string
     regionId: string
     limit?: number
@@ -37,9 +37,9 @@ export const getBestSellers = cache(async function ({
             offset,
         }
 
-        // category_id takes priority over collection_id
-        if (category_id) {
-            queryParams.category_id = category_id
+        // category_ids takes priority over collection_id
+        if (category_ids && category_ids.length > 0) {
+            queryParams.category_ids = category_ids
         } else if (collection_id) {
             queryParams.collection_id = collection_id
         }
