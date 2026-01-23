@@ -5,6 +5,7 @@ import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero from "@modules/home/components/hero"
 import Carousel from "@modules/home/components/carousel"
 import ShopByCategory from "@modules/home/components/shop-by-category"
+import BestSellers from "@modules/home/components/best-sellers"
 import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getBrandingConfig } from "@lib/data/branding"
@@ -51,12 +52,17 @@ export default async function Home({
           </div>
         </section>
       )}
-      <Hero />
+      {/* <section className="bg-ui-bg-subtle"> */}
+      <div className="container">
+        <BestSellers region={region} limit={12} />
+      </div>
+      {/* </section> */}
+      {/* <Hero />
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">
           <FeaturedProducts collections={collections} region={region} />
         </ul>
-      </div>
+      </div> */}
     </>
   )
 }
