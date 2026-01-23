@@ -5,6 +5,7 @@ export const ProductSales = model
         id: model.id().primaryKey(),
         product_id: model.text().unique(),
         category_id: model.text().nullable(),
+        collection_id: model.text().nullable(),
         selling_count: model.number().default(0),
     })
     .indexes([
@@ -14,6 +15,9 @@ export const ProductSales = model
         },
         {
             on: ["category_id"],
+        },
+        {
+            on: ["collection_id"],
         },
     ]);
 
