@@ -76,3 +76,20 @@ export const getPersonalizationCollectionId = async (): Promise<string | null> =
 
   return collectionIdCookie || null
 }
+
+/**
+ * Reads the recent_product_ids cookie and returns an array of product IDs
+ * Returns empty array if cookie doesn't exist or is invalid
+ */
+export const getRecentProductIds = async (): Promise<string[]> => {
+  const cookiesStore = await cookies()
+  const recentProductIdsCookie = cookiesStore.get("_personalization_recent_product_ids")?.value
+
+  if (!recentProductIdsCookie) {
+    return []
+  }
+
+  // Parse comma-separated string into array
+  const productIds = recentProductIdsCookie.split(",").map((id) => id.trim()).filter(Boolean)
+  return productIds
+}

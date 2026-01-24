@@ -6,12 +6,18 @@ import Hero from "@modules/home/components/hero"
 import Carousel from "@modules/home/components/carousel"
 import ShopByCategory from "@modules/home/components/shop-by-category"
 import BestSellers from "@modules/home/components/best-sellers"
+import RecentlyVisited from "@modules/home/components/recently-visited"
 import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getBrandingConfig } from "@lib/data/branding"
 import { getCategoriesList } from "@lib/data/categories"
-import { getPersonalizationCategoryIds } from "@lib/data/cookies"
+import {
+  getPersonalizationCategoryIds,
+  getPersonalizationCollectionId,
+  getRecentProductIds,
+} from "@lib/data/cookies"
 import { getBestSellers } from "@lib/data/best-sellers"
+import { getProductsById } from "@lib/data/products"
 
 export const metadata: Metadata = {
   title: "Medusa Next.js Starter Template",
@@ -44,14 +50,32 @@ export default async function Home({
 
   // Check if category_ids cookie exists for personalization
   const categoryIds = await getPersonalizationCategoryIds()
+  const collectionId = await getPersonalizationCollectionId()
   const hasPersonalizedCategories = categoryIds.length > 0
 
-  // Fetch best sellers to check if we should show the section
+  // Fetch best sellers products
   const bestSellersProducts = await getBestSellers({
     category_ids: hasPersonalizedCategories ? categoryIds : undefined,
+    collection_id: collectionId || undefined,
     regionId: region.id,
-    limit: 4,
+    limit: 12,
   })
+
+  // Fetch recently visited products
+  const recentProductIds = await getRecentProductIds()
+  let recentlyVisitedProducts: HttpTypes.StoreProduct[] = []
+  if (recentProductIds.length > 0) {
+    const productIdsToFetch = recentProductIds.slice(0, 4)
+    const fetchedProducts = await getProductsById({
+      ids: productIdsToFetch,
+      regionId: region.id,
+    })
+
+    // Maintain order from cookie
+    recentlyVisitedProducts = productIdsToFetch
+      .map((id) => fetchedProducts.find((p) => p.id === id))
+      .filter((product): product is HttpTypes.StoreProduct => product !== undefined)
+  }
 
   return (
     <>
@@ -59,12 +83,18 @@ export default async function Home({
         <Carousel carouselSlides={carouselSlides} />
       </div>}
 
+      {recentlyVisitedProducts.length > 0 && (
+        <div className="container">
+          <RecentlyVisited region={region} products={recentlyVisitedProducts} />
+        </div>
+      )}
+
       {hasPersonalizedCategories ? (
         // If category_ids cookie exists, show Best Sellers before Shop By Category
         <>
           {bestSellersProducts.length > 0 && (
             <div className="container">
-              <BestSellers region={region} limit={12} />
+              <BestSellers region={region} products={bestSellersProducts} />
             </div>
           )}
           {categories.length > 0 && (
@@ -81,9 +111,9 @@ export default async function Home({
               <ShopByCategory countryCode={countryCode} categories={categories} />
             </div>
           )}
-          {bestSellersProducts.length > 1 && (
+          {bestSellersProducts.length > 0 && (
             <div className="container">
-              <BestSellers region={region} limit={12} />
+              <BestSellers region={region} products={bestSellersProducts} />
             </div>
           )}
         </>

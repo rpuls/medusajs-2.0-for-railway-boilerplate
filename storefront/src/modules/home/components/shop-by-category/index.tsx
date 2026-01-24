@@ -1,5 +1,5 @@
 import type { HttpTypes } from "@medusajs/types"
-import { Heading } from "@medusajs/ui"
+import { Heading, Text } from "@medusajs/ui"
 import ShopByCategoryCard from "@modules/home/components/shop-by-category/shop-by-category-card"
 
 type ShopByCategorySectionProps = {
@@ -17,9 +17,14 @@ const ShopByCategorySection = ({
 
     return (
         <div className="flex flex-col gap-6 sm:gap-10">
-            <Heading level="h2" className="text-ui-fg-base font-heading text-2xl sm:text-4xl font-bold">
-                Shop by Category
-            </Heading>
+            <div className="flex flex-col gap-2">
+                <Heading level="h2" className="text-ui-fg-base font-heading text-2xl sm:text-4xl font-bold">
+                    Shop by Category
+                </Heading>
+                <Text className="text-ui-fg-muted">
+                    Browse our curated collection of categories
+                </Text>
+            </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {categories.slice(0, 8).map((category) => {
                     const href = `/categories/${category.handle}`
