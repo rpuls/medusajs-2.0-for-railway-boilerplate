@@ -18,18 +18,10 @@
     "analyze": "ANALYZE=true next build",
     "test-e2e": "playwright test e2e"
   },
-  "resolutions": {
-    "webpack": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "qs": ">=6.14.1"
-    }
-  },
   "dependencies": {
     "@headlessui/react": "^1.6.1",
     "@hookform/error-message": "^2.0.0",
-    "@medusajs/icons": "2.13.1",
+    "@medusajs/icons": "2.13.6",
     "@medusajs/js-sdk": "preview",
     "@medusajs/types": "preview",
     "@medusajs/ui": "preview",
@@ -42,12 +34,12 @@
     "@stripe/react-stripe-js": "^1.7.2",
     "@stripe/stripe-js": "^1.29.0",
     "algoliasearch": "^4.20.0",
-    "axios": "^1.12.0",
-    "lodash": "^4.17.23",
+    "axios": "^1.15.0",
+    "lodash": "^4.18.1",
     "medusajs-launch-utils": "0.0.18",
-    "next": "^15.5.10",
+    "next": "^15.5.15",
     "pg": "^8.11.3",
-    "qs": "^6.14.1",
+    "qs": "^6.15.1",
     "react": "19.0.4",
     "react-country-flag": "^3.0.2",
     "react-dom": "19.0.4",
@@ -55,7 +47,7 @@
     "react-intersection-observer": "^9.3.4",
     "server-only": "^0.0.1",
     "tailwindcss-radix": "^2.8.0",
-    "webpack": "^5.104.1"
+    "webpack": "^5.106.2"
   },
   "devDependencies": {
     "@babel/core": "^7.28.6",
@@ -72,7 +64,7 @@
     "autoprefixer": "^10.4.2",
     "babel-loader": "^8.2.3",
     "eslint": "^9.39.2",
-    "eslint-config-next": "^13.4.5",
+    "eslint-config-next": "^15.5.15",
     "postcss": "^8.4.8",
     "prettier": "^2.8.8",
     "tailwindcss": "^3.4.19",
