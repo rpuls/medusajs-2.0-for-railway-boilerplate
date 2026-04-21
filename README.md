@@ -6,7 +6,7 @@
       <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg" width=100>
     </picture>
   </a>
-  <a href="https://railway.app/template/gkU-27?referralCode=-Yg50p">
+  <a href="https://railway.com/deploy/medusajs-2136-storefront-new">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://railway.app/brand/logo-light.svg">
       <source media="(prefers-color-scheme: light)" srcset="https://railway.app/brand/logo-dark.svg">
@@ -42,7 +42,7 @@ This boilerplate is a monorepo consisting of the officially released MedusaJS 2.
 Updated: to `version 2.13.6` 🥳
 
 ## Deploy with no manual setup in minutes
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/gkU-27?referralCode=-Yg50p)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2136-storefront-new)
 
 
 ## Preconfigured 3rd party integrations
