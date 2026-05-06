@@ -1,6 +1,13 @@
 "use client"
 
-import { useCallback, useContext, useEffect, useMemo, useState } from "react"
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { RadioGroup } from "@headlessui/react"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -30,6 +37,7 @@ const Payment = ({
   )
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [cardBrand, setCardBrand] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
@@ -108,12 +116,14 @@ const Payment = ({
         return
       }
 
-      return router.push(
-        pathname + "?" + createQueryString("step", "review"),
-        {
-          scroll: false,
-        }
-      )
+      startTransition(() => {
+        router.push(
+          pathname + "?" + createQueryString("step", "review"),
+          {
+            scroll: false,
+          }
+        )
+      })
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -225,10 +235,11 @@ const Payment = ({
             variant="primary"
             className="checkout-primary-action mt-6 w-full small:w-auto"
             onClick={handleSubmit}
-            isLoading={isLoading}
+            isLoading={isLoading || isPending}
             disabled={
               (stripeSelected && stripeSessionReady && !cardComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard)
+              (!selectedPaymentMethod && !paidByGiftcard) ||
+              isPending
             }
             data-testid="submit-payment-button"
           >

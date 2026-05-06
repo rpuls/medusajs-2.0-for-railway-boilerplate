@@ -8,10 +8,10 @@
     {
       "id": "select_product",
       "title": "Select your product",
-      "description": "A t-shirt being selected with a cursor.",
+      "description": "A t-shirt outline with a selection cursor.",
       "format": "svg",
       "viewBox": "0 0 64 64",
-      "svg_content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#1A365D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 20l16-8 16 8v32H16z'/><path d='M32 12v8'/><path d='M20 22h24'/><circle cx='48' cy='48' r='10' stroke='#38B2AC'/><path d='M44 48l8-4v8z' fill='#38B2AC'/></svg>"
+      "svg_content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#1A365D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M24 14 L14 20 L8 30 L16 32 L20 28 L20 52 L44 52 L44 28 L48 32 L56 30 L50 20 L40 14 C38 18 35 20 32 20 C29 20 26 18 24 14 Z'/><path d='M44 46 L48 42 L54 50 L58 46 L52 38 L56 34 L46 32 L44 46 Z' fill='#38B2AC' stroke='#38B2AC'/></svg>"
     },
     {
       "id": "choose_colours_sizes",
@@ -24,10 +24,10 @@
     {
       "id": "upload_design",
       "title": "Upload your design",
-      "description": "A document with an image being uploaded.",
+      "description": "A t-shirt with an image placed on the chest.",
       "format": "svg",
       "viewBox": "0 0 64 64",
-      "svg_content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#1A365D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 12h16l12 12v28a2 2 0 01-2 2H20a2 2 0 01-2-2V14a2 2 0 012-2z'/><path d='M36 12v12h12'/><circle cx='32' cy='36' r='6'/><circle cx='48' cy='48' r='10' stroke='#38B2AC'/><path d='M48 52V44M44 48l4-4 4 4' stroke='#38B2AC'/></svg>"
+      "svg_content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#1A365D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M24 14 L14 20 L8 30 L16 32 L20 28 L20 52 L44 52 L44 28 L48 32 L56 30 L50 20 L40 14 C38 18 35 20 32 20 C29 20 26 18 24 14 Z'/><rect x='24' y='30' width='16' height='14' rx='1' stroke='#38B2AC'/><circle cx='28' cy='34' r='1.5' fill='#38B2AC' stroke='none'/><path d='M24 42 L30 36 L33 39 L36 36 L40 40 L40 44 L24 44 Z' stroke='#38B2AC'/></svg>"
     },
     {
       "id": "print_embroider_prove",
@@ -40,10 +40,10 @@
     {
       "id": "order_delivered",
       "title": "Your order is delivered",
-      "description": "A shipping box in motion.",
+      "description": "A shipping box with a delivery checkmark.",
       "format": "svg",
       "viewBox": "0 0 64 64",
-      "svg_content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#1A365D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M32 18L16 26l16 8 16-8-16-8z'/><path d='M16 26v16l16 8 16-8V26'/><path d='M32 34v24'/><path d='M24 30l16-8'/><path d='M12 36h-4M16 44h-8' stroke='#38B2AC'/></svg>"
+      "svg_content": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#1A365D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 22 L32 14 L50 22 L50 44 L32 52 L14 44 Z'/><path d='M14 22 L32 30 L50 22'/><path d='M32 30 L32 52'/><path d='M22 18 L40 26'/><circle cx='48' cy='48' r='8' fill='white' stroke='#38B2AC'/><path d='M44 48 L47 51 L52 45' stroke='#38B2AC'/></svg>"
     },
     {
       "id": "pickup_lansvale",

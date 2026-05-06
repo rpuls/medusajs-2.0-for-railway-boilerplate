@@ -7,7 +7,7 @@ import { Button, Heading, Text, clx } from "@medusajs/ui"
 import Radio from "@modules/common/components/radio"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { setShippingMethod } from "@lib/data/cart"
 import { formatStoreCartShippingOptionPrice } from "@lib/util/shipping-option-price"
 import { HttpTypes } from "@medusajs/types"
@@ -36,7 +36,10 @@ const Shipping: React.FC<ShippingProps> = ({
   thresholdGrams,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [pendingOptionId, setPendingOptionId] = useState<string | null>(null)
+  const [optimisticId, setOptimisticId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -44,9 +47,10 @@ const Shipping: React.FC<ShippingProps> = ({
 
   const isOpen = searchParams.get("step") === "delivery"
 
+  const serverSelectedId = cart.shipping_methods?.at(-1)?.shipping_option_id
+  const effectiveSelectedId = optimisticId ?? serverSelectedId
   const selectedShippingMethod = availableShippingMethods?.find(
-    // To do: remove the previously selected shipping method instead of using the last one
-    (method) => method.id === cart.shipping_methods?.at(-1)?.shipping_option_id
+    (method) => method.id === effectiveSelectedId
   )
 
   const handleEdit = () => {
@@ -54,17 +58,23 @@ const Shipping: React.FC<ShippingProps> = ({
   }
 
   const handleSubmit = () => {
-    router.push(pathname + "?step=payment", { scroll: false })
+    startTransition(() => {
+      router.push(pathname + "?step=payment", { scroll: false })
+    })
   }
 
   const set = async (id: string) => {
+    setOptimisticId(id)
+    setPendingOptionId(id)
     setIsLoading(true)
     await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
       .catch((err) => {
         setError(err.message)
+        setOptimisticId(null)
       })
       .finally(() => {
         setIsLoading(false)
+        setPendingOptionId(null)
       })
   }
 
@@ -147,6 +157,9 @@ const Shipping: React.FC<ShippingProps> = ({
                         checked={option.id === selectedShippingMethod?.id}
                       />
                       <span className="text-base-regular">{option.name}</span>
+                      {pendingOptionId === option.id && (
+                        <span className="ml-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--brand-secondary)] border-t-transparent" />
+                      )}
                     </div>
                     <span className="justify-self-end text-ui-fg-base">
                       {formatStoreCartShippingOptionPrice(
@@ -170,8 +183,8 @@ const Shipping: React.FC<ShippingProps> = ({
             variant="primary"
             className="checkout-primary-action mt-6 w-full small:w-auto"
             onClick={handleSubmit}
-            isLoading={isLoading}
-            disabled={!cart.shipping_methods?.[0]}
+            isLoading={isLoading || isPending}
+            disabled={!effectiveSelectedId || isLoading}
             data-testid="submit-delivery-option-button"
           >
             Continue to payment
