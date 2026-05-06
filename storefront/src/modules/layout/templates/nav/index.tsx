@@ -118,7 +118,7 @@ export default async function Nav() {
               data-testid="nav-store-link"
             >
               <Image
-                src="/branding/scp-vector.svg"
+                src="/branding/sc-prints-logo-white.png"
                 alt="SC Prints"
                 width={158}
                 height={52}
