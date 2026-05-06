@@ -8,19 +8,16 @@ import CountrySelect from "../country-select"
 import { services } from "@modules/services/data"
 import { HttpTypes } from "@medusajs/types"
 
-const MENU_COLLECTIONS_CAP = 10
+const MENU_COLLECTIONS_CAP = 6
 
+// Home, Search, Account, Cart are already in the sticky header — no need to duplicate here.
 const SideMenuItems = {
-  Home: "/",
   Store: "/store",
   Customizer: "/customizer",
   Services: "/services",
   Brands: "/brands",
   BYO: "/byo",
   "Contact Us": "/contact",
-  Search: "/search",
-  Account: "/account",
-  Cart: "/cart",
 }
 
 export type SideMenuBrowseGroup = {
@@ -36,14 +33,13 @@ const SERVICES_GROUP: SideMenuBrowseGroup = {
   })),
 }
 
-const discoverAndHelpLinks: Array<{
-  label: string
-  href: string
-  testId: string
-}> = [
+const discoverLinks: Array<{ label: string; href: string; testId: string }> = [
   { label: "Explore", href: "/explore", testId: "explore-link" },
   { label: "DTF builder", href: "/dtf-builder", testId: "dtf-builder-link" },
   { label: "FAQ", href: "/faq", testId: "faq-link" },
+]
+
+const policyLinks: Array<{ label: string; href: string; testId: string }> = [
   {
     label: "Shipping policy",
     href: "/shipping-policy",
@@ -78,7 +74,6 @@ const SideMenu = ({
   const toggleState = useToggleState()
   const safeCollectionLinks = collectionLinks ?? []
   const collectionPreview = safeCollectionLinks.slice(0, MENU_COLLECTIONS_CAP)
-  const hasMoreCollections = safeCollectionLinks.length > MENU_COLLECTIONS_CAP
 
   const browseGroups: SideMenuBrowseGroup[] = [
     ...categoryBrowseGroups,
@@ -125,13 +120,13 @@ const SideMenu = ({
                         <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
                           Quick links
                         </h2>
-                        <ul className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 lg:grid-cols-1">
+                        <ul className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 lg:grid-cols-1">
                           {Object.entries(SideMenuItems).map(([name, href]) => (
                             <li key={name}>
                               <NavLink
                                 href={href}
                                 onClick={close}
-                                className="text-xl leading-snug text-[rgba(248,250,252,0.96)] transition-colors hover:text-[var(--brand-secondary)] min-[400px]:text-2xl"
+                                className="text-base font-medium leading-snug text-[rgba(248,250,252,0.96)] transition-colors hover:text-[var(--brand-secondary)]"
                                 data-testid={`${name.toLowerCase()}-link`}
                               >
                                 {name}
@@ -172,10 +167,10 @@ const SideMenu = ({
                       <div className="flex flex-col gap-8 border-t border-[var(--brand-accent)]/35 pt-8 lg:col-span-3 lg:border-t-0 lg:pt-0">
                         <div>
                           <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
-                            Discover &amp; help
+                            Discover
                           </h2>
                           <ul className="space-y-1.5">
-                            {discoverAndHelpLinks.map((item) => (
+                            {discoverLinks.map((item) => (
                               <li key={item.href}>
                                 <NavLink
                                   href={item.href}
@@ -192,7 +187,7 @@ const SideMenu = ({
 
                         <div>
                           <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
-                            Shop by collection
+                            Collections
                           </h2>
                           <ul className="space-y-1.5">
                             {collectionPreview.map((c) => (
@@ -207,12 +202,6 @@ const SideMenu = ({
                                 </NavLink>
                               </li>
                             ))}
-                            {hasMoreCollections && (
-                              <li className="pt-1 text-xs text-[rgba(248,250,252,0.6)]">
-                                Showing {MENU_COLLECTIONS_CAP} of{" "}
-                                {safeCollectionLinks.length}
-                              </li>
-                            )}
                             <li>
                               <NavLink
                                 href="/sitemap"
@@ -220,9 +209,29 @@ const SideMenu = ({
                                 className="text-sm font-medium leading-6 text-[var(--brand-secondary)] transition-colors hover:text-[var(--brand-accent)]"
                                 data-testid="nav-menu-sitemap-link"
                               >
-                                Site map (all pages &amp; collections)
+                                Browse all →
                               </NavLink>
                             </li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[rgba(248,250,252,0.4)]">
+                            Policies
+                          </h2>
+                          <ul className="space-y-1.5">
+                            {policyLinks.map((item) => (
+                              <li key={item.href}>
+                                <NavLink
+                                  href={item.href}
+                                  onClick={close}
+                                  className="text-sm leading-6 text-[rgba(248,250,252,0.55)] transition-colors hover:text-[rgba(248,250,252,0.85)]"
+                                  data-testid={item.testId}
+                                >
+                                  {item.label}
+                                </NavLink>
+                              </li>
+                            ))}
                           </ul>
                         </div>
                       </div>
