@@ -2,7 +2,7 @@ import { Metadata } from "next"
 
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import V3Splash from "./v3-splash"
+import ParticleFlowTuner from "./particle-flow-tuner"
 
 type MetadataProps = {
   params: Promise<{ countryCode: string }>
@@ -45,7 +45,7 @@ export default function ParticleFlowPage() {
         </div>
       </div>
       <div className="pt-14">
-        <V3Splash />
+        <ParticleFlowTuner />
       </div>
     </div>
   )

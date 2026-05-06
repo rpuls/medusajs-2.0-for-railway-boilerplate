@@ -124,6 +124,15 @@ export type NewmixLiveTuning = {
   /** Force falloff with distance from vortex centre. `((R - d)/R)^P`. Higher = sharper
    * concentration of force near the vortex centre = tighter visible curl. */
   vortexFalloffPower: number
+  /** Vortex capture-orbit-release: how fast captured particles orbit (deg/sec).
+   * Slower = more visible spinning. ~360-720 reads as 1-2 rotations/sec. */
+  vortexOrbitSpeedDegPerSec: number
+  /** How long a captured particle stays locked on its orbital path (ms) before
+   * being released into the wake. */
+  vortexCaptureDurationMs: number
+  /** Probability (0..1) that a particle entering a vortex zone gets captured.
+   * Lower = sparser orbits, more particles streaming past. */
+  vortexCaptureProbability: number
 }
 
 /** SC PRints v2-era settings (commit 2f8436e, May 3 11:20). User indicated these
@@ -176,6 +185,9 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   vortexLagBmp: -8,
   vortexRadiusBmp: 35,
   vortexFalloffPower: 1.6,
+  vortexOrbitSpeedDegPerSec: 540,
+  vortexCaptureDurationMs: 500,
+  vortexCaptureProbability: 0.7,
 })
 
 export function mergeNewmixLiveTuning(

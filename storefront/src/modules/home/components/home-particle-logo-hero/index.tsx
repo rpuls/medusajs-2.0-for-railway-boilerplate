@@ -356,6 +356,28 @@ type ParallaxParticle = {
   /** Newmix: swirl side at capture (-1 or +1). Locked through the wake so left-swirled
    * particles trail the left side of the cursor path, right-swirled particles trail the right. */
   newmixSwirlSide?: number
+  /** Vortex influence (0..1). Set by `applyDualVortexImpulse` whenever a
+   * particle receives tangential force; decays each frame. Used to suppress
+   * the home spring so the orbital motion has time to develop into a visible
+   * curl before the spring snaps the particle back home. */
+  newmixVortexSuppress?: number
+  /** Capture-orbit-release: when a particle enters a vortex zone, it gets
+   * locked onto a circular orbit around that vortex's centre. Position is
+   * SET each frame from the orbital math (no force / spring / friction).
+   * On expiry the particle is released into the wake. */
+  newmixVortexLockUntil?: number
+  /** Which vortex captured this particle: -1 (left) or +1 (right). */
+  newmixVortexSide?: number
+  /** Current angle of the orbit (radians, world frame). Advances each frame. */
+  newmixVortexAngle?: number
+  /** Orbital radius (preserved from capture so the particle stays on a
+   * stable circle as the centre translates with the cursor). */
+  newmixVortexRadius?: number
+  /** Offset from cursor to vortex centre at capture time (frozen). Each
+   * frame, vortex centre = cursor + this offset, so the orbital path
+   * smoothly follows the cursor as it moves. */
+  newmixVortexOffsetX?: number
+  newmixVortexOffsetY?: number
 }
 
 type LogoInteractBounds = {
@@ -697,78 +719,131 @@ function applyNewmixCaptureImpulse(
 }
 
 /**
- * Dual counter-rotating vortex emitters. Two virtual rotation centres are placed
+ * Capture-orbit-release vortex pair. Two virtual rotation centres are placed
  * perpendicular to the cursor's motion direction (one on each side, optionally
- * offset along/behind the cursor). Each vortex applies a tangential impulse to
- * particles within its radius — around its OWN centre, not the cursor's. The two
- * centres counter-rotate, producing the Kármán-style vortex pair you see trailing
- * a moving spoon. The emitters travel with the cursor and decay with motion gate.
+ * offset along/behind by `vortexLagBmp`). Particles entering either zone are
+ * CAPTURED — locked onto a circular orbital path around that vortex centre.
+ * Each frame the integration loop sets the particle's position directly from
+ * the orbital math (no force / friction / spring). After
+ * `vortexCaptureDurationMs`, the lock expires and the particle is released
+ * into the wake on the swirl side it was captured from.
+ *
+ * The vortex centre offset relative to the cursor is FROZEN at capture time,
+ * so the orbital path translates with the cursor (smooth) without re-aiming
+ * if the cursor's velocity direction changes mid-spin.
  */
-function applyDualVortexImpulse(
+function applyDualVortexCapture(
   p: ParallaxParticle,
   cx: number,
   cy: number,
-  /** Cursor unit-velocity direction (gx, gy already normalised). Caller passes zero
-   * vector when cursor isn't moving — function early-exits in that case. */
   velUx: number,
   velUy: number,
-  /** Mouse speed (bitmap px / frame). Forces scale with motion gate. */
   mouseSpeed: number,
-  t: NewmixLiveTuning
+  nowTick: number,
+  t: NewmixLiveTuning,
+  rand01: number
 ): void {
-  if (t.vortexStrength <= 0 || t.vortexRadiusBmp <= 0) {
-    return
-  }
-  if (cx <= -9000) {
+  if (t.vortexStrength <= 0 || t.vortexRadiusBmp <= 0) return
+  if (cx <= -9000) return
+  /** Already locked on an orbit — let the integration branch handle it. */
+  if (
+    p.newmixVortexLockUntil != null &&
+    nowTick < p.newmixVortexLockUntil
+  ) {
     return
   }
   const speedMag = Math.hypot(velUx, velUy)
-  if (speedMag < 1e-5) {
-    return
-  }
-  /** Re-normalise just in case caller didn't. */
+  if (speedMag < 1e-5) return
   const ux = velUx / speedMag
   const uy = velUy / speedMag
-  /** Perpendicular unit vector (90° CCW from velocity in canvas-y-down coords). */
   const perpX = -uy
   const perpY = ux
-  /** Compute both vortex centre positions: offset perpendicular ± and along velocity by `vortexLagBmp`. */
   const lag = t.vortexLagBmp
   const off = t.vortexOffsetBmp
-  const lvx = cx + perpX * off + ux * lag
-  const lvy = cy + perpY * off + uy * lag
-  const rvx = cx - perpX * off + ux * lag
-  const rvy = cy - perpY * off + uy * lag
+  /** Left and right vortex offsets from cursor. */
+  const loffX = perpX * off + ux * lag
+  const loffY = perpY * off + uy * lag
+  const roffX = -perpX * off + ux * lag
+  const roffY = -perpY * off + uy * lag
   const R = t.vortexRadiusBmp
   const motionScale = Math.max(
     0,
     Math.min(1, mouseSpeed / Math.max(0.01, t.motionGateSpeed))
   )
-  /** Apply a tangential impulse around one vortex centre. `rotSign = +1` rotates
-   * counter-clockwise around the centre (in canvas-y-down coords), -1 = clockwise. */
-  const applyAt = (vx: number, vy: number, rotSign: number) => {
+  if (motionScale < 0.05) return
+  /** Try to capture into one of the two vortices. Capture probability gates
+   * how many particles get locked — at <1, some particles stream past the
+   * vortex zone instead of getting captured (gives a sparser, less crowded
+   * orbital field). */
+  const tryCapture = (
+    offX: number,
+    offY: number,
+    rotSign: number
+  ): boolean => {
+    const vx = cx + offX
+    const vy = cy + offY
     const dxv = p.x - vx
     const dyv = p.y - vy
     const distV = Math.hypot(dxv, dyv)
-    if (distV >= R || distV < PHYSICS_DIST_EPSILON) {
-      return
-    }
-    const edge = (R - distV) / R
-    const fall = Math.pow(
-      Math.max(0, Math.min(1, edge)),
-      t.vortexFalloffPower
-    )
-    /** Tangential unit vector around vortex centre (CCW). */
-    const tvx = -dyv / distV
-    const tvy = dxv / distV
-    const force = t.vortexStrength * fall * motionScale
-    p.vx += tvx * rotSign * force
-    p.vy += tvy * rotSign * force
+    if (distV >= R || distV < PHYSICS_DIST_EPSILON) return false
+    /** Probability gate. */
+    if (rand01 > t.vortexCaptureProbability) return false
+    /** Lock the particle onto an orbit around this vortex centre. */
+    p.newmixVortexLockUntil = nowTick + t.vortexCaptureDurationMs
+    p.newmixVortexSide = rotSign
+    p.newmixVortexAngle = Math.atan2(dyv, dxv)
+    p.newmixVortexRadius = distV
+    p.newmixVortexOffsetX = offX
+    p.newmixVortexOffsetY = offY
+    /** Stamp suppression so the spring stays off if anything else samples it. */
+    p.newmixVortexSuppress = 1
+    return true
   }
-  /** Counter-rotation: left vortex CW (-1), right vortex CCW (+1). With cursor moving
-   * rightward this produces the canonical Kármán pair pattern. */
-  applyAt(lvx, lvy, -1)
-  applyAt(rvx, rvy, 1)
+  /** Try left vortex first; if particle is in the right zone, try that instead. */
+  if (!tryCapture(loffX, loffY, -1)) {
+    tryCapture(roffX, roffY, 1)
+  }
+}
+
+/**
+ * Per-frame integration for vortex-locked particles. Sets position directly
+ * from the orbital math: vortex centre = cursor + frozen offset; particle
+ * position = centre + (radius·cos(angle), radius·sin(angle)); angle advances
+ * by `vortexOrbitSpeedDegPerSec`. Returns `true` if the particle is still
+ * locked, `false` if the lock just expired (caller should release into wake).
+ */
+function integrateVortexOrbit(
+  p: ParallaxParticle,
+  cx: number,
+  cy: number,
+  nowTick: number,
+  dtMs: number,
+  t: NewmixLiveTuning
+): boolean {
+  if (
+    p.newmixVortexLockUntil == null ||
+    nowTick >= p.newmixVortexLockUntil
+  ) {
+    return false
+  }
+  const offX = p.newmixVortexOffsetX ?? 0
+  const offY = p.newmixVortexOffsetY ?? 0
+  const radius = p.newmixVortexRadius ?? 0
+  const side = p.newmixVortexSide ?? 1
+  let angle = p.newmixVortexAngle ?? 0
+  const angSpeedRadPerMs =
+    (t.vortexOrbitSpeedDegPerSec * Math.PI) / 180 / 1000
+  /** `rotSign = side`: -1 for left vortex (CW), +1 for right vortex (CCW). */
+  angle += angSpeedRadPerMs * dtMs * side
+  p.newmixVortexAngle = angle
+  /** Vortex centre = cursor + frozen offset (so the path follows the cursor). */
+  const vx = cx + offX
+  const vy = cy + offY
+  p.x = vx + Math.cos(angle) * radius
+  p.y = vy + Math.sin(angle) * radius
+  p.vx = 0
+  p.vy = 0
+  return true
 }
 
 /**
@@ -1599,6 +1674,12 @@ type Props = {
    * Set `stops` to a list of CSS colour strings (any length).
    */
   wordmarkGradient?: { angleDeg: number; stops: string[] } | null
+  /**
+   * Override the animated particle's draw size (bitmap px). When set, takes
+   * priority over the presentation-mode default (1 px embedded / 5 px fullscreen).
+   * Useful for live-tuning UIs that expose particle size as a slider.
+   */
+  particleDrawSize?: number | null
 }
 
 export default function HomeParticleLogoHero({
@@ -1614,6 +1695,7 @@ export default function HomeParticleLogoHero({
   inkPolarity = "auto",
   bgClassName = "bg-black",
   wordmarkGradient = null,
+  particleDrawSize = null,
 }: Props) {
   const presentationRef = useRef(presentation)
   presentationRef.current = presentation
@@ -1704,6 +1786,12 @@ export default function HomeParticleLogoHero({
   /** Wall-clock start of entrance lerp (−1 = disabled / reduced motion). */
   const particleEntranceStartMsRef = useRef(-1)
   const particleDrawSizeBmpRef = useRef(PARTICLE_DRAW_SIZE_BMP)
+  /** Push live `particleDrawSize` prop changes into the ref every render so
+   * slider drags apply to the next frame's draw, without waiting for a
+   * resampling pass to overwrite the ref. */
+  if (particleDrawSize != null && particleDrawSize > 0) {
+    particleDrawSizeBmpRef.current = particleDrawSize
+  }
 
   const reduceParallaxRef = useRef(reduceParallax)
   reduceParallaxRef.current = reduceParallax
@@ -1985,9 +2073,14 @@ export default function HomeParticleLogoHero({
       })
     }
 
-    particleDrawSizeBmpRef.current = isFsBuild
-      ? FULLSCREEN_PARTICLE_DRAW_SIZE_BMP
-      : PARTICLE_DRAW_SIZE_BMP
+    /** Particle draw size: caller-provided prop takes priority, else fall back
+     * to presentation-mode default (1 px embedded / 5 px fullscreen). */
+    particleDrawSizeBmpRef.current =
+      particleDrawSize != null && particleDrawSize > 0
+        ? particleDrawSize
+        : isFsBuild
+        ? FULLSCREEN_PARTICLE_DRAW_SIZE_BMP
+        : PARTICLE_DRAW_SIZE_BMP
 
     if (reduceParallaxRef.current) {
       for (const p of particles) {
@@ -2887,21 +2980,57 @@ export default function HomeParticleLogoHero({
                 p.newmixHomeReturnStartMs = undefined
               }
 
-              /** Dual vortex emitters — two counter-rotating curls flanking the cursor's
-               * path. Each vortex centre is offset to the side of the cursor disk, so
-               * particles JUST outside the cursor disk can also be affected. Applied
-               * unconditionally (outside `captured`) so the curls extend beyond the
-               * cursor's own influence radius. The helper internally early-exits if
-               * the particle isn't inside either vortex's radius. */
-              applyDualVortexImpulse(
+              /** Dual vortex emitters — capture-orbit-release. Particles entering
+               * either vortex zone get LOCKED onto an orbital path. Position is
+               * set directly each frame from the orbital math (no force /
+               * friction / spring). On expiry, particle is released into the
+               * wake on the swirl-side it was captured from. */
+              const pHash = ((p.hx | 0) * 2654435761 + (p.hy | 0) * 1597334677) >>> 0
+              const captureRand = (pHash & 0xffffff) / 0xffffff
+              applyDualVortexCapture(
                 p,
                 currentMouseX,
                 currentMouseY,
                 newmixSpoonGx,
                 newmixSpoonGy,
                 newmixSpoonSpeed,
+                nowTick,
+                nm,
+                captureRand
+              )
+
+              /** Vortex-orbit branch: if locked, integrate the orbit and skip
+               * everything else for this particle. On lock expiry, fall through
+               * with newmixCursorOriginX set so the particle enters the wake. */
+              const stillOrbiting = integrateVortexOrbit(
+                p,
+                currentMouseX,
+                currentMouseY,
+                nowTick,
+                16,
                 nm
               )
+              if (stillOrbiting) {
+                p.bhPrevInRadius = inCaptureDiskGeom
+                continue
+              }
+              if (
+                p.newmixVortexLockUntil != null &&
+                nowTick >= p.newmixVortexLockUntil
+              ) {
+                /** Lock just expired — release into the wake at the particle's
+                 * current orbital position. Set up wake state so it trails the
+                 * cursor on the captured side. */
+                p.newmixVortexLockUntil = undefined
+                p.newmixCursorOriginX = nowTick
+                p.newmixCursorOriginY = 0
+                p.newmixHomeAtReleaseX = p.hx
+                p.newmixHomeAtReleaseY = p.hy
+                p.newmixSwirlSide = p.newmixVortexSide ?? 1
+                p.bhTrailUntilMs = nowTick + nm.trailFollowMs
+                /** Decay vortex suppress so spring re-engages after release. */
+                p.newmixVortexSuppress = 0.5
+              }
 
               if (captured) {
                 /** Apply the swirl impulse — particle is being curled around the cursor. */
@@ -3238,17 +3367,39 @@ export default function HomeParticleLogoHero({
                   p.newmixSwirlSide = undefined
                 }
               } else {
-                /** Resting at home — no force, no velocity. */
-                p.vx = 0
-                p.vy = 0
-                /** Snap any subpixel residual. */
-                if (
-                  (p.hx - p.x) * (p.hx - p.x) +
-                    (p.hy - p.y) * (p.hy - p.y) <
-                  0.25
-                ) {
-                  p.x = p.hx
-                  p.y = p.hy
+                /** Resting at home — usually no force, no velocity. BUT if the
+                 * dual-vortex emitter just applied tangential force this frame,
+                 * we need to LET the velocity play out (with strong spring
+                 * suppression) so the orbital motion develops into a visible
+                 * curl before snapping back. Without this, the vortex impulse
+                 * gets wiped on the very next line and the effect is invisible. */
+                const vortexSupp = p.newmixVortexSuppress ?? 0
+                if (vortexSupp > 0.05) {
+                  /** Spring suppressed in proportion to vortex influence — at
+                   * full vortex (supp=1) spring is fully off, letting the
+                   * tangential motion travel; as supp decays, spring returns. */
+                  const springMul = Math.max(0, 1 - vortexSupp * 1.6)
+                  p.vx += (p.hx - p.x) * springKBase * springMul
+                  p.vy += (p.hy - p.y) * springKBase * springMul
+                  p.vx *= frictionK
+                  p.vy *= frictionK
+                  p.x += p.vx
+                  p.y += p.vy
+                  /** Decay vortex influence each frame so the particle
+                   * eventually returns to its resting state. */
+                  p.newmixVortexSuppress = vortexSupp * 0.93
+                } else {
+                  p.vx = 0
+                  p.vy = 0
+                  /** Snap any subpixel residual. */
+                  if (
+                    (p.hx - p.x) * (p.hx - p.x) +
+                      (p.hy - p.y) * (p.hy - p.y) <
+                    0.25
+                  ) {
+                    p.x = p.hx
+                    p.y = p.hy
+                  }
                 }
               }
 

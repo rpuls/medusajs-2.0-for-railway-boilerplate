@@ -69,12 +69,12 @@ export default function InputPanel({
               return (
                 <div
                   key={upload.id}
-                  className="group relative overflow-hidden rounded-md border border-ui-border-base bg-ui-bg-subtle hover:border-ui-fg-subtle"
+                  className="group relative rounded-md border border-ui-border-base bg-ui-bg-subtle hover:border-ui-fg-subtle"
                 >
                   <button
                     type="button"
                     onClick={() => onReuseUpload(upload.id)}
-                    className="block w-full text-left"
+                    className="block w-full overflow-hidden rounded-md text-left"
                     title={`Add ${upload.name} to this view`}
                   >
                     <div className="aspect-square w-full overflow-hidden bg-ui-bg-base/40">
@@ -94,15 +94,15 @@ export default function InputPanel({
                       }}
                       aria-label={`Delete ${upload.name} from My uploads`}
                       title="Delete from My uploads"
-                      className="absolute bottom-7 right-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-ui-bg-base/90 text-ui-fg-subtle opacity-0 shadow-sm ring-1 ring-ui-border-base transition-opacity hover:bg-rose-50 hover:text-rose-700 focus:opacity-100 group-hover:opacity-100"
+                      className="absolute -right-1.5 -top-1.5 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white shadow-md ring-2 ring-white transition-colors hover:bg-rose-700"
                     >
                       <svg
                         viewBox="0 0 24 24"
-                        width="14"
-                        height="14"
+                        width="13"
+                        height="13"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="2"
+                        strokeWidth="2.2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         aria-hidden
@@ -117,23 +117,27 @@ export default function InputPanel({
                   ) : null}
 
                   {isPendingDelete && onDeleteUpload ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-ui-bg-base/95 p-1.5 text-center">
-                      <p className="text-[11px] font-medium text-ui-fg-base">Delete this upload?</p>
-                      <div className="flex gap-1">
+                    <div
+                      className="absolute left-1/2 top-full z-30 mt-2 w-[11rem] -translate-x-1/2 space-y-2 rounded-lg border border-ui-border-base bg-ui-bg-base p-2.5 text-center shadow-xl"
+                      role="dialog"
+                      aria-label="Confirm delete"
+                    >
+                      <p className="text-xs font-medium text-ui-fg-base">Delete this upload?</p>
+                      <div className="flex gap-1.5">
                         <button
                           type="button"
                           onClick={() => {
                             onDeleteUpload(upload.id)
                             setPendingDeleteId(null)
                           }}
-                          className="rounded bg-rose-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-rose-700"
+                          className="flex-1 rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white hover:bg-rose-700"
                         >
                           Delete
                         </button>
                         <button
                           type="button"
                           onClick={() => setPendingDeleteId(null)}
-                          className="rounded border border-ui-border-base bg-ui-bg-base px-2 py-0.5 text-[11px] text-ui-fg-base hover:bg-ui-bg-subtle"
+                          className="flex-1 rounded-md border border-ui-border-base bg-ui-bg-base px-2 py-1 text-xs text-ui-fg-base hover:bg-ui-bg-subtle"
                         >
                           Cancel
                         </button>
