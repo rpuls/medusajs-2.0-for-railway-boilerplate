@@ -41,7 +41,28 @@ export const SCP_PRINT_UNIT_MATRIX: Record<ScpPrintSizeId, readonly [number, num
   }
 
 export const DEFAULT_SCP_PRINT_SIZE_ID: ScpPrintSizeId = "up_to_a6"
-export const SCP_A6_ONLY_SIDES = new Set(["left_sleeve", "right_sleeve", "printed_tag"])
+// Only the printed neck tag is hard-restricted to A6 by physical print area.
+// Sleeves are gated per garment type in the UI: short sleeves → A6 only,
+// long sleeves → up to A3.
+export const SCP_A6_ONLY_SIDES = new Set(["printed_tag"])
+
+/**
+ * Allowed SCP print sizes per side, accounting for garment cut. UI uses this
+ * to filter the size tile picker; pricing trusts whatever size the customer
+ * picks per location.
+ */
+export function getAllowedScpPrintSizesForSide(
+  side: string,
+  isLongSleeve: boolean
+): ScpPrintSizeId[] {
+  if (side === "printed_tag") {
+    return ["up_to_a6"]
+  }
+  if (side === "left_sleeve" || side === "right_sleeve") {
+    return isLongSleeve ? ["up_to_a6", "up_to_a4", "up_to_a3"] : ["up_to_a6"]
+  }
+  return ["up_to_a6", "up_to_a4", "up_to_a3", "oversize"]
+}
 
 export const isScpPrintSizeId = (value: unknown): value is ScpPrintSizeId =>
   value === "up_to_a6" || value === "up_to_a4" || value === "up_to_a3" || value === "oversize"

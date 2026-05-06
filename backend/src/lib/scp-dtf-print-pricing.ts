@@ -56,7 +56,10 @@ export const SCP_PRINT_UNIT_MATRIX: Record<ScpPrintSizeId, readonly [number, num
   }
 
 export const DEFAULT_SCP_PRINT_SIZE_ID: ScpPrintSizeId = "up_to_a6"
-export const SCP_A6_ONLY_SIDES = new Set(["left_sleeve", "right_sleeve", "printed_tag"])
+// Only the printed neck tag is physically constrained to A6 server-side.
+// Sleeve sizing is enforced by the storefront UI based on garment type
+// (short sleeves stay A6-only; long sleeves accept up to A3).
+export const SCP_A6_ONLY_SIDES = new Set(["printed_tag"])
 
 export const isScpPrintSizeId = (value: unknown): value is ScpPrintSizeId =>
   value === "up_to_a6" || value === "up_to_a4" || value === "up_to_a3" || value === "oversize"

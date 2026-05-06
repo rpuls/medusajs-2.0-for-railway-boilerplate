@@ -20,6 +20,7 @@ import {
   SCP_A6_ONLY_SIDES,
   SCP_PRINT_SIZE_OPTIONS,
   SCP_PRINT_UNIT_MATRIX,
+  getAllowedScpPrintSizesForSide,
   resolveScpPrintSizeForSide,
   type ScpPrintSizeId,
 } from "@modules/customizer/lib/scp-dtf-print-pricing"
@@ -36,7 +37,7 @@ import {
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { useProductOptionsOptional } from "@modules/products/context/product-options-context"
 import { sortApparelSizeLabels } from "@modules/products/lib/apparel-size-order"
-import { getGarmentImageUrlForPrintSide, getPrimaryGarmentImageUrl } from "@modules/products/lib/variant-options"
+import { getGarmentImageUrlForPrintSide, getPrimaryGarmentImageUrl, isLongSleeveGarmentProduct } from "@modules/products/lib/variant-options"
 import { sampleImageDominantColor } from "@modules/customizer/lib/sample-image-color"
 import { HttpTypes } from "@medusajs/types"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -508,6 +509,26 @@ export default function CustomizerTemplate({
   const lastCustomizerProductIdRef = useRef<string | null>(null)
   const sideLoadVersionRef = useRef(0)
   const productOptionsFromPdp = useProductOptionsOptional()
+
+  // Long-sleeve garments accept up to A3 on sleeves; short-sleeve garments stay
+  // A6-only. Used to gate the print-size tile picker and to clamp the global
+  // scpPrintSizeId when the user switches to a side with stricter limits.
+  const productIsLongSleeve = useMemo(
+    () => isLongSleeveGarmentProduct(selectedProduct),
+    [selectedProduct]
+  )
+  const allowedSizesForCurrentSide = useMemo(
+    () => getAllowedScpPrintSizesForSide(currentSide, productIsLongSleeve),
+    [currentSide, productIsLongSleeve]
+  )
+  // If the current global print size isn't allowed on this side, snap it to
+  // the largest allowed size so pricing + UI stay in sync.
+  useEffect(() => {
+    if (!allowedSizesForCurrentSide.includes(scpPrintSizeId)) {
+      const fallback = allowedSizesForCurrentSide[allowedSizesForCurrentSide.length - 1]
+      if (fallback) setScpPrintSizeId(fallback)
+    }
+  }, [allowedSizesForCurrentSide, scpPrintSizeId])
 
   // Per-side effective print size (sleeves & printed tag are forced to A6 in
   // pricing, so the visible print area mirrors that constraint too).
@@ -2343,15 +2364,22 @@ export default function CustomizerTemplate({
               />
               {pdpStep === 3 ? (
                 <>
-                  {SCP_A6_ONLY_SIDES.has(currentSide) ? (
+                  {allowedSizesForCurrentSide.length === 1 &&
+                  allowedSizesForCurrentSide[0] === "up_to_a6" ? (
                     <p className="rounded-md bg-ui-bg-subtle/70 px-2.5 py-1.5 text-xs text-ui-fg-subtle">
                       <span className="font-semibold text-ui-fg-base">{sideLabel}</span> prints
                       are limited to A6 (10×15 cm) — only one size is available for this location.
                     </p>
+                  ) : (currentSide === "left_sleeve" || currentSide === "right_sleeve") &&
+                    productIsLongSleeve ? (
+                    <p className="rounded-md bg-ui-bg-subtle/70 px-2.5 py-1.5 text-xs text-ui-fg-subtle">
+                      <span className="font-semibold text-ui-fg-base">{sideLabel}</span> prints on
+                      long-sleeve garments can go up to A3 (29×42 cm).
+                    </p>
                   ) : null}
                   <div className="grid grid-cols-2 gap-2">
                     {SCP_PRINT_SIZE_OPTIONS.filter((opt) =>
-                      SCP_A6_ONLY_SIDES.has(currentSide) ? opt.id === "up_to_a6" : true
+                      allowedSizesForCurrentSide.includes(opt.id)
                     ).map((opt) => {
                       const fromPrice = SCP_PRINT_UNIT_MATRIX[opt.id][SCP_PRINT_UNIT_MATRIX[opt.id].length - 1]
                       const selected = scpPrintSizeId === opt.id

@@ -38,6 +38,23 @@ export default function CanvasStage({
   // multiplying — dark line work stays dark, white body picks up the colour.
   const isSleeveView = printSideKey === "left_sleeve" || printSideKey === "right_sleeve"
   const applySleeveTint = isSleeveView && Boolean(tintColor)
+
+  // Pre-compute whether the tint is dark; on dark colours the multiply blend
+  // hides the (already-dark) line work, so we invert the SVG and use a
+  // "lighten" blend instead — lines become bright while the body still picks
+  // up the tint colour.
+  const isDarkTint = (() => {
+    if (!tintColor) return false
+    const m = /^#?([0-9a-f]{6})$/i.exec(tintColor)
+    if (!m) return false
+    const v = parseInt(m[1], 16)
+    const r = (v >> 16) & 0xff
+    const g = (v >> 8) & 0xff
+    const b = v & 0xff
+    // Rec.709 luminance, normalised 0..1
+    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+    return lum < 0.4
+  })()
   // Tag prints sit at the inner-back of the collar. We don't have separate tag
   // photography per colour, so zoom into the neck area of the variant's
   // primary photo. transform-origin is the focal point (top-centre of the tee).
@@ -92,7 +109,11 @@ export default function CanvasStage({
             draggable={false}
             style={
               applySleeveTint
-                ? { ...(tagZoomStyle ?? {}), mixBlendMode: "multiply" }
+                ? {
+                    ...(tagZoomStyle ?? {}),
+                    mixBlendMode: isDarkTint ? "lighten" : "multiply",
+                    filter: isDarkTint ? "invert(1)" : undefined,
+                  }
                 : tagZoomStyle
             }
           />
