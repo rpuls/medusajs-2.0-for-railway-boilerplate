@@ -133,6 +133,14 @@ export type NewmixLiveTuning = {
   /** Probability (0..1) that a particle entering a vortex zone gets captured.
    * Lower = sparser orbits, more particles streaming past. */
   vortexCaptureProbability: number
+  /** Ellipse aspect ratio for vortex orbits (major/minor). 1.0 = circle;
+   * >1.0 stretches orbit along the cursor's motion direction so curls read
+   * as oval rather than perfect circles (matches Newmix's elongated swirls). */
+  vortexEllipseAspect: number
+  /** Reference cursor speed (bitmap px / frame) at which orbit speed equals
+   * `vortexOrbitSpeedDegPerSec`. Faster cursor → faster spin; slower → slower
+   * spin. The ratio is clamped to a sensible range. */
+  vortexSpeedReference: number
 }
 
 /** SC PRints v2-era settings (commit 2f8436e, May 3 11:20). User indicated these
@@ -188,6 +196,8 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   vortexOrbitSpeedDegPerSec: 540,
   vortexCaptureDurationMs: 500,
   vortexCaptureProbability: 0.7,
+  vortexEllipseAspect: 1.6,
+  vortexSpeedReference: 8.0,
 })
 
 export function mergeNewmixLiveTuning(

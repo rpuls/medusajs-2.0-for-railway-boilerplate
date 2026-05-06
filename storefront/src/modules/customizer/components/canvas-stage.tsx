@@ -61,9 +61,24 @@ export default function CanvasStage({
       {showPhoto ? (
         <>
           {applySleeveTint ? (
+            // The colour backdrop is masked by the same sleeve SVG so it only
+            // fills the sleeve silhouette, not the whole canvas. Combined with
+            // the multiply blend on the <img> above, white sleeve body picks up
+            // the colour while the dark line work stays dark.
             <div
               className="absolute inset-0"
-              style={{ backgroundColor: tintColor ?? "transparent" }}
+              style={{
+                backgroundColor: tintColor ?? "transparent",
+                WebkitMaskImage: `url(${garmentImage})`,
+                maskImage: `url(${garmentImage})`,
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskSize: "cover",
+                maskSize: "cover",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                transform: isRightSleeveView ? "scaleX(-1)" : undefined,
+              }}
               aria-hidden
             />
           ) : null}

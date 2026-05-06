@@ -122,7 +122,7 @@ export function isHoodieGarmentProduct(
     .join(" ")
     .toLowerCase()
 
-  return /\b(hoodie|hoodies|hooded|hood\b|zip\s*hood|zip\s*hoodie|sweatshirt|sweat\s*shirt)\b/.test(
+  return /\b(hoodie|hoodies|hooded|hood\b|zip\s*hood|zip\s*hoodie|sweatshirt|sweat\s*shirt|rugby|jersey|jerseys|long\s*sleeve|long-?sleeve|longsleeve|l\/s|crew\s*neck|crewneck|jumper|jumpers|pullover|pullovers|sweater|sweaters|cardigan|cardigans|fleece)\b/.test(
     blob
   )
 }

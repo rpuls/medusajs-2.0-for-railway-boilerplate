@@ -1,6 +1,7 @@
 "use client"
 
 import { ChangeEvent, useState } from "react"
+import { createPortal } from "react-dom"
 
 type InputPanelProps = {
   onUploadFile: (file: File) => Promise<void>
@@ -65,7 +66,6 @@ export default function InputPanel({
           </div>
           <div className="grid grid-cols-3 gap-2">
             {uploads.map((upload) => {
-              const isPendingDelete = pendingDeleteId === upload.id
               return (
                 <div
                   key={upload.id}
@@ -116,40 +116,54 @@ export default function InputPanel({
                     </button>
                   ) : null}
 
-                  {isPendingDelete && onDeleteUpload ? (
-                    <div
-                      className="absolute left-1/2 top-full z-30 mt-2 w-[11rem] -translate-x-1/2 space-y-2 rounded-lg border border-ui-border-base bg-ui-bg-base p-2.5 text-center shadow-xl"
-                      role="dialog"
-                      aria-label="Confirm delete"
-                    >
-                      <p className="text-xs font-medium text-ui-fg-base">Delete this upload?</p>
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onDeleteUpload(upload.id)
-                            setPendingDeleteId(null)
-                          }}
-                          className="flex-1 rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white hover:bg-rose-700"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPendingDeleteId(null)}
-                          className="flex-1 rounded-md border border-ui-border-base bg-ui-bg-base px-2 py-1 text-xs text-ui-fg-base hover:bg-ui-bg-subtle"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               )
             })}
           </div>
         </div>
       ) : null}
+
+      {pendingDeleteId && onDeleteUpload && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+              role="dialog"
+              aria-modal
+              aria-label="Confirm delete upload"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setPendingDeleteId(null)
+              }}
+            >
+              <div className="w-[min(22rem,90vw)] space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4 text-center shadow-2xl">
+                <p className="text-sm font-semibold text-ui-fg-base">Delete this upload?</p>
+                <p className="text-xs text-ui-fg-subtle">
+                  It will be removed from your <span className="font-medium">My uploads</span> list.
+                  Designs already placed on the canvas stay put.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendingDeleteId(null)}
+                    className="flex-1 rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2 text-sm text-ui-fg-base hover:bg-ui-bg-subtle"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDeleteUpload(pendingDeleteId)
+                      setPendingDeleteId(null)
+                    }}
+                    className="flex-1 rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       <button
         type="button"

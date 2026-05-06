@@ -107,6 +107,56 @@ const GRADIENT_PRESETS: GradientPreset[] = [
     angleDeg: 78,
     stops: ["#3dcfc2", "#a8e8e0", "#ffffff", "#ff2e63"],
   },
+  {
+    id: "spectrum",
+    label: "Spectrum",
+    angleDeg: 78,
+    stops: [
+      "#ff004c", "#ff5300", "#ffa600", "#ffe800", "#c2ff00",
+      "#5dff00", "#00ff7a", "#00ffd1", "#00d4ff", "#0077ff",
+      "#3a00ff", "#8c00ff", "#d300ff", "#ff00bf", "#ff0066",
+    ],
+  },
+  {
+    id: "aurora",
+    label: "Aurora",
+    angleDeg: 90,
+    stops: [
+      "#0a0e2e", "#13325c", "#1a6b8a", "#21a796", "#3edc8b",
+      "#86f29c", "#c9f8b0", "#fff7c2", "#ffd166", "#f29259",
+      "#d9466b", "#9a3d8a", "#5a2c95", "#2a1d6e",
+    ],
+  },
+  {
+    id: "neon",
+    label: "Neon",
+    angleDeg: 78,
+    stops: [
+      "#fe00fe", "#ff00b3", "#ff0080", "#ff3366", "#ff5e3a",
+      "#ff9500", "#ffd400", "#aaff00", "#00ff85", "#00ffd5",
+      "#00d4ff", "#00a3ff", "#3a6dff", "#7c4dff", "#c800ff",
+    ],
+  },
+  {
+    id: "candy",
+    label: "Candy",
+    angleDeg: 78,
+    stops: [
+      "#ffd5e5", "#ffb3d1", "#ff8fc8", "#ff6fb1", "#ff5c8a",
+      "#ff7e6b", "#ffae5a", "#ffd86b", "#fff39a", "#d8f59a",
+      "#a3e8c3", "#7ad7e0", "#a3b8f0", "#cfa8f0",
+    ],
+  },
+  {
+    id: "ember",
+    label: "Ember",
+    angleDeg: 90,
+    stops: [
+      "#0a0202", "#1f0606", "#3b0d0d", "#621414", "#8f1d1d",
+      "#bf2b22", "#e0492a", "#f47237", "#ffa14a", "#ffce6e",
+      "#fff0a5", "#fffadc", "#ffffff",
+    ],
+  },
 ]
 const DEFAULT_GRADIENT_ID = "rainbow"
 
@@ -380,6 +430,24 @@ const GROUPS: Group[] = [
         min: 0,
         max: 1,
         step: 0.05,
+      },
+      {
+        key: "vortexEllipseAspect",
+        label: "Oval aspect",
+        description:
+          "Stretches the orbit into an oval along the cursor's heading. 1.0 = perfect circle; >1.0 = elongated like the Newmix spoon-trail vortices.",
+        min: 1,
+        max: 3,
+        step: 0.05,
+      },
+      {
+        key: "vortexSpeedReference",
+        label: "Speed coupling ref",
+        description:
+          "Cursor speed (px/frame) at which orbit speed equals the configured rate. Lower = vortex reacts more sensitively to cursor speed (slow cursor → very slow spin; fast cursor → fast spin).",
+        min: 1,
+        max: 30,
+        step: 0.5,
       },
     ],
   },
