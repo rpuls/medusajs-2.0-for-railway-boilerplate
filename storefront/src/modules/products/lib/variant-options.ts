@@ -70,7 +70,11 @@ export function isLongSleeveGarmentProduct(
     return true
   }
 
-  if (/\b(hoodie|hood\b|sweatshirt|sweat\s*shirt|fleece|pullover|jumper|sweater)\b/i.test(lower)) {
+  if (
+    /\b(hoodie|hood\b|sweatshirt|sweat\s*shirt|fleece|pullover|jumper|sweater|rugby|jerseys?|crewneck|crew\s*neck|cardigan|cardigans)\b/i.test(
+      lower
+    )
+  ) {
     return true
   }
 
@@ -122,7 +126,7 @@ export function isHoodieGarmentProduct(
     .join(" ")
     .toLowerCase()
 
-  return /\b(hoodie|hoodies|hooded|hood\b|zip\s*hood|zip\s*hoodie|sweatshirt|sweat\s*shirt|rugby|jersey|jerseys|long\s*sleeve|long-?sleeve|longsleeve|l\/s|crew\s*neck|crewneck|jumper|jumpers|pullover|pullovers|sweater|sweaters|cardigan|cardigans|fleece)\b/.test(
+  return /\b(hoodie|hoodies|hooded|hood\b|zip\s*hood|zip\s*hoodie|sweatshirt|sweat\s*shirt)\b/.test(
     blob
   )
 }
