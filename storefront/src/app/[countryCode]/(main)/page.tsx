@@ -10,7 +10,6 @@ import { getRegion } from "@lib/data/regions"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import MarketingHero from "@modules/common/components/marketing-hero"
 import HomeCoreServicesLordicons from "@modules/home/components/home-core-services-lordicons"
 import HowOrderWorksSection from "@modules/home/components/how-order-works-section"
 import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-hero"
@@ -166,6 +165,8 @@ export default async function Home({
             __html: JSON.stringify(homeStructuredData),
           }}
         />
+
+        {/* 1. Hero */}
         <HomeParticleLogoHero
           interactionMode="newmix"
           animatedParticleCap={55000}
@@ -173,29 +174,23 @@ export default async function Home({
           bgClassName="bg-ui-fg-base"
           wordmarkGradient={WORDMARK_GRADIENT}
         />
-        <HowOrderWorksSection />
-        <section className="content-container py-12 small:py-16">
-          <MarketingHero
-            eyebrow="Australian custom decoration"
-            title="Branded apparel and merch for teams, workwear, and events"
-            subtitle="Screen printing, embroidery, transfers, and more—browse blanks, choose how you want them decorated, and check out online. Built for Australian businesses, clubs, and resellers who need reliable quality at volume."
-            subtitleClassName="text-base small:text-lg"
-            titleSpacing="relaxed"
-            padding="spacious"
-          >
-            <div className="mt-8">
-              <LocalizedClientLink
-                href="/store"
-                className="inline-flex items-center rounded-lg bg-ui-fg-base px-6 py-3 text-sm font-semibold text-white transition hover:bg-black"
+
+        {/* 2. Value props reassurance strip — immediately under hero */}
+        <section className="overflow-hidden border-b border-ui-border-base bg-ui-bg-subtle py-4">
+          <div className="value-marquee-track flex min-w-max gap-6 whitespace-nowrap px-6 text-sm font-semibold uppercase tracking-[0.12em] text-ui-fg-base">
+            {[...VALUE_PROPS, ...VALUE_PROPS].map((value, index) => (
+              <span
+                key={`${value}-${index}`}
+                className="flex items-center gap-6"
               >
-                Browse the catalogue
-              </LocalizedClientLink>
-            </div>
-          </MarketingHero>
+                {value}
+                <span className="text-ui-fg-muted">|</span>
+              </span>
+            ))}
+          </div>
         </section>
 
-        <ScrollingPictureBar />
-
+        {/* 3. Featured products — on screen within 2–3 scrolls */}
         <section className="content-container py-12">
           <div className="mb-6 flex items-end justify-between">
             <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
@@ -238,20 +233,10 @@ export default async function Home({
           </ul>
         </section>
 
-        <section className="overflow-hidden border-y border-ui-border-base bg-ui-bg-subtle py-4">
-          <div className="value-marquee-track flex min-w-max gap-6 whitespace-nowrap px-6 text-sm font-semibold uppercase tracking-[0.12em] text-ui-fg-base">
-            {[...VALUE_PROPS, ...VALUE_PROPS].map((value, index) => (
-              <span
-                key={`${value}-${index}`}
-                className="flex items-center gap-6"
-              >
-                {value}
-                <span className="text-ui-fg-muted">|</span>
-              </span>
-            ))}
-          </div>
-        </section>
+        {/* 4. Brand carousel — contextualises the products above */}
+        <ScrollingPictureBar />
 
+        {/* 5. Services — shown while customer is in discovery mode */}
         <section className="content-container py-14">
           <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
@@ -264,7 +249,11 @@ export default async function Home({
           <HomeCoreServicesLordicons />
         </section>
 
-        <section className="content-container pb-16">
+        {/* 6. How to order — once the customer has seen what's available */}
+        <HowOrderWorksSection />
+
+        {/* 7. Bulk order CTA — when the customer is closest to a decision */}
+        <section className="content-container py-16">
           <div className="rounded-2xl border border-ui-border-base bg-ui-bg-subtle p-8 small:p-10">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
               Prefer to talk it through?
@@ -295,6 +284,7 @@ export default async function Home({
           </div>
         </section>
 
+        {/* 8. Instagram — social proof near the bottom-of-funnel moment */}
         <InstagramFeedStrip
           items={instagramMedia}
           profileUrl={instagramProfileUrl}
