@@ -539,25 +539,9 @@ export default function CustomizerTemplate({
   const sideLoadVersionRef = useRef(0)
   const productOptionsFromPdp = useProductOptionsOptional()
 
-  // Long-sleeve garments accept up to A3 on sleeves; short-sleeve garments stay
-  // A6-only. Used to gate the print-size tile picker and to clamp the global
-  // scpPrintSizeId when the user switches to a side with stricter limits.
-  const productIsLongSleeve = useMemo(
-    () => isLongSleeveGarmentProduct(selectedProduct),
-    [selectedProduct]
-  )
-  const allowedSizesForCurrentSide = useMemo(
-    () => getAllowedScpPrintSizesForSide(currentSide, productIsLongSleeve),
-    [currentSide, productIsLongSleeve]
-  )
-  // If the current global print size isn't allowed on this side, snap it to
-  // the largest allowed size so pricing + UI stay in sync.
-  useEffect(() => {
-    if (!allowedSizesForCurrentSide.includes(scpPrintSizeId)) {
-      const fallback = allowedSizesForCurrentSide[allowedSizesForCurrentSide.length - 1]
-      if (fallback) setScpPrintSizeId(fallback)
-    }
-  }, [allowedSizesForCurrentSide, scpPrintSizeId])
+  // (productIsLongSleeve / allowedSizesForCurrentSide are computed below,
+  // after `selectedProduct` is in scope — they were moved to fix a
+  // temporal-dead-zone "Cannot access … before initialization" error.)
 
   // Per-side effective print size (sleeves & printed tag are forced to A6 in
   // pricing, so the visible print area mirrors that constraint too).
@@ -621,6 +605,25 @@ export default function CustomizerTemplate({
     }
   }, [effectivePrintSizeIdForArea, printArea.width, printArea.height])
   const selectedProduct = product
+  // Long-sleeve garments accept up to A3 on sleeves; short-sleeve garments stay
+  // A6-only. Used to gate the print-size tile picker and to clamp the global
+  // scpPrintSizeId when the user switches to a side with stricter limits.
+  const productIsLongSleeve = useMemo(
+    () => isLongSleeveGarmentProduct(selectedProduct),
+    [selectedProduct]
+  )
+  const allowedSizesForCurrentSide = useMemo(
+    () => getAllowedScpPrintSizesForSide(currentSide, productIsLongSleeve),
+    [currentSide, productIsLongSleeve]
+  )
+  // If the current global print size isn't allowed on this side, snap it to
+  // the largest allowed size so pricing + UI stay in sync.
+  useEffect(() => {
+    if (!allowedSizesForCurrentSide.includes(scpPrintSizeId)) {
+      const fallback = allowedSizesForCurrentSide[allowedSizesForCurrentSide.length - 1]
+      if (fallback) setScpPrintSizeId(fallback)
+    }
+  }, [allowedSizesForCurrentSide, scpPrintSizeId])
   const pdpHasVariantOptions = (selectedProduct.variants?.length ?? 0) > 1
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
