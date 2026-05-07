@@ -72,6 +72,15 @@ import type { ViscousCoffeeLiveTuning } from "./viscous-coffee-live-tuning"
 import { mergeViscousCoffeeLiveTuning } from "./viscous-coffee-live-tuning"
 import type { NewmixLiveTuning } from "./newmix-live-tuning"
 import { mergeNewmixLiveTuning } from "./newmix-live-tuning"
+import type { VelocityField } from "./velocity-field"
+import {
+  clearVelocityField,
+  createVelocityField,
+  decayVelocityField,
+  diffuseVelocityField,
+  injectVelocity,
+  sampleVelocityField,
+} from "./velocity-field"
 import type { FlowLiveTuning } from "./flow-live-tuning"
 import { mergeFlowLiveTuning } from "./flow-live-tuning"
 import type { DisplacedLiveTuning } from "./displaced-live-tuning"
@@ -1845,6 +1854,16 @@ export default function HomeParticleLogoHero({
   const newmixLiveMergedRef = useRef<NewmixLiveTuning>(
     mergeNewmixLiveTuning()
   )
+  /** Velocity-field grid for the lingering-momentum mechanic. Allocated lazily
+   * the first frame `fieldStrength > 0` and the canvas size is known. Reused
+   * across frames; only reallocated if grid resolution changes. */
+  const newmixVelocityFieldRef = useRef<VelocityField | null>(null)
+  /** Scratch buffer (length cols*rows*2) reused across frames by the diffusion
+   * pass. Resized in lockstep with the field. */
+  const newmixVelocityFieldScratchRef = useRef<Float32Array | null>(null)
+  /** Scratch tuple reused across the per-particle field-sample call to avoid
+   * per-frame `[number, number]` allocation. */
+  const newmixVelocityFieldSampleRef = useRef<[number, number]>([0, 0])
   /** Flow mode: low-pass-smoothed cursor velocity used for the carry-along velocity handoff. */
   const flowSpoonVelRef = useRef({ vx: 0, vy: 0 })
   const flowPrevCursorRef = useRef({ x: -9999, y: -9999 })
@@ -2909,6 +2928,91 @@ export default function HomeParticleLogoHero({
           newmixSpoonPrimedRef.current = false
         }
 
+        /** Velocity-field grid update — happens once per frame BEFORE the
+         * per-particle loop so particles read the field that was just updated
+         * by this frame's cursor stroke. The field carries momentum across
+         * frames; particles ride it in their integration branch below.
+         *
+         * Allocated lazily and reallocated only if the resolution knob or
+         * canvas size has changed.
+         */
+        let velocityField: VelocityField | null = null
+        if (
+          newmix &&
+          nm != null &&
+          nm.fieldStrength > 0 &&
+          c2.width > 0 &&
+          c2.height > 0
+        ) {
+          const targetRes = Math.max(8, Math.floor(nm.fieldGridResolution))
+          const existing = newmixVelocityFieldRef.current
+          const longSide = Math.max(c2.width, c2.height)
+          const targetCellSize = Math.max(
+            4,
+            Math.floor(longSide / Math.max(4, targetRes))
+          )
+          const targetCols = Math.max(2, Math.ceil(c2.width / targetCellSize))
+          const targetRows = Math.max(2, Math.ceil(c2.height / targetCellSize))
+          const needsRebuild =
+            !existing ||
+            existing.cols !== targetCols ||
+            existing.rows !== targetRows ||
+            existing.bitmapW !== c2.width ||
+            existing.bitmapH !== c2.height
+          if (needsRebuild) {
+            newmixVelocityFieldRef.current = createVelocityField(
+              c2.width,
+              c2.height,
+              targetRes
+            )
+            const nf = newmixVelocityFieldRef.current
+            newmixVelocityFieldScratchRef.current = new Float32Array(
+              nf.cols * nf.rows * 2
+            )
+          }
+          velocityField = newmixVelocityFieldRef.current
+          if (velocityField) {
+            /** Inject the cursor's smoothed velocity into cells around the cursor
+             * — only when the cursor is actually moving. A still cursor adds
+             * nothing, so the field gets to coast on whatever was deposited by
+             * the last stroke. */
+            if (
+              cursorOk &&
+              inNewmixStipple &&
+              !entranceActive &&
+              newmixSpoonSpeed > 0.05
+            ) {
+              injectVelocity(
+                velocityField,
+                currentMouseX,
+                currentMouseY,
+                newmixSpoonGx,
+                newmixSpoonGy,
+                nm.fieldInjectRadiusBmp,
+                nm.fieldInjectStrength
+              )
+            }
+            /** Lateral diffusion — energy seeps outward from the inject site
+             * each frame so the swirl spreads beyond the cursor's path. */
+            if (
+              nm.fieldDiffusion > 0 &&
+              newmixVelocityFieldScratchRef.current
+            ) {
+              diffuseVelocityField(
+                velocityField,
+                nm.fieldDiffusion,
+                newmixVelocityFieldScratchRef.current
+              )
+            }
+            /** Per-frame decay (frame-rate-correct via dt). */
+            decayVelocityField(velocityField, nm.fieldDecayPerSec, 16)
+          }
+        } else if (newmixVelocityFieldRef.current) {
+          /** Field is disabled — clear it so re-enabling later starts fresh
+           * instead of resuming with stale momentum from the previous session. */
+          clearVelocityField(newmixVelocityFieldRef.current)
+        }
+
         let newmixIdle = false
         if (newmix && nm != null) {
           const tprev = newmixTickPrevCursorRef.current
@@ -3442,11 +3546,52 @@ export default function HomeParticleLogoHero({
                  * curl before snapping back. Without this, the vortex impulse
                  * gets wiped on the very next line and the effect is invisible. */
                 const vortexSupp = p.newmixVortexSuppress ?? 0
-                if (vortexSupp > 0.05) {
+                /** Velocity-field contribution — sample the lingering-momentum
+                 * grid at this particle's resting position and add it to the
+                 * particle's velocity. This is what produces the "swirl
+                 * continues after the cursor stops" effect: even when no
+                 * cursor force is active, the field carries momentum and lifts
+                 * resting particles into temporary motion. */
+                let fieldRideX = 0
+                let fieldRideY = 0
+                if (
+                  velocityField &&
+                  nm.fieldStrength > 0 &&
+                  nm.fieldRideStrength > 0
+                ) {
+                  const sampleOut =
+                    newmixVelocityFieldSampleRef.current
+                  sampleVelocityField(
+                    velocityField,
+                    p.x,
+                    p.y,
+                    sampleOut
+                  )
+                  const ride =
+                    nm.fieldStrength * nm.fieldRideStrength
+                  fieldRideX = sampleOut[0] * ride
+                  fieldRideY = sampleOut[1] * ride
+                  p.vx += fieldRideX
+                  p.vy += fieldRideY
+                }
+                /** Compound activation: vortex impulse OR enough field velocity
+                 * at this cell. If either is active, run integrated motion
+                 * with spring suppression so the displacement reads visibly
+                 * before the spring pulls it home. */
+                const fieldRideMag = Math.hypot(fieldRideX, fieldRideY)
+                if (vortexSupp > 0.05 || fieldRideMag > 0.05) {
                   /** Spring suppressed in proportion to vortex influence — at
                    * full vortex (supp=1) spring is fully off, letting the
-                   * tangential motion travel; as supp decays, spring returns. */
-                  const springMul = Math.max(0, 1 - vortexSupp * 1.6)
+                   * tangential motion travel; as supp decays, spring returns.
+                   * Field velocity also suppresses the spring proportionally
+                   * to its magnitude so resting particles can drift on the
+                   * field's lingering momentum without instantly snapping back. */
+                  const fieldSupp = Math.min(1, fieldRideMag * 1.5)
+                  const totalSupp = Math.min(
+                    1,
+                    Math.max(vortexSupp, fieldSupp)
+                  )
+                  const springMul = Math.max(0, 1 - totalSupp * 1.6)
                   p.vx += (p.hx - p.x) * springKBase * springMul
                   p.vy += (p.hy - p.y) * springKBase * springMul
                   p.vx *= frictionK

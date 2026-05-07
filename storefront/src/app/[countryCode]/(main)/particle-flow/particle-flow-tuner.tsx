@@ -452,6 +452,81 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    id: "field",
+    label: "Field",
+    blurb:
+      "Lingering-momentum velocity grid — the cursor stirs a coarse 2D field that holds momentum across frames and slowly decays. Particles ride the field, so when the cursor stops the swirl keeps spinning before fading. Turning the group off disables the field entirely (no inject, no sample).",
+    offValues: {
+      fieldStrength: 0,
+    },
+    sliders: [
+      {
+        key: "fieldStrength",
+        label: "Master strength",
+        description:
+          "Global on/off / fade for the field. 0 = particles never sample it (system disabled). 1 = full ride strength. Acts as the master multiplier on every other field knob.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
+      {
+        key: "fieldGridResolution",
+        label: "Grid resolution",
+        description:
+          "Cells along the longer canvas axis. Higher = finer detail in the swirl, but more cells to update each frame. 24-48 reads as natural; >64 starts costing fps.",
+        min: 12,
+        max: 96,
+        step: 2,
+        format: (v) => `${Math.round(v)} cells`,
+      },
+      {
+        key: "fieldInjectRadiusBmp",
+        label: "Inject radius",
+        description:
+          "How wide the cursor's velocity is splashed into the grid each frame (px). Larger = the stir reaches further out from the cursor's path.",
+        min: 20,
+        max: 200,
+        step: 2,
+      },
+      {
+        key: "fieldInjectStrength",
+        label: "Inject strength",
+        description:
+          "Multiplier on cursor velocity when injecting into the field. Higher = a single mouse stroke deposits more momentum, so the field carries longer / spins harder after the cursor leaves.",
+        min: 0,
+        max: 5,
+        step: 0.1,
+      },
+      {
+        key: "fieldDecayPerSec",
+        label: "Decay rate",
+        description:
+          "Fraction of field energy lost per second when the cursor isn't adding to it. 0 = field never decays (energy keeps building, can get chaotic); 1 = field dies within a second. 0.4-0.7 = stir, watch it spin down over a couple of seconds.",
+        min: 0,
+        max: 1,
+        step: 0.02,
+      },
+      {
+        key: "fieldDiffusion",
+        label: "Diffusion",
+        description:
+          "Lateral spread of momentum each frame — energy bleeds from each cell into its 4 neighbours. Higher = the swirl spreads beyond the cursor's path more aggressively. 0 = skip the pass (perf saving).",
+        min: 0,
+        max: 0.25,
+        step: 0.01,
+      },
+      {
+        key: "fieldRideStrength",
+        label: "Ride strength",
+        description:
+          "How much of the sampled field velocity is added to a particle each frame. 0 = particles ignore the field. 0.05-0.2 = particles ride it but keep their own dynamics. >0.3 = particles act mostly as flow tracers.",
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+      },
+    ],
+  },
+  {
     id: "display",
     label: "Display",
     blurb:

@@ -141,6 +141,36 @@ export type NewmixLiveTuning = {
    * `vortexOrbitSpeedDegPerSec`. Faster cursor → faster spin; slower → slower
    * spin. The ratio is clamped to a sensible range. */
   vortexSpeedReference: number
+  /** Master toggle for the velocity-field grid (0..1). 0 = field is dormant,
+   * particles never sample it; 1 = particles ride the field at full strength.
+   * Acts as the global on/off / fade knob for the lingering-momentum mechanic. */
+  fieldStrength: number
+  /** Resolution of the velocity-field grid along the longer canvas axis. Higher
+   * = finer detail in the swirl, but more cells to update each frame. 24-48 is
+   * a good range. */
+  fieldGridResolution: number
+  /** Radius (bitmap px) over which the cursor injects velocity into the field
+   * each frame. Roughly the cursor-disk size or slightly larger reads as
+   * "the spoon stirring the coffee around it". */
+  fieldInjectRadiusBmp: number
+  /** Multiplier on the cursor's per-frame velocity when injecting into the
+   * field. Higher = a single mouse stroke deposits more momentum, so the
+   * field carries longer / spins harder after the cursor leaves. */
+  fieldInjectStrength: number
+  /** Fraction of the field's energy LOST per second when the cursor isn't
+   * adding to it. 0 = field never decays (chaotic build-up); 1 = field dies
+   * within a frame (no lingering). 0.4-0.7 reads as "stir, watch it spin
+   * down over a couple of seconds". */
+  fieldDecayPerSec: number
+  /** Per-frame lateral diffusion (0..0.25). Each cell averages a fraction of
+   * its 4 neighbours' velocity into itself, so injected energy seeps outward
+   * — crucial for "the swirl spreads beyond where the cursor went". 0 skips
+   * the pass for a perf saving. */
+  fieldDiffusion: number
+  /** How much of the sampled field velocity is added to a particle's velocity
+   * each frame. Multiplied by `fieldStrength`. 0.05-0.20 reads as "particles
+   * ride the field but still keep their own dynamics". */
+  fieldRideStrength: number
 }
 
 /** SC PRints v2-era settings (commit 2f8436e, May 3 11:20). User indicated these
@@ -198,6 +228,15 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   vortexCaptureProbability: 0.7,
   vortexEllipseAspect: 1.6,
   vortexSpeedReference: 8.0,
+  /** Velocity-field grid — disabled by default. Enable by raising
+   * `fieldStrength` above 0 to introduce the lingering-momentum mechanic. */
+  fieldStrength: 0.0,
+  fieldGridResolution: 36,
+  fieldInjectRadiusBmp: 70,
+  fieldInjectStrength: 1.0,
+  fieldDecayPerSec: 0.55,
+  fieldDiffusion: 0.06,
+  fieldRideStrength: 0.12,
 })
 
 export function mergeNewmixLiveTuning(
