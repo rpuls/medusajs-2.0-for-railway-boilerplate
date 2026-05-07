@@ -144,13 +144,20 @@ type CustomizerTemplateProps = {
   pickerProducts?: CustomizerPickerProduct[]
 }
 
-// Real-world print dimensions per SCP size (cm). "Oversize" is the largest,
-// matching the full 68% × 72% canvas footprint; smaller sizes are scaled
-// proportionally so the dashed guide reflects what will actually be printed.
+// Visual-only dimensions used to scale the dashed print-area guide on the
+// canvas. These are tuned against the photographed garment so each size *looks*
+// like the print a customer will actually receive — they are NOT the true
+// printable dimensions used for pricing or production. The customer-facing
+// label dimensions live in `SCP_PRINT_SIZE_OPTIONS` (scp-dtf-print-pricing.ts).
+//
+// "Oversize" matches the full 68%×72% canvas footprint (≈ a real garment-wide
+// print). A3 and A4 are pulled in so the rectangle reads more like a normal
+// chest print rather than swallowing the whole tee, otherwise customers expect
+// a print larger than what they're paying for. A6 is small enough already.
 const SCP_PRINT_SIZE_CM: Record<ScpPrintSizeId, { w: number; h: number }> = {
   up_to_a6: { w: 10, h: 15 },
-  up_to_a4: { w: 21, h: 30 },
-  up_to_a3: { w: 29, h: 42 },
+  up_to_a4: { w: 17, h: 24 },
+  up_to_a3: { w: 23, h: 33 },
   oversize: { w: 38, h: 48 },
 }
 const SCP_BASE_REF = SCP_PRINT_SIZE_CM.oversize
