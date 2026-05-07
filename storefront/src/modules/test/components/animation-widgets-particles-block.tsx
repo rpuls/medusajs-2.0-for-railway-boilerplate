@@ -1,8 +1,12 @@
 "use client"
 
-import type { ISourceOptions } from "@tsparticles/engine"
 import Particles, { initParticlesEngine } from "@tsparticles/react"
 import { loadSlim } from "@tsparticles/slim"
+
+// `@tsparticles/engine` is installed transitively but not declared as a direct
+// dep, so TS can't resolve a top-level import. Reuse its core options shape
+// loosely — we only use a handful of fields below.
+type ISourceOptions = Record<string, unknown>
 import { useEffect, useMemo, useState } from "react"
 
 type Props = {

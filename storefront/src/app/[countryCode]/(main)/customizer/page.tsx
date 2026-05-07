@@ -87,10 +87,12 @@ export default async function CustomizerPage({ params, searchParams }: Customize
       response: { products: byQuery },
     } = await getProductsList({
       countryCode,
+      // `handle` filter is accepted by Medusa at runtime but isn't declared in
+      // the SDK's StoreProductParams preview types — cast to silence drift.
       queryParams: {
         handle: handleFromQuery,
         limit: 1,
-      },
+      } as HttpTypes.StoreProductParams,
     })
     customizerProduct = byQuery[0] ?? null
   }
@@ -103,7 +105,7 @@ export default async function CustomizerPage({ params, searchParams }: Customize
       queryParams: {
         handle: configuredHandle,
         limit: 1,
-      },
+      } as HttpTypes.StoreProductParams,
     })
     customizerProduct = byEnv[0] ?? null
   }

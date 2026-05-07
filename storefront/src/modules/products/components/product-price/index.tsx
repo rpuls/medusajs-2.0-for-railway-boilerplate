@@ -42,7 +42,7 @@ const getBulkPricingTiers = (variant?: HttpTypes.StoreProductVariant): BulkTier[
   }
 
   return bulkPricing.tiers
-    .map((tier) => {
+    .map((tier): BulkTier | null => {
       const minQuantity = toNumber(tier.min_quantity)
       const maxQuantity = toNumber(tier.max_quantity)
       const amount = toNumber(tier.amount)

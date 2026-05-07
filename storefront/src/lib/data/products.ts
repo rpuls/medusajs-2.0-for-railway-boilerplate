@@ -2,6 +2,7 @@ import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { cache } from "react"
 import { getRegion } from "./regions"
+import { nextHeaders } from "./sdk-helpers"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { ProductFilters } from "@modules/store/components/refinement-list/types"
 import { sortProducts } from "@lib/util/sort-products"
@@ -34,9 +35,7 @@ const STORE_PRODUCT_FIELDS =
  * Next.js Data Cache: tag for on-demand `revalidateTag("products")`, plus a max age so catalog
  * changes (e.g. Draft after trim script) are not served forever without a redeploy.
  */
-const PRODUCT_LIST_FETCH_INIT = {
-  next: { tags: ["products"] as const, revalidate: 120 },
-}
+const PRODUCT_LIST_FETCH_INIT = nextHeaders({ tags: ["products"], revalidate: 120 })
 
 export const getProductsById = cache(async function ({
   ids,
@@ -66,10 +65,11 @@ export async function getProductByHandle(
     return null
   }
 
-  const baseParams: HttpTypes.FindParams & HttpTypes.StoreProductParams = {
+  // `handle` is accepted at runtime; cast widens the SDK preview type.
+  const baseParams = {
     handle: normalizedHandle,
     fields: STORE_PRODUCT_FIELDS,
-  }
+  } as HttpTypes.FindParams & HttpTypes.StoreProductParams
 
   if (!regionId) {
     return null
@@ -187,7 +187,11 @@ export const getHomeFeaturedRangeProducts = cache(async function ({
     }
     const { response } = await getProductsList({
       countryCode,
-      queryParams: { q, limit: HOME_FEATURED_SEARCH_FETCH },
+      // `q` (full-text search) is accepted at runtime; cast over preview-type drift.
+      queryParams: {
+        q,
+        limit: HOME_FEATURED_SEARCH_FETCH,
+      } as Parameters<typeof getProductsList>[0]["queryParams"],
     })
     addHoodies(byId, response.products)
   }

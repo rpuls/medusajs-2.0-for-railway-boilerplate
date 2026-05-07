@@ -426,11 +426,11 @@ function TypewriterHeadline({ reducedMotion }: { reducedMotion: boolean }) {
       current += 1
       setLen(Math.min(current, fullLen))
       if (current < fullLen) {
-        activeId = window.setTimeout(step, 48)
+        activeId = setTimeout(step, 48)
       }
     }
 
-    activeId = window.setTimeout(step, 48)
+    activeId = setTimeout(step, 48)
     return () => {
       cancelled = true
       if (activeId !== undefined) {

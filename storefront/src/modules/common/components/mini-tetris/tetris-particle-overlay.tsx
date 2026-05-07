@@ -1127,11 +1127,13 @@ export default function TetrisParticleOverlay({
             const ri = r | 0
             const gi = g | 0
             const bi = b | 0
-            /** Replace pixel — block colour wins over field underneath. */
-            pixBuf[off] = ri > 255 ? 255 : ri
-            pixBuf[off + 1] = gi > 255 ? 255 : gi
-            pixBuf[off + 2] = bi > 255 ? 255 : bi
-            pixBuf[off + 3] = edgeA
+            /** Replace pixel — block colour wins over field underneath.
+             * Non-null asserted: the early-return guard above keeps pixBuf
+             * non-null for the entire tick(); TS just loses track in nested loops. */
+            pixBuf![off] = ri > 255 ? 255 : ri
+            pixBuf![off + 1] = gi > 255 ? 255 : gi
+            pixBuf![off + 2] = bi > 255 ? 255 : bi
+            pixBuf![off + 3] = edgeA
           }
         }
         /** Sparse internal sparkles — 5-6 brighter pixels inside the core for
@@ -1146,10 +1148,11 @@ export default function TetrisParticleOverlay({
           const syi = sy | 0
           if (sxi < 0 || sxi + 1 >= PW || syi < 0 || syi + 1 >= PH) continue
           const off = (syi * PW + sxi) * 4
-          pixBuf[off] = 255
-          pixBuf[off + 1] = 255
-          pixBuf[off + 2] = 255
-          pixBuf[off + 3] = 255
+          // Non-null asserted — see note above on the early-return guard.
+          pixBuf![off] = 255
+          pixBuf![off + 1] = 255
+          pixBuf![off + 2] = 255
+          pixBuf![off + 3] = 255
         }
       }
 

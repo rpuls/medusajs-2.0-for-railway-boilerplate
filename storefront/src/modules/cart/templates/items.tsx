@@ -158,7 +158,8 @@ const CartItemGroup = ({
   return (
     <>
       <Table.Row className="bg-ui-bg-subtle">
-        <Table.Cell colSpan={5} className="!py-2">
+        {/* Medusa UI's Table.Cell prop type doesn't declare `colSpan`, but it forwards rest props to <td>. */}
+        <Table.Cell {...({ colSpan: 5 } as any)} className="!py-2">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}

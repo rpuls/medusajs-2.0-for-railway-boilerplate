@@ -124,7 +124,7 @@ export default function BrandsHero() {
 
       let resizeTimer: ReturnType<typeof setTimeout> | undefined
       const onResize = () => {
-        clearTimeout(resizeTimer)
+        if (resizeTimer !== undefined) clearTimeout(resizeTimer)
         resizeTimer = setTimeout(() => {
           gsap.killTweensOf(tiles)
           applyFinalTiles(false)
@@ -138,7 +138,7 @@ export default function BrandsHero() {
       })
 
       return () => {
-        clearTimeout(resizeTimer)
+        if (resizeTimer !== undefined) clearTimeout(resizeTimer)
         window.removeEventListener("resize", onResize)
         cancelAnimationFrame(raf1)
         gsap.killTweensOf(tiles)

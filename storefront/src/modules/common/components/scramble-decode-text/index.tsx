@@ -82,7 +82,7 @@ function ScrambleDecodeInner({
     )
     const chars = text.split("")
 
-    tickRef.current = window.setInterval(() => {
+    tickRef.current = setInterval(() => {
       frame += 1
       let li = 0
       setDisplay(

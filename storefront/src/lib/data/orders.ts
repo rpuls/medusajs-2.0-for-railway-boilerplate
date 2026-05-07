@@ -3,7 +3,7 @@
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { cache } from "react"
-import { getAuthHeaders } from "./cookies"
+import { authedNextHeaders } from "./sdk-helpers"
 
 import type { CustomizerMetadata } from "@modules/customizer/lib/types"
 
@@ -16,12 +16,9 @@ const ORDER_FIELDS =
 const normalizeOrderUnits = <T extends Record<string, any>>(order: T): T => order
 
 export const retrieveOrder = cache(async function (id: string) {
+  const headers = await authedNextHeaders({ tags: ["order"] })
   return sdk.store.order
-    .retrieve(
-      id,
-      { fields: ORDER_FIELDS },
-      { next: { tags: ["order"] }, ...getAuthHeaders() }
-    )
+    .retrieve(id, { fields: ORDER_FIELDS }, headers)
     .then(({ order }) => normalizeOrderUnits(order as any))
     .catch((err) => medusaError(err))
 })
@@ -56,11 +53,9 @@ export const listOrders = cache(async function (
   limit: number = 10,
   offset: number = 0
 ) {
+  const headers = await authedNextHeaders({ tags: ["order"] })
   return sdk.store.order
-    .list(
-      { limit, offset, fields: ORDER_FIELDS },
-      { next: { tags: ["order"] }, ...getAuthHeaders() }
-    )
+    .list({ limit, offset, fields: ORDER_FIELDS }, headers)
     .then(({ orders }) => orders.map((o: any) => normalizeOrderUnits(o)))
     .catch((err) => medusaError(err))
 })

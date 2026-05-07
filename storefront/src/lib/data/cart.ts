@@ -441,13 +441,13 @@ export async function enrichLineItems(
 
   // One row per size/design can repeat the same product_id 100+ times. Passing
   // duplicate ids balloons the list API query and can 414/fail checkout RSC.
-  const uniqueIds = [
-    ...new Set(
+  const uniqueIds = Array.from(
+    new Set(
       lineItems
         .map((lineItem) => lineItem.product_id)
         .filter((id): id is string => typeof id === "string" && id.length > 0)
-    ),
-  ]
+    )
+  )
 
   let products: Awaited<ReturnType<typeof getProductsById>> | null = null
   try {
@@ -464,13 +464,17 @@ export async function enrichLineItems(
 
   // If the catalog fetch failed, keep checkout alive with unenriched lines
   // rather than returning [] (which would wipe the cart UI).
-  if (!products?.length) {
+  if (!products || products.length === 0) {
     return lineItems as HttpTypes.StoreCartLineItem[]
   }
 
+  // Const-bind for the closure: TS doesn't carry `let`-narrowing into the
+  // map callback since the binding is technically reassignable from outside.
+  const productCatalog = products
+
   // Enrich line items with product and variant information
   const enrichedItems = lineItems.map((item) => {
-    const product = products.find((p: any) => p.id === item.product_id)
+    const product = productCatalog.find((p: any) => p.id === item.product_id)
     const variant = product?.variants?.find(
       (v: any) => v.id === item.variant_id
     )

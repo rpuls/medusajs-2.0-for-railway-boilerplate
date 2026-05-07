@@ -247,7 +247,7 @@ const resolveVariantBulkPricingTiers = (
   }
 
   return bulkPricing.tiers
-    .map((tier) => {
+    .map((tier): BulkPricingTier | null => {
       const minQuantity = toFiniteNumber(tier.min_quantity)
       const maxQuantity = toFiniteNumber(tier.max_quantity)
       const amountCents = toFiniteNumber(tier.amount)
@@ -494,6 +494,7 @@ export default function CustomizerTemplate({
   /** Once the customer dismisses the modal we don't keep re-opening it on every scale event. */
   const lowResModalDismissedRef = useRef(false)
   const [vectorizationRequested, setVectorizationRequested] = useState(false)
+  const [isRemovingVectorization, setIsRemovingVectorization] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSavingDesign, setIsSavingDesign] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
@@ -542,9 +543,11 @@ export default function CustomizerTemplate({
   // Long-sleeve garments accept up to A3 on sleeves; short-sleeve garments stay
   // A6-only. Used to gate the print-size tile picker and to clamp the global
   // scpPrintSizeId when the user switches to a side with stricter limits.
+  // Reads `product` (prop) directly rather than `selectedProduct` (declared
+  // later in the file) — same value, just avoids a use-before-declaration.
   const productIsLongSleeve = useMemo(
-    () => isLongSleeveGarmentProduct(selectedProduct),
-    [selectedProduct]
+    () => isLongSleeveGarmentProduct(product),
+    [product]
   )
   const allowedSizesForCurrentSide = useMemo(
     () => getAllowedScpPrintSizesForSide(currentSide, productIsLongSleeve),
@@ -1657,6 +1660,52 @@ export default function CustomizerTemplate({
   }
 
   /**
+   * Cancels the vectorization upsell and removes any matching cart line that a
+   * previous "Add to cart" already inserted. Without the cart-side cleanup the
+   * customer sees the banner disappear but still pays for vectorization at
+   * checkout — exactly the gap that made the bug worth fixing.
+   *
+   * If the cart is unreachable, we still flip the local state but warn the
+   * customer to check their cart manually rather than silently leaving the
+   * stale line in place.
+   */
+  const handleRemoveVectorization = async () => {
+    setIsRemovingVectorization(true)
+    setStatusMessage(null)
+    setUploadError(null)
+    try {
+      const cart = await retrieveCart()
+      const matchingLines = (cart?.items ?? []).filter((line: any) => {
+        const meta = (line?.metadata ?? {}) as Record<string, unknown>
+        return meta.vectorization_for_order === true
+      })
+      let anyDeleteFailed = false
+      for (const line of matchingLines) {
+        try {
+          await deleteLineItem((line as any).id)
+        } catch {
+          anyDeleteFailed = true
+        }
+      }
+      setVectorizationRequested(false)
+      if (anyDeleteFailed) {
+        setUploadError(
+          "Removed from this design, but couldn't fully clear it from your cart — please double-check the cart before checking out."
+        )
+      } else if (matchingLines.length > 0) {
+        setStatusMessage("Vectorization service removed from your cart.")
+      }
+    } catch {
+      setVectorizationRequested(false)
+      setUploadError(
+        "Removed from this design, but we couldn't reach your cart to confirm. Double-check the cart before checking out."
+      )
+    } finally {
+      setIsRemovingVectorization(false)
+    }
+  }
+
+  /**
    * Persist the current canvas state to the customer's "My Designs" without
    * sending it to the cart. Skips the heavy server-side print/mockup render —
    * those run later when the user actually adds the design to cart. The
@@ -1954,23 +2003,41 @@ export default function CustomizerTemplate({
       }
 
       // Vectorization service: when the customer accepted the upsell from the
-      // low-resolution modal, add the matching service SKU once per cart-add
-      // (a single review covers all the lines we just inserted).
+      // low-resolution modal, add the matching service SKU once per cart —
+      // a single review covers everything in the cart. Re-clicking "Add to cart"
+      // (e.g. after tweaking quantity) MUST NOT add a second service line: we
+      // probe the cart for an existing `vectorization_for_order: true` marker
+      // first. On read failure we default to "already there" so we never
+      // double-charge a customer because of a transient cart fetch.
       const vectorizationVariantId =
         process.env.NEXT_PUBLIC_VECTORIZATION_VARIANT_ID?.trim()
       if (vectorizationRequested && vectorizationVariantId) {
-        const vectorizationResult = await addToCartSafe({
-          variantId: vectorizationVariantId,
-          quantity: 1,
-          countryCode,
-          metadata: {
-            vectorization_for_order: true,
-          },
-        })
-        if (!vectorizationResult.ok) {
-          setStatusMessage(
-            `Items were added, but the vectorization service couldn't be added automatically (${vectorizationResult.error}). Our team will add it during artwork review.`
-          )
+        let cartAlreadyHasVectorization = true
+        try {
+          const existingCart = await retrieveCart()
+          cartAlreadyHasVectorization = (existingCart?.items ?? []).some((line: any) => {
+            const meta = (line?.metadata ?? {}) as Record<string, unknown>
+            return meta.vectorization_for_order === true
+          })
+        } catch {
+          // Defensive default: leave `cartAlreadyHasVectorization = true` so
+          // we skip the add. Better to under-add than to double-charge.
+        }
+
+        if (!cartAlreadyHasVectorization) {
+          const vectorizationResult = await addToCartSafe({
+            variantId: vectorizationVariantId,
+            quantity: 1,
+            countryCode,
+            metadata: {
+              vectorization_for_order: true,
+            },
+          })
+          if (!vectorizationResult.ok) {
+            setStatusMessage(
+              `Items were added, but the vectorization service couldn't be added automatically (${vectorizationResult.error}). Our team will add it during artwork review.`
+            )
+          }
         }
       }
 
@@ -2105,10 +2172,13 @@ export default function CustomizerTemplate({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setVectorizationRequested(false)}
-                  className="text-xs text-emerald-800 hover:text-emerald-900 underline self-start"
+                  onClick={() => {
+                    void handleRemoveVectorization()
+                  }}
+                  disabled={isRemovingVectorization}
+                  className="text-xs text-emerald-800 hover:text-emerald-900 underline self-start disabled:opacity-60"
                 >
-                  Remove
+                  {isRemovingVectorization ? "Removing…" : "Remove"}
                 </button>
               </div>
             )}
