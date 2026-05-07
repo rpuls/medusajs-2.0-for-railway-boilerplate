@@ -34,9 +34,12 @@ export async function retrieveCart() {
 
   const retrieveConfig = {
     // `customer_id` is needed so `getOrSetCart` can detect a logged-in
-    // customer holding an old guest cart and transfer ownership.
+    // customer holding an old guest cart and transfer ownership. The
+    // `*items.variant.*` paths populate items + their variant + variant's
+    // product (including handle, thumbnail, images) plus the inventory flags
+    // the cart UI uses for the qty dropdown cap.
     fields:
-      "customer_id,*items.variant.manage_inventory,*items.variant.allow_backorder",
+      "customer_id,*items.variant.product,*items.variant.manage_inventory,*items.variant.allow_backorder",
   }
   const authHeaders = await getAuthHeaders()
 

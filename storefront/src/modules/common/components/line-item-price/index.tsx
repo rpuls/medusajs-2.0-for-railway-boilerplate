@@ -29,6 +29,14 @@ const LineItemPrice = ({ item, style = "default" }: LineItemPriceProps) => {
 
   const itemRecord = item as { compare_at_unit_price?: number | null }
 
+  // Defensive: if the line came back partially populated (custom add-to-cart,
+  // missing variant, etc.), `quantity` can be undefined → `unitMinor * qty`
+  // becomes NaN and the price renders as `$NaN`. Floor at 0.
+  const safeQuantity =
+    typeof item.quantity === "number" && Number.isFinite(item.quantity)
+      ? item.quantity
+      : 0
+
   let originalPrice: number
   let currentPrice: number
   let hasReducedPrice: boolean
@@ -39,13 +47,13 @@ const LineItemPrice = ({ item, style = "default" }: LineItemPriceProps) => {
       Number.isFinite(itemRecord.compare_at_unit_price)
         ? Math.round(itemRecord.compare_at_unit_price)
         : null
-    originalPrice = (compareAtMinor ?? unitMinor) * item.quantity
-    currentPrice = unitMinor * item.quantity - adjustmentsSum
+    originalPrice = (compareAtMinor ?? unitMinor) * safeQuantity
+    currentPrice = unitMinor * safeQuantity - adjustmentsSum
     hasReducedPrice = compareAtMinor != null && compareAtMinor > unitMinor
   } else {
     const original_price_number = prices?.original_price_number ?? 0
-    originalPrice = original_price_number * item.quantity
-    currentPrice = unitMinor * item.quantity - adjustmentsSum
+    originalPrice = original_price_number * safeQuantity
+    currentPrice = unitMinor * safeQuantity - adjustmentsSum
     hasReducedPrice = currentPrice < originalPrice
   }
 

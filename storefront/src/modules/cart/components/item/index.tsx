@@ -29,10 +29,35 @@ const Item = ({ item, type = "full" }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { handle } = item.variant?.product ?? {}
   const customizerMetadata = getCustomizerMetadata(item)
   const mockupUrls = getCustomizerMockupUrls(item)
   const mockupArtifacts = getCustomizerMockupArtifacts(item)
+
+  // Resilient handle/title resolution — if the line came back without an
+  // attached product/variant (custom SCP add-to-cart, deleted variant, or a
+  // partial fields population), avoid linking to /products/undefined (which
+  // 404s) and avoid an empty title row. Customizer add-to-cart stamps these
+  // onto `item.metadata` as a last-resort fallback.
+  const metaRecord = (item.metadata ?? {}) as Record<string, unknown>
+  const metaHandle =
+    typeof metaRecord.product_handle === "string"
+      ? metaRecord.product_handle
+      : null
+  const metaTitle =
+    typeof metaRecord.product_title === "string"
+      ? metaRecord.product_title
+      : null
+  const handle =
+    item.variant?.product?.handle ??
+    (item as { product_handle?: string }).product_handle ??
+    metaHandle ??
+    null
+  const displayTitle =
+    item.product_title ||
+    item.variant?.product?.title ||
+    (item as { title?: string }).title ||
+    metaTitle ||
+    "Custom item"
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -64,26 +89,42 @@ const Item = ({ item, type = "full" }: ItemProps) => {
   return (
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
-        <LocalizedClientLink
-          href={`/products/${handle}?${[
-            item.variant?.id ? `variant=${item.variant.id}` : null,
-            `edit=${item.id}`,
-          ]
-            .filter(Boolean)
-            .join("&")}`}
-          className={clx("flex", {
-            "w-16": type === "preview",
-            "small:w-24 w-12": type === "full",
-          })}
-        >
-          <LineItemMockupPreview
-            mockups={mockupArtifacts}
-            mockupUrls={mockupUrls}
-            productThumbnail={item.variant?.product?.thumbnail}
-            productImages={item.variant?.product?.images}
-            size="square"
-          />
-        </LocalizedClientLink>
+        {handle ? (
+          <LocalizedClientLink
+            href={`/products/${handle}?${[
+              item.variant?.id ? `variant=${item.variant.id}` : null,
+              `edit=${item.id}`,
+            ]
+              .filter(Boolean)
+              .join("&")}`}
+            className={clx("flex", {
+              "w-16": type === "preview",
+              "small:w-24 w-12": type === "full",
+            })}
+          >
+            <LineItemMockupPreview
+              mockups={mockupArtifacts}
+              mockupUrls={mockupUrls}
+              productThumbnail={item.variant?.product?.thumbnail ?? item.thumbnail}
+              productImages={item.variant?.product?.images}
+              size="square"
+            />
+          </LocalizedClientLink>
+        ) : (
+          <div
+            className={clx("flex", {
+              "w-16": type === "preview",
+              "small:w-24 w-12": type === "full",
+            })}
+          >
+            <LineItemMockupPreview
+              mockups={mockupArtifacts}
+              mockupUrls={mockupUrls}
+              productThumbnail={item.thumbnail}
+              size="square"
+            />
+          </div>
+        )}
       </Table.Cell>
 
       <Table.Cell className="text-left">
@@ -91,7 +132,7 @@ const Item = ({ item, type = "full" }: ItemProps) => {
           className="txt-medium-plus text-ui-fg-base"
           data-testid="product-title"
         >
-          {item.product_title}
+          {displayTitle}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
         {customizerMetadata && (

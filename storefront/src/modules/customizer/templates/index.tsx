@@ -2180,6 +2180,12 @@ export default function CustomizerTemplate({
           printSizeId: scpPrintSizeId,
           metadata: {
             customizerDesign: sanitizeCustomizerDesignForCart(lineItemMetadata),
+            // Fallback display fields — if the cart later loses the
+            // variant→product join (custom add path, deleted variant, or
+            // partial fields population), the cart UI still has a title and
+            // a working "back to product" link from these.
+            product_handle: selectedProduct.handle ?? undefined,
+            product_title: selectedProduct.title ?? undefined,
           },
         })
 
@@ -2859,7 +2865,14 @@ export default function CustomizerTemplate({
                     num={stepNum(2)}
                     title={decoratedCount > 0 ? "Add / change print positions" : "Print location"}
                     done={pdpStep2Done && pdpStep > 2}
-                    onChange={() => setPdpStep(2)}
+                    onChange={() => {
+                      setPdpStep(2)
+                      // Going back to add/change another print location means
+                      // the customer is restarting the size flow for the next
+                      // location — clear the "chosen" highlight so the size
+                      // tiles aren't pre-selected when they reach step 3.
+                      setScpPrintSizeChosen(false)
+                    }}
                   />
 
                   {decoratedCount > 0 ? (
@@ -2923,7 +2936,12 @@ export default function CustomizerTemplate({
                 num={stepNum(3)}
                 title="Print size"
                 done={pdpStep3Done && pdpStep > 3}
-                onChange={() => setPdpStep(3)}
+                onChange={() => {
+                  setPdpStep(3)
+                  // Re-pick: clear highlight so the customer makes a fresh
+                  // choice rather than seeing the previous size pre-selected.
+                  setScpPrintSizeChosen(false)
+                }}
               />
               {pdpStep === 3 ? (
                 <>
