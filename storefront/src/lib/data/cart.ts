@@ -23,6 +23,53 @@ const cartDebug = (message: string, extra?: Record<string, unknown>) => {
   console.info(CART_DEBUG_TAG, message)
 }
 
+/**
+ * Diagnostic: walks a freshly-fetched cart's line items and logs to the
+ * server console if anything looks malformed. Catches the "fields query
+ * pruned my data" class of regression early, before customers see "$0.00 /
+ * Cart (0)" rows. Pure observation — never throws or mutates.
+ */
+function assertLineItemsLookHealthy(cart: unknown, source: string) {
+  const c = cart as { id?: string; items?: Array<Record<string, unknown>> } | null
+  const items = c?.items ?? []
+  if (!Array.isArray(items) || items.length === 0) return
+
+  const broken: Array<{
+    line: string
+    missing: string[]
+  }> = []
+
+  for (const item of items) {
+    const missing: string[] = []
+    if (typeof item.quantity !== "number" || !Number.isFinite(item.quantity) || item.quantity < 1) {
+      missing.push("quantity")
+    }
+    if (typeof item.unit_price !== "number" || !Number.isFinite(item.unit_price)) {
+      missing.push("unit_price")
+    }
+    if (typeof item.variant_id !== "string" || !item.variant_id) {
+      missing.push("variant_id")
+    }
+    if (typeof item.product_title !== "string" || !item.product_title) {
+      missing.push("product_title")
+    }
+    if (missing.length) {
+      broken.push({ line: String(item.id ?? "?"), missing })
+    }
+  }
+
+  if (broken.length) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[cart-health] ${source} returned ${broken.length}/${items.length} line items missing critical fields. ` +
+        `Cart will render as $0.00 / empty quantity / Cart (0). ` +
+        `Most likely cause: a 'fields' parameter was added to retrieveCart that prunes scalar item fields. ` +
+        `See the warning at the top of retrieveCart in storefront/src/lib/data/cart.ts. ` +
+        `Cart ${c?.id ?? "?"}, broken lines: ${JSON.stringify(broken)}`
+    )
+  }
+}
+
 export async function retrieveCart() {
   const cartId = await getCartId()
   cartDebug("retrieveCart:start", { cartId: cartId ?? null })
@@ -32,93 +79,57 @@ export async function retrieveCart() {
     return null
   }
 
-  // Two-layer recovery: try a broad `*items` fields config first so item
-  // line fields (product_title, unit_price, quantity, thumbnail) come back
-  // populated. If that 400s on this Medusa version, retry without any
-  // `fields` so we still get a populated cart from defaults. Better to
-  // render a working cart with default fields than to show "Cart (0)"
-  // because of a fields-syntax mismatch.
+  // ⚠️ DO NOT pass a `fields` parameter to `sdk.store.cart.retrieve`.
   //
-  // Previous configs explicitly listed `*items.variant.manage_inventory`
-  // etc., which seems to have caused Medusa to prune sibling default fields
-  // — items came back without `quantity` or `unit_price`, so the cart UI
-  // rendered "$0.00" and "(0)" rows. Bumping to `*items.variant.product`
-  // expands variant + product (handle, thumbnail, calculated_price) without
-  // restricting per-field selection on items themselves.
-  const retrieveConfigWithFields = {
-    fields: "customer_id,*items.variant.product",
-  }
-  const retrieveConfigDefault: Record<string, never> = {}
+  // Background: in Medusa 2.12.x, specifying `fields` with sub-path syntax
+  // like `*items.variant.manage_inventory` causes the server to prune
+  // default scalar fields on the parent (`items.quantity`,
+  // `items.unit_price`, `items.variant_title`, etc.). The cart then renders
+  // as $0.00 / Cart (0) / Variant: <empty> — which is exactly the bug we
+  // chased for many turns trying clever combinations of `*` and explicit
+  // field lists. None of them worked; only "no fields config" works.
+  //
+  // If you need to ADD a non-default field, use `+fieldname` syntax (see
+  // `lib/data/orders.ts` ORDER_FIELDS for the additive pattern). Never
+  // re-introduce a `*items.X` config here without first verifying the
+  // returned cart still has `quantity`, `unit_price`, and `variant_title`
+  // populated on every line item. The `assertLineItemsLookHealthy` guard
+  // below will warn you in the server logs if you break this.
   const authHeaders = await getAuthHeaders()
 
-  const tryRetrieve = async (
-    config: Record<string, unknown>,
-    headers: Record<string, string>
-  ) => {
-    return sdk.store.cart.retrieve(cartId, config, {
-      next: { tags: ["cart"] },
-      ...headers,
-    })
-  }
-
-  // 1. Authed + explicit fields (happy path)
   try {
-    const { cart } = await tryRetrieve(retrieveConfigWithFields, authHeaders)
+    const { cart } = await sdk.store.cart.retrieve(cartId, {}, {
+      next: { tags: ["cart"] },
+      ...authHeaders,
+    })
     cartDebug("retrieveCart:success", {
       cartId: cart.id,
       itemCount: Array.isArray(cart.items) ? cart.items.length : null,
       authMode: "auth",
     })
+    assertLineItemsLookHealthy(cart, "retrieveCart:auth")
     return cart
   } catch (error) {
-    cartDebug("retrieveCart:auth-with-fields-failed", {
+    cartDebug("retrieveCart:auth-failed", {
       cartId,
       message: error instanceof Error ? error.message : "unknown",
     })
   }
 
-  // 2. Authed + no fields (in case the fields path is the problem)
-  try {
-    const { cart } = await tryRetrieve(retrieveConfigDefault, authHeaders)
-    cartDebug("retrieveCart:success-default-fields", {
-      cartId: cart.id,
-      itemCount: Array.isArray(cart.items) ? cart.items.length : null,
-      authMode: "auth",
-    })
-    return cart
-  } catch (error) {
-    cartDebug("retrieveCart:auth-default-failed", {
-      cartId,
-      message: error instanceof Error ? error.message : "unknown",
-    })
-  }
-
-  // 3. Guest + explicit fields (stale auth cookie etc.)
+  // Stale auth cookie recovery — retry as guest.
   if ("authorization" in authHeaders) {
     try {
-      const { cart } = await tryRetrieve(retrieveConfigWithFields, {})
+      const { cart } = await sdk.store.cart.retrieve(cartId, {}, {
+        next: { tags: ["cart"] },
+      })
       cartDebug("retrieveCart:guest-retry-success", {
         cartId: cart.id,
         itemCount: Array.isArray(cart.items) ? cart.items.length : null,
       })
+      assertLineItemsLookHealthy(cart, "retrieveCart:guest-retry")
       return cart
     } catch (error) {
       cartDebug("retrieveCart:guest-retry-failed", {
-        cartId,
-        message: error instanceof Error ? error.message : "unknown",
-      })
-    }
-
-    // 4. Guest + no fields (last resort)
-    try {
-      const { cart } = await tryRetrieve(retrieveConfigDefault, {})
-      cartDebug("retrieveCart:guest-default-success", {
-        cartId: cart.id,
-        itemCount: Array.isArray(cart.items) ? cart.items.length : null,
-      })
-      return cart
-    } catch (error) {
-      cartDebug("retrieveCart:guest-default-failed", {
         cartId,
         message: error instanceof Error ? error.message : "unknown",
       })
