@@ -181,6 +181,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   mergedMetadata.customizerDesign = mergedCustomizerDesign
 
+  // Capture the cart's existing line count so we can verify the workflow
+  // actually appended a row. addToCartWorkflow can no-op silently in some
+  // edge cases (variant unavailable in region, sales-channel mismatch,
+  // calculated_price missing), returning success with the cart unchanged.
+  // When that happens the storefront shows a green "added" toast but the
+  // cart badge stays at 0. Surfacing it here as a 500 lets the customer
+  // retry instead of silently losing the click.
+  const beforeRows = await query.graph({
+    entity: "cart",
+    filters: { id: cartId },
+    fields: ["items.id"],
+  })
+  const beforeCount = ((beforeRows.data?.[0] as { items?: unknown[] } | undefined)?.items ?? []).length
+
   await addToCartWorkflow(req.scope).run({
     input: {
       cart_id: cartId,
@@ -195,9 +209,26 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     },
   })
 
+  const afterRows = await query.graph({
+    entity: "cart",
+    filters: { id: cartId },
+    fields: ["items.id", "items.variant_id", "items.quantity", "items.unit_price"],
+  })
+  const afterItems = ((afterRows.data?.[0] as { items?: Array<{ variant_id?: string; quantity?: number }> } | undefined)?.items ?? [])
+  const afterCount = afterItems.length
+  const matchingItem = afterItems.find((it) => it.variant_id === variantId)
+
+  if (afterCount <= beforeCount || !matchingItem) {
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `addToCartWorkflow ran but did not append the line (variant ${variantId}, qty ${quantity}, unit_price ${unitPriceMajor}). Cart had ${beforeCount} items before and ${afterCount} after. Likely cause: variant has no calculated_price for this region/currency, or the variant isn't on the cart's sales channel.`
+    )
+  }
+
   return res.status(200).json({
     ok: true,
     cart_id: cartId,
     unit_price: unitPriceMajor,
+    items_after: afterCount,
   })
 }

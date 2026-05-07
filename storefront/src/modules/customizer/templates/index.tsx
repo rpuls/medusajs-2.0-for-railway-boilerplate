@@ -3020,7 +3020,7 @@ export default function CustomizerTemplate({
                   <button
                     type="button"
                     onClick={() => setPdpStep(2)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-ui-border-base bg-ui-bg-subtle/40 px-3 py-2 text-left text-xs text-ui-fg-subtle transition-colors hover:border-ui-fg-base hover:bg-ui-bg-subtle hover:text-ui-fg-base"
+                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--brand-secondary)] bg-ui-bg-subtle/40 px-3 py-2 text-left text-xs text-ui-fg-subtle transition-colors hover:bg-ui-bg-subtle hover:text-ui-fg-base"
                   >
                     <span>
                       <span className="font-semibold text-ui-fg-base">+ Add another print location</span>

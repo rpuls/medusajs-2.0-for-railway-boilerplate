@@ -32,22 +32,31 @@ export async function retrieveCart() {
     return null
   }
 
-  const retrieveConfig = {
-    // `customer_id` is needed so `getOrSetCart` can detect a logged-in
-    // customer holding an old guest cart and transfer ownership. The
-    // `*items.variant.*` paths populate items + their variant + variant's
-    // product (including handle, thumbnail, images) plus the inventory flags
-    // the cart UI uses for the qty dropdown cap.
+  // Two-layer recovery: try the explicit fields config first (gives us
+  // `customer_id` + the variant inventory flags), but if that 400s on this
+  // Medusa version, retry without `fields` so we still get a populated cart
+  // back. Better to render a working cart with default fields than to show
+  // "Cart (0)" because of a fields-syntax mismatch.
+  const retrieveConfigWithFields = {
     fields:
-      "customer_id,*items.variant.product,*items.variant.manage_inventory,*items.variant.allow_backorder",
+      "customer_id,*items.variant.manage_inventory,*items.variant.allow_backorder",
   }
+  const retrieveConfigDefault: Record<string, never> = {}
   const authHeaders = await getAuthHeaders()
 
-  try {
-    const { cart } = await sdk.store.cart.retrieve(cartId, retrieveConfig, {
+  const tryRetrieve = async (
+    config: Record<string, unknown>,
+    headers: Record<string, string>
+  ) => {
+    return sdk.store.cart.retrieve(cartId, config, {
       next: { tags: ["cart"] },
-      ...authHeaders,
+      ...headers,
     })
+  }
+
+  // 1. Authed + explicit fields (happy path)
+  try {
+    const { cart } = await tryRetrieve(retrieveConfigWithFields, authHeaders)
     cartDebug("retrieveCart:success", {
       cartId: cart.id,
       itemCount: Array.isArray(cart.items) ? cart.items.length : null,
@@ -55,31 +64,61 @@ export async function retrieveCart() {
     })
     return cart
   } catch (error) {
-    cartDebug("retrieveCart:auth-failed", {
+    cartDebug("retrieveCart:auth-with-fields-failed", {
       cartId,
       message: error instanceof Error ? error.message : "unknown",
     })
-    // Recover from stale/invalid auth cookie by retrying cart retrieval as guest.
-    if ("authorization" in authHeaders) {
-      try {
-        const { cart } = await sdk.store.cart.retrieve(cartId, retrieveConfig, {
-          next: { tags: ["cart"] },
-        })
-        cartDebug("retrieveCart:guest-retry-success", {
-          cartId: cart.id,
-          itemCount: Array.isArray(cart.items) ? cart.items.length : null,
-        })
-        return cart
-      } catch (retryError) {
-        cartDebug("retrieveCart:guest-retry-failed", {
-          cartId,
-          message: retryError instanceof Error ? retryError.message : "unknown",
-        })
-        return null
-      }
-    }
-    return null
   }
+
+  // 2. Authed + no fields (in case the fields path is the problem)
+  try {
+    const { cart } = await tryRetrieve(retrieveConfigDefault, authHeaders)
+    cartDebug("retrieveCart:success-default-fields", {
+      cartId: cart.id,
+      itemCount: Array.isArray(cart.items) ? cart.items.length : null,
+      authMode: "auth",
+    })
+    return cart
+  } catch (error) {
+    cartDebug("retrieveCart:auth-default-failed", {
+      cartId,
+      message: error instanceof Error ? error.message : "unknown",
+    })
+  }
+
+  // 3. Guest + explicit fields (stale auth cookie etc.)
+  if ("authorization" in authHeaders) {
+    try {
+      const { cart } = await tryRetrieve(retrieveConfigWithFields, {})
+      cartDebug("retrieveCart:guest-retry-success", {
+        cartId: cart.id,
+        itemCount: Array.isArray(cart.items) ? cart.items.length : null,
+      })
+      return cart
+    } catch (error) {
+      cartDebug("retrieveCart:guest-retry-failed", {
+        cartId,
+        message: error instanceof Error ? error.message : "unknown",
+      })
+    }
+
+    // 4. Guest + no fields (last resort)
+    try {
+      const { cart } = await tryRetrieve(retrieveConfigDefault, {})
+      cartDebug("retrieveCart:guest-default-success", {
+        cartId: cart.id,
+        itemCount: Array.isArray(cart.items) ? cart.items.length : null,
+      })
+      return cart
+    } catch (error) {
+      cartDebug("retrieveCart:guest-default-failed", {
+        cartId,
+        message: error instanceof Error ? error.message : "unknown",
+      })
+    }
+  }
+
+  return null
 }
 
 export async function getOrSetCart(countryCode: string) {
