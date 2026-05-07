@@ -623,6 +623,47 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    id: "crema",
+    label: "Crema",
+    blurb:
+      "Two-phase fluid: a fraction of particles is flagged as 'lighter' (crema) — they react more strongly to the cursor and get sucked into vortex eddies first while the heavier particles swing wider. Plus an asymmetric-paddling knob that biases cursor force toward broadside particles. Foam status is hash-derived per particle so it's stable across frames; the slider just shifts the cutoff. Gradient colours are preserved — only physics differs.",
+    offValues: {
+      foamFraction: 0,
+      paddleSharpness: 0,
+    },
+    sliders: [
+      {
+        key: "foamFraction",
+        label: "Foam fraction",
+        description:
+          "Fraction of particles flagged as crema (lighter). 0 = none. ~0.05-0.15 reads as a few visibly more reactive specks. Hash-derived so the same particles are crema every refresh.",
+        min: 0,
+        max: 0.3,
+        step: 0.01,
+        format: (v) => `${(v * 100).toFixed(0)}%`,
+      },
+      {
+        key: "foamForceMultiplier",
+        label: "Foam reactivity",
+        description:
+          "How much more strongly foam particles react to cursor and vortex forces vs heavier particles. 1.0 = identical (effectively disabled). 1.5-2.5 = visible difference. >3 = foam shoots ahead while liquid lags.",
+        min: 1,
+        max: 4,
+        step: 0.1,
+        format: (v) => `${v.toFixed(1)}×`,
+      },
+      {
+        key: "paddleSharpness",
+        label: "Paddle bias",
+        description:
+          "Biases cursor force toward particles that are broadside to the motion direction. 0 = spherical cursor (current default). 1 = strong cos² weighting — the cursor reads like a flat spoon face: hits sideways particles hard, slices past those in line with motion.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
+    ],
+  },
+  {
     id: "flocking",
     label: "Flocking",
     blurb:

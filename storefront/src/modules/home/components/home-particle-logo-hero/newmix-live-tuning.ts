@@ -225,6 +225,28 @@ export type NewmixLiveTuning = {
   /** Alpha threshold (0..1) for the metaball cutoff. Higher = harder, more
    * surface-tension edges; lower = softer, more diffuse. */
   metaballThreshold: number
+
+  /** Fraction of particles flagged as "crema" (lighter mass) — they react
+   * MORE strongly to cursor and vortex forces while keeping their gradient
+   * colour. Visually reads as the lighter particles getting sucked into
+   * eddies first while the heavier particles swing wider. 0 = disabled.
+   *
+   * Foam-status is hash-derived from the home position so it's deterministic:
+   * the same particles are foam every refresh, but raising/lowering the
+   * fraction live just shifts the cutoff threshold. */
+  foamFraction: number
+  /** Force multiplier applied to foam particles when the cursor-disk imparts
+   * impulse. >1 = foam reacts more strongly than regular particles (lighter
+   * mass). 1 = foam behaves identically to non-foam (effectively disabled). */
+  foamForceMultiplier: number
+
+  /** Asymmetric paddling — biases the cursor's force toward particles that
+   * are BROADSIDE to the motion direction (perpendicular to heading), away
+   * from particles that are along the heading. 0 = no bias (current
+   * spherical-cursor behaviour). 1 = strong cos² weighting — the cursor reads
+   * like the flat face of a spoon: hits sideways particles hard, slices past
+   * the ones in line with motion. */
+  paddleSharpness: number
 }
 
 /** SC PRints v2-era settings (commit 2f8436e, May 3 11:20). User indicated these
@@ -310,6 +332,11 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   metaballGlowRadius: 8,
   metaballBlurPx: 12,
   metaballThreshold: 0.45,
+  /** Crema layer — disabled by default. */
+  foamFraction: 0.0,
+  foamForceMultiplier: 1.6,
+  /** Asymmetric paddling — disabled by default. */
+  paddleSharpness: 0.0,
 })
 
 export function mergeNewmixLiveTuning(

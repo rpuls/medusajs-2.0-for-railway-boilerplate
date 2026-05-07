@@ -744,7 +744,30 @@ function applyNewmixCaptureImpulse(
         t.cursorForceSpeedCoupling *
           (mouseSpeed / Math.max(0.01, t.cursorForceSpeedReference))
       : 1
-  const finalScale = motionScale * speedCouplingMult
+  /** Asymmetric paddling — bias force toward broadside particles (perp to
+   * motion), away from particles in line with the heading. `alongN` is the
+   * along-axis projection of (particle - cursor) over `radius`, so its
+   * absolute value runs 0 at broadside, ~1 at front/back tips. cos² weight
+   * is `1 - alongN²`, blended with 1 at sharpness=0. */
+  const paddleMult =
+    t.paddleSharpness > 0
+      ? 1 -
+        t.paddleSharpness *
+          Math.min(1, alongN * alongN)
+      : 1
+  /** Crema mass — foam particles react more strongly. Foam status is
+   * deterministically hash-derived from the home position so it persists
+   * across frames; raising/lowering `foamFraction` just shifts the cutoff. */
+  let massMult = 1
+  if (t.foamFraction > 0 && t.foamForceMultiplier !== 1) {
+    const hashSrc =
+      ((p.hx | 0) * 374761393) ^ ((p.hy | 0) * 668265263)
+    const foamRoll = ((hashSrc >>> 0) & 0xffffff) / 0xffffff
+    if (foamRoll < t.foamFraction) {
+      massMult = t.foamForceMultiplier
+    }
+  }
+  const finalScale = motionScale * speedCouplingMult * paddleMult * massMult
   p.vx += ax * finalScale
   p.vy += ay * finalScale
 }
@@ -882,8 +905,22 @@ function applyDualVortexCapture(
     const dyv = p.y - vy
     const distV = Math.hypot(dxv, dyv)
     if (distV >= R || distV < PHYSICS_DIST_EPSILON) return false
-    /** Probability gate. */
-    if (rand01 > t.vortexCaptureProbability) return false
+    /** Probability gate. Foam particles are lighter — multiply their effective
+     * capture probability by `foamForceMultiplier` so they get sucked into
+     * eddies first while heavier particles swing wide. */
+    let effectiveCaptureProb = t.vortexCaptureProbability
+    if (t.foamFraction > 0 && t.foamForceMultiplier !== 1) {
+      const fhSrc =
+        ((p.hx | 0) * 374761393) ^ ((p.hy | 0) * 668265263)
+      const fRoll = ((fhSrc >>> 0) & 0xffffff) / 0xffffff
+      if (fRoll < t.foamFraction) {
+        effectiveCaptureProb = Math.min(
+          1,
+          effectiveCaptureProb * t.foamForceMultiplier
+        )
+      }
+    }
+    if (rand01 > effectiveCaptureProb) return false
     /** Lock the particle onto an orbit around this vortex centre. The orbit
      * angle is expressed in the cursor's motion frame: 0 rad = along the
      * cursor's heading (major axis); π/2 = perpendicular (minor axis). */
