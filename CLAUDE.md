@@ -145,15 +145,20 @@ The `customizer-render` service ([backend/src/services/customizer-render/](backe
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 
-These are real but non-blocking. Triage when you have a moment:
-
-1. **Stage rollback re-emails the customer** — moving from `in_production` back to `awaiting_approval` re-fires the action-required email. Fix: in [order-production-stage-changed.ts](backend/src/subscribers/order-production-stage-changed.ts), suppress emails when `PRODUCTION_STAGES.indexOf(to) <= PRODUCTION_STAGES.indexOf(from)`.
-2. **Hydration loses the original active side** — the canvas re-opens on `front` regardless of which side was active when saved. Fix: persist `activeSide` in `CustomizerMetadata` at save time and load it during hydration.
+All audit items from the original review have been resolved. See "Fixed" below for the history.
 
 ### Fixed (kept here for context)
+- ✅ **Logged-in customers' orders weren't appearing on `/account/orders`** — the storefront was creating carts without auth headers, so carts (and the orders they became) had `customer_id = null`. Three places now associate the customer:
+  1. [`getOrSetCart`](storefront/src/lib/data/cart.ts) creates new carts with auth headers, AND auto-transfers any existing guest cart to the logged-in customer on next access (uses `sdk.store.cart.transferCart`).
+  2. [`login`](storefront/src/lib/data/customer.ts) calls `transferGuestCartToCustomer()` immediately after token persistence.
+  3. [`signup`](storefront/src/lib/data/customer.ts) does the same after the post-register login.
+
+  **Existing orders placed before this fix are orphaned** — they have email but no `customer_id`, so they remain invisible to `/account/orders`. To recover them, run a one-shot backend script that updates `order.customer_id` based on email match (Medusa data plumbing; not auto-included in this fix).
 - ✅ **Vectorization charged twice on double "Add to cart"** — `addCustomizedToCart` now probes the cart for an existing line with `metadata.vectorization_for_order: true` before adding. On cart-fetch failure it defaults to "skip add" so a transient error never causes a double-charge.
 - ✅ **Remove button stranded a cart line** — the in-customizer "Remove" on the vectorization banner now calls `handleRemoveVectorization()`, which deletes any matching cart line via `deleteLineItem`. Surfaces an error if the cart-side cleanup fails so the customer can verify before checkout.
 - ✅ **Initial orders showed no tracker** — new subscriber [order-placed-stamp-production-stage.ts](backend/src/subscribers/order-placed-stamp-production-stage.ts) auto-stamps `production_stage = "received"` on every new order. Idempotent (skips if a stage is already set).
+- ✅ **Stage rollback re-emailed the customer** — extracted `shouldEmailForStageTransition(from, to)` in [production-stage.ts](backend/src/lib/production-stage.ts) and call it from the subscriber. Suppresses the email when the new stage is at or earlier than the previous in the canonical ordering. Forward re-entry after a rollback (e.g. awaiting_approval → in_production for a second time) still emails since each forward step is a real progression.
+- ✅ **Hydration lost the original active side** — `activeSide` is now persisted in [`CustomizerMetadata`](storefront/src/modules/customizer/lib/types.ts) by `buildCustomizerMetadataBase()` (both save-design and cart-add paths). The rehydration effect in the customizer template restores it before calling `loadSide()`, so reopening a back-of-hoodie design lands the user on the back, not the front.
 
 ## Operational notes
 

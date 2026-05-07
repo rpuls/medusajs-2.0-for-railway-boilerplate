@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import { cache } from "react"
+import { transferGuestCartToCustomer } from "./cart"
 import { removeAuthToken, setAuthToken } from "./cookies"
 import { authedNextHeaders, awaitedAuthHeaders } from "./sdk-helpers"
 
@@ -58,7 +59,13 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     })
 
-    setAuthToken(typeof loginToken === 'string' ? loginToken : loginToken.location)
+    const finalToken = typeof loginToken === 'string' ? loginToken : loginToken.location
+    await setAuthToken(finalToken)
+
+    // If the customer was building a cart as a guest, claim it now that they
+    // have an account. Without this, their first order after signup would
+    // ship with `customer_id = null` and never reach /account/orders.
+    await transferGuestCartToCustomer({ authorization: `Bearer ${finalToken}` })
 
     revalidateTag("customer")
     return createdCustomer
@@ -72,12 +79,13 @@ export async function login(_currentState: unknown, formData: FormData) {
   const password = formData.get("password") as string
 
   try {
-    await sdk.auth
-      .login("customer", "emailpass", { email, password })
-      .then((token) => {
-        setAuthToken(typeof token === 'string' ? token : token.location)
-        revalidateTag("customer")
-      })
+    const token = await sdk.auth.login("customer", "emailpass", { email, password })
+    const finalToken = typeof token === 'string' ? token : token.location
+    await setAuthToken(finalToken)
+    revalidateTag("customer")
+    // Claim any guest cart the customer was building before login. Idempotent
+    // when no guest cart exists; silently logged when transfer fails.
+    await transferGuestCartToCustomer({ authorization: `Bearer ${finalToken}` })
   } catch (error: any) {
     return error.toString()
   }

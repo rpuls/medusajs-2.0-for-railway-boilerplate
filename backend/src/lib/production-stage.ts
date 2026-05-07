@@ -96,6 +96,35 @@ export const STAGES_THAT_EMAIL: ReadonlySet<ProductionStage> = new Set<Productio
   "in_production",
 ])
 
+/**
+ * Decides whether a `from → to` stage transition should fire a customer email.
+ *
+ * Rules (in order):
+ *   1. `to` must be in {@link STAGES_THAT_EMAIL} — only specific milestones email.
+ *   2. Same-stage transitions are no-ops.
+ *   3. Rollbacks (new stage at or earlier than the previous in the canonical
+ *      ordering) suppress the email — the customer already got it on the
+ *      forward pass and re-firing it just confuses them. Forward re-entry
+ *      after a rollback (e.g. awaiting_approval → in_production for a second
+ *      time) DOES email again, since each forward step is a real progression.
+ *
+ * Pure function, no side effects — easy to unit-test the decision matrix
+ * separately from the subscriber's notification / data plumbing.
+ */
+export function shouldEmailForStageTransition(
+  from: ProductionStage | null | undefined,
+  to: ProductionStage
+): boolean {
+  if (!STAGES_THAT_EMAIL.has(to)) return false
+  if (from === to) return false
+  if (from && isProductionStage(from)) {
+    const fromIdx = PRODUCTION_STAGES.indexOf(from)
+    const toIdx = PRODUCTION_STAGES.indexOf(to)
+    if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) return false
+  }
+  return true
+}
+
 export function isProductionStage(value: unknown): value is ProductionStage {
   return typeof value === "string" && (PRODUCTION_STAGES as readonly string[]).includes(value)
 }

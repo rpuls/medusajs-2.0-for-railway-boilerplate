@@ -8,8 +8,8 @@ import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 import {
   PRODUCTION_STAGE_EVENT,
-  STAGES_THAT_EMAIL,
   isProductionStage,
+  shouldEmailForStageTransition,
   type ProductionStageChangedEvent,
 } from "../lib/production-stage"
 import { subjectForStage } from "../modules/email-notifications/templates/order-production-stage"
@@ -45,11 +45,7 @@ export default async function orderProductionStageChangedHandler({
     return
   }
 
-  if (!STAGES_THAT_EMAIL.has(data.to_stage)) {
-    return
-  }
-
-  if (data.from_stage === data.to_stage) {
+  if (!shouldEmailForStageTransition(data.from_stage, data.to_stage)) {
     return
   }
 

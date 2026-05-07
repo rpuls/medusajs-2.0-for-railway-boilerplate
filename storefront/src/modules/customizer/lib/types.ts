@@ -96,4 +96,10 @@ export type CustomizerMetadata = {
    * Surfaced in the admin so the team can charge / process accordingly.
    */
   requiresVectorization?: boolean
+  /**
+   * Which garment side the customer was viewing when the design was saved /
+   * cart-added. Re-hydration restores it so re-opening a back-of-hoodie design
+   * doesn't dump the customer onto the front and make them hunt for their work.
+   */
+  activeSide?: GarmentSide
 }
