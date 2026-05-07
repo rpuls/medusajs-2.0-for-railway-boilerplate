@@ -520,6 +520,12 @@ export default function CustomizerTemplate({
   const [sessionUploads, setSessionUploads] = useState<SessionUploadAsset[]>([])
   const [layoutVersion, setLayoutVersion] = useState(0)
   const [scpPrintSizeId, setScpPrintSizeId] = useState<ScpPrintSizeId>(DEFAULT_SCP_PRINT_SIZE_ID)
+  // Tracks whether the customer has actively chosen a size in the picker.
+  // Pricing still uses `scpPrintSizeId` (defaulted to A6) so totals work pre-
+  // selection, but the tile UI doesn't highlight anything until this flips
+  // true. Re-hydration / re-edit flows set it via the same setter as the
+  // size, so prior selections appear pre-selected on return.
+  const [scpPrintSizeChosen, setScpPrintSizeChosen] = useState(false)
   const [showPrintAreaGuides, setShowPrintAreaGuides] = useState(false)
   // Guided PDP wizard: tracks the highest step the user has reached (1..4).
   // Steps below `pdpStep` collapse to summary chips with a "Change" link.
@@ -925,6 +931,7 @@ export default function CustomizerTemplate({
             sid === "oversize"
           ) {
             setScpPrintSizeId(sid as ScpPrintSizeId)
+            setScpPrintSizeChosen(true)
           }
         }
         const previousSides = (design?.artifacts ?? [])
@@ -1001,6 +1008,7 @@ export default function CustomizerTemplate({
       const sid = pendingHydration.scpPrintSizeId
       if (sid === "up_to_a6" || sid === "up_to_a4" || sid === "up_to_a3" || sid === "oversize") {
         setScpPrintSizeId(sid as ScpPrintSizeId)
+        setScpPrintSizeChosen(true)
       }
     }
     if (pendingHydration.variantId) {
@@ -2402,7 +2410,10 @@ export default function CustomizerTemplate({
               showDtfTierEstimator={productMetadataShowsDtfTierEstimator(selectedProduct)}
               embedPdpQuantityStepNumber={embedPdpQuantityStepNumber}
               scpPrintSizeId={scpPrintSizeId}
-              onScpPrintSizeIdChange={setScpPrintSizeId}
+              onScpPrintSizeIdChange={(id) => {
+                setScpPrintSizeId(id)
+                setScpPrintSizeChosen(true)
+              }}
               decoratedSides={decoratedSides}
               onSaveDesign={embedded ? undefined : saveCurrentDesign}
               isSavingDesign={isSavingDesign}
@@ -2651,6 +2662,42 @@ export default function CustomizerTemplate({
       </div>
     )
 
+    // Dimmed, clickable preview card for steps the customer hasn't reached
+    // yet. Clicking advances `pdpStep` directly so the customer can jump
+    // ahead — earlier steps stay accessible via the "Change" link on their
+    // collapsed summary.
+    const StepPreview = ({
+      num,
+      title,
+      hint,
+      onClick,
+    }: {
+      num: number
+      title: string
+      hint: string
+      onClick: () => void
+    }) => (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full rounded-xl border border-dashed border-ui-border-base bg-ui-bg-subtle/40 p-4 text-left opacity-70 transition hover:border-ui-fg-base hover:bg-ui-bg-subtle hover:opacity-100"
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ui-bg-base text-[10px] font-semibold text-ui-fg-subtle ring-1 ring-ui-border-base"
+            aria-hidden
+          >
+            {num}
+          </span>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-subtle truncate">
+            {title}
+          </h3>
+          <span aria-hidden className="ml-auto text-ui-fg-muted">›</span>
+        </div>
+        <p className="mt-1.5 pl-7 text-xs text-ui-fg-muted">{hint}</p>
+      </button>
+    )
+
     return (
       <div id="customize" className="contents">
         <div className="lg:col-span-6 flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
@@ -2814,7 +2861,14 @@ export default function CustomizerTemplate({
                 </div>
               )
             })()
-          ) : null}
+          ) : (
+            <StepPreview
+              num={stepNum(2)}
+              title="Print location"
+              hint="Pick where the artwork goes — front, back, sleeves, neck tag."
+              onClick={() => setPdpStep(2)}
+            />
+          )}
 
           {/* Step 3 — Print size */}
           {pdpStep >= 3 ? (
@@ -2845,13 +2899,14 @@ export default function CustomizerTemplate({
                       allowedSizesForCurrentSide.includes(opt.id)
                     ).map((opt) => {
                       const fromPrice = SCP_PRINT_UNIT_MATRIX[opt.id][SCP_PRINT_UNIT_MATRIX[opt.id].length - 1]
-                      const selected = scpPrintSizeId === opt.id
+                      const selected = scpPrintSizeChosen && scpPrintSizeId === opt.id
                       return (
                         <button
                           key={opt.id}
                           type="button"
                           onClick={() => {
                             setScpPrintSizeId(opt.id)
+                            setScpPrintSizeChosen(true)
                             setPdpStep3Done(true)
                             setPdpStep((s) => (s > 3 ? s : 4))
                           }}
@@ -2914,7 +2969,14 @@ export default function CustomizerTemplate({
                 </div>
               )}
             </div>
-          ) : null}
+          ) : (
+            <StepPreview
+              num={stepNum(3)}
+              title="Print size"
+              hint="Choose A6, A4, A3 or oversize for each location."
+              onClick={() => setPdpStep(3)}
+            />
+          )}
 
           {/* Step 4 — Quantities, notes & checkout */}
           {pdpStep >= 4 ? (
@@ -2963,7 +3025,10 @@ export default function CustomizerTemplate({
                 showDtfTierEstimator={productMetadataShowsDtfTierEstimator(selectedProduct)}
                 embedPdpQuantityStepNumber={embedPdpQuantityStepNumber}
                 scpPrintSizeId={scpPrintSizeId}
-                onScpPrintSizeIdChange={setScpPrintSizeId}
+                onScpPrintSizeIdChange={(id) => {
+                setScpPrintSizeId(id)
+                setScpPrintSizeChosen(true)
+              }}
                 decoratedSides={decoratedSides}
                 hidePrintSizeSelector
                 hideHeader
@@ -2994,7 +3059,14 @@ export default function CustomizerTemplate({
                 </p>
               </div>
             </>
-          ) : null}
+          ) : (
+            <StepPreview
+              num={stepNum(4)}
+              title="Quantity & checkout"
+              hint="Set sizes, quantities and add to cart."
+              onClick={() => setPdpStep(4)}
+            />
+          )}
         </div>
       </div>
     )

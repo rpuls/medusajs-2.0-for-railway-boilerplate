@@ -45,7 +45,7 @@ export default async function OrderCompletedTemplate({
             <h2 className="text-2xl font-semibold text-[var(--brand-primary)] border-l-4 border-[var(--brand-secondary)] pl-4 mb-5">
               Summary
             </h2>
-            <Items items={order.items} />
+            <Items items={order.items} currencyCode={order.currency_code} />
             <div className="mt-4">
               <CartTotals totals={order} />
             </div>

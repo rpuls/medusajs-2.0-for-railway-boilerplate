@@ -293,7 +293,10 @@ export default function PricingPanel({
         </details>
       ) : null}
 
-      <details className="group rounded-lg border border-ui-border-base bg-ui-bg-subtle/50">
+      <details
+        className="group rounded-lg border border-ui-border-base bg-ui-bg-subtle/50"
+        open={pricing.sideSurchargePerUnitCents > 0}
+      >
         <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-ui-fg-base marker:hidden [&::-webkit-details-marker]:hidden">
           <span className="flex items-center justify-between gap-2">
             Price breakdown

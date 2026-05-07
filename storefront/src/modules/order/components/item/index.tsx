@@ -1,6 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { Table, Text } from "@medusajs/ui"
 
+import { convertMinorToLocale } from "@lib/util/money"
 import LineItemOptions from "@modules/common/components/line-item-options"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
@@ -13,12 +14,33 @@ import {
 
 type ItemProps = {
   item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem
+  /** Optional currency override; falls back to AUD when not provided. */
+  currencyCode?: string
 }
 
-const Item = ({ item }: ItemProps) => {
+const Item = ({ item, currencyCode }: ItemProps) => {
   const customizerMetadata = getCustomizerMetadata(item)
   const mockupUrls = getCustomizerMockupUrls(item)
   const mockupArtifacts = getCustomizerMockupArtifacts(item)
+
+  // Garment vs print split for the line. The customizer stamps a pricing
+  // breakdown into the line metadata at add-to-cart time; we surface it here
+  // so customers can see what they paid for the blank vs the SCP print work.
+  // Falls back gracefully if metadata is missing or shaped differently.
+  const currency = currencyCode ?? "aud"
+  const pricing = customizerMetadata?.pricing
+  const baseUnitCents =
+    typeof pricing?.baseUnitPriceCents === "number"
+      ? pricing.baseUnitPriceCents
+      : null
+  const printUnitCents =
+    typeof pricing?.sideSurchargePerUnitCents === "number"
+      ? pricing.sideSurchargePerUnitCents
+      : null
+  const showSplit =
+    baseUnitCents !== null && printUnitCents !== null && printUnitCents > 0
+  const fmt = (cents: number) =>
+    convertMinorToLocale({ amount: cents, currency_code: currency })
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
@@ -48,6 +70,18 @@ const Item = ({ item }: ItemProps) => {
             <Text className="txt-small text-ui-fg-subtle mt-1">
               Custom design archived with print-ready assets.
             </Text>
+            {showSplit && (
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-ui-fg-subtle max-w-xs">
+                <span>Garment / unit</span>
+                <span className="text-right text-ui-fg-base">
+                  {fmt(baseUnitCents!)}
+                </span>
+                <span>Print / unit</span>
+                <span className="text-right text-ui-fg-base">
+                  {fmt(printUnitCents!)}
+                </span>
+              </div>
+            )}
             {customizerMetadata.printNotes ? (
               <Text
                 className="txt-small text-ui-fg-subtle mt-1 line-clamp-3"
