@@ -171,6 +171,60 @@ export type NewmixLiveTuning = {
    * each frame. Multiplied by `fieldStrength`. 0.05-0.20 reads as "particles
    * ride the field but still keep their own dynamics". */
   fieldRideStrength: number
+
+  /** Curl-noise micro-turbulence amplitude (bitmap px / frame). Layered onto
+   * resting particles to produce organic marbling instead of dead-still
+   * particles outside the cursor's reach. 0 = disabled. */
+  curlNoiseAmplitude: number
+  /** Spatial frequency of the curl-noise potential (cycles per bitmap px).
+   * Lower = bigger, slower swirls; higher = tighter, more chaotic eddies. */
+  curlNoiseScale: number
+  /** Temporal evolution rate (Hz) — how fast the noise field drifts in time.
+   * Lower = lazy, slow-flowing; higher = busy / nervous. */
+  curlNoiseEvolutionHz: number
+
+  /** Cursor-speed coupling on cursor-disk forces (sideSwirlForce, frontPush,
+   * backInward). 0 = constant force regardless of cursor speed (classic);
+   * 1 = force fully scales with `mouseSpeed / cursorForceSpeedReference`. */
+  cursorForceSpeedCoupling: number
+  /** Reference speed (bitmap px / frame) at which the speed-coupled force
+   * multiplier equals 1. Lower = forces ramp up faster as cursor moves. */
+  cursorForceSpeedReference: number
+
+  /** Boundary reflection radius as a fraction of the canvas half-diagonal.
+   * Particles past this radius are pushed back inward. 0 = boundary disabled. */
+  boundaryRadiusFrac: number
+  /** Velocity restitution on boundary impact (0..1). 0 = velocity zeroed on
+   * impact; 1 = perfect bounce. */
+  boundaryRestitution: number
+
+  /** Flocking velocity-alignment strength (0..1). Each particle blends a
+   * fraction of a neighbour's velocity into its own. 0 = no alignment;
+   * higher = particles form ribbons / streams instead of acting independently. */
+  flockingStrength: number
+  /** Spatial radius for finding neighbours (bitmap px). Sets the spatial-hash
+   * cell size. Larger = particles align over longer distances but at higher
+   * cost (more candidates per cell). */
+  flockingRadiusBmp: number
+  /** Per-frame fraction of particles processed by the flocking pass (0..1).
+   * 1 = every particle every frame; 0.25 = round-robin every 4 frames. Lets
+   * you keep the visual without the full perf cost on dense fields. */
+  flockingProcessFraction: number
+
+  /** Metaball renderer toggle. 0 = direct putImageData (default, fast); 1 =
+   * offscreen blur+threshold pass that fuses overlapping particles into
+   * liquid blobs. Heavy at high particle counts; pair with a particle-count
+   * reduction. */
+  metaballEnabled: number
+  /** Glow radius per particle in CSS px before the threshold pass. Larger =
+   * particles fuse more aggressively; smaller = more discrete blobs. */
+  metaballGlowRadius: number
+  /** Gaussian blur amount (CSS px) applied to the glow buffer before the
+   * threshold. Higher = softer edges before the threshold cuts them. */
+  metaballBlurPx: number
+  /** Alpha threshold (0..1) for the metaball cutoff. Higher = harder, more
+   * surface-tension edges; lower = softer, more diffuse. */
+  metaballThreshold: number
 }
 
 /** SC PRints v2-era settings (commit 2f8436e, May 3 11:20). User indicated these
@@ -237,6 +291,25 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   fieldDecayPerSec: 0.55,
   fieldDiffusion: 0.06,
   fieldRideStrength: 0.12,
+  /** Curl-noise micro-turbulence — disabled by default. */
+  curlNoiseAmplitude: 0.0,
+  curlNoiseScale: 0.012,
+  curlNoiseEvolutionHz: 0.4,
+  /** Cursor-force speed coupling — disabled by default (classic constant force). */
+  cursorForceSpeedCoupling: 0.0,
+  cursorForceSpeedReference: 8.0,
+  /** Boundary reflection — disabled by default. */
+  boundaryRadiusFrac: 0.0,
+  boundaryRestitution: 0.5,
+  /** Flocking velocity alignment — disabled by default. */
+  flockingStrength: 0.0,
+  flockingRadiusBmp: 18,
+  flockingProcessFraction: 0.5,
+  /** Metaball renderer — disabled by default (direct putImageData is faster). */
+  metaballEnabled: 0,
+  metaballGlowRadius: 8,
+  metaballBlurPx: 12,
+  metaballThreshold: 0.45,
 })
 
 export function mergeNewmixLiveTuning(

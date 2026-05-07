@@ -527,6 +527,140 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    id: "curl",
+    label: "Curl",
+    blurb:
+      "Divergence-free curl-noise micro-turbulence. Layers organic 2D flow on top of the cursor + field forces, so resting particles drift in marbled streams instead of sitting dead-still. Turning the group off zeroes the amplitude.",
+    offValues: {
+      curlNoiseAmplitude: 0,
+    },
+    sliders: [
+      {
+        key: "curlNoiseAmplitude",
+        label: "Amplitude",
+        description:
+          "How strongly the curl-noise field nudges resting particles each frame (px). 0 = disabled. 0.05-0.2 = subtle marbling. >0.5 = chaotic.",
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+      {
+        key: "curlNoiseScale",
+        label: "Spatial scale",
+        description:
+          "Spatial frequency of the noise (cycles per px). Lower = bigger, slower swirls; higher = tighter, more chaotic eddies. 0.005-0.03 typical.",
+        min: 0.001,
+        max: 0.05,
+        step: 0.001,
+      },
+      {
+        key: "curlNoiseEvolutionHz",
+        label: "Evolution rate",
+        description:
+          "How fast the noise field drifts in time (Hz). Lower = lazy, slow-flowing turbulence; higher = busy, nervous.",
+        min: 0,
+        max: 2,
+        step: 0.05,
+      },
+    ],
+  },
+  {
+    id: "coupling",
+    label: "Coupling",
+    blurb:
+      "Cursor-speed coupling: blends the constant cursor force with one that scales with mouse speed. Slow drag = gentle, fast flick = chaotic. Turning the group off restores classic constant force regardless of speed.",
+    offValues: {
+      cursorForceSpeedCoupling: 0,
+    },
+    sliders: [
+      {
+        key: "cursorForceSpeedCoupling",
+        label: "Coupling strength",
+        description:
+          "Blend between constant force (0) and fully speed-coupled force (1). At 1, slow drag barely moves particles and a flick produces violent chaos.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
+      {
+        key: "cursorForceSpeedReference",
+        label: "Reference speed",
+        description:
+          "Cursor speed (px/frame) at which the speed-coupled multiplier equals 1. Lower = forces ramp up faster at lower cursor speeds.",
+        min: 1,
+        max: 30,
+        step: 0.5,
+      },
+    ],
+  },
+  {
+    id: "boundary",
+    label: "Boundary",
+    blurb:
+      "Optional invisible circular wall (the 'coffee cup'). Particles past the radius are reflected back inward, so cursor pushes pile up at the rim and curl back instead of escaping. Turning the group off disables the wall.",
+    offValues: {
+      boundaryRadiusFrac: 0,
+    },
+    sliders: [
+      {
+        key: "boundaryRadiusFrac",
+        label: "Radius",
+        description:
+          "Wall radius as a fraction of canvas half-diagonal. 0 = no wall. 1.0 = wall at canvas corner. ~0.7-0.9 keeps the bowl tight enough to feel like a cup.",
+        min: 0,
+        max: 1.5,
+        step: 0.02,
+      },
+      {
+        key: "boundaryRestitution",
+        label: "Bounce",
+        description:
+          "Velocity restitution on impact. 0 = velocity wiped on contact (sticky wall); 1 = perfect bounce. ~0.4-0.6 reads as soft but visible reflection.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
+    ],
+  },
+  {
+    id: "flocking",
+    label: "Flocking",
+    blurb:
+      "Particles blend a fraction of a neighbour's velocity into their own each frame, forming streams / ribbons instead of independent dust. Uses a spatial hash so it scales linearly. Turning the group off skips the pass entirely.",
+    offValues: {
+      flockingStrength: 0,
+    },
+    sliders: [
+      {
+        key: "flockingStrength",
+        label: "Strength",
+        description:
+          "Fraction of a neighbour's velocity blended in per process tick. 0 = disabled. 0.05-0.15 = subtle alignment into ribbons. >0.3 starts to look gummy.",
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+      },
+      {
+        key: "flockingRadiusBmp",
+        label: "Neighbour radius",
+        description:
+          "Spatial radius for finding neighbours (px). Sets the spatial-hash cell size. Larger = particles align over longer distances at higher cost.",
+        min: 4,
+        max: 60,
+        step: 1,
+      },
+      {
+        key: "flockingProcessFraction",
+        label: "Process fraction",
+        description:
+          "Fraction of particles processed each frame (round-robin). 1 = every particle every frame (heavy at 50k+). 0.25 = every particle once every 4 frames (cheap, still reads as alignment).",
+        min: 0.05,
+        max: 1,
+        step: 0.05,
+      },
+    ],
+  },
+  {
     id: "display",
     label: "Display",
     blurb:
@@ -553,6 +687,54 @@ const GROUPS: Group[] = [
         max: 100000,
         step: 1000,
         format: (v) => `${(v / 1000).toFixed(0)}k`,
+      },
+    ],
+  },
+  {
+    id: "metaball",
+    label: "Metaball",
+    blurb:
+      "Liquid render mode — particles are blurred + thresholded into fused blobs with sharp surface-tension edges. Significantly heavier than direct rendering; pair with a lower particle count. Turning the group off restores classic discrete-particle rendering.",
+    offValues: {
+      metaballEnabled: 0,
+    },
+    sliders: [
+      {
+        key: "metaballEnabled",
+        label: "Liquid mode",
+        description:
+          "Master toggle (0 = off, 1 = on). When on, particles are drawn larger & softer, then blurred and contrast-thresholded so overlapping ones fuse into single blobs.",
+        min: 0,
+        max: 1,
+        step: 1,
+        format: (v) => (v >= 0.5 ? "ON" : "OFF"),
+      },
+      {
+        key: "metaballGlowRadius",
+        label: "Glow radius",
+        description:
+          "Per-particle drawn size when metaball is on (px). Larger = particles fuse more aggressively across gaps. Replaces the normal Particle Size in Display while metaball is on.",
+        min: 2,
+        max: 24,
+        step: 0.5,
+      },
+      {
+        key: "metaballBlurPx",
+        label: "Blur",
+        description:
+          "Gaussian blur (CSS px) applied before the threshold. Higher = softer fusion, more diffuse blobs.",
+        min: 0,
+        max: 40,
+        step: 0.5,
+      },
+      {
+        key: "metaballThreshold",
+        label: "Threshold",
+        description:
+          "How hard the contrast pass cuts the blurred glow. Higher = harder, more surface-tension edges; lower = softer, more ghostly.",
+        min: 0,
+        max: 1,
+        step: 0.02,
       },
     ],
   },

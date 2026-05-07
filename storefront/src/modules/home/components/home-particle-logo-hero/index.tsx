@@ -81,6 +81,13 @@ import {
   injectVelocity,
   sampleVelocityField,
 } from "./velocity-field"
+import { sampleCurlNoise } from "./curl-noise"
+import type { SpatialHash } from "./spatial-hash"
+import {
+  buildSpatialHash,
+  ensureSpatialHash,
+  pickNeighbor,
+} from "./spatial-hash"
 import type { FlowLiveTuning } from "./flow-live-tuning"
 import { mergeFlowLiveTuning } from "./flow-live-tuning"
 import type { DisplacedLiveTuning } from "./displaced-live-tuning"
@@ -728,8 +735,18 @@ function applyNewmixCaptureImpulse(
     0,
     Math.min(1, mouseSpeed / Math.max(0.01, t.motionGateSpeed))
   )
-  p.vx += ax * motionScale
-  p.vy += ay * motionScale
+  /** Cursor-force speed coupling: blends a constant force (coupling=0) with a
+   * fully speed-coupled force (coupling=1, scaled by mouseSpeed/refSpeed).
+   * Produces the "slow drag = gentle, flick = chaotic" feel. */
+  const speedCouplingMult =
+    t.cursorForceSpeedCoupling > 0
+      ? (1 - t.cursorForceSpeedCoupling) +
+        t.cursorForceSpeedCoupling *
+          (mouseSpeed / Math.max(0.01, t.cursorForceSpeedReference))
+      : 1
+  const finalScale = motionScale * speedCouplingMult
+  p.vx += ax * finalScale
+  p.vy += ay * finalScale
 }
 
 /**
@@ -1722,6 +1739,52 @@ function drawLayer(
   ctx.restore()
 }
 
+/**
+ * Metaball post-process — copies the just-rendered canvas to an offscreen,
+ * applies CSS-filter blur + contrast, and composites it back over the original.
+ * The contrast pass acts as the threshold: overlapping soft-blur particles
+ * fuse into solid blobs with sharp surface-tension edges, while isolated
+ * particles fade out (low alpha pushed below the contrast cutoff).
+ *
+ * Caches its own offscreen canvas across frames to avoid per-frame alloc.
+ * Returns the (possibly newly created) offscreen so the caller can hold the
+ * reference.
+ */
+function applyMetaballPostprocess(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  glowCanvas: HTMLCanvasElement | null,
+  blurPx: number,
+  threshold: number
+): HTMLCanvasElement | null {
+  const W = canvas.width
+  const H = canvas.height
+  if (W <= 0 || H <= 0) return glowCanvas
+  let offscreen = glowCanvas
+  if (!offscreen || offscreen.width !== W || offscreen.height !== H) {
+    offscreen = document.createElement("canvas")
+    offscreen.width = W
+    offscreen.height = H
+  }
+  const offCtx = offscreen.getContext("2d", { alpha: true })
+  if (!offCtx) return offscreen
+  /** Snapshot the pre-threshold render. */
+  offCtx.clearRect(0, 0, W, H)
+  offCtx.drawImage(canvas, 0, 0)
+  /** Clear the main canvas and composite back through a CSS-filter blur +
+   * contrast pass. The contrast multiplier is mapped from the threshold knob:
+   * higher threshold = harder cutoff (more contrast). */
+  ctx.save()
+  ctx.clearRect(0, 0, W, H)
+  /** Map threshold (0..1) to contrast (1..30). 0.45 → ~13, gives clean blobs. */
+  const contrast = 1 + Math.max(0, Math.min(1, threshold)) * 30
+  ctx.filter = `blur(${Math.max(0, blurPx)}px) contrast(${contrast})`
+  ctx.drawImage(offscreen, 0, 0)
+  ctx.filter = "none"
+  ctx.restore()
+  return offscreen
+}
+
 type Props = {
   logoSrc?: string
   /**
@@ -1864,6 +1927,20 @@ export default function HomeParticleLogoHero({
   /** Scratch tuple reused across the per-particle field-sample call to avoid
    * per-frame `[number, number]` allocation. */
   const newmixVelocityFieldSampleRef = useRef<[number, number]>([0, 0])
+  /** Scratch tuple for the per-particle curl-noise sample. */
+  const newmixCurlNoiseSampleRef = useRef<[number, number]>([0, 0])
+  /** Spatial hash for flocking-alignment neighbour lookups. Allocated lazily
+   * the first frame `flockingStrength > 0`. Reused across frames; rebuilt
+   * each frame by `buildSpatialHash`. */
+  const newmixFlockingHashRef = useRef<SpatialHash | null>(null)
+  /** Round-robin offset for `flockingProcessFraction < 1` so processing rotates
+   * across all particles over multiple frames. */
+  const newmixFlockingOffsetRef = useRef(0)
+  /** Offscreen canvases for the metaball render path. Allocated lazily and
+   * resized in lockstep with the main canvas. */
+  const newmixMetaballGlowRef = useRef<HTMLCanvasElement | null>(null)
+  const newmixMetaballThresholdRef =
+    useRef<HTMLCanvasElement | null>(null)
   /** Flow mode: low-pass-smoothed cursor velocity used for the carry-along velocity handoff. */
   const flowSpoonVelRef = useRef({ vx: 0, vy: 0 })
   const flowPrevCursorRef = useRef({ x: -9999, y: -9999 })
@@ -3013,6 +3090,55 @@ export default function HomeParticleLogoHero({
           clearVelocityField(newmixVelocityFieldRef.current)
         }
 
+        /** Spatial-hash rebuild for the flocking pass. Cell size matches the
+         * neighbour radius so the 3x3 window covers ~3R distance. */
+        let flockingHash: SpatialHash | null = null
+        if (
+          newmix &&
+          nm != null &&
+          nm.flockingStrength > 0 &&
+          c2.width > 0 &&
+          c2.height > 0
+        ) {
+          flockingHash = ensureSpatialHash(
+            newmixFlockingHashRef.current,
+            c2.width,
+            c2.height,
+            nm.flockingRadiusBmp,
+            particles.length
+          )
+          newmixFlockingHashRef.current = flockingHash
+          buildSpatialHash(
+            flockingHash,
+            particles.length,
+            (i) => particles[i]!.x,
+            (i) => particles[i]!.y
+          )
+        }
+
+        /** Curl-noise time argument (seconds). Drives temporal evolution of the
+         * potential — same `t` for every particle this frame. */
+        const curlT = nowTick / 1000
+
+        /** Cursor-force speed coupling multiplier. Computed once per frame and
+         * applied where the cursor disk imparts force on particles. */
+        const cursorForceMult =
+          nm != null && nm.cursorForceSpeedCoupling > 0
+            ? (1 - nm.cursorForceSpeedCoupling) +
+              nm.cursorForceSpeedCoupling *
+                (newmixSpoonSpeed /
+                  Math.max(0.01, nm.cursorForceSpeedReference))
+            : 1
+
+        /** Boundary radius (bitmap px) for the reflection wall. Computed once
+         * per frame from the canvas half-diagonal. 0 = boundary disabled. */
+        const boundaryR =
+          nm != null && nm.boundaryRadiusFrac > 0
+            ? Math.hypot(c2.width, c2.height) * 0.5 * nm.boundaryRadiusFrac
+            : 0
+        const boundaryCx = c2.width * 0.5
+        const boundaryCy = c2.height * 0.5
+
         let newmixIdle = false
         if (newmix && nm != null) {
           const tprev = newmixTickPrevCursorRef.current
@@ -3069,7 +3195,9 @@ export default function HomeParticleLogoHero({
         }
 
         if (!entranceActive) {
+          let __pIdx = -1
           for (const p of particles) {
+            __pIdx++
             if (blackHole) {
               if (
                 p.bhTrailUntilMs != null &&
@@ -3574,12 +3702,66 @@ export default function HomeParticleLogoHero({
                   p.vx += fieldRideX
                   p.vy += fieldRideY
                 }
+                /** Curl-noise micro-turbulence — divergence-free organic
+                 * marbling, sampled per-particle from a 2D potential field
+                 * that drifts in time. Never zero unless amplitude is 0. */
+                let curlX = 0
+                let curlY = 0
+                if (nm.curlNoiseAmplitude > 0) {
+                  const curlOut = newmixCurlNoiseSampleRef.current
+                  sampleCurlNoise(
+                    p.x,
+                    p.y,
+                    curlT,
+                    nm.curlNoiseScale,
+                    nm.curlNoiseAmplitude,
+                    nm.curlNoiseEvolutionHz,
+                    curlOut
+                  )
+                  curlX = curlOut[0]
+                  curlY = curlOut[1]
+                  p.vx += curlX
+                  p.vy += curlY
+                }
+                /** Flocking velocity alignment — blend a fraction of a single
+                 * neighbour's velocity into this particle's. Round-robin so
+                 * we only touch a fraction of particles each frame. */
+                let flockX = 0
+                let flockY = 0
+                if (
+                  flockingHash &&
+                  nm.flockingStrength > 0 &&
+                  ((p.hx | 0) + (p.hy | 0) + nowTick) %
+                    Math.max(1, Math.round(1 / Math.max(0.01, nm.flockingProcessFraction))) ===
+                    0
+                ) {
+                  const flockHash =
+                    ((p.hx | 0) * 374761393 + (p.hy | 0) * 668265263 + nowTick) >>> 0
+                  const flockRand = (flockHash & 0xffffff) / 0xffffff
+                  const neighborIdx = pickNeighbor(
+                    flockingHash,
+                    p.x,
+                    p.y,
+                    __pIdx,
+                    flockRand
+                  )
+                  if (neighborIdx >= 0) {
+                    const n = particles[neighborIdx]!
+                    flockX = (n.vx - p.vx) * nm.flockingStrength
+                    flockY = (n.vy - p.vy) * nm.flockingStrength
+                    p.vx += flockX
+                    p.vy += flockY
+                  }
+                }
                 /** Compound activation: vortex impulse OR enough field velocity
-                 * at this cell. If either is active, run integrated motion
-                 * with spring suppression so the displacement reads visibly
-                 * before the spring pulls it home. */
+                 * OR curl/flocking velocity at this position. If any is
+                 * active, run integrated motion with spring suppression so
+                 * the displacement reads visibly before the spring pulls home. */
                 const fieldRideMag = Math.hypot(fieldRideX, fieldRideY)
-                if (vortexSupp > 0.05 || fieldRideMag > 0.05) {
+                const curlMag = Math.hypot(curlX, curlY)
+                const flockMag = Math.hypot(flockX, flockY)
+                const ambientMag = fieldRideMag + curlMag + flockMag
+                if (vortexSupp > 0.05 || ambientMag > 0.05) {
                   /** Spring suppressed in proportion to vortex influence — at
                    * full vortex (supp=1) spring is fully off, letting the
                    * tangential motion travel; as supp decays, spring returns.
@@ -3619,6 +3801,34 @@ export default function HomeParticleLogoHero({
               /** Track in-radius status so the next exit triggers a release. Trailing particles
                * inside the disk are re-captured (handled above) and will re-enter the swirl cycle. */
               p.bhPrevInRadius = inCaptureDiskGeom
+
+              /** Boundary reflection (the "coffee cup wall"). Particles past the
+               * boundary radius are pushed back inward and their velocity is
+               * reflected along the inward normal, producing the classic
+               * "stuff piles up at the rim and curls back" look. */
+              if (boundaryR > 0) {
+                const bdx = p.x - boundaryCx
+                const bdy = p.y - boundaryCy
+                const bDist = Math.hypot(bdx, bdy)
+                if (bDist > boundaryR && bDist > PHYSICS_DIST_EPSILON) {
+                  const nx = bdx / bDist
+                  const ny = bdy / bDist
+                  /** Push position back to the wall. */
+                  p.x = boundaryCx + nx * boundaryR
+                  p.y = boundaryCy + ny * boundaryR
+                  /** Reflect velocity along the inward normal: v - 2(v·n)n,
+                   * scaled by restitution. */
+                  const vDotN = p.vx * nx + p.vy * ny
+                  if (vDotN > 0) {
+                    const restitution = Math.max(
+                      0,
+                      Math.min(1, nm.boundaryRestitution)
+                    )
+                    p.vx -= (1 + restitution) * vDotN * nx
+                    p.vy -= (1 + restitution) * vDotN * ny
+                  }
+                }
+              }
             } else if (flow && fl != null) {
               /** FLUID FLOW with CARRY-STATE TRAIL. Three modes per particle:
                *  1. INSIDE RADIUS: displace to rim + start/refresh carry timer.
@@ -3936,6 +4146,15 @@ export default function HomeParticleLogoHero({
         const dotDprTick = c2.width / Math.max(1, c2.clientWidth)
         const parallaxX = T.x * PARALLAX_MULT_C
         const parallaxY = T.y * PARALLAX_MULT_C
+        /** Metaball post-process needs the particles drawn LARGER and SOFTER so
+         * overlapping ones can fuse during the blur+contrast pass. Temporarily
+         * upsize when the toggle is on. */
+        const metaballOn =
+          newmix && nm != null && nm.metaballEnabled > 0.5
+        const drawSize = particleDrawSizeBmpRef.current
+        const renderSize = metaballOn
+          ? Math.max(drawSize, nm!.metaballGlowRadius)
+          : drawSize
         drawLayer(
           ctx2,
           c2,
@@ -3947,13 +4166,24 @@ export default function HomeParticleLogoHero({
           parallaxX,
           parallaxY,
           applyCanvasParallax,
-          particleDrawSizeBmpRef.current,
+          renderSize,
           viscousCoffee ? viscousCoffeeWakeParticlesRef.current : null,
           newmix && nm != null ? nm.wakeAlphaMult : 1,
           /** Newmix mode uses crisp single-pass rendering; other modes keep the dual-pass bloom. */
           !newmix,
           wordmarkGradientRef.current
         )
+        /** Apply the metaball blur+contrast pass after the particles are
+         * rendered. Cached offscreen lives on a ref. */
+        if (metaballOn && nm != null) {
+          newmixMetaballGlowRef.current = applyMetaballPostprocess(
+            ctx2,
+            c2,
+            newmixMetaballGlowRef.current,
+            nm.metaballBlurPx,
+            nm.metaballThreshold
+          )
+        }
 
         const tiltEl = logoTiltLayerRef.current
         if (tiltEl != null) {
