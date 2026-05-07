@@ -1661,6 +1661,109 @@ export default function CustomizerTemplate({
   }
 
   /**
+   * Background render cache. Key encodes everything that affects render output
+   * (objects, print size, garment image, canvas dims) so a stale entry is
+   * impossible — any edit changes the key and forces a fresh render at click
+   * time. Cache entries hold finished URLs; in-flight entries hold the promise
+   * so a click during a prefetch awaits the existing request instead of
+   * starting a duplicate.
+   */
+  const prerenderedArtifactsRef = useRef<
+    Map<GarmentSide, { key: string; printUrl: string; mockupUrl: string }>
+  >(new Map())
+  const inflightRendersRef = useRef<
+    Map<
+      GarmentSide,
+      {
+        key: string
+        promise: Promise<{ printUrl: string | null; mockupUrl: string | null }>
+      }
+    >
+  >(new Map())
+
+  const buildSideRenderKey = (
+    side: GarmentSide
+  ):
+    | {
+        key: string
+        canvasDims: { width: number; height: number }
+        mockupGarmentUrl: string | null
+        sideObjects: Record<string, unknown>[]
+      }
+    | null => {
+    if (!selectedProduct || !selectedVariant) return null
+    const w = Math.round(canvasSize.width)
+    const h = Math.round(canvasSize.height)
+    if (w < MIN_PRINT_AREA_PX || h < MIN_PRINT_AREA_PX) return null
+    const sideObjects = sideLayoutsRef.current[side] ?? []
+    if (sideObjects.length === 0) return null
+    const mockupGarmentUrl = getGarmentImageUrlForPrintSide(
+      selectedProduct,
+      selectedVariant,
+      side,
+      defaultGarmentImage
+    )
+    let serialized: string
+    try {
+      serialized = JSON.stringify(sideObjects)
+    } catch {
+      return null
+    }
+    const key = `${serialized}|${scpPrintSizeId}|${mockupGarmentUrl ?? ""}|${w}x${h}`
+    return { key, canvasDims: { width: w, height: h }, mockupGarmentUrl, sideObjects }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const handle = window.setTimeout(() => {
+      DESIGN_SIDES.forEach((side) => {
+        const built = buildSideRenderKey(side)
+        if (!built) return
+        const cached = prerenderedArtifactsRef.current.get(side)
+        if (cached && cached.key === built.key) return
+        const inflight = inflightRendersRef.current.get(side)
+        if (inflight && inflight.key === built.key) return
+        const promise = renderSideArtifacts(
+          side,
+          built.sideObjects,
+          built.mockupGarmentUrl,
+          built.canvasDims
+        )
+        inflightRendersRef.current.set(side, { key: built.key, promise })
+        promise
+          .then((res) => {
+            if (res.printUrl && res.mockupUrl) {
+              prerenderedArtifactsRef.current.set(side, {
+                key: built.key,
+                printUrl: res.printUrl,
+                mockupUrl: res.mockupUrl,
+              })
+            }
+          })
+          .catch(() => {
+            // Swallow — the click-time render will surface the error properly.
+          })
+          .finally(() => {
+            const cur = inflightRendersRef.current.get(side)
+            if (cur && cur.key === built.key) {
+              inflightRendersRef.current.delete(side)
+            }
+          })
+      })
+    }, 800)
+    return () => window.clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    layoutVersion,
+    selectedProduct?.id,
+    selectedVariant?.id,
+    scpPrintSizeId,
+    canvasSize.width,
+    canvasSize.height,
+    defaultGarmentImage,
+  ])
+
+  /**
    * Cancels the vectorization upsell and removes any matching cart line that a
    * previous "Add to cart" already inserted. Without the cart-side cleanup the
    * customer sees the banner disappear but still pays for vectorization at
@@ -1854,9 +1957,45 @@ export default function CustomizerTemplate({
             side,
             defaultGarmentImage
           )
+          const sideObjects = sideLayoutsRef.current[side] ?? []
+
+          // Try the prefetch cache first — keyed on the same inputs the
+          // prefetch effect uses, so a hit means the URLs match the current
+          // canvas state byte-for-byte.
+          let cacheKey: string | null = null
+          if (
+            effectiveCanvas.width >= MIN_PRINT_AREA_PX &&
+            effectiveCanvas.height >= MIN_PRINT_AREA_PX
+          ) {
+            try {
+              cacheKey = `${JSON.stringify(sideObjects)}|${scpPrintSizeId}|${
+                mockupUrlForSide ?? ""
+              }|${effectiveCanvas.width}x${effectiveCanvas.height}`
+            } catch {
+              cacheKey = null
+            }
+          }
+          if (cacheKey) {
+            const cached = prerenderedArtifactsRef.current.get(side)
+            if (cached && cached.key === cacheKey) {
+              return { side, printUrl: cached.printUrl, mockupUrl: cached.mockupUrl }
+            }
+            const inflight = inflightRendersRef.current.get(side)
+            if (inflight && inflight.key === cacheKey) {
+              try {
+                const res = await inflight.promise
+                if (res.printUrl && res.mockupUrl) {
+                  return { side, printUrl: res.printUrl, mockupUrl: res.mockupUrl }
+                }
+              } catch {
+                // fall through to live render
+              }
+            }
+          }
+
           const rendered = await renderSideArtifacts(
             side,
-            sideLayoutsRef.current[side] ?? [],
+            sideObjects,
             mockupUrlForSide,
             effectiveCanvas
           )
