@@ -398,50 +398,16 @@ export async function addScpLineItemToCart(input: {
       cartId: cart.id,
       message: error instanceof Error ? error.message : "unknown",
     })
-    // Keep checkout usable if the custom SCP endpoint or key config is unavailable.
-    const fallbackPayload = {
-      variant_id: variantId,
-      quantity,
-      metadata: {
-        ...(metadata ?? {}),
-        scp_pricing_fallback: true,
-        scp_print: {
-          version: SCP_PRINT_PRICING_VERSION,
-          print_size_id: printSizeId,
-        },
-      },
-    }
-    const authHeaders = await getAuthHeaders()
-
-    try {
-      await sdk.store.cart.createLineItem(cart.id, fallbackPayload, {}, authHeaders)
-      cartDebug("addScpLineItemToCart:fallback-success", { cartId: cart.id, authMode: "auth" })
-    } catch (fallbackError) {
-      cartDebug("addScpLineItemToCart:fallback-auth-failed", {
-        cartId: cart.id,
-        message: fallbackError instanceof Error ? fallbackError.message : "unknown",
-      })
-      if ("authorization" in authHeaders) {
-        await sdk.store.cart.createLineItem(cart.id, fallbackPayload, {}, {}).catch(() => {
-          const primaryMessage =
-            error instanceof Error ? error.message : "SCP pricing route failed."
-          const fallbackMessage =
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : "Standard add-to-cart fallback failed."
-          throw new Error(`${primaryMessage} ${fallbackMessage}`.trim())
-        })
-        cartDebug("addScpLineItemToCart:fallback-guest-retry-success", { cartId: cart.id })
-      } else {
-        const primaryMessage =
-          error instanceof Error ? error.message : "SCP pricing route failed."
-        const fallbackMessage =
-          fallbackError instanceof Error
-            ? fallbackError.message
-            : "Standard add-to-cart fallback failed."
-        throw new Error(`${primaryMessage} ${fallbackMessage}`.trim())
-      }
-    }
+    // Previously fell back to `sdk.store.cart.createLineItem` without
+    // `unit_price`, which created phantom $0.00 lines whenever the SCP route
+    // failed — accumulating broken rows in the cart that the customer
+    // couldn't easily clean up. Now we surface the actual error so the user
+    // can retry instead of polluting their cart.
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Could not add this customized item to your cart. Please try again."
+    throw new Error(message)
   }
 
   revalidateTag("cart")
