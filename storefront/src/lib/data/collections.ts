@@ -39,7 +39,10 @@ export const getCollectionsWithProducts = cache(
       .filter(Boolean) as string[]
 
     const { response } = await getProductsList({
-      queryParams: { collection_id: collectionIds },
+      // collection_id accepted at runtime; cast over SDK preview type drift.
+      queryParams: { collection_id: collectionIds } as Parameters<
+        typeof getProductsList
+      >[0]["queryParams"],
       countryCode,
     })
 

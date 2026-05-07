@@ -1,6 +1,6 @@
 "use client"
 
-import { AnimatePresence, LayoutGroup, motion, useMotionValue, useScroll, useSpring, useTransform } from "framer-motion"
+import { AnimatePresence, LayoutGroup, motion, useMotionValue, useScroll, useSpring, useTransform, type Variants } from "framer-motion"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useInView } from "react-intersection-observer"
 
@@ -27,7 +27,7 @@ const staggerContainer = {
   },
 }
 
-const staggerItem = {
+const staggerItem: Variants = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
 }
@@ -779,7 +779,7 @@ export function LabScrambleText({ reducedMotion }: { reducedMotion: boolean }) {
     const totalFrames = 22
     const chars = target.split("")
     const letters = chars.filter((c) => c !== " ")
-    tickRef.current = window.setInterval(() => {
+    tickRef.current = setInterval(() => {
       frame += 1
       let li = 0
       setDisplay(

@@ -127,7 +127,7 @@ export default function SessionIntro({
         setZoomScale(ZOOM_END_SCALE)
       }
     })
-    zoomTimerRef.current = window.setTimeout(() => {
+    zoomTimerRef.current = setTimeout(() => {
       if (!cancelled) {
         const n =
           PARTICLE_MIN +
@@ -157,7 +157,7 @@ export default function SessionIntro({
       }
     })
     const waitAfterFlyMs = msUntilFadeAfterParticlesAtEdge(particles)
-    explodeTimerRef.current = window.setTimeout(() => {
+    explodeTimerRef.current = setTimeout(() => {
       if (!cancelled) {
         setParticleLayerFade(true)
         setPhase("fading")
@@ -218,7 +218,7 @@ export default function SessionIntro({
     if (el) {
       el.addEventListener("transitionend", onTransitionEnd)
     }
-    unmountFallbackRef.current = window.setTimeout(
+    unmountFallbackRef.current = setTimeout(
       finish,
       PARTICLE_LAYER_FADE_MS + 200
     )

@@ -82,5 +82,5 @@ export const getCustomizerMockupArtifacts = (item: AnyLineItem): LineItemMockupA
         mockupUrl,
       }
     })
-    .filter((artifact): artifact is LineItemMockupArtifact => Boolean(artifact))
+    .filter((artifact: LineItemMockupArtifact | null): artifact is LineItemMockupArtifact => Boolean(artifact))
 }

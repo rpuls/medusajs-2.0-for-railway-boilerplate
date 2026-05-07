@@ -215,7 +215,7 @@ export const getVariantOptionValue = (
     return undefined
   }
   const byId = (variant.options ?? []).find(
-    (vo: { option_id?: string }) => vo?.option_id === productOption.id
+    (vo) => (vo as { option_id?: string })?.option_id === productOption.id
   )
   return (byId as { value?: string } | undefined)?.value
 }
@@ -540,7 +540,7 @@ export function resolveVariantFromOptions(
   }
 
   const exact = variants.find((v) =>
-    isEqual(optionsAsKeymap(v.options, product), options)
+    isEqual(optionsAsKeymap(v.options ?? undefined, product), options)
   )
   if (exact) {
     return exact
@@ -555,7 +555,7 @@ export function resolveVariantFromOptions(
   }
 
   const partial = variants.find((v) => {
-    const vo = optionsAsKeymap(v.options, product)
+    const vo = optionsAsKeymap(v.options ?? undefined, product)
     return selectedEntries.every(([title, value]) => value === vo[title])
   })
   if (partial) {

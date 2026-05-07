@@ -147,11 +147,13 @@ The `customizer-render` service ([backend/src/services/customizer-render/](backe
 
 These are real but non-blocking. Triage when you have a moment:
 
-1. **Vectorization charged twice if customer hits "Add to cart" twice in the same session** — the customizer doesn't check whether the cart already has the vectorization line before adding another. Fix: query cart for an existing line with `metadata.vectorization_for_order: true` before adding.
-2. **"Remove" on the vectorization banner doesn't remove an already-added cart line** — only flips local state. Fix: when Remove is clicked, find + delete any matching cart line.
-3. **Stage rollback re-emails the customer** — moving from `in_production` back to `awaiting_approval` re-fires the action-required email. Fix: in [order-production-stage-changed.ts](backend/src/subscribers/order-production-stage-changed.ts), suppress emails when `PRODUCTION_STAGES.indexOf(to) <= PRODUCTION_STAGES.indexOf(from)`.
-4. **Initial orders show no tracker** — the storefront stepper hides until staff sets a stage. Fix: extend [order-placed.ts](backend/src/subscribers/order-placed.ts) to set `metadata.production_stage = "received"` automatically.
-5. **Hydration loses the original active side** — the canvas re-opens on `front` regardless of which side was active when saved. Fix: persist `activeSide` in `CustomizerMetadata` at save time and load it during hydration.
+1. **Stage rollback re-emails the customer** — moving from `in_production` back to `awaiting_approval` re-fires the action-required email. Fix: in [order-production-stage-changed.ts](backend/src/subscribers/order-production-stage-changed.ts), suppress emails when `PRODUCTION_STAGES.indexOf(to) <= PRODUCTION_STAGES.indexOf(from)`.
+2. **Hydration loses the original active side** — the canvas re-opens on `front` regardless of which side was active when saved. Fix: persist `activeSide` in `CustomizerMetadata` at save time and load it during hydration.
+
+### Fixed (kept here for context)
+- ✅ **Vectorization charged twice on double "Add to cart"** — `addCustomizedToCart` now probes the cart for an existing line with `metadata.vectorization_for_order: true` before adding. On cart-fetch failure it defaults to "skip add" so a transient error never causes a double-charge.
+- ✅ **Remove button stranded a cart line** — the in-customizer "Remove" on the vectorization banner now calls `handleRemoveVectorization()`, which deletes any matching cart line via `deleteLineItem`. Surfaces an error if the cart-side cleanup fails so the customer can verify before checkout.
+- ✅ **Initial orders showed no tracker** — new subscriber [order-placed-stamp-production-stage.ts](backend/src/subscribers/order-placed-stamp-production-stage.ts) auto-stamps `production_stage = "received"` on every new order. Idempotent (skips if a stage is already set).
 
 ## Operational notes
 

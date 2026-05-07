@@ -25,7 +25,13 @@ export default async function RelatedProducts({
   // Medusa Store API uses `tag_id` (array of tag IDs), NOT `tags`; sending
   // `tags` causes "Invalid request: Unrecognized fields: 'tags'" (400) for
   // any product that actually has tags in the catalog.
-  const queryParams: HttpTypes.StoreProductParams = {}
+  // Cast widens the SDK preview types — `collection_id`, `tag_id`,
+  // `is_giftcard` are accepted at runtime but not declared in StoreProductParams.
+  const queryParams = {} as HttpTypes.StoreProductParams & {
+    collection_id?: string[]
+    tag_id?: string[]
+    is_giftcard?: boolean
+  }
   queryParams.region_id = region.id
   if (product.collection_id) {
     queryParams.collection_id = [product.collection_id]

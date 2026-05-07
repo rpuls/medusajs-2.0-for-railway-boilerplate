@@ -712,8 +712,8 @@ export default function ParticleFlowTuner() {
   const saveSettings = useCallback(() => {
     try {
       const payload: Partial<NewmixLiveTuning> = {}
-      for (const k of ALL_SLIDER_KEYS) {
-        ;(payload as Record<string, number>)[k as string] = tuning[k]
+      for (const k of Array.from(ALL_SLIDER_KEYS)) {
+        ;(payload as Record<string, number>)[k as string] = tuning[k as keyof NewmixLiveTuning]
       }
       localStorage.setItem(LS_KEY, JSON.stringify(payload))
       localStorage.setItem(

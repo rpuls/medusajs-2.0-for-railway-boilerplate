@@ -48,9 +48,9 @@ const layerStyles = [
 ] as const
 
 export type ScrollExpandingGraphicLayerRefs = {
-  back: RefObject<HTMLDivElement | null>
-  mid: RefObject<HTMLDivElement | null>
-  front: RefObject<HTMLDivElement | null>
+  back: RefObject<HTMLDivElement>
+  mid: RefObject<HTMLDivElement>
+  front: RefObject<HTMLDivElement>
 }
 
 type Props = {
