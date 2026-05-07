@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+
+import { searchCustomizerProducts } from "@lib/data/customizer-product-search"
 
 export type CustomizerPickerProduct = {
   id: string
@@ -21,11 +23,19 @@ type Props = {
   hasUnsavedDesign?: () => boolean
 }
 
+const SEARCH_DEBOUNCE_MS = 280
+
 const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: Props) => {
   const router = useRouter()
   const { countryCode } = useParams() as { countryCode: string }
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [serverResults, setServerResults] = useState<CustomizerPickerProduct[] | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+
+  // Bumps on every search invocation so out-of-order responses (slow network +
+  // fast typing) can't overwrite the freshest results.
+  const searchTokenRef = useRef(0)
 
   useEffect(() => {
     if (!open) return
@@ -36,16 +46,49 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
     return () => window.removeEventListener("keydown", onKey)
   }, [open])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return products
-    return products.filter((p) => {
-      return (
-        p.title.toLowerCase().includes(q) ||
-        p.handle.toLowerCase().includes(q)
-      )
-    })
-  }, [products, query])
+  // Server-side search effect. Initial-prop products only cover ~60 items, so
+  // local filtering missed anything beyond that (e.g. searching "5001"
+  // returned zero hits even though Staple Tee | 5001 exists). Hitting the
+  // store API with `q=` here covers the FULL catalogue.
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      // Empty query → fall back to the prop products (instant, no fetch).
+      setServerResults(null)
+      setIsSearching(false)
+      return
+    }
+    const token = ++searchTokenRef.current
+    setIsSearching(true)
+    const t = window.setTimeout(async () => {
+      try {
+        const results = await searchCustomizerProducts(trimmed, countryCode)
+        if (token !== searchTokenRef.current) return // stale
+        setServerResults(results)
+      } catch {
+        if (token !== searchTokenRef.current) return
+        setServerResults([])
+      } finally {
+        if (token === searchTokenRef.current) setIsSearching(false)
+      }
+    }, SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(t)
+  }, [query, countryCode])
+
+  // Reset search when modal closes, so reopening always starts fresh.
+  useEffect(() => {
+    if (!open) {
+      setQuery("")
+      setServerResults(null)
+      setIsSearching(false)
+      searchTokenRef.current++
+    }
+  }, [open])
+
+  const visibleProducts = useMemo<CustomizerPickerProduct[]>(() => {
+    if (query.trim() && serverResults !== null) return serverResults
+    return products
+  }, [query, products, serverResults])
 
   if (products.length === 0) {
     return null
@@ -67,6 +110,14 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
     setOpen(false)
     router.push(`/${countryCode}/customizer?handle=${encodeURIComponent(handle)}`)
   }
+
+  const trimmedQuery = query.trim()
+  const showingSearchResults = trimmedQuery.length > 0 && serverResults !== null
+  const counterText = isSearching
+    ? "Searching catalogue…"
+    : showingSearchResults
+    ? `${visibleProducts.length} ${visibleProducts.length === 1 ? "match" : "matches"} for "${trimmedQuery}"`
+    : `${visibleProducts.length} products`
 
   return (
     <>
@@ -115,24 +166,36 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
             </div>
 
             <div className="border-b border-ui-border-base px-6 py-3">
-              <input
-                type="search"
-                placeholder="Search products by name…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  type="search"
+                  placeholder="Search products by name or code (e.g. 5001)…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+                  autoFocus
+                />
+                {isSearching ? (
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] uppercase tracking-wide text-ui-fg-subtle"
+                    aria-live="polite"
+                  >
+                    Searching
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              {filtered.length === 0 ? (
+              {visibleProducts.length === 0 ? (
                 <p className="py-12 text-center text-sm text-ui-fg-subtle">
-                  No products match &quot;{query}&quot;.
+                  {isSearching
+                    ? "Searching the catalogue…"
+                    : `No products match "${trimmedQuery}".`}
                 </p>
               ) : (
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {filtered.map((p) => {
+                  {visibleProducts.map((p) => {
                     const isCurrent = p.handle === currentHandle
                     return (
                       <li key={p.id}>
@@ -180,8 +243,8 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-ui-border-base bg-ui-bg-subtle/40 px-6 py-3">
-              <p className="text-xs text-ui-fg-subtle">
-                {filtered.length} of {products.length} products
+              <p className="text-xs text-ui-fg-subtle" aria-live="polite">
+                {counterText}
               </p>
               <button
                 type="button"
