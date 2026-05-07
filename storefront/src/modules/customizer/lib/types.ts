@@ -90,4 +90,10 @@ export type CustomizerMetadata = {
   customerOriginalFiles?: CustomerOriginalFileRef[]
   /** SCP digital print size for this line; persisted so an "edit from cart" flow can restore it. */
   scpPrintSizeId?: string
+  /**
+   * Customer opted in to a paid artwork vectorization / upscaling service after
+   * the live DPI check flagged the artwork as too low-resolution for clean print.
+   * Surfaced in the admin so the team can charge / process accordingly.
+   */
+  requiresVectorization?: boolean
 }

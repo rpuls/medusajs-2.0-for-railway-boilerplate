@@ -209,6 +209,10 @@ const medusaConfig = {
       : []),
 
     {
+      resolve: "./src/modules/designs",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {

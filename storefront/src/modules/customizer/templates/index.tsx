@@ -1,6 +1,16 @@
 "use client"
 
-import { addScpLineItemToCartSafe, deleteLineItem, retrieveCart } from "@lib/data/cart"
+import { addScpLineItemToCartSafe, addToCartSafe, deleteLineItem, retrieveCart } from "@lib/data/cart"
+import { createMyDesign, getMyDesign } from "@lib/data/designs"
+import { getOrderLineCustomizerMetadata } from "@lib/data/orders"
+import LowResolutionModal from "@modules/customizer/components/low-resolution-modal"
+import { buildCustomizerMetadataBase } from "@modules/customizer/lib/build-metadata"
+import {
+  DPI_CRITICAL_THRESHOLD,
+  assessCanvasDpi,
+  effectiveDpiForFabricImage,
+  type DpiAssessment,
+} from "@modules/customizer/lib/dpi"
 import { resolvePdpFlyImageSrc } from "@modules/common/components/fly-to-cart-add-button"
 import CanvasStage from "@modules/customizer/components/canvas-stage"
 import DesignPreviewPopover from "@modules/customizer/components/design-preview-popover"
@@ -474,7 +484,18 @@ export default function CustomizerTemplate({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [outOfBoundsWarning, setOutOfBoundsWarning] = useState<string | null>(null)
   const [dpiWarning, setDpiWarning] = useState<string | null>(null)
+  const [dpiAssessment, setDpiAssessment] = useState<DpiAssessment>({
+    worstDpi: null,
+    severity: "ok",
+    imagesEvaluated: 0,
+    imagesBelowCritical: 0,
+  })
+  const [lowResModalOpen, setLowResModalOpen] = useState(false)
+  /** Once the customer dismisses the modal we don't keep re-opening it on every scale event. */
+  const lowResModalDismissedRef = useRef(false)
+  const [vectorizationRequested, setVectorizationRequested] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSavingDesign, setIsSavingDesign] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [printNotes, setPrintNotes] = useState("")
   // Seed from `?variant=` (e.g. when returning from cart) so the previously
@@ -502,6 +523,14 @@ export default function CustomizerTemplate({
   // the line metadata and "Add to cart" replaces (add new + delete old).
   const editLineItemIdFromUrl = initialVariantSearchParams?.get("edit") ?? null
   const [editLineItemId, setEditLineItemId] = useState<string | null>(editLineItemIdFromUrl)
+
+  // Rehydration mode: `?design=<id>` (saved-design re-edit) or
+  // `?reorder=<order_id>:<line_item_id>` (re-order from order history). Both
+  // resolve to a CustomizerMetadata that we replay onto the canvas + state.
+  const designIdFromUrl = initialVariantSearchParams?.get("design") ?? null
+  const reorderRefFromUrl = initialVariantSearchParams?.get("reorder") ?? null
+  const [pendingHydration, setPendingHydration] = useState<CustomizerMetadata | null>(null)
+  const [hydrationApplied, setHydrationApplied] = useState(false)
   const [editingHydrated, setEditingHydrated] = useState(false)
   const [editingProductTitle, setEditingProductTitle] = useState<string | null>(null)
   const [editingPreviousSides, setEditingPreviousSides] = useState<GarmentSide[]>([])
@@ -799,50 +828,54 @@ export default function CustomizerTemplate({
 
   const updateDpiWarning = () => {
     const canvas = fabricCanvasRef.current
-    const active = canvas?.getActiveObject?.()
-
-    if (!active || active.type !== "image") {
+    if (!canvas) {
       setDpiWarning(null)
+      setDpiAssessment({ worstDpi: null, severity: "ok", imagesEvaluated: 0, imagesBelowCritical: 0 })
       return
     }
-
     if (printArea.width < 1 || printArea.height < 1) {
       setDpiWarning(null)
-      return
-    }
-
-    const sourceWidthPx = getFabricImageSourceWidthPx(active)
-    if (!sourceWidthPx) {
-      setDpiWarning(null)
-      return
-    }
-
-    const renderedWidth = active.getScaledWidth?.() ?? 0
-    if (!renderedWidth) {
-      setDpiWarning(null)
+      setDpiAssessment({ worstDpi: null, severity: "ok", imagesEvaluated: 0, imagesBelowCritical: 0 })
       return
     }
 
     const pixelsPerInch = printArea.width / PRINT_AREA_INCHES.width
     if (!Number.isFinite(pixelsPerInch) || pixelsPerInch <= 0) {
       setDpiWarning(null)
+      setDpiAssessment({ worstDpi: null, severity: "ok", imagesEvaluated: 0, imagesBelowCritical: 0 })
       return
     }
 
-    const printWidthInches = renderedWidth / pixelsPerInch
-    if (!Number.isFinite(printWidthInches) || printWidthInches <= 0) {
+    // Inline warning prefers the active object (what the user is touching);
+    // canvas-wide assessment drives the modal so unselected low-res layers
+    // can't sneak through.
+    const active = canvas.getActiveObject?.()
+    const activeDpi =
+      active && active.type === "image"
+        ? effectiveDpiForFabricImage(active, pixelsPerInch)
+        : null
+
+    if (activeDpi !== null && activeDpi < DPI_CRITICAL_THRESHOLD) {
+      setDpiWarning(
+        `Low resolution warning: estimated ${Math.max(1, Math.round(activeDpi))} DPI at current size.`
+      )
+    } else {
       setDpiWarning(null)
-      return
     }
 
-    const dpi = sourceWidthPx / printWidthInches
+    const assessment = assessCanvasDpi(canvas, pixelsPerInch)
+    setDpiAssessment(assessment)
 
-    if (dpi < 150) {
-      setDpiWarning(`Low resolution warning: estimated ${Math.max(1, Math.round(dpi))} DPI at current size.`)
-      return
+    // Auto-open the modal the first time the canvas crosses into "critical"
+    // territory. Stays closed once dismissed; the customer can re-trigger by
+    // re-uploading a worse file (assessment changes again).
+    if (
+      assessment.severity === "critical" &&
+      !lowResModalDismissedRef.current &&
+      !vectorizationRequested
+    ) {
+      setLowResModalOpen(true)
     }
-
-    setDpiWarning(null)
   }
 
   // Edit-from-cart hydration: when `?edit=<lineItemId>` is present, fetch the
@@ -904,6 +937,69 @@ export default function CustomizerTemplate({
       cancelled = true
     }
   }, [editLineItemId, editingHydrated])
+
+  // Stage 1 of rehydration: fetch the saved metadata from either source.
+  useEffect(() => {
+    if (hydrationApplied || pendingHydration) return
+    if (!designIdFromUrl && !reorderRefFromUrl) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        let meta: CustomizerMetadata | null = null
+        if (designIdFromUrl) {
+          const design = await getMyDesign(designIdFromUrl)
+          meta = (design?.customizer_metadata as CustomizerMetadata | undefined) ?? null
+        } else if (reorderRefFromUrl) {
+          const [orderId, lineItemId] = reorderRefFromUrl.split(":")
+          if (orderId && lineItemId) {
+            meta = await getOrderLineCustomizerMetadata(orderId, lineItemId)
+          }
+        }
+        if (cancelled) return
+        if (meta) setPendingHydration(meta)
+      } catch {
+        // Best-effort; user can still build a fresh design.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [designIdFromUrl, reorderRefFromUrl, hydrationApplied, pendingHydration])
+
+  // Stage 2 of rehydration: replay the metadata once Fabric is up. canvasSize
+  // is the readiness signal (set by syncSize() inside the canvas init effect).
+  useEffect(() => {
+    if (!pendingHydration || hydrationApplied) return
+    const canvas = fabricCanvasRef.current
+    if (!canvas || canvasSize.width <= 0 || canvasSize.height <= 0) return
+
+    if (Array.isArray(pendingHydration.sideLayouts)) {
+      for (const sl of pendingHydration.sideLayouts) {
+        if (sl?.side && Array.isArray(sl.objects)) {
+          sideLayoutsRef.current[sl.side] = sl.objects
+        }
+      }
+    }
+    if (Array.isArray(pendingHydration.sizes) && pendingHydration.sizes.length > 0) {
+      setSizeMatrix(pendingHydration.sizes)
+    }
+    if (typeof pendingHydration.printNotes === "string" && pendingHydration.printNotes.length) {
+      setPrintNotes(pendingHydration.printNotes)
+    }
+    if (pendingHydration.scpPrintSizeId) {
+      const sid = pendingHydration.scpPrintSizeId
+      if (sid === "up_to_a6" || sid === "up_to_a4" || sid === "up_to_a3" || sid === "oversize") {
+        setScpPrintSizeId(sid as ScpPrintSizeId)
+      }
+    }
+    if (pendingHydration.variantId) {
+      const variantExists = product.variants?.some((v) => v.id === pendingHydration.variantId)
+      if (variantExists) setActiveVariantId(pendingHydration.variantId)
+    }
+
+    void loadSide(currentSideRef.current)
+    setHydrationApplied(true)
+  }, [pendingHydration, hydrationApplied, canvasSize.width, canvasSize.height, product.variants])
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1560,6 +1656,96 @@ export default function CustomizerTemplate({
     }
   }
 
+  /**
+   * Persist the current canvas state to the customer's "My Designs" without
+   * sending it to the cart. Skips the heavy server-side print/mockup render —
+   * those run later when the user actually adds the design to cart. The
+   * thumbnail is a small inline JPEG generated client-side from Fabric.
+   */
+  const saveCurrentDesign = async () => {
+    if (!selectedProduct || !selectedVariant) {
+      setUploadError("Select a product and variant before saving.")
+      return
+    }
+    saveCurrentSide()
+    const decoratedSidesNow = DESIGN_SIDES.filter(
+      (side) => (sideLayoutsRef.current[side] ?? []).length > 0
+    )
+    if (!decoratedSidesNow.length) {
+      setUploadError("Add at least one design element before saving.")
+      return
+    }
+
+    const defaultName = `${selectedProduct.title ?? "Design"} · ${new Date().toLocaleDateString()}`
+    const proposedName = window.prompt("Name this design", defaultName)
+    if (proposedName === null) {
+      return
+    }
+    const name = proposedName.trim() || defaultName
+
+    setIsSavingDesign(true)
+    setStatusMessage(null)
+    setUploadError(null)
+    try {
+      let thumbnailDataUrl: string | undefined
+      try {
+        const canvas = fabricCanvasRef.current
+        if (canvas && typeof canvas.toDataURL === "function") {
+          const url = canvas.toDataURL({
+            format: "jpeg",
+            quality: 0.6,
+            multiplier: 0.4,
+          }) as string
+          if (typeof url === "string" && url.length < 120_000) {
+            thumbnailDataUrl = url
+          }
+        }
+      } catch {
+        // Thumbnail is best-effort.
+      }
+
+      const partialMetadata: CustomizerMetadata = {
+        ...buildCustomizerMetadataBase({
+          productId: selectedProduct.id,
+          sideLayoutsBySide: sideLayoutsRef.current,
+          printArea,
+          sizes: sizeMatrix,
+          pricing,
+          artifacts: [],
+          scpPrintSizeId,
+          printNotes,
+          customerOriginalFiles: sessionUploads
+            .filter((u) => u.originalStorageUrl)
+            .map((u) => ({
+              url: u.originalStorageUrl!,
+              fileName: u.name,
+              mimeType: u.type,
+            })),
+        }),
+        variantId: selectedVariant.id,
+      }
+
+      const result = await createMyDesign({
+        name,
+        thumbnail_url: thumbnailDataUrl ?? null,
+        base_product_id: selectedProduct.id,
+        base_variant_id: selectedVariant.id,
+        customizer_metadata: partialMetadata,
+      })
+
+      if (!result.ok) {
+        setUploadError(result.error)
+        return
+      }
+
+      setStatusMessage(`Saved "${name}" to your designs.`)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Failed to save design.")
+    } finally {
+      setIsSavingDesign(false)
+    }
+  }
+
   const addCustomizedToCart = async () => {
     if (!selectedProduct || !selectedVariant || !countryCode) {
       setUploadError("Select a product and variant before adding to cart.")
@@ -1665,27 +1851,18 @@ export default function CustomizerTemplate({
           mimeType: u.type,
         }))
 
-      const metadataBase: Omit<CustomizerMetadata, "variantId"> = {
-        version: 2,
-        type: "fabric_customizer",
+      const metadataBase = buildCustomizerMetadataBase({
         productId: selectedProduct.id,
-        sideLayouts: DESIGN_SIDES.map((side) => ({
-          side,
-          objects: sideLayoutsRef.current[side] ?? [],
-        })),
-        printArea: {
-          x: Math.round(printArea.x),
-          y: Math.round(printArea.y),
-          width: Math.round(printArea.width),
-          height: Math.round(printArea.height),
-        },
+        sideLayoutsBySide: sideLayoutsRef.current,
+        printArea,
         sizes: sizeMatrix,
         pricing,
         artifacts,
         scpPrintSizeId,
-        ...(normalizedPrintNotes ? { printNotes: normalizedPrintNotes } : {}),
-        ...(originalFilesPayload.length > 0 ? { customerOriginalFiles: originalFilesPayload } : {}),
-      }
+        printNotes: normalizedPrintNotes,
+        customerOriginalFiles: originalFilesPayload,
+        requiresVectorization: vectorizationRequested,
+      })
 
       const resolvedQuantities =
         sizeOption && selectedProduct.variants?.length
@@ -1773,6 +1950,27 @@ export default function CustomizerTemplate({
 
         if (!addResult.ok) {
           throw new Error(addResult.error)
+        }
+      }
+
+      // Vectorization service: when the customer accepted the upsell from the
+      // low-resolution modal, add the matching service SKU once per cart-add
+      // (a single review covers all the lines we just inserted).
+      const vectorizationVariantId =
+        process.env.NEXT_PUBLIC_VECTORIZATION_VARIANT_ID?.trim()
+      if (vectorizationRequested && vectorizationVariantId) {
+        const vectorizationResult = await addToCartSafe({
+          variantId: vectorizationVariantId,
+          quantity: 1,
+          countryCode,
+          metadata: {
+            vectorization_for_order: true,
+          },
+        })
+        if (!vectorizationResult.ok) {
+          setStatusMessage(
+            `Items were added, but the vectorization service couldn't be added automatically (${vectorizationResult.error}). Our team will add it during artwork review.`
+          )
         }
       }
 
@@ -1895,6 +2093,25 @@ export default function CustomizerTemplate({
               </div>
             </div>
 
+            {vectorizationRequested && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-emerald-900">
+                    Vectorization service requested
+                  </p>
+                  <p className="text-xs text-emerald-800 mt-0.5">
+                    Added to your cart at checkout. Our team will redraw your artwork sharp for print.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVectorizationRequested(false)}
+                  className="text-xs text-emerald-800 hover:text-emerald-900 underline self-start"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
             {uploadError && (
               <p className="text-sm text-rose-600" role="alert">
                 {uploadError}
@@ -1970,6 +2187,8 @@ export default function CustomizerTemplate({
               scpPrintSizeId={scpPrintSizeId}
               onScpPrintSizeIdChange={setScpPrintSizeId}
               decoratedSides={decoratedSides}
+              onSaveDesign={embedded ? undefined : saveCurrentDesign}
+              isSavingDesign={isSavingDesign}
             />
 
             <details className="group rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
@@ -2110,6 +2329,33 @@ export default function CustomizerTemplate({
           {editorColumn}
           {defaultSidebarColumn}
         </div>
+        <LowResolutionModal
+          open={lowResModalOpen}
+          worstDpi={dpiAssessment.worstDpi}
+          imagesBelowCritical={dpiAssessment.imagesBelowCritical}
+          vectorizationDisplayPrice={
+            process.env.NEXT_PUBLIC_VECTORIZATION_DISPLAY_PRICE ?? null
+          }
+          onClose={() => {
+            setLowResModalOpen(false)
+            lowResModalDismissedRef.current = true
+          }}
+          onUploadHigherQuality={() => {
+            // Best-effort: scroll the upload area into view. The exact node ID
+            // doesn't exist, so fall back to gentle scroll-to-top of canvas col.
+            try {
+              fabricContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+            } catch {
+              /* noop */
+            }
+          }}
+          onAcceptVectorization={() => {
+            setVectorizationRequested(true)
+            setStatusMessage(
+              "Vectorization service will be added when you check out — our team will redraw your artwork sharp for print."
+            )
+          }}
+        />
     </div>
   )
 

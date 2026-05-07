@@ -16,6 +16,7 @@
     "build:next": "next build",
     "lint": "next lint",
     "analyze": "ANALYZE=true next build",
+    "test": "jest --config jest.config.cjs",
     "test-e2e": "playwright test e2e"
   },
   "resolutions": {
@@ -83,7 +84,10 @@
     "@medusajs/client-types": "preview",
     "@medusajs/ui-preset": "preview",
     "@playwright/test": "^1.55.1",
+    "@swc/core": "^1.5.7",
+    "@swc/jest": "^0.2.39",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/jest": "^29.5.14",
     "@types/lodash": "^4.14.195",
     "@types/node": "17.0.21",
     "@types/pg": "^8.11.0",
@@ -96,6 +100,7 @@
     "babel-loader": "^8.2.3",
     "eslint": "^9.39.2",
     "eslint-config-next": "^13.4.5",
+    "jest": "^29.7.0",
     "postcss": "^8.4.8",
     "prettier": "^2.8.8",
     "tailwindcss": "^3.4.19",

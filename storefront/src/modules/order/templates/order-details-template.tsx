@@ -7,6 +7,8 @@ import Help from "@modules/order/components/help"
 import Items from "@modules/order/components/items"
 import OrderDetails from "@modules/order/components/order-details"
 import OrderSummary from "@modules/order/components/order-summary"
+import ProductionStageTracker from "@modules/order/components/production-stage-tracker"
+import ReorderActions from "@modules/order/components/reorder-actions"
 import ShippingDetails from "@modules/order/components/shipping-details"
 import TrackingList from "@modules/order/components/tracking-list"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -36,6 +38,8 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
         data-testid="order-details-container"
       >
         <OrderDetails order={order} showStatus />
+        <ProductionStageTracker order={order} />
+        <ReorderActions order={order} />
         <Items items={order.items} />
         <ShippingDetails order={order} />
         <TrackingList order={order} />

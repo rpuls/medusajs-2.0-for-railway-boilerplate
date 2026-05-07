@@ -47,6 +47,10 @@ type PricingPanelProps = {
   primaryCtaLabel?: string
   /** Override the busy/loading CTA label. */
   primaryCtaLoadingLabel?: string
+  /** Optional secondary action — when provided, renders a "Save design" button below add-to-cart. */
+  onSaveDesign?: () => Promise<void>
+  /** Whether the save-design action is currently running. */
+  isSavingDesign?: boolean
 }
 
 const formatMoney = (amount: number, currencyCode: string) =>
@@ -81,6 +85,8 @@ export default function PricingPanel({
   hideHeader = false,
   primaryCtaLabel,
   primaryCtaLoadingLabel,
+  onSaveDesign,
+  isSavingDesign = false,
 }: PricingPanelProps) {
   const ctaLabel = primaryCtaLabel ?? "Add to cart"
   const ctaLoadingLabel = primaryCtaLoadingLabel ?? "Adding..."
@@ -342,6 +348,19 @@ export default function PricingPanel({
           {isSubmitting ? ctaLoadingLabel : ctaLabel}
         </button>
       )}
+
+      {onSaveDesign ? (
+        <button
+          type="button"
+          onClick={() => {
+            void onSaveDesign()
+          }}
+          disabled={isSavingDesign || isSubmitting}
+          className="w-full rounded-xl border border-ui-border-base bg-ui-bg-base px-4 py-2.5 text-sm font-medium text-ui-fg-base transition hover:bg-ui-bg-subtle disabled:opacity-50"
+        >
+          {isSavingDesign ? "Saving design…" : "Save to my designs"}
+        </button>
+      ) : null}
     </div>
   )
 }

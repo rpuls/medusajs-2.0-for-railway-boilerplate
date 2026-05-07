@@ -32,6 +32,9 @@
     ".next",
     ".nyc_output",
     "coverage",
-    "jest-coverage"
+    "jest-coverage",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "e2e/**/*"
   ]
 }

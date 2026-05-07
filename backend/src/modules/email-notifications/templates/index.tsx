@@ -17,6 +17,11 @@ import {
   CartReminderEmail,
   isCartReminderData,
 } from './cart-reminder'
+import {
+  ORDER_PRODUCTION_STAGE,
+  OrderProductionStageTemplate,
+  isOrderProductionStageData,
+} from './order-production-stage'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -24,6 +29,7 @@ export const EmailTemplates = {
   ORDER_SHIPPED,
   CONTACT_SUBMISSION,
   CART_REMINDER,
+  ORDER_PRODUCTION_STAGE,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -75,6 +81,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <CartReminderEmail {...data} />
 
+    case EmailTemplates.ORDER_PRODUCTION_STAGE:
+      if (!isOrderProductionStageData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.ORDER_PRODUCTION_STAGE}"`
+        )
+      }
+      return <OrderProductionStageTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -83,4 +98,9 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate }
+export {
+  InviteUserEmail,
+  OrderPlacedTemplate,
+  OrderShippedTemplate,
+  OrderProductionStageTemplate,
+}
