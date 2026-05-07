@@ -32,14 +32,21 @@ export async function retrieveCart() {
     return null
   }
 
-  // Two-layer recovery: try the explicit fields config first (gives us
-  // `customer_id` + the variant inventory flags), but if that 400s on this
-  // Medusa version, retry without `fields` so we still get a populated cart
-  // back. Better to render a working cart with default fields than to show
-  // "Cart (0)" because of a fields-syntax mismatch.
+  // Two-layer recovery: try a broad `*items` fields config first so item
+  // line fields (product_title, unit_price, quantity, thumbnail) come back
+  // populated. If that 400s on this Medusa version, retry without any
+  // `fields` so we still get a populated cart from defaults. Better to
+  // render a working cart with default fields than to show "Cart (0)"
+  // because of a fields-syntax mismatch.
+  //
+  // Previous configs explicitly listed `*items.variant.manage_inventory`
+  // etc., which seems to have caused Medusa to prune sibling default fields
+  // — items came back without `quantity` or `unit_price`, so the cart UI
+  // rendered "$0.00" and "(0)" rows. Bumping to `*items.variant.product`
+  // expands variant + product (handle, thumbnail, calculated_price) without
+  // restricting per-field selection on items themselves.
   const retrieveConfigWithFields = {
-    fields:
-      "customer_id,*items.variant.manage_inventory,*items.variant.allow_backorder",
+    fields: "customer_id,*items.variant.product",
   }
   const retrieveConfigDefault: Record<string, never> = {}
   const authHeaders = await getAuthHeaders()
