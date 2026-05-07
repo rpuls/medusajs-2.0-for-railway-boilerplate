@@ -5,6 +5,7 @@ import {
   STAGES_THAT_EMAIL,
   customerMilestoneForStage,
   isProductionStage,
+  shouldEmailForStageTransition,
   type ProductionStage,
 } from "../production-stage"
 
@@ -78,5 +79,46 @@ describe("isProductionStage", () => {
     expect(isProductionStage(null)).toBe(false)
     expect(isProductionStage(42)).toBe(false)
     expect(isProductionStage({})).toBe(false)
+  })
+})
+
+describe("shouldEmailForStageTransition", () => {
+  it("emails on the agreed milestones for forward transitions", () => {
+    expect(shouldEmailForStageTransition("art_review", "awaiting_approval")).toBe(true)
+    expect(shouldEmailForStageTransition("approved", "in_production")).toBe(true)
+    expect(shouldEmailForStageTransition(null, "awaiting_approval")).toBe(true)
+    expect(shouldEmailForStageTransition(undefined, "in_production")).toBe(true)
+  })
+
+  it("never emails for stages outside STAGES_THAT_EMAIL", () => {
+    expect(shouldEmailForStageTransition("received", "art_review")).toBe(false)
+    expect(shouldEmailForStageTransition("approved", "blanks_ordered")).toBe(false)
+    expect(shouldEmailForStageTransition("in_production", "shipped")).toBe(false)
+    expect(shouldEmailForStageTransition("shipped", "delivered")).toBe(false)
+  })
+
+  it("does not email on same-stage transitions", () => {
+    expect(shouldEmailForStageTransition("awaiting_approval", "awaiting_approval")).toBe(false)
+    expect(shouldEmailForStageTransition("in_production", "in_production")).toBe(false)
+  })
+
+  it("suppresses emails on rollback (the bug this function exists for)", () => {
+    // in_production → awaiting_approval: customer already approved once.
+    expect(shouldEmailForStageTransition("in_production", "awaiting_approval")).toBe(false)
+    // approved → awaiting_approval: rollback, customer already saw this email.
+    expect(shouldEmailForStageTransition("approved", "awaiting_approval")).toBe(false)
+    // shipped (somehow) → in_production: still a rollback, no second "on the press" email.
+    expect(shouldEmailForStageTransition("shipped", "in_production")).toBe(false)
+  })
+
+  it("DOES email on forward re-entry after a rollback", () => {
+    // After rollback to awaiting_approval, moving forward to in_production again
+    // is a real new milestone — the previous in_production was undone.
+    expect(shouldEmailForStageTransition("awaiting_approval", "in_production")).toBe(true)
+  })
+
+  it("ignores garbage from_stage values gracefully", () => {
+    // Stale events with malformed from_stage should still email if to_stage qualifies.
+    expect(shouldEmailForStageTransition("not_a_real_stage" as any, "in_production")).toBe(true)
   })
 })

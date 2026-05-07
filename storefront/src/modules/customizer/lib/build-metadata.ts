@@ -33,6 +33,8 @@ export type BuildCustomizerMetadataInput = {
   customerOriginalFiles?: CustomerOriginalFileRef[]
   /** Phase 4 vectorization upsell flag. */
   requiresVectorization?: boolean
+  /** Side the customer was viewing at save/cart-add time; restored on re-edit. */
+  activeSide?: GarmentSide
 }
 
 /**
@@ -73,5 +75,6 @@ export function buildCustomizerMetadataBase(
     ...(trimmedNotes ? { printNotes: trimmedNotes } : {}),
     ...(customerFiles ? { customerOriginalFiles: customerFiles } : {}),
     ...(input.requiresVectorization ? { requiresVectorization: true } : {}),
+    ...(input.activeSide ? { activeSide: input.activeSide } : {}),
   }
 }

@@ -126,6 +126,30 @@ export default async function CustomizerPage({ params, searchParams }: Customize
     notFound()
   }
 
+  // Catalog list for the in-customizer "Change product" picker. Customers
+  // landing on /customizer (e.g. via the account dashboard or a saved-design
+  // re-edit) need a way to swap to a different garment without back-buttoning
+  // to the catalog. Trimmed to thumbnail + handle + title to keep the payload
+  // small — full product data is fetched on actual switch.
+  const {
+    response: { products: catalogForPicker },
+  } = await getProductsList({
+    countryCode,
+    queryParams: {
+      limit: 60,
+      fields: "id,handle,title,thumbnail",
+    } as HttpTypes.StoreProductParams,
+  }).catch(() => ({ response: { products: [] as HttpTypes.StoreProduct[] } }))
+
+  const pickerProducts = catalogForPicker
+    .map((p) => ({
+      id: p.id,
+      handle: p.handle ?? "",
+      title: p.title ?? "Untitled",
+      thumbnail: p.thumbnail ?? null,
+    }))
+    .filter((p) => p.handle.length > 0)
+
   const defaultGarment = extractDefaultGarmentFromProduct(customizerProduct)
 
   return (
@@ -134,6 +158,7 @@ export default async function CustomizerPage({ params, searchParams }: Customize
         defaultGarmentImage={defaultGarment?.url ?? null}
         defaultGarmentTitle={defaultGarment?.title ?? null}
         product={customizerProduct}
+        pickerProducts={pickerProducts}
       />
     </ProductOptionsProvider>
   )

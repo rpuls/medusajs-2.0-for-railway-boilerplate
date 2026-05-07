@@ -86,4 +86,17 @@ describe("buildCustomizerMetadataBase", () => {
     expect(meta.version).toBe(2)
     expect(meta.type).toBe("fabric_customizer")
   })
+
+  it("omits activeSide when not provided", () => {
+    expect(buildCustomizerMetadataBase(baseInput).activeSide).toBeUndefined()
+  })
+
+  it("preserves activeSide when provided so re-edit lands on the right side", () => {
+    expect(
+      buildCustomizerMetadataBase({ ...baseInput, activeSide: "back" }).activeSide
+    ).toBe("back")
+    expect(
+      buildCustomizerMetadataBase({ ...baseInput, activeSide: "left_sleeve" }).activeSide
+    ).toBe("left_sleeve")
+  })
 })

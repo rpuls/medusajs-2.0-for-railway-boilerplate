@@ -3,6 +3,9 @@
 import { addScpLineItemToCartSafe, addToCartSafe, deleteLineItem, retrieveCart } from "@lib/data/cart"
 import { createMyDesign, getMyDesign } from "@lib/data/designs"
 import { getOrderLineCustomizerMetadata } from "@lib/data/orders"
+import CustomizerProductPicker, {
+  type CustomizerPickerProduct,
+} from "@modules/customizer/components/customizer-product-picker"
 import LowResolutionModal from "@modules/customizer/components/low-resolution-modal"
 import { buildCustomizerMetadataBase } from "@modules/customizer/lib/build-metadata"
 import {
@@ -133,6 +136,12 @@ type CustomizerTemplateProps = {
     gallery: ReactNode
     variantPickers: ReactNode
   }
+  /**
+   * Catalog products available in the in-customizer "Change product" picker.
+   * Only used by the standalone /customizer route — PDP embeds always know
+   * their product up front and never show the picker.
+   */
+  pickerProducts?: CustomizerPickerProduct[]
 }
 
 // Real-world print dimensions per SCP size (cm). "Oversize" is the largest,
@@ -438,6 +447,7 @@ export default function CustomizerTemplate({
   embedded = false,
   pdpSyncedVariantId = null,
   integratedPdpSlots,
+  pickerProducts,
 }: CustomizerTemplateProps) {
   const params = useParams()
   const router = useRouter()
@@ -1001,7 +1011,26 @@ export default function CustomizerTemplate({
       if (variantExists) setActiveVariantId(pendingHydration.variantId)
     }
 
-    void loadSide(currentSideRef.current)
+    // Restore the side the customer was viewing when they saved / placed the
+    // order. Without this, re-opening a back-of-hoodie design dumps the user
+    // onto the front and they have to hunt for their work.
+    let sideToLoad: GarmentSide = currentSideRef.current
+    const savedSide = pendingHydration.activeSide
+    if (
+      savedSide === "front" ||
+      savedSide === "back" ||
+      savedSide === "left_sleeve" ||
+      savedSide === "right_sleeve" ||
+      savedSide === "printed_tag"
+    ) {
+      sideToLoad = savedSide
+      // Update the ref synchronously so the loadSide call below reads the
+      // new value before React commits the setCurrentSide state update.
+      currentSideRef.current = savedSide
+      setCurrentSide(savedSide)
+    }
+
+    void loadSide(sideToLoad)
     setHydrationApplied(true)
   }, [pendingHydration, hydrationApplied, canvasSize.width, canvasSize.height, product.variants])
 
@@ -1874,6 +1903,7 @@ export default function CustomizerTemplate({
               fileName: u.name,
               mimeType: u.type,
             })),
+          activeSide: currentSideRef.current,
         }),
         variantId: selectedVariant.id,
       }
@@ -2051,6 +2081,7 @@ export default function CustomizerTemplate({
         printNotes: normalizedPrintNotes,
         customerOriginalFiles: originalFilesPayload,
         requiresVectorization: vectorizationRequested,
+        activeSide: currentSideRef.current,
       })
 
       const resolvedQuantities =
@@ -2225,13 +2256,28 @@ export default function CustomizerTemplate({
           <div className="space-y-4">
             <div className="overflow-hidden rounded-2xl border border-ui-border-base bg-ui-bg-base shadow-sm">
               <div className="flex flex-col border-b border-ui-border-base bg-ui-bg-subtle/40 px-4 py-3 small:flex-row small:items-center small:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ui-fg-subtle">
-                    Design preview
-                  </p>
-                  <p className="mt-0.5 text-sm text-ui-fg-base">
-                    {selectedProduct?.title ? `Design your ${selectedProduct.title}` : "Design your product"}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ui-fg-subtle">
+                      Design preview
+                    </p>
+                    <p className="mt-0.5 text-sm text-ui-fg-base">
+                      {selectedProduct?.title ? `Design your ${selectedProduct.title}` : "Design your product"}
+                    </p>
+                  </div>
+                  {!embedded && pickerProducts && pickerProducts.length > 0 ? (
+                    <CustomizerProductPicker
+                      products={pickerProducts}
+                      currentHandle={selectedProduct?.handle ?? null}
+                      hasUnsavedDesign={() => {
+                        // Any side carrying objects = real design work the
+                        // customer would lose by switching products.
+                        return DESIGN_SIDES.some(
+                          (side) => (sideLayoutsRef.current[side] ?? []).length > 0
+                        )
+                      }}
+                    />
+                  ) : null}
                 </div>
                 <div className="mt-2 flex items-center gap-3 small:mt-0">
                   <p className="hidden text-xs text-ui-fg-subtle small:block">

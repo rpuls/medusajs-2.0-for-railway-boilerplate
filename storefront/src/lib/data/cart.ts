@@ -33,8 +33,10 @@ export async function retrieveCart() {
   }
 
   const retrieveConfig = {
-    // Keep to fields supported across Medusa deployments.
-    fields: "*items.variant.manage_inventory,*items.variant.allow_backorder",
+    // `customer_id` is needed so `getOrSetCart` can detect a logged-in
+    // customer holding an old guest cart and transfer ownership.
+    fields:
+      "customer_id,*items.variant.manage_inventory,*items.variant.allow_backorder",
   }
   const authHeaders = await getAuthHeaders()
 
@@ -90,12 +92,59 @@ export async function getOrSetCart(countryCode: string) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
+  // Pre-fetch auth headers ONCE — used for cart create AND cart transfer below.
+  // Without these, a logged-in customer's cart was being created as a guest,
+  // which meant the resulting order had no `customer_id` and never appeared
+  // on /account/orders. (Bug surfaced when admin showed the order but
+  // /au/account/orders showed "Nothing to see here".)
+  const authHeaders = await getAuthHeaders()
+  const isAuthed = "authorization" in authHeaders
+
   if (!cart) {
-    const cartResp = await sdk.store.cart.create({ region_id: region.id })
+    const cartResp = await sdk.store.cart.create(
+      { region_id: region.id },
+      {},
+      authHeaders
+    )
     cart = cartResp.cart
     await setCartId(cart.id)
-    cartDebug("getOrSetCart:created", { cartId: cart.id, regionId: region.id })
+    cartDebug("getOrSetCart:created", {
+      cartId: cart.id,
+      regionId: region.id,
+      authMode: isAuthed ? "auth" : "guest",
+      customerId: (cart as { customer_id?: string | null }).customer_id ?? null,
+    })
     revalidateTag("cart")
+  } else if (isAuthed) {
+    // Transfer an orphan guest cart (created before login) onto the now-authed
+    // customer. Without this, the customer keeps their items but the order
+    // they place still has `customer_id = null` and won't show up under
+    // /account/orders. Idempotent: Medusa no-ops when the cart already belongs.
+    const cartCustomerId =
+      (cart as { customer_id?: string | null }).customer_id ?? null
+    if (!cartCustomerId) {
+      try {
+        const { cart: transferred } = await sdk.store.cart.transferCart(
+          cart.id,
+          {},
+          authHeaders
+        )
+        cart = transferred
+        cartDebug("getOrSetCart:transferred", {
+          cartId: cart.id,
+          newCustomerId:
+            (cart as { customer_id?: string | null }).customer_id ?? null,
+        })
+        revalidateTag("cart")
+      } catch (err) {
+        // Don't block checkout if transfer fails — log and proceed. The order
+        // will still be a guest order; the customer can ask support to merge.
+        cartDebug("getOrSetCart:transfer-failed", {
+          cartId: cart.id,
+          message: err instanceof Error ? err.message : "unknown",
+        })
+      }
+    }
   }
 
   if (cart && cart?.region_id !== region.id) {
@@ -103,7 +152,7 @@ export async function getOrSetCart(countryCode: string) {
       cart.id,
       { region_id: region.id },
       {},
-      await getAuthHeaders()
+      authHeaders
     )
     cartDebug("getOrSetCart:region-updated", {
       cartId: cart.id,
@@ -115,6 +164,36 @@ export async function getOrSetCart(countryCode: string) {
 
   cartDebug("getOrSetCart:return", { cartId: cart?.id ?? null })
   return cart
+}
+
+/**
+ * Associates the cookie-stored cart with the just-authenticated customer.
+ *
+ * Call this from `login` and `signup` immediately after the auth token is
+ * persisted. Without it, a customer who built a guest cart, then logged in,
+ * then checked out, ends up with an order that has `customer_id = null` and
+ * never appears on `/account/orders`. Idempotent: Medusa no-ops when the
+ * cart already belongs to the requesting customer.
+ *
+ * Silent on failure — auth has already succeeded, so we don't want to fail
+ * the login UX. The next `getOrSetCart` will retry the transfer anyway.
+ */
+export async function transferGuestCartToCustomer(
+  authHeaders: { authorization: string } | Record<string, string>
+): Promise<void> {
+  if (!("authorization" in authHeaders)) return
+  const cartId = await getCartId()
+  if (!cartId) return
+  try {
+    await sdk.store.cart.transferCart(cartId, {}, authHeaders)
+    cartDebug("transferGuestCartToCustomer:success", { cartId })
+    revalidateTag("cart")
+  } catch (err) {
+    cartDebug("transferGuestCartToCustomer:failed", {
+      cartId,
+      message: err instanceof Error ? err.message : "unknown",
+    })
+  }
 }
 
 export async function updateCart(data: HttpTypes.StoreUpdateCart) {
