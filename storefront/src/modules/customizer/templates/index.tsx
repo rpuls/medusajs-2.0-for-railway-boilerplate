@@ -45,8 +45,14 @@ import {
   CUSTOMIZER_PRINT_NOTES_MAX_LENGTH,
   CustomizerMetadata,
   GarmentSide,
+  PrintSpec,
   SizeQuantity,
 } from "@modules/customizer/lib/types"
+import {
+  canvasPxToApproxCm,
+  printSpecsToPricingSpecs,
+  snapSizeForBoundingCm,
+} from "@modules/customizer/lib/print-spec"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { useProductOptionsOptional } from "@modules/products/context/product-options-context"
 import { sortApparelSizeLabels } from "@modules/products/lib/apparel-size-order"
@@ -66,6 +72,12 @@ const SESSION_UPLOADS_KEY = "customizer_uploads_v1"
 const PRINT_AREA_EPS = 1.5
 /** Skip clamp until the canvas has a real size (avoids pinning art to a corner when printArea is ~0). */
 const MIN_PRINT_AREA_PX = 8
+/**
+ * Cap on top-level Fabric objects per side. Each object is one transfer in
+ * production, so unlimited additions can produce orders the print room
+ * rejects (a chest covered in 12 tiny logos isn't a real product).
+ */
+const MAX_PRINTS_PER_SIDE = 4
 
 /** Initial on-canvas width for uploads when the print area is not sized yet (avoids Fabric Image width/scale bugs). */
 const getTargetArtworkWidth = (printAreaWidth: number) => Math.max(120, printAreaWidth * 0.35)
@@ -486,6 +498,12 @@ export default function CustomizerTemplate({
     right_sleeve: [],
     printed_tag: [],
   })
+  /**
+   * Per-object manual size override. Keyed by `customizerId`. When set the
+   * auto-snap leaves that object alone — the customer has explicitly
+   * chosen a size and we shouldn't yank it back when they nudge the box.
+   */
+  const manualSizeOverridesRef = useRef<Map<string, ScpPrintSizeId>>(new Map())
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
   const [currentSide, setCurrentSide] = useState<GarmentSide>("front")
@@ -640,6 +658,41 @@ export default function CustomizerTemplate({
     () => getAllowedScpPrintSizesForSide(currentSide, productIsLongSleeve),
     [currentSide, productIsLongSleeve]
   )
+  /**
+   * Per-side allowed sizes — fed into PricingPanel so the per-print size
+   * dropdown only offers what the side physically supports (sleeves on a
+   * short-sleeve tee are A6-only, etc).
+   */
+  const allowedSizesBySide = useMemo<
+    Partial<Record<GarmentSide, ScpPrintSizeId[]>>
+  >(
+    () =>
+      DESIGN_SIDES.reduce(
+        (acc, side) => {
+          acc[side] = getAllowedScpPrintSizesForSide(side, productIsLongSleeve)
+          return acc
+        },
+        {} as Partial<Record<GarmentSide, ScpPrintSizeId[]>>
+      ),
+    [productIsLongSleeve]
+  )
+
+  /**
+   * Manual size override entry point. The per-print row in PricingPanel
+   * calls this; we mutate the ref + bump layoutVersion so `printSpecs`
+   * recomputes and pricing updates on the next render.
+   */
+  const handleChangePrintSize = (
+    objectId: string,
+    sizeId: ScpPrintSizeId | null
+  ) => {
+    if (sizeId) {
+      manualSizeOverridesRef.current.set(objectId, sizeId)
+    } else {
+      manualSizeOverridesRef.current.delete(objectId)
+    }
+    bumpLayoutVersion()
+  }
   // If the current global print size isn't allowed on this side, snap it to
   // the largest allowed size so pricing + UI stay in sync.
   useEffect(() => {
@@ -741,6 +794,60 @@ export default function CustomizerTemplate({
   )
   const decoratedSidesCount = decoratedSides.length
   const totalQty = sizeMatrix.reduce((total, entry) => total + entry.quantity, 0)
+
+  /**
+   * One PrintSpec per top-level Fabric object — the canonical input to the
+   * per-print pricing path. Derives bounding-box → cm → snapped size tier
+   * for each object, honouring any per-object manual overrides the
+   * customer has set. Re-runs whenever the canvas changes (`layoutVersion`)
+   * or the canvas size / product changes.
+   *
+   * Falls back to an empty array when the canvas is too small to convert
+   * pixels to cm reliably; pricing then uses the legacy side-level path.
+   */
+  const printSpecs = useMemo<PrintSpec[]>(() => {
+    const canvasW = Math.round(canvasSize.width)
+    const canvasH = Math.round(canvasSize.height)
+    if (canvasW < MIN_PRINT_AREA_PX || canvasH < MIN_PRINT_AREA_PX) {
+      return []
+    }
+    const longSleeve = isLongSleeveGarmentProduct(selectedProduct)
+    const out: PrintSpec[] = []
+    DESIGN_SIDES.forEach((side) => {
+      const objects = sideLayoutsRef.current[side] ?? []
+      objects.forEach((raw) => {
+        const obj = raw as Record<string, any>
+        const objectId =
+          typeof obj.customizerId === "string" && obj.customizerId.length > 0
+            ? (obj.customizerId as string)
+            : null
+        if (!objectId) return
+        const baseW = Number(obj.width)
+        const baseH = Number(obj.height)
+        const scaleX = Number(obj.scaleX ?? 1)
+        const scaleY = Number(obj.scaleY ?? 1)
+        if (!Number.isFinite(baseW) || !Number.isFinite(baseH)) return
+        const renderedW = Math.max(0, baseW * (Number.isFinite(scaleX) ? scaleX : 1))
+        const renderedH = Math.max(0, baseH * (Number.isFinite(scaleY) ? scaleY : 1))
+        const approxCm = canvasPxToApproxCm(renderedW, renderedH, canvasW, canvasH)
+        const manual = manualSizeOverridesRef.current.get(objectId)
+        const sizeId = manual ?? snapSizeForBoundingCm(side, approxCm, longSleeve)
+        out.push({
+          objectId,
+          side,
+          sizeId: SCP_A6_ONLY_SIDES.has(side) ? "up_to_a6" : sizeId,
+          manualSize: !!manual,
+          approxCm: {
+            width: Math.round(approxCm.width * 10) / 10,
+            height: Math.round(approxCm.height * 10) / 10,
+          },
+        })
+      })
+    })
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutVersion, canvasSize.width, canvasSize.height, selectedProduct?.id])
+
   const pricing = calculatePricing({
     basePriceCents,
     decoratedSidesCount,
@@ -748,6 +855,7 @@ export default function CustomizerTemplate({
     totalQuantity: totalQty,
     bulkPricingTiers,
     scpPrint: { printSizeId: scpPrintSizeId },
+    prints: printSpecs.length > 0 ? printSpecsToPricingSpecs(printSpecs) : undefined,
   })
 
   const updateLayers = () => {
@@ -1024,6 +1132,28 @@ export default function CustomizerTemplate({
     if (pendingHydration.variantId) {
       const variantExists = product.variants?.some((v) => v.id === pendingHydration.variantId)
       if (variantExists) setActiveVariantId(pendingHydration.variantId)
+    }
+
+    // Restore manual size overrides so a re-edit of a saved/ordered design
+    // keeps the prices the customer last saw. Auto-snapped prints carry
+    // `manualSize: false` and we leave them out of the override map so the
+    // bounding-box math drives them again on first render.
+    if (Array.isArray(pendingHydration.prints)) {
+      manualSizeOverridesRef.current.clear()
+      for (const print of pendingHydration.prints) {
+        if (
+          print &&
+          typeof print.objectId === "string" &&
+          print.objectId.length > 0 &&
+          print.manualSize === true &&
+          (print.sizeId === "up_to_a6" ||
+            print.sizeId === "up_to_a4" ||
+            print.sizeId === "up_to_a3" ||
+            print.sizeId === "oversize")
+        ) {
+          manualSizeOverridesRef.current.set(print.objectId, print.sizeId)
+        }
+      }
     }
 
     // Restore the side the customer was viewing when they saved / placed the
@@ -1317,6 +1447,17 @@ export default function CustomizerTemplate({
   const addCanvasObject = (object: any) => {
     const canvas = fabricCanvasRef.current
     if (!canvas) {
+      return
+    }
+
+    // Per-side cap. Each top-level object becomes one transfer in
+    // production, so leaving this unbounded creates orders the print room
+    // can't realistically fulfil.
+    const currentCount = canvas.getObjects().length
+    if (currentCount >= MAX_PRINTS_PER_SIDE) {
+      setUploadError(
+        `Up to ${MAX_PRINTS_PER_SIDE} prints per location. Remove one before adding another.`
+      )
       return
     }
 
@@ -1919,6 +2060,7 @@ export default function CustomizerTemplate({
               mimeType: u.type,
             })),
           activeSide: currentSideRef.current,
+          prints: printSpecs,
         }),
         variantId: selectedVariant.id,
       }
@@ -2097,6 +2239,7 @@ export default function CustomizerTemplate({
         customerOriginalFiles: originalFilesPayload,
         requiresVectorization: vectorizationRequested,
         activeSide: currentSideRef.current,
+        prints: printSpecs,
       })
 
       const resolvedQuantities =
@@ -2164,6 +2307,18 @@ export default function CustomizerTemplate({
         return
       }
 
+      // Bridge between Fabric's inline data URLs and the hosted MinIO URLs we
+      // already have for each upload. `sanitizeCustomizerDesignForCart` uses
+      // this map to swap data URLs for hosted URLs, so re-order rehydration
+      // can actually load the images back into Fabric instead of choking on a
+      // "[omitted-image-data]" placeholder (the original Phase 3 bug).
+      const dataUrlToHostedUrl: Record<string, string> = {}
+      for (const upload of sessionUploads) {
+        if (upload.dataUrl && upload.originalStorageUrl) {
+          dataUrlToHostedUrl[upload.dataUrl] = upload.originalStorageUrl
+        }
+      }
+
       for (const quantityEntry of resolvedQuantities) {
         const lineItemMetadata: CustomizerMetadata = {
           ...metadataBase,
@@ -2184,7 +2339,10 @@ export default function CustomizerTemplate({
           countryCode,
           printSizeId: scpPrintSizeId,
           metadata: {
-            customizerDesign: sanitizeCustomizerDesignForCart(lineItemMetadata),
+            customizerDesign: sanitizeCustomizerDesignForCart(
+              lineItemMetadata,
+              dataUrlToHostedUrl
+            ),
             // Fallback display fields — if the cart later loses the
             // variant→product join (custom add path, deleted variant, or
             // partial fields population), the cart UI still has a title and
@@ -2487,6 +2645,9 @@ export default function CustomizerTemplate({
                 setScpPrintSizeChosen(true)
               }}
               decoratedSides={decoratedSides}
+              prints={printSpecs}
+              onChangePrintSize={handleChangePrintSize}
+              allowedPrintSizesBySide={allowedSizesBySide}
               onSaveDesign={embedded ? undefined : saveCurrentDesign}
               isSavingDesign={isSavingDesign}
             />
@@ -3114,6 +3275,9 @@ export default function CustomizerTemplate({
                 setScpPrintSizeChosen(true)
               }}
                 decoratedSides={decoratedSides}
+                prints={printSpecs}
+                onChangePrintSize={handleChangePrintSize}
+                allowedPrintSizesBySide={allowedSizesBySide}
                 hidePrintSizeSelector
                 hideHeader
                 primaryCtaLabel={editLineItemId ? "Update cart" : undefined}

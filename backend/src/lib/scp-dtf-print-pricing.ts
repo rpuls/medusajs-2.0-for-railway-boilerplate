@@ -139,7 +139,27 @@ export function decoratedLocationsFromLineMetadata(
   if (!metadata || typeof metadata !== "object") {
     return []
   }
-  const customizerDesign = metadata.customizerDesign as CustomizerDesignLike | undefined
+  const customizerDesign = metadata.customizerDesign as
+    | (CustomizerDesignLike & { prints?: unknown })
+    | undefined
+  // Per-print pricing path. Each print is one transfer, charged at its own
+  // size tier — produces one DecoratedLocation per print so callers can sum
+  // unit prices over them directly. New cart payloads use this branch; old
+  // ones (artifacts-only) keep working through the legacy fallback below.
+  if (customizerDesign && Array.isArray(customizerDesign.prints)) {
+    const fromPrints = customizerDesign.prints
+      .map((p) => {
+        const side = (p as { side?: unknown })?.side
+        if (typeof side !== "string" || !side.trim().length) return null
+        const printSizeId = maybePrintSizeId((p as { sizeId?: unknown })?.sizeId)
+        return {
+          side: side.trim(),
+          printSizeId,
+        } satisfies DecoratedLocation
+      })
+      .filter((location) => location !== null) as DecoratedLocation[]
+    if (fromPrints.length > 0) return fromPrints
+  }
   if (customizerDesign && Array.isArray(customizerDesign.artifacts)) {
     return customizerDesign.artifacts
       .map((a) => {
@@ -169,7 +189,17 @@ export function decoratedLocationsFromLineMetadata(
 export function decoratedSidesFromLineMetadata(
   metadata: Record<string, unknown> | null | undefined
 ): string[] {
-  return decoratedLocationsFromLineMetadata(metadata).map((l) => l.side)
+  // Dedupe — multiple prints on the same side count as one decorated side
+  // for callers that just want "is anything decorated and where".
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  decoratedLocationsFromLineMetadata(metadata).forEach((l) => {
+    if (!seen.has(l.side)) {
+      seen.add(l.side)
+      ordered.push(l.side)
+    }
+  })
+  return ordered
 }
 
 export function decoratedSidesCountFromLineMetadata(metadata: Record<string, unknown> | null | undefined): number {

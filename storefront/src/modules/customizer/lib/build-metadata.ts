@@ -4,6 +4,7 @@ import {
   type CustomizerMetadata,
   type GarmentSide,
   type PricingBreakdown,
+  type PrintSpec,
   type RenderArtifact,
   type RenderPlacement,
   type SizeQuantity,
@@ -35,6 +36,8 @@ export type BuildCustomizerMetadataInput = {
   requiresVectorization?: boolean
   /** Side the customer was viewing at save/cart-add time; restored on re-edit. */
   activeSide?: GarmentSide
+  /** Per-image print specs (per-print pricing). Empty array → legacy side-level pricing. */
+  prints?: PrintSpec[]
 }
 
 /**
@@ -76,5 +79,6 @@ export function buildCustomizerMetadataBase(
     ...(customerFiles ? { customerOriginalFiles: customerFiles } : {}),
     ...(input.requiresVectorization ? { requiresVectorization: true } : {}),
     ...(input.activeSide ? { activeSide: input.activeSide } : {}),
+    ...(input.prints && input.prints.length > 0 ? { prints: input.prints } : {}),
   }
 }
