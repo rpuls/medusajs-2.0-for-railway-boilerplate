@@ -174,7 +174,7 @@ export async function getOrSetCart(countryCode: string) {
       authMode: isAuthed ? "auth" : "guest",
       customerId: (cart as { customer_id?: string | null }).customer_id ?? null,
     })
-    revalidateTag("cart")
+    revalidateTag("cart", "max")
   } else if (isAuthed) {
     // Transfer an orphan guest cart (created before login) onto the now-authed
     // customer. Without this, the customer keeps their items but the order
@@ -195,7 +195,7 @@ export async function getOrSetCart(countryCode: string) {
           newCustomerId:
             (cart as { customer_id?: string | null }).customer_id ?? null,
         })
-        revalidateTag("cart")
+        revalidateTag("cart", "max")
       } catch (err) {
         // Don't block checkout if transfer fails — log and proceed. The order
         // will still be a guest order; the customer can ask support to merge.
@@ -219,7 +219,7 @@ export async function getOrSetCart(countryCode: string) {
       fromRegionId: cart.region_id,
       toRegionId: region.id,
     })
-    revalidateTag("cart")
+    revalidateTag("cart", "max")
   }
 
   cartDebug("getOrSetCart:return", { cartId: cart?.id ?? null })
@@ -247,7 +247,7 @@ export async function transferGuestCartToCustomer(
   try {
     await sdk.store.cart.transferCart(cartId, {}, authHeaders)
     cartDebug("transferGuestCartToCustomer:success", { cartId })
-    revalidateTag("cart")
+    revalidateTag("cart", "max")
   } catch (err) {
     cartDebug("transferGuestCartToCustomer:failed", {
       cartId,
@@ -265,7 +265,7 @@ export async function updateCart(data: HttpTypes.StoreUpdateCart) {
   return sdk.store.cart
     .update(cartId, data, {}, await getAuthHeaders())
     .then(({ cart }) => {
-      revalidateTag("cart")
+      revalidateTag("cart", "max")
       return cart
     })
     .catch(medusaError)
@@ -319,7 +319,7 @@ export async function addToCart({
       medusaError(error)
     }
   }
-  revalidateTag("cart")
+  revalidateTag("cart", "max")
   cartDebug("addToCart:done", { cartId: cart.id })
 }
 
@@ -467,7 +467,7 @@ export async function addScpLineItemToCart(input: {
     throw new Error(message)
   }
 
-  revalidateTag("cart")
+  revalidateTag("cart", "max")
   cartDebug("addScpLineItemToCart:done", { cartId: cart.id })
 }
 
@@ -559,7 +559,7 @@ export async function addEmbroideryLineItemToCart(input: {
     throw new Error(message)
   }
 
-  revalidateTag("cart")
+  revalidateTag("cart", "max")
   cartDebug("addEmbroideryLineItemToCart:done", { cartId: cart.id })
 }
 
@@ -605,7 +605,7 @@ export async function updateLineItem({
   await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, await getAuthHeaders())
     .then(() => {
-      revalidateTag("cart")
+      revalidateTag("cart", "max")
     })
     .catch(medusaError)
 }
@@ -623,10 +623,10 @@ export async function deleteLineItem(lineId: string) {
   await sdk.store.cart
     .deleteLineItem(cartId, lineId, await getAuthHeaders())
     .then(() => {
-      revalidateTag("cart")
+      revalidateTag("cart", "max")
     })
     .catch(medusaError)
-  revalidateTag("cart")
+  revalidateTag("cart", "max")
 }
 
 export async function enrichLineItems(
@@ -711,8 +711,8 @@ export async function setShippingMethod({
       await getAuthHeaders()
     )
     .then(() => {
-      revalidateTag("cart")
-      revalidateTag("shipping")
+      revalidateTag("cart", "max")
+      revalidateTag("shipping", "max")
     })
     .catch(medusaError)
 }
@@ -727,7 +727,7 @@ export async function initiatePaymentSession(
   return sdk.store.payment
     .initiatePaymentSession(cart, data, {}, await getAuthHeaders())
     .then((resp) => {
-      revalidateTag("cart")
+      revalidateTag("cart", "max")
       return resp
     })
     .catch(medusaError)
@@ -741,7 +741,7 @@ export async function applyPromotions(codes: string[]) {
 
   await updateCart({ promo_codes: codes })
     .then(() => {
-      revalidateTag("cart")
+      revalidateTag("cart", "max")
     })
     .catch(medusaError)
 }
@@ -751,7 +751,7 @@ export async function applyGiftCard(code: string) {
   //   if (!cartId) return "No cartId cookie found"
   //   try {
   //     await updateCart(cartId, { gift_cards: [{ code }] }).then(() => {
-  //       revalidateTag("cart")
+  //       revalidateTag("cart", "max")
   //     })
   //   } catch (error: any) {
   //     throw error
@@ -763,7 +763,7 @@ export async function removeDiscount(code: string) {
   // if (!cartId) return "No cartId cookie found"
   // try {
   //   await deleteDiscount(cartId, code)
-  //   revalidateTag("cart")
+  //   revalidateTag("cart", "max")
   // } catch (error: any) {
   //   throw error
   // }
@@ -782,7 +782,7 @@ export async function removeGiftCard(
   //         .filter((gc) => gc.code !== codeToRemove)
   //         .map((gc) => ({ code: gc.code })),
   //     }).then(() => {
-  //       revalidateTag("cart")
+  //       revalidateTag("cart", "max")
   //     })
   //   } catch (error: any) {
   //     throw error
@@ -870,7 +870,7 @@ export async function placeOrder() {
   const cartRes = await sdk.store.cart
     .complete(cartId, {}, await getAuthHeaders())
     .then((cartRes) => {
-      revalidateTag("cart")
+      revalidateTag("cart", "max")
       return cartRes
     })
     .catch(medusaError)
@@ -900,11 +900,11 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
   if (cartId) {
     await updateCart({ region_id: region.id })
-    revalidateTag("cart")
+    revalidateTag("cart", "max")
   }
 
-  revalidateTag("regions")
-  revalidateTag("products")
+  revalidateTag("regions", "max")
+  revalidateTag("products", "max")
 
   redirect(`/${countryCode}${currentPath}`)
 }
@@ -969,7 +969,7 @@ export async function replaceCartWithSavedItems({
       .catch(medusaError)
   }
 
-  revalidateTag("cart")
+  revalidateTag("cart", "max")
 
   return {
     success: true,

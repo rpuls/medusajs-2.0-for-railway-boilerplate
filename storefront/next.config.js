@@ -8,19 +8,14 @@ checkEnvVariables()
 const nextConfig = {
   reactStrictMode: true,
   devIndicators: false,
-  // TypeScript errors break the prod build — was previously suppressed via
-  // `ignoreBuildErrors: true`, now enforced so the build catches type
-  // regressions across Next/React/Medusa upgrades. Existing baseline is
-  // clean (verified via `tsc --noEmit`).
+  // Next 16 removed the `eslint` config block — lint no longer runs as part
+  // of `next build`. Use `pnpm lint` (standalone) to check. The repo has
+  // ~24 pre-existing lint errors (mostly missing react/jsx-key in animation
+  // demo components under src/modules/test/) that are tracked as a separate
+  // clean-up task.
   //
-  // ESLint errors do NOT break the prod build (ignoreDuringBuilds: true)
-  // because we have ~24 pre-existing lint errors (mostly missing `key`
-  // props in animation-demo components under src/modules/test/). Cleaning
-  // those up is its own task and is intentionally NOT bundled with the
-  // upgrade. Run `pnpm lint` manually to see the backlog.
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // TypeScript errors DO break the prod build (was previously suppressed
+  // via `ignoreBuildErrors: true`). Baseline verified clean.
   typescript: {
     ignoreBuildErrors: false,
   },

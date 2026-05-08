@@ -32,7 +32,7 @@ const STORE_PRODUCT_FIELDS =
   "+metadata,+type,+weight,*variants.calculated_price,*variants.options,+variants.metadata,+variants.sku,+variants.weight,+tags"
 
 /**
- * Next.js Data Cache: tag for on-demand `revalidateTag("products")`, plus a max age so catalog
+ * Next.js Data Cache: tag for on-demand `revalidateTag("products", "max")`, plus a max age so catalog
  * changes (e.g. Draft after trim script) are not served forever without a redeploy.
  */
 const PRODUCT_LIST_FETCH_INIT = nextHeaders({ tags: ["products"], revalidate: 120 })

@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
 
   const tags = ["products", "graph"] as const
   for (const tag of tags) {
-    revalidateTag(tag)
+    // Next 16 made the second arg required. "max" preserves v15 semantics
+    // (purge immediately). `updateTag` is the alternative but only allowed
+    // inside Server Actions, not route handlers.
+    revalidateTag(tag, "max")
   }
 
   return NextResponse.json({ revalidated: true, tags })

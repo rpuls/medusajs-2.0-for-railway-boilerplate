@@ -87,7 +87,7 @@ export async function createMyDesign(input: {
         customizer_metadata: input.customizer_metadata,
       },
     })) as { design: SavedDesign }
-    revalidateTag(DESIGNS_TAG)
+    revalidateTag(DESIGNS_TAG, "max")
     return { ok: true, design: res.design }
   } catch (err) {
     return {
@@ -114,7 +114,7 @@ export async function renameMyDesign(
         body: { name },
       }
     )) as { design: SavedDesign }
-    revalidateTag(DESIGNS_TAG)
+    revalidateTag(DESIGNS_TAG, "max")
     return { ok: true, design: res.design }
   } catch (err) {
     return {
@@ -136,7 +136,7 @@ export async function deleteMyDesign(
       method: "DELETE",
       headers,
     })
-    revalidateTag(DESIGNS_TAG)
+    revalidateTag(DESIGNS_TAG, "max")
     return { ok: true }
   } catch (err) {
     return {
