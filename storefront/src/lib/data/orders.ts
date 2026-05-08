@@ -7,8 +7,14 @@ import { authedNextHeaders } from "./sdk-helpers"
 
 import type { CustomizerMetadata } from "@modules/customizer/lib/types"
 
+// `+items.metadata` is required to surface the customizer payload
+// (`metadata.customizerDesign`) that the order summary thumbnail needs to
+// render the customer's mockup instead of a bare product photo. Medusa 2.14
+// no longer includes line item `metadata` in the default response payload,
+// so without this explicit `+`, OrderCard falls back to the variant
+// thumbnail and historical orders look like uncustomized products.
 const ORDER_FIELDS =
-  "*payment_collections.payments,*fulfillments,+fulfillments.metadata,+fulfillments.labels,*shipping_methods,+shipping_methods.detail"
+  "*payment_collections.payments,*fulfillments,+fulfillments.metadata,+fulfillments.labels,*shipping_methods,+shipping_methods.detail,+items.metadata"
 
 // No-op: Medusa now returns shipping/payment amounts in major units (decimals), same scale as
 // `price.amount`. The previous ÷100 normaliser was double-dividing and turning $16.50 shipping into
