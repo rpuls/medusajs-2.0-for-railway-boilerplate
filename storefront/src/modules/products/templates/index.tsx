@@ -47,11 +47,40 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   // Beanies skip the print customizer entirely — embroidery is the only
   // realistic decoration on a knit pull-on cap.
   if (isBeanieGarmentProduct(product)) {
+    /** Render server-only slots HERE (parent is a server component) and
+     * pass them down. The embroidery template is "use client" and cannot
+     * import these directly without dragging the data layer's
+     * `"server-only"` modules into the client bundle. */
+    const embProductActions = (
+      <Suspense
+        fallback={
+          <ProductActions
+            disabled={true}
+            product={product}
+            region={region}
+            hideInlinePurchaseControls
+          />
+        }
+      >
+        <ProductActionsWrapper
+          id={product.id}
+          region={region}
+          hideInlinePurchaseControls
+        />
+      </Suspense>
+    )
+    const embRelatedProducts = (
+      <Suspense fallback={<SkeletonRelatedProducts />}>
+        <RelatedProducts product={product} countryCode={countryCode} />
+      </Suspense>
+    )
     return (
       <EmbroideryOnlyProductTemplate
         product={product}
         region={region}
         countryCode={countryCode}
+        productActions={embProductActions}
+        relatedProducts={embRelatedProducts}
       />
     )
   }
