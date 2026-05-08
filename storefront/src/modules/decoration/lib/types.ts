@@ -36,6 +36,13 @@ export type Breakdown = {
   belowMinimum: boolean
   rushTier: RushTier
   notes?: string[]
+  /**
+   * When true, this design can't be auto-priced and must go through a manual
+   * quote (e.g. embroidery >12,000 stitches). Cart layers must block
+   * "Add to cart" and surface a quote CTA instead. Optional so non-POA
+   * methods don't need to set it explicitly.
+   */
+  requiresQuote?: boolean
 }
 
 export type ScreenDesign = {

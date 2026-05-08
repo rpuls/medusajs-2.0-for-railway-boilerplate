@@ -88,7 +88,12 @@ const StitchEstimator: React.FC<Props> = ({
   const tierIndex = config.quantityTiers.findIndex(
     (tier) => tier.label === breakdown.appliedTier.label
   )
-  const flatTiers = config.stitchTiers.filter((tier) => !tier.isIncrementalRow)
+  // Highlight the row in the price table that matches the current stitch
+  // count. Excludes POA + incremental rows from the candidate list so a
+  // 13k-stitch design highlights the POA row, not the +1k row.
+  const flatTiers = config.stitchTiers.filter(
+    (tier) => !tier.isIncrementalRow && !tier.isPoaRow
+  )
   const rowIndex = (() => {
     const idx = flatTiers.findIndex(
       (tier) => tier.maxStitches !== null && stitchCount <= tier.maxStitches
@@ -215,28 +220,7 @@ const StitchEstimator: React.FC<Props> = ({
           <p className="text-xs text-ui-fg-muted">{COPY.fontPreview}</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          <div className="rounded-md border border-dashed border-ui-border-base p-4 text-sm text-ui-fg-subtle">
-            <p className="mb-2">
-              For Phase 1, enter the stitch count from your artwork supplier or our digitizing
-              team. AI-assisted artwork analysis is coming next.
-            </p>
-            <label className="flex items-center gap-3">
-              <span className="w-28 text-ui-fg-base">Stitch count</span>
-              <input
-                type="number"
-                min={0}
-                step={500}
-                value={artwork.manualStitchCount ?? 0}
-                onChange={(e) =>
-                  setArtwork({ ...artwork, manualStitchCount: Number(e.target.value) })
-                }
-                className="w-32 rounded-md border border-ui-border-base px-3 py-2"
-              />
-            </label>
-          </div>
-          <p className="text-xs text-ui-fg-muted">{COPY.resolutionNote}</p>
-        </div>
+        <ArtworkEstimateBlock artwork={artwork} setArtwork={setArtwork} />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -270,15 +254,40 @@ const StitchEstimator: React.FC<Props> = ({
         </div>
       )}
 
+      {breakdown.requiresQuote ? (
+        <div className="rounded-md border border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Price on application</p>
+          <p className="mt-1">
+            Designs over 12,000 stitches need a manual quote — they sit outside
+            our published rate card. Send us the artwork and we'll come back
+            with a price within one business day.
+          </p>
+          <a
+            href={`mailto:info@scprints.com.au?subject=${encodeURIComponent(
+              `Embroidery quote (${stitchCount.toLocaleString()} stitches × ${quantity})`
+            )}&body=${encodeURIComponent(
+              `Hi SC Prints,\n\nI'd like a quote for an embroidery design that's larger than the auto-priced range.\n\nDesign type: ${tab}\nEstimated stitches: ${stitchCount.toLocaleString()}\nQuantity: ${quantity}\n\n(Please attach the artwork to this email.)\n\nThanks!`
+            )}`}
+            className="mt-3 inline-block rounded-md bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-950"
+          >
+            Email us for a quote →
+          </a>
+        </div>
+      ) : null}
+
       <div className="rounded-md border border-ui-border-base bg-ui-bg-subtle p-4">
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <Stat label="Stitches" value={stitchCount.toLocaleString()} />
           <Stat label="Quantity tier" value={breakdown.appliedTier.label} />
           <Stat
             label="Per garment"
-            value={`$${breakdown.unitDecorationPrice.toFixed(2)}`}
+            value={breakdown.requiresQuote ? "POA" : `$${breakdown.unitDecorationPrice.toFixed(2)}`}
           />
-          <Stat label="Total" value={`$${breakdown.total.toFixed(2)}`} bold />
+          <Stat
+            label="Total"
+            value={breakdown.requiresQuote ? "POA" : `$${breakdown.total.toFixed(2)}`}
+            bold
+          />
         </div>
       </div>
 
@@ -312,5 +321,198 @@ const Stat: React.FC<{ label: string; value: string; bold?: boolean }> = ({
     </div>
   </div>
 )
+
+/**
+ * Artwork tab. Customer uploads an image + sets the embroidered size in mm,
+ * then either gets an AI stitch estimate (Claude vision) or types the count
+ * manually. The AI estimate populates `manualStitchCount` so downstream
+ * pricing reads from a single field — the `aiEstimate` payload is kept
+ * alongside for transparency (range + complexity + notes).
+ */
+const ArtworkEstimateBlock: React.FC<{
+  artwork: ArtworkConfig
+  setArtwork: (next: ArtworkConfig) => void
+}> = ({ artwork, setArtwork }) => {
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
+  const [imageMediaType, setImageMediaType] = useState<string | null>(null)
+  const [imageFileName, setImageFileName] = useState<string | null>(null)
+  const [widthMm, setWidthMm] = useState<number>(80)
+  const [heightMm, setHeightMm] = useState<number>(80)
+  const [estimating, setEstimating] = useState(false)
+  const [estimateError, setEstimateError] = useState<string | null>(null)
+
+  const handleFile = async (file: File) => {
+    setEstimateError(null)
+    if (file.size > 5 * 1024 * 1024) {
+      setEstimateError("Image is over 5 MB. Resize it down before uploading.")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null
+      if (dataUrl) {
+        setImageDataUrl(dataUrl)
+        setImageMediaType(file.type || "image/png")
+        setImageFileName(file.name)
+        setArtwork({ ...artwork, fileName: file.name, fileSize: file.size })
+      }
+    }
+    reader.onerror = () => setEstimateError("Could not read that file. Try a different image.")
+    reader.readAsDataURL(file)
+  }
+
+  const handleEstimate = async () => {
+    if (!imageDataUrl) {
+      setEstimateError("Upload an image first.")
+      return
+    }
+    if (!Number.isFinite(widthMm) || widthMm <= 0 || !Number.isFinite(heightMm) || heightMm <= 0) {
+      setEstimateError("Enter the embroidered size in mm before estimating.")
+      return
+    }
+    setEstimating(true)
+    setEstimateError(null)
+    try {
+      const response = await fetch("/api/embroidery/estimate-stitches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: imageDataUrl,
+          mediaType: imageMediaType,
+          widthMm,
+          heightMm,
+        }),
+      })
+      const body = await response.json().catch(() => ({})) as {
+        stitchesMin?: number
+        stitchesMax?: number
+        complexity?: "low" | "medium" | "high"
+        notes?: string
+        message?: string
+      }
+      if (!response.ok) {
+        setEstimateError(body.message ?? "Stitch analysis failed. Enter the count manually.")
+        return
+      }
+      const aiEstimate = {
+        stitchesMin: body.stitchesMin ?? 0,
+        stitchesMax: body.stitchesMax ?? 0,
+        complexity: body.complexity ?? "medium",
+        notes: body.notes,
+      }
+      // Default the manual count to the midpoint of the AI range so pricing
+      // updates immediately. Customer can still nudge it up/down before
+      // adding to cart.
+      const midpoint = Math.round(((aiEstimate.stitchesMin + aiEstimate.stitchesMax) / 2) || 0)
+      setArtwork({
+        ...artwork,
+        aiEstimate,
+        manualStitchCount: midpoint > 0 ? midpoint : artwork.manualStitchCount,
+      })
+    } catch (err) {
+      setEstimateError(err instanceof Error ? err.message : "Stitch analysis failed.")
+    } finally {
+      setEstimating(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-md border border-dashed border-ui-border-base p-4 text-sm">
+        <p className="mb-3 text-ui-fg-subtle">
+          Upload your artwork, set the embroidered size, and we'll estimate the
+          stitch count with Claude — or skip the upload and type a count below.
+        </p>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex flex-1 flex-col gap-1 text-sm">
+            <span className="text-ui-fg-subtle">Artwork file (PNG/JPG/SVG)</span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void handleFile(file)
+              }}
+              className="text-sm"
+            />
+            {imageFileName ? (
+              <span className="text-[11px] text-ui-fg-muted">Loaded: {imageFileName}</span>
+            ) : null}
+          </label>
+
+          <label className="flex w-28 flex-col gap-1 text-sm">
+            <span className="text-ui-fg-subtle">Width (mm)</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={widthMm}
+              onChange={(e) => setWidthMm(Math.max(1, Number(e.target.value) || 0))}
+              className="rounded-md border border-ui-border-base px-2 py-1.5"
+            />
+          </label>
+          <label className="flex w-28 flex-col gap-1 text-sm">
+            <span className="text-ui-fg-subtle">Height (mm)</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={heightMm}
+              onChange={(e) => setHeightMm(Math.max(1, Number(e.target.value) || 0))}
+              className="rounded-md border border-ui-border-base px-2 py-1.5"
+            />
+          </label>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleEstimate}
+          disabled={estimating || !imageDataUrl}
+          className="mt-3 inline-flex items-center justify-center rounded-md bg-ui-fg-base px-3 py-1.5 text-sm font-semibold text-ui-bg-base disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {estimating ? "Estimating…" : "Estimate stitches with AI"}
+        </button>
+
+        {estimateError ? (
+          <p className="mt-2 text-xs text-rose-700">{estimateError}</p>
+        ) : null}
+
+        {artwork.aiEstimate ? (
+          <div className="mt-3 rounded-md bg-ui-bg-subtle/60 p-3 text-xs">
+            <p className="font-semibold text-ui-fg-base">
+              AI estimate: {artwork.aiEstimate.stitchesMin.toLocaleString()}–
+              {artwork.aiEstimate.stitchesMax.toLocaleString()} stitches (
+              {artwork.aiEstimate.complexity} complexity)
+            </p>
+            {artwork.aiEstimate.notes ? (
+              <p className="mt-1 text-ui-fg-subtle">{artwork.aiEstimate.notes}</p>
+            ) : null}
+            <p className="mt-2 text-[11px] text-ui-fg-muted">
+              The pricing field below seeded to the midpoint — adjust if you've
+              digitised this design before and know the exact count.
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      <label className="flex items-center gap-3 text-sm">
+        <span className="w-28 text-ui-fg-base">Stitch count</span>
+        <input
+          type="number"
+          min={0}
+          step={500}
+          value={artwork.manualStitchCount ?? 0}
+          onChange={(e) =>
+            setArtwork({ ...artwork, manualStitchCount: Number(e.target.value) })
+          }
+          className="w-32 rounded-md border border-ui-border-base px-3 py-2"
+        />
+      </label>
+
+      <p className="text-xs text-ui-fg-muted">{COPY.resolutionNote}</p>
+    </div>
+  )
+}
 
 export default StitchEstimator

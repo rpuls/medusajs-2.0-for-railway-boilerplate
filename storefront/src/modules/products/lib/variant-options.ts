@@ -131,6 +131,79 @@ export function isHoodieGarmentProduct(
   )
 }
 
+const HEADWEAR_META_KEYS = [
+  "garment_type",
+  "style",
+  "product_type",
+  "category",
+  "apparel_category",
+  "headwear_type",
+] as const
+
+const readHeadwearMeta = (
+  product: HttpTypes.StoreProduct | undefined | null
+): { metaBlob: string; titleBlob: string } => {
+  const meta = (product?.metadata ?? {}) as Record<string, unknown>
+  const metaString = (key: string): string | null => {
+    const v = meta[key]
+    return typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null
+  }
+  const metaBlob = HEADWEAR_META_KEYS.map(metaString).filter(Boolean).join(" ")
+  const titleBlob = [
+    product?.title,
+    product?.handle,
+    product?.subtitle,
+    product?.description,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+  return { metaBlob, titleBlob }
+}
+
+/**
+ * Beanie products — knit pull-on caps with no brim. Decoration is embroidery
+ * only; the print customizer is suppressed in favour of the embroidery panel.
+ *
+ * Detection order: explicit metadata first (canonical, override-friendly) →
+ * title/handle keyword fallback. The fallback intentionally requires the
+ * word "beanie" rather than just "knit" or "fleece" so a fleece pullover
+ * doesn't get misclassified.
+ */
+export function isBeanieGarmentProduct(
+  product: HttpTypes.StoreProduct | undefined | null
+): boolean {
+  if (!product) return false
+  const { metaBlob, titleBlob } = readHeadwearMeta(product)
+  if (/\bbeanie(s)?\b/.test(metaBlob)) return true
+  return /\bbeanie(s)?\b/.test(titleBlob)
+}
+
+/**
+ * Hat / cap products with a brim — baseball caps, snapbacks, truckers,
+ * buckets, etc. Print is allowed but locked to A6 (the only realistic
+ * size on a curved crown). Embroidery is also allowed.
+ *
+ * Beanies are explicitly excluded so they don't double-classify; the
+ * beanie path takes precedence.
+ */
+export function isHatGarmentProduct(
+  product: HttpTypes.StoreProduct | undefined | null
+): boolean {
+  if (!product) return false
+  if (isBeanieGarmentProduct(product)) return false
+  const { metaBlob, titleBlob } = readHeadwearMeta(product)
+  // Metadata wins. We accept "hat", "cap", or "headwear" as a generic
+  // signal; "beanie" was already excluded above.
+  if (/\b(hat|cap|caps|headwear)\b/.test(metaBlob)) return true
+  // Title fallback. Caps/snapbacks/truckers/buckets/visors all use the
+  // brimmed-headwear print restrictions. We anchor on whole words to
+  // avoid false positives (e.g. "capacity", "thatched").
+  return /\b(cap|caps|snapback(s)?|trucker(s)?|bucket\s*hat|visor(s)?|brim(med)?|hat(s)?)\b/.test(
+    titleBlob
+  )
+}
+
 function getSleevePlaceholderUrl(
   side: "left_sleeve" | "right_sleeve",
   product: HttpTypes.StoreProduct | undefined

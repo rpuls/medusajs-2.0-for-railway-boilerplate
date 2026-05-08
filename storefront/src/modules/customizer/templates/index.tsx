@@ -56,7 +56,12 @@ import {
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { useProductOptionsOptional } from "@modules/products/context/product-options-context"
 import { sortApparelSizeLabels } from "@modules/products/lib/apparel-size-order"
-import { getGarmentImageUrlForPrintSide, getPrimaryGarmentImageUrl, isLongSleeveGarmentProduct } from "@modules/products/lib/variant-options"
+import {
+  getGarmentImageUrlForPrintSide,
+  getPrimaryGarmentImageUrl,
+  isHatGarmentProduct,
+  isLongSleeveGarmentProduct,
+} from "@modules/products/lib/variant-options"
 import { sampleImageDominantColor } from "@modules/customizer/lib/sample-image-color"
 import { HttpTypes } from "@medusajs/types"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -654,14 +659,27 @@ export default function CustomizerTemplate({
     () => isLongSleeveGarmentProduct(selectedProduct),
     [selectedProduct]
   )
+  /**
+   * Hats / caps lock every print location to A6 (curved-crown garments
+   * can't reliably take a larger transfer). The picker collapses to a
+   * single A6 option and `printSpecs` clamps any stale override down.
+   */
+  const productIsHat = useMemo(
+    () => isHatGarmentProduct(selectedProduct),
+    [selectedProduct]
+  )
   const allowedSizesForCurrentSide = useMemo(
-    () => getAllowedScpPrintSizesForSide(currentSide, productIsLongSleeve),
-    [currentSide, productIsLongSleeve]
+    () =>
+      getAllowedScpPrintSizesForSide(currentSide, {
+        isLongSleeve: productIsLongSleeve,
+        isHat: productIsHat,
+      }),
+    [currentSide, productIsLongSleeve, productIsHat]
   )
   /**
    * Per-side allowed sizes — fed into PricingPanel so the per-print size
    * dropdown only offers what the side physically supports (sleeves on a
-   * short-sleeve tee are A6-only, etc).
+   * short-sleeve tee are A6-only, hats are A6-only everywhere, etc).
    */
   const allowedSizesBySide = useMemo<
     Partial<Record<GarmentSide, ScpPrintSizeId[]>>
@@ -669,12 +687,15 @@ export default function CustomizerTemplate({
     () =>
       DESIGN_SIDES.reduce(
         (acc, side) => {
-          acc[side] = getAllowedScpPrintSizesForSide(side, productIsLongSleeve)
+          acc[side] = getAllowedScpPrintSizesForSide(side, {
+            isLongSleeve: productIsLongSleeve,
+            isHat: productIsHat,
+          })
           return acc
         },
         {} as Partial<Record<GarmentSide, ScpPrintSizeId[]>>
       ),
-    [productIsLongSleeve]
+    [productIsLongSleeve, productIsHat]
   )
 
   /**
@@ -812,6 +833,7 @@ export default function CustomizerTemplate({
       return []
     }
     const longSleeve = isLongSleeveGarmentProduct(selectedProduct)
+    const hat = isHatGarmentProduct(selectedProduct)
     const out: PrintSpec[] = []
     DESIGN_SIDES.forEach((side) => {
       const objects = sideLayoutsRef.current[side] ?? []
@@ -831,11 +853,19 @@ export default function CustomizerTemplate({
         const renderedH = Math.max(0, baseH * (Number.isFinite(scaleY) ? scaleY : 1))
         const approxCm = canvasPxToApproxCm(renderedW, renderedH, canvasW, canvasH)
         const manual = manualSizeOverridesRef.current.get(objectId)
-        const sizeId = manual ?? snapSizeForBoundingCm(side, approxCm, longSleeve)
+        const sizeId =
+          manual ??
+          snapSizeForBoundingCm(side, approxCm, {
+            isLongSleeve: longSleeve,
+            isHat: hat,
+          })
+        // Hats clamp every side to A6 even when a stale manual override
+        // says otherwise — same shape as the printed_tag clamp below.
+        const clampedSize = hat || SCP_A6_ONLY_SIDES.has(side) ? "up_to_a6" : sizeId
         out.push({
           objectId,
           side,
-          sizeId: SCP_A6_ONLY_SIDES.has(side) ? "up_to_a6" : sizeId,
+          sizeId: clampedSize,
           manualSize: !!manual,
           approxCm: {
             width: Math.round(approxCm.width * 10) / 10,

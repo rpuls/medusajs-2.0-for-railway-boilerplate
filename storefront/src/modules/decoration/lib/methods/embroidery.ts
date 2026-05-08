@@ -53,6 +53,7 @@ export const calculateEmbroideryPrice = ({
     belowMinimum: inner.belowMinimum,
     rushTier,
     notes: notes.length ? notes : undefined,
+    requiresQuote: inner.requiresQuote,
   }
 }
 

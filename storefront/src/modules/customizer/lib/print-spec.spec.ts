@@ -28,7 +28,7 @@ describe("canvasPxToApproxCm", () => {
 
 describe("snapSizeForBoundingCm", () => {
   it("snaps tiny artwork to A6", () => {
-    expect(snapSizeForBoundingCm("front", { width: 5, height: 8 }, false)).toBe("up_to_a6")
+    expect(snapSizeForBoundingCm("front", { width: 5, height: 8 }, { isLongSleeve: false })).toBe("up_to_a6")
   })
 
   it("snaps mid-sized artwork to A4", () => {
@@ -59,6 +59,23 @@ describe("snapSizeForBoundingCm", () => {
     expect(snapSizeForBoundingCm("left_sleeve", { width: 18, height: 26 }, true)).toBe(
       "up_to_a3"
     )
+  })
+
+  it("clamps hats to A6 on every side regardless of bounding size", () => {
+    expect(
+      snapSizeForBoundingCm(
+        "front",
+        { width: 30, height: 40 },
+        { isLongSleeve: false, isHat: true }
+      )
+    ).toBe("up_to_a6")
+    expect(
+      snapSizeForBoundingCm(
+        "back",
+        { width: 25, height: 35 },
+        { isLongSleeve: false, isHat: true }
+      )
+    ).toBe("up_to_a6")
   })
 })
 

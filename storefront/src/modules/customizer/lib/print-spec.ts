@@ -68,18 +68,29 @@ export const canvasPxToApproxCm = (
   }
 }
 
+export type SnapContext = {
+  isLongSleeve: boolean
+  /** Hat / cap garments — every side collapses to A6. */
+  isHat?: boolean
+}
+
 /**
  * Pick the smallest tier that contains the supplied bounding box. If even
  * the largest tier is too small, returns the largest. Restricted sides
- * (e.g. printed_tag → A6) are honoured so callers don't have to remember
- * that the picker is gated.
+ * (e.g. printed_tag → A6, hats → A6 everywhere) are honoured so callers
+ * don't have to remember that the picker is gated.
+ *
+ * Accepts either a boolean (legacy `isLongSleeve` shorthand) or a
+ * SnapContext object — same affordance as `getAllowedScpPrintSizesForSide`.
  */
 export const snapSizeForBoundingCm = (
   side: GarmentSide,
   approxCm: { width: number; height: number },
-  isLongSleeve: boolean
+  context: boolean | SnapContext
 ): ScpPrintSizeId => {
-  const allowed = getAllowedScpPrintSizesForSide(side, isLongSleeve)
+  const ctx: SnapContext =
+    typeof context === "boolean" ? { isLongSleeve: context } : context
+  const allowed = getAllowedScpPrintSizesForSide(side, ctx)
   const orderedAllowed = SCP_PRINT_SIZE_ORDER.filter((id) => allowed.includes(id))
   if (!orderedAllowed.length) {
     return "up_to_a6"

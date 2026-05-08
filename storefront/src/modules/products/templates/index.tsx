@@ -12,8 +12,10 @@ import PdpCustomizerBoundary from "@modules/products/components/pdp-customizer-b
 import DtfAutoBuilderTemplate, {
   isDtfAutoBuilderProduct,
 } from "@modules/products/templates/dtf-auto-builder-template"
+import EmbroideryOnlyProductTemplate from "@modules/products/templates/embroidery-only-template"
 import { DecorationEstimator } from "@modules/decoration/components"
 import { getEnabledDecorationMethods } from "@modules/decoration/lib/product"
+import { isBeanieGarmentProduct } from "@modules/products/lib/variant-options"
 import { HttpTypes } from "@medusajs/types"
 import { PrintPlacementProvider } from "@modules/products/context/print-placement-context"
 import { ProductOptionsProvider } from "@modules/products/context/product-options-context"
@@ -35,6 +37,18 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   if (isDtfAutoBuilderProduct(product)) {
     return (
       <DtfAutoBuilderTemplate
+        product={product}
+        region={region}
+        countryCode={countryCode}
+      />
+    )
+  }
+
+  // Beanies skip the print customizer entirely — embroidery is the only
+  // realistic decoration on a knit pull-on cap.
+  if (isBeanieGarmentProduct(product)) {
+    return (
+      <EmbroideryOnlyProductTemplate
         product={product}
         region={region}
         countryCode={countryCode}

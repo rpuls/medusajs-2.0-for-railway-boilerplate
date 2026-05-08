@@ -46,20 +46,40 @@ export const DEFAULT_SCP_PRINT_SIZE_ID: ScpPrintSizeId = "up_to_a6"
 // long sleeves → up to A3.
 export const SCP_A6_ONLY_SIDES = new Set(["printed_tag"])
 
+export type AllowedSizesContext = {
+  isLongSleeve: boolean
+  /**
+   * Hat / cap garments (curved crown) — only A6 is realistically achievable
+   * with a digital transfer. The picker collapses to a single option.
+   */
+  isHat?: boolean
+}
+
 /**
  * Allowed SCP print sizes per side, accounting for garment cut. UI uses this
  * to filter the size tile picker; pricing trusts whatever size the customer
  * picks per location.
+ *
+ * Accepts either a boolean (legacy `isLongSleeve` shorthand) or an object
+ * carrying the full context. New call sites should prefer the object form
+ * so adding more flags later doesn't require another positional argument.
  */
 export function getAllowedScpPrintSizesForSide(
   side: string,
-  isLongSleeve: boolean
+  context: boolean | AllowedSizesContext
 ): ScpPrintSizeId[] {
+  const ctx: AllowedSizesContext =
+    typeof context === "boolean" ? { isLongSleeve: context } : context
+  // Hats (curved crown) collapse every side to A6 — the brim, side panels,
+  // and crown all share the same restriction.
+  if (ctx.isHat) {
+    return ["up_to_a6"]
+  }
   if (side === "printed_tag") {
     return ["up_to_a6"]
   }
   if (side === "left_sleeve" || side === "right_sleeve") {
-    return isLongSleeve ? ["up_to_a6", "up_to_a4", "up_to_a3"] : ["up_to_a6"]
+    return ctx.isLongSleeve ? ["up_to_a6", "up_to_a4", "up_to_a3"] : ["up_to_a6"]
   }
   return ["up_to_a6", "up_to_a4", "up_to_a3", "oversize"]
 }

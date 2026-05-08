@@ -492,6 +492,94 @@ export async function addScpLineItemToCartSafe(input: {
   }
 }
 
+/**
+ * Server-priced embroidery line. Mirrors `addScpLineItemToCart` — pricing
+ * comes from the rate card (single price level), unit_price is the per-
+ * garment decoration cost plus an amortised slice of the per-design
+ * digitizing fee. Designs above the auto-priced cap are rejected by the
+ * backend; callers should also gate the UI on `requiresQuote` so the user
+ * sees a quote CTA instead of a 400.
+ */
+export async function addEmbroideryLineItemToCart(input: {
+  variantId: string
+  quantity: number
+  countryCode: string
+  metadata?: Record<string, unknown>
+  stitchCount: number
+  /** Defaults to true; set false on reorders so the digitizing fee isn't re-charged. */
+  includeDigitizing?: boolean
+}) {
+  const {
+    variantId,
+    quantity,
+    countryCode,
+    metadata,
+    stitchCount,
+    includeDigitizing = true,
+  } = input
+
+  if (!variantId) throw new Error("Missing variant ID when adding to cart")
+
+  const cart = await getOrSetCart(countryCode)
+  if (!cart?.id) throw new Error("Error retrieving or creating cart")
+
+  cartDebug("addEmbroideryLineItemToCart:start", {
+    cartId: cart.id,
+    variantId,
+    quantity,
+    stitchCount,
+  })
+
+  try {
+    await postJsonMedusa(`/store/carts/${cart.id}/embroidery-line-items`, {
+      variant_id: variantId,
+      quantity,
+      metadata: metadata ?? {},
+      embroidery: {
+        version: 1,
+        stitch_count: stitchCount,
+        include_digitizing: includeDigitizing,
+      },
+    })
+    cartDebug("addEmbroideryLineItemToCart:success", { cartId: cart.id })
+  } catch (error) {
+    cartDebug("addEmbroideryLineItemToCart:failed", {
+      cartId: cart.id,
+      message: error instanceof Error ? error.message : "unknown",
+    })
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Could not add this embroidery item to your cart. Please try again."
+    throw new Error(message)
+  }
+
+  revalidateTag("cart")
+  cartDebug("addEmbroideryLineItemToCart:done", { cartId: cart.id })
+}
+
+export async function addEmbroideryLineItemToCartSafe(input: {
+  variantId: string
+  quantity: number
+  countryCode: string
+  metadata?: Record<string, unknown>
+  stitchCount: number
+  includeDigitizing?: boolean
+}): Promise<AddToCartResult> {
+  try {
+    await addEmbroideryLineItemToCart(input)
+    return { ok: true }
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not add this embroidery item to your cart right now.",
+    }
+  }
+}
+
 export async function updateLineItem({
   lineId,
   quantity,
