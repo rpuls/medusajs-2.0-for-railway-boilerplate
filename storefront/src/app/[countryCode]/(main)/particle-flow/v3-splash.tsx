@@ -21,9 +21,10 @@ export { WORDMARK_GRADIENT }
  *  - Pressure projection 0.5 (rings hold their shape across many frames)
  *  - Decay 0.5 / sec (~1s settling matches Newmix's spring-back speed)
  *  - Spring stiffness 1.2 (faster snapback than the default 0.9)
- *  - Inject strength 2.0 (compensates for the per-particle disk deposit being
- *    skipped when fieldDrivenCursor is on — bulk inject is now the sole
- *    cursor → field path)
+ *  - Inject strength 10.0 (matches Newmix's effective per-cell deposit,
+ *    since their 1/r-style falloff peaks ~6× higher than our Gaussian and
+ *    the per-particle disk deposit is no longer running when fieldDrivenCursor
+ *    is on — bulk inject is the sole cursor → field path)
  *  - Vortex emitters OFF (Newmix has no orbital capture mechanic)
  *  - Wake-history playback OFF (the field replaces it)
  *  - Velocity-alpha boost 0.05 (moving particles read slightly luminous —
@@ -75,7 +76,7 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   fieldStrength: 1,
   fieldGridResolution: 48,
   fieldInjectRadiusBmp: 36,
-  fieldInjectStrength: 2.0,
+  fieldInjectStrength: 10.0,
   fieldDecayPerSec: 0.5,
   fieldDiffusion: 0.05,
   fieldRideStrength: 0.06,
