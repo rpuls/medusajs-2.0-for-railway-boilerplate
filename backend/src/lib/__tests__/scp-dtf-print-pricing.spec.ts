@@ -107,4 +107,51 @@ describe("scp-dtf-print-pricing", () => {
       })
     ).toBe(1)
   })
+
+  it("reads per-print prints[] when present (Phase B)", () => {
+    expect(
+      decoratedLocationsFromLineMetadata({
+        customizerDesign: {
+          // artifacts is single-per-side and would underprice 2× front
+          artifacts: [{ side: "front" }, { side: "back" }],
+          prints: [
+            { objectId: "o1", side: "front", sizeId: "up_to_a6" },
+            { objectId: "o2", side: "front", sizeId: "up_to_a4" },
+            { objectId: "o3", side: "back", sizeId: "up_to_a3" },
+          ],
+        },
+      })
+    ).toEqual([
+      { side: "front", printSizeId: "up_to_a6" },
+      { side: "front", printSizeId: "up_to_a4" },
+      { side: "back", printSizeId: "up_to_a3" },
+    ])
+  })
+
+  it("decoratedSidesFromLineMetadata dedupes when prints[] has multiple per side", () => {
+    expect(
+      decoratedSidesFromLineMetadata({
+        customizerDesign: {
+          prints: [
+            { objectId: "o1", side: "front", sizeId: "up_to_a6" },
+            { objectId: "o2", side: "front", sizeId: "up_to_a6" },
+            { objectId: "o3", side: "back", sizeId: "up_to_a4" },
+          ],
+        },
+      })
+    ).toEqual(["front", "back"])
+  })
+
+  it("sums per-print pricing for two A6 prints on the front (Phase B)", () => {
+    expect(
+      scpPrintTotalMajorFromLocations({
+        selectedPrintSizeId: "up_to_a6",
+        tierIndex: 0,
+        locations: [
+          { side: "front", printSizeId: "up_to_a6" },
+          { side: "front", printSizeId: "up_to_a6" },
+        ],
+      })
+    ).toBe(17) // 8.5 × 2
+  })
 })

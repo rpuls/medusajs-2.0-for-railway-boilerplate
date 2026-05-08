@@ -24,6 +24,21 @@ export type PricingInput = {
   scpPrint?: {
     printSizeId: ScpPrintSizeId
   }
+  /**
+   * Phase-2 per-image pricing model. When supplied, the price per garment is
+   * the sum of `unitMatrix[print.sizeId][quantityTier]` over every print —
+   * one entry per top-level Fabric object that the customer placed. Passing
+   * this overrides the legacy `decoratedSides` × `scpPrint.printSizeId`
+   * calculation; orders that pre-date this rollout still go through the
+   * legacy path because they don't carry `prints`.
+   */
+  prints?: PrintPricingSpec[]
+}
+
+/** Pricing-only view of a single logical print (one heat-press transfer). */
+export type PrintPricingSpec = {
+  side: GarmentSide
+  sizeId: ScpPrintSizeId
 }
 
 export type BulkPricingTier = {
@@ -102,4 +117,29 @@ export type CustomizerMetadata = {
    * doesn't dump the customer onto the front and make them hunt for their work.
    */
   activeSide?: GarmentSide
+  /**
+   * Per-image print specifications — one entry per top-level Fabric object
+   * the customer placed. Drives per-print pricing and is the production-side
+   * source of truth for which transfers to cut and how big each one is.
+   * Absent on legacy orders (before per-print pricing rolled out); those keep
+   * working through the side-level fallback in pricing/cart code.
+   */
+  prints?: PrintSpec[]
+}
+
+/**
+ * Logical "print" record. One per top-level Fabric object on a side; multiple
+ * per side are allowed (capped in UI to keep the print room sane). The size
+ * tier determines pricing; manualSize=false means we may auto-snap on the
+ * next bounding-box change, true means the customer locked it explicitly.
+ */
+export type PrintSpec = {
+  /** Stable customizer object id (matches `customizerId` on the Fabric object). */
+  objectId: string
+  side: GarmentSide
+  sizeId: ScpPrintSizeId
+  /** True when the customer has explicitly chosen a size for this print. */
+  manualSize: boolean
+  /** Approximate physical print size on the garment (cm). */
+  approxCm: { width: number; height: number }
 }

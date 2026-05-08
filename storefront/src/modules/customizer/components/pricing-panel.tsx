@@ -13,7 +13,12 @@ import {
   scpPrintUnitMajorForTier,
   type ScpPrintSizeId,
 } from "@modules/customizer/lib/scp-dtf-print-pricing"
-import { GarmentSide, PricingBreakdown, SizeQuantity } from "@modules/customizer/lib/types"
+import {
+  GarmentSide,
+  PricingBreakdown,
+  PrintSpec,
+  SizeQuantity,
+} from "@modules/customizer/lib/types"
 
 type PricingPanelProps = {
   currencyCode: string
@@ -37,6 +42,22 @@ type PricingPanelProps = {
   onScpPrintSizeIdChange: (id: ScpPrintSizeId) => void
   /** Decorated sides used for SCP totals (matches customizer canvas). */
   decoratedSides: GarmentSide[]
+  /**
+   * Per-image prints (one per Fabric object). When provided, the price
+   * breakdown lists each print on its own line — that's how customers see
+   * they're paying per transfer rather than per location.
+   */
+  prints?: PrintSpec[]
+  /**
+   * Override the auto-snapped size for a single print. Pass `null` as the
+   * second argument to clear the override and let auto-snap take over again.
+   */
+  onChangePrintSize?: (objectId: string, sizeId: ScpPrintSizeId | null) => void
+  /**
+   * Allowed sizes per side (sleeves on a short-sleeve tee → A6 only, etc).
+   * Falls back to the full SCP size list when omitted.
+   */
+  allowedPrintSizesBySide?: Partial<Record<GarmentSide, ScpPrintSizeId[]>>
   /** When true, breakdown labels reflect SCP tiered print dollars instead of the legacy flat surcharge. */
   scpPricingEnabled?: boolean
   /** Hide the built-in print-size dropdown (when an external picker controls scpPrintSizeId). */
@@ -80,6 +101,9 @@ export default function PricingPanel({
   scpPrintSizeId,
   onScpPrintSizeIdChange,
   decoratedSides,
+  prints,
+  onChangePrintSize,
+  allowedPrintSizesBySide,
   scpPricingEnabled = true,
   hidePrintSizeSelector = false,
   hideHeader = false,
@@ -308,10 +332,95 @@ export default function PricingPanel({
             <span>Base unit</span>
             <span>{formatMoney(pricing.baseUnitPriceCents, currencyCode)}</span>
           </p>
-          <p className="flex justify-between">
-            <span>{scpPricingEnabled ? "SCP print (all locations) / garment" : "Print location surcharge / unit"}</span>
-            <span>{formatMoney(pricing.sideSurchargePerUnitCents, currencyCode)}</span>
-          </p>
+          {prints && prints.length > 0 ? (
+            <div className="space-y-1">
+              <p className="flex justify-between font-medium">
+                <span>Prints / garment</span>
+                <span>{formatMoney(pricing.sideSurchargePerUnitCents, currencyCode)}</span>
+              </p>
+              <ul className="space-y-1 pl-2 text-[11px]">
+                {prints.map((print, idx) => {
+                  const sizeId = resolveScpPrintSizeForSide(print.side, print.sizeId)
+                  const unit = scpPrintUnitMajorForTier(sizeId, scpTierIndex)
+                  const sideLabel = (print.side ?? "").replace(/_/g, " ") || "side"
+                  const allowed =
+                    allowedPrintSizesBySide?.[print.side] ??
+                    SCP_PRINT_SIZE_OPTIONS.map((opt) => opt.id)
+                  const allowedSet = new Set(allowed)
+                  // The current sizeId may be outside `allowed` (e.g. a
+                  // sleeve forced to A6). Surface it as the chosen value
+                  // anyway so the dropdown reflects reality.
+                  const optionsForRow = SCP_PRINT_SIZE_OPTIONS.filter(
+                    (opt) => allowedSet.has(opt.id) || opt.id === sizeId
+                  )
+                  const editable = !!onChangePrintSize && optionsForRow.length > 1
+                  return (
+                    <li
+                      key={`${print.objectId}-${idx}`}
+                      className="flex items-center justify-between gap-2 text-ui-fg-subtle"
+                    >
+                      <span className="capitalize">
+                        Print {idx + 1} · {sideLabel}
+                        {print.approxCm.width > 0 && print.approxCm.height > 0
+                          ? ` · ~${Math.round(print.approxCm.width)}×${Math.round(
+                              print.approxCm.height
+                            )} cm`
+                          : ""}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        {editable ? (
+                          <select
+                            value={sizeId}
+                            onChange={(event) =>
+                              onChangePrintSize?.(
+                                print.objectId,
+                                event.target.value as ScpPrintSizeId
+                              )
+                            }
+                            className="rounded border border-ui-border-base bg-ui-bg-base px-1 py-0.5 text-[11px]"
+                            title={
+                              print.manualSize
+                                ? "Manually chosen — click 'Auto' to restore auto-snap"
+                                : "Auto-snapped from bounding box"
+                            }
+                          >
+                            {optionsForRow.map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span>
+                            {SCP_PRINT_SIZE_OPTIONS.find((opt) => opt.id === sizeId)
+                              ?.label ?? sizeId}
+                          </span>
+                        )}
+                        {print.manualSize && onChangePrintSize ? (
+                          <button
+                            type="button"
+                            onClick={() => onChangePrintSize?.(print.objectId, null)}
+                            className="text-[10px] uppercase tracking-wide text-ui-fg-muted hover:text-ui-fg-base"
+                            title="Clear manual size — auto-snap will take over"
+                          >
+                            Auto
+                          </button>
+                        ) : null}
+                        <span className="font-medium text-ui-fg-base">
+                          {formatMoney(unit, currencyCode)}
+                        </span>
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ) : (
+            <p className="flex justify-between">
+              <span>{scpPricingEnabled ? "SCP print (all locations) / garment" : "Print location surcharge / unit"}</span>
+              <span>{formatMoney(pricing.sideSurchargePerUnitCents, currencyCode)}</span>
+            </p>
+          )}
           <p className="flex justify-between">
             <span>Discount</span>
             <span>{Math.round(pricing.quantityDiscountRate * 100)}%</span>

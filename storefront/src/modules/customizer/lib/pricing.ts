@@ -1,9 +1,11 @@
 import { convertToLocale } from "@lib/util/money"
 
 import {
+  resolveScpPrintSizeForSide,
   resolveScpTierIndexForQuantity,
   scpPrintTotalMajorPerGarment,
   scpPrintTotalMajorPerGarmentForSides,
+  scpPrintUnitMajorForTier,
 } from "./scp-dtf-print-pricing"
 import { BulkPricingTier, PricingBreakdown, PricingInput } from "./types"
 
@@ -71,6 +73,7 @@ export const calculatePricing = ({
   totalQuantity,
   bulkPricingTiers,
   scpPrint,
+  prints,
 }: PricingInput): PricingBreakdown => {
   const safeQuantity = Math.max(1, Math.floor(totalQuantity || 1))
   const decoratedSidesResolved = Math.max(0, Math.floor(decoratedSidesCount || 0))
@@ -90,6 +93,20 @@ export const calculatePricing = ({
           tierIndex,
           decoratedSidesCount: decoratedSidesResolved,
         })
+  }
+  // Per-print pricing takes precedence whenever the customizer hands us a
+  // populated `prints` list. Each entry is one transfer charged at its own
+  // size tier — that's how production actually costs (one film per object).
+  // The legacy `decoratedSides` × global-size path stays in place for older
+  // saved-design / cart payloads that still use the single-size model.
+  if (Array.isArray(prints) && prints.length > 0) {
+    const tierIndex = resolveScpTierIndexForQuantity(safeQuantity)
+    sideSurchargePerUnit = round2(
+      prints.reduce((sum, print) => {
+        const sizeId = resolveScpPrintSizeForSide(print.side, print.sizeId)
+        return sum + scpPrintUnitMajorForTier(sizeId, tierIndex)
+      }, 0)
+    )
   }
   const normalizedTiers = normalizeTiers(bulkPricingTiers)
   const activeBulkTier = normalizedTiers.length

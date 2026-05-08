@@ -50,6 +50,53 @@ describe("calculatePricing", () => {
     expect(pricing.sideSurchargePerUnitCents).toBe(28.5)
   })
 
+  it("sums per-print pricing when prints[] is supplied (Phase B)", () => {
+    // Two A6s on the front + one A4 on the back at qty 1 (tier 0).
+    // A6 tier-0 = $8.50, A4 tier-0 = $11. Total = 8.5 + 8.5 + 11 = $28.
+    const pricing = calculatePricing({
+      basePriceCents: 25,
+      decoratedSidesCount: 2,
+      decoratedSides: ["front", "back"],
+      totalQuantity: 1,
+      scpPrint: { printSizeId: "up_to_a6" },
+      prints: [
+        { side: "front", sizeId: "up_to_a6" },
+        { side: "front", sizeId: "up_to_a6" },
+        { side: "back", sizeId: "up_to_a4" },
+      ],
+    })
+
+    expect(pricing.sideSurchargePerUnitCents).toBeCloseTo(28, 2)
+  })
+
+  it("forces printed_tag prints to A6 even when prints[] requests larger", () => {
+    const pricing = calculatePricing({
+      basePriceCents: 25,
+      decoratedSidesCount: 1,
+      decoratedSides: ["printed_tag"],
+      totalQuantity: 1,
+      scpPrint: { printSizeId: "up_to_a3" },
+      // Stale override on the spec — pricing must clamp to A6.
+      prints: [{ side: "printed_tag", sizeId: "up_to_a3" }],
+    })
+
+    // Tier 0 A6 = $8.50 (not A3 $12.50).
+    expect(pricing.sideSurchargePerUnitCents).toBeCloseTo(8.5, 2)
+  })
+
+  it("ignores prints[] when empty and falls back to side-level pricing", () => {
+    const pricing = calculatePricing({
+      basePriceCents: 25,
+      decoratedSidesCount: 1,
+      decoratedSides: ["front"],
+      totalQuantity: 1,
+      scpPrint: { printSizeId: "up_to_a4" },
+      prints: [],
+    })
+
+    expect(pricing.sideSurchargePerUnitCents).toBe(11)
+  })
+
   it("uses bulk tiers as base unit pricing when provided", () => {
     const pricing = calculatePricing({
       basePriceCents: 30,
