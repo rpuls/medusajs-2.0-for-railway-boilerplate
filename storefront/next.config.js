@@ -8,11 +8,21 @@ checkEnvVariables()
 const nextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  // TypeScript errors break the prod build — was previously suppressed via
+  // `ignoreBuildErrors: true`, now enforced so the build catches type
+  // regressions across Next/React/Medusa upgrades. Existing baseline is
+  // clean (verified via `tsc --noEmit`).
+  //
+  // ESLint errors do NOT break the prod build (ignoreDuringBuilds: true)
+  // because we have ~24 pre-existing lint errors (mostly missing `key`
+  // props in animation-demo components under src/modules/test/). Cleaning
+  // those up is its own task and is intentionally NOT bundled with the
+  // upgrade. Run `pnpm lint` manually to see the backlog.
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     /** Set NEXT_PUBLIC_UNOPTIMIZED_IMAGES=true to skip the image optimizer (debug / broken remote hosts). Default: optimized WebP/AVIF + sizing via `/_next/image`. */
@@ -65,9 +75,6 @@ const nextConfig = {
         hostname: "dncworkwear.com.au",
       },
     ],
-  },
-  serverRuntimeConfig: {
-    port: process.env.PORT || 3000
   },
   // ──────────────────────────────────────────────────────────────────
   // Server-Action ID stability across deploys
