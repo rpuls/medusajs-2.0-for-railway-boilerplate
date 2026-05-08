@@ -6,6 +6,7 @@ import Refresh from "@modules/common/icons/refresh"
 import { HttpTypes } from "@medusajs/types"
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion"
 import { useId, useState } from "react"
+import { isBeanieGarmentProduct } from "@modules/products/lib/variant-options"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
@@ -70,7 +71,7 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
         aria-labelledby={`${baseId}-tab-1`}
         hidden={active !== 1}
       >
-        <ShippingInfoTab />
+        <ShippingInfoTab product={product} />
       </div>
     </div>
   )
@@ -113,7 +114,12 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
   )
 }
 
-const ShippingInfoTab = () => {
+const ShippingInfoTab = ({ product }: ProductTabsProps) => {
+  const isBeanie = isBeanieGarmentProduct(product)
+  // Beanies are embroidery-only (knit pull-on cap; print isn't a real
+  // option). Other products go through the print/decoration flow. Both
+  // share the same blank-arrival timing, so only the leading word changes.
+  const decorationNoun = isBeanie ? "embroidery" : "prints"
   return (
     <div className="text-small-regular pt-6">
       <div className="grid grid-cols-1 gap-y-8">
@@ -122,10 +128,10 @@ const ShippingInfoTab = () => {
           <div>
             <span className="font-semibold">Production &amp; delivery</span>
             <p className="max-w-sm">
-              Custom prints are made to order — most orders ship within 3–5
-              business days of artwork approval. If blanks need to be ordered
-              in, allow an extra 2–4 business days. Need it sooner? Priority
-              and express options are available at checkout.
+              Custom {decorationNoun} are made to order — most orders ship
+              within 3–5 business days of artwork approval. If blanks need to
+              be ordered in, allow an extra 2–4 business days. Need it sooner?
+              Priority and express options are available at checkout.
             </p>
           </div>
         </div>
