@@ -15,7 +15,7 @@ type CanvasStageProps = {
   outOfBoundsWarning: string | null
   dpiWarning: string | null
   /** Empty mount node; parent creates the canvas imperatively so Fabric can wrap the canvas without breaking React’s sibling tree. */
-  fabricContainerRef: RefObject<HTMLDivElement>
+  fabricContainerRef: RefObject<HTMLDivElement | null>
   /** Hex colour sampled from the variant photo, used to tint the sleeve placeholder line drawing. */
   tintColor?: string | null
 }
