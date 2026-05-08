@@ -1660,7 +1660,13 @@ function drawLayer(
   useDualPass = true,
   /** Optional linear gradient overlay applied to the rendered particle pixels via
    * `globalCompositeOperation = 'source-in'`. `angleDeg` follows CSS convention. */
-  wordmarkGradient: { angleDeg: number; stops: string[] } | null = null
+  wordmarkGradient: { angleDeg: number; stops: string[] } | null = null,
+  /** Per-particle alpha boost proportional to particle speed
+   * (`hypot(vx, vy) * boost`, clamped to `boostCap`). Reproduces the
+   * Newmix effect where moving particles read slightly brighter than
+   * resting ones. 0 disables. */
+  velocityAlphaBoost = 0,
+  velocityAlphaBoostCap = 0.35
 ) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   /** Smoothing on so the soft sprite blits scale cleanly when the canvas is at a
@@ -1719,14 +1725,23 @@ function drawLayer(
     }
   }
 
+  const velBoostOn = velocityAlphaBoost > 0
   const drawOne = (p: ParallaxParticle) => {
     const ba = Number.isFinite(p.baseAlpha) ? p.baseAlpha : PARTICLE_BASE_ALPHA
     const op = Number.isFinite(p.entranceOpacity) ? p.entranceOpacity : 1
     /** Trailing particles render at a lower alpha so the wake reads as ghostly. */
     const wakeMul = p.bhTrailUntilMs != null ? wakeAlphaMult : 1
+    /** Velocity-based luminosity bump — moving particles read slightly
+     * brighter than resting ones, reproducing the Newmix effect where the
+     * cursor's wake is illuminated. Boost = speed * coefficient, capped. */
+    let velBoost = 0
+    if (velBoostOn) {
+      const speed = Math.hypot(p.vx, p.vy)
+      velBoost = Math.min(velocityAlphaBoostCap, speed * velocityAlphaBoost)
+    }
     const alpha = Math.min(
       PARTICLE_ALPHA_CAP,
-      Math.max(0, ba * ANIMATED_PARTICLE_ALPHA_MULT * op * wakeMul)
+      Math.max(0, ba * ANIMATED_PARTICLE_ALPHA_MULT * op * wakeMul + velBoost)
     )
     const hx = Number.isFinite(p.hx) ? p.hx : 0
     const hy = Number.isFinite(p.hy) ? p.hy : 0
@@ -3945,7 +3960,9 @@ export default function HomeParticleLogoHero({
           newmix && nm != null ? nm.wakeAlphaMult : 1,
           /** Newmix mode uses crisp single-pass rendering; other modes keep the dual-pass bloom. */
           !newmix,
-          wordmarkGradientRef.current
+          wordmarkGradientRef.current,
+          newmix && nm != null ? nm.velocityAlphaBoost : 0,
+          newmix && nm != null ? nm.velocityAlphaBoostCap : 0.35
         )
         /** Apply the metaball blur+contrast pass after the particles are
          * rendered. Cached offscreen lives on a ref. */

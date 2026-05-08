@@ -82,6 +82,11 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   homeReturnSpring: 0.04,
   homeReturnFriction: 0.85,
   homeReturnGravity: 0,
+  /** Render-time alpha boost on moving particles — reproduces the Newmix
+   * effect where the cursor's wake reads slightly luminous against the
+   * resting wordmark. Subtle but visible. */
+  velocityAlphaBoost: 0.05,
+  velocityAlphaBoostCap: 0.35,
   /** Off by default — Crema, Curl, Flocking, Boundary, Metaball, Coupling.
    * The user can layer them on top via the tuner panel; the preset is the
    * minimal Newmix-style baseline. */
