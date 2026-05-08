@@ -2307,6 +2307,18 @@ export default function CustomizerTemplate({
         return
       }
 
+      // Bridge between Fabric's inline data URLs and the hosted MinIO URLs we
+      // already have for each upload. `sanitizeCustomizerDesignForCart` uses
+      // this map to swap data URLs for hosted URLs, so re-order rehydration
+      // can actually load the images back into Fabric instead of choking on a
+      // "[omitted-image-data]" placeholder (the original Phase 3 bug).
+      const dataUrlToHostedUrl: Record<string, string> = {}
+      for (const upload of sessionUploads) {
+        if (upload.dataUrl && upload.originalStorageUrl) {
+          dataUrlToHostedUrl[upload.dataUrl] = upload.originalStorageUrl
+        }
+      }
+
       for (const quantityEntry of resolvedQuantities) {
         const lineItemMetadata: CustomizerMetadata = {
           ...metadataBase,
@@ -2327,7 +2339,10 @@ export default function CustomizerTemplate({
           countryCode,
           printSizeId: scpPrintSizeId,
           metadata: {
-            customizerDesign: sanitizeCustomizerDesignForCart(lineItemMetadata),
+            customizerDesign: sanitizeCustomizerDesignForCart(
+              lineItemMetadata,
+              dataUrlToHostedUrl
+            ),
             // Fallback display fields — if the cart later loses the
             // variant→product join (custom add path, deleted variant, or
             // partial fields population), the cart UI still has a title and
