@@ -116,6 +116,13 @@ export type CalculatePriceInput = {
   /** When true, treat orderQuantity as already-consolidated across placements. */
   consolidatedQuantity?: boolean
   includeDigitizing?: boolean
+  /**
+   * Number of embroidery passes per garment (1 for front-only or back-only,
+   * 2 for "both sides"). Multiplies the per-unit decoration price; the
+   * digitizing fee stays at 1× because the same digitised file is reused
+   * across placements.
+   */
+  placementCount?: number
 }
 
 export const calculatePrice = ({
@@ -124,6 +131,7 @@ export const calculatePrice = ({
   quantity,
   consolidatedQuantity = false,
   includeDigitizing = true,
+  placementCount = 1,
 }: CalculatePriceInput): Breakdown => {
   const safeStitches = Math.max(0, Math.round(stitchCount))
   const safeQuantity = Math.max(1, Math.round(quantity))
@@ -152,22 +160,28 @@ export const calculatePrice = ({
     }
   }
 
-  let unitDecorationPrice = 0
+  const safePlacementCount = Math.max(1, Math.floor(placementCount || 1))
+  let perPlacementPrice = 0
   if (flatTier) {
-    unitDecorationPrice = flatTier.prices[tierIndex]
+    perPlacementPrice = flatTier.prices[tierIndex]
   } else {
     const highest = findHighestFlatTier(config)
     const incremental = findIncrementalTier(config)
     if (highest && incremental && highest.maxStitches !== null) {
       const overflow = Math.max(0, safeStitches - highest.maxStitches)
       const blocks = Math.ceil(overflow / 1000)
-      unitDecorationPrice =
+      perPlacementPrice =
         highest.prices[tierIndex] + blocks * incremental.prices[tierIndex]
     } else {
-      unitDecorationPrice = 0
+      perPlacementPrice = 0
     }
   }
 
+  // Apply the placement multiplier — "both sides" doubles the per-garment
+  // decoration cost since each garment gets two embroidery passes. Digitizing
+  // is excluded from the multiplier because the same digitised file runs on
+  // both sides; the fee covers the file, not the run.
+  const unitDecorationPrice = perPlacementPrice * safePlacementCount
   const decorationSubtotal = unitDecorationPrice * safeQuantity
   const digitizingFee = includeDigitizing ? config.digitizingFee : 0
   const total = decorationSubtotal + digitizingFee

@@ -78,11 +78,13 @@ const PRINT_AREA_EPS = 1.5
 /** Skip clamp until the canvas has a real size (avoids pinning art to a corner when printArea is ~0). */
 const MIN_PRINT_AREA_PX = 8
 /**
- * Cap on top-level Fabric objects per side. Each object is one transfer in
- * production, so unlimited additions can produce orders the print room
- * rejects (a chest covered in 12 tiny logos isn't a real product).
+ * Default cap on top-level Fabric objects per side. Each object is one
+ * transfer in production, so unlimited additions create orders the print
+ * room rejects. Hats are tighter than this (single transfer on the crown);
+ * see `MAX_PRINTS_PER_SIDE_HAT`.
  */
 const MAX_PRINTS_PER_SIDE = 4
+const MAX_PRINTS_PER_SIDE_HAT = 1
 
 /** Initial on-canvas width for uploads when the print area is not sized yet (avoids Fabric Image width/scale bugs). */
 const getTargetArtworkWidth = (printAreaWidth: number) => Math.max(120, printAreaWidth * 0.35)
@@ -668,6 +670,29 @@ export default function CustomizerTemplate({
     () => isHatGarmentProduct(selectedProduct),
     [selectedProduct]
   )
+  /**
+   * Sides the customer can print on for this product. Hats: front only —
+   * the curved crown is the single realistic transfer location. Bottom-
+   * half garments and accessories (pants, totes, bags, beanies, aprons,
+   * towels): front + back. Everything else (tees, hoodies, longsleeves):
+   * full set. Hoisted to the component body so both the embedded PDP
+   * picker and the standalone /customizer rail share the same gate.
+   */
+  const allowedPrintSides = useMemo<GarmentSide[]>(() => {
+    if (productIsHat) return ["front"]
+    const productTags = getStoreProductTagValues(selectedProduct).map((t) => t.toLowerCase())
+    const productTitleLower = (selectedProduct.title ?? "").toLowerCase()
+    const isFrontBackOnlyProduct =
+      productTags.some((t) =>
+        /\b(pants?|shorts?|trousers?|jeans?|leggings?|skirts?|tote|totes|bags?|backpacks?|pouch|pouches|cap|caps|hat|hats|beanie|beanies|apron|aprons|towel|towels)\b/.test(
+          t
+        )
+      ) ||
+      /\b(tote|bag|backpack|pouch|cap|hat|beanie|apron|towel)\b/.test(productTitleLower)
+    return isFrontBackOnlyProduct
+      ? ["front", "back"]
+      : ["front", "back", "left_sleeve", "right_sleeve", "printed_tag"]
+  }, [productIsHat, selectedProduct])
   const allowedSizesForCurrentSide = useMemo(
     () =>
       getAllowedScpPrintSizesForSide(currentSide, {
@@ -722,6 +747,37 @@ export default function CustomizerTemplate({
       if (fallback) setScpPrintSizeId(fallback)
     }
   }, [allowedSizesForCurrentSide, scpPrintSizeId])
+  /**
+   * When the side only allows one size (hats → A6, short-sleeve sleeves → A6,
+   * printed_tag → A6), there's no decision for the customer to make on step 3
+   * — but the wizard still expects an explicit "tile click" to flip
+   * `pdpStep3Done` and unlock the upload panel. Without this auto-advance,
+   * hat PDPs land in a stuck state where the right column shows green
+   * checkmarks but the left "Add to design" panel keeps saying
+   * "Customize first". Auto-advance the step so the flow continues.
+   */
+  useEffect(() => {
+    if (!embedded) return
+    if (allowedSizesForCurrentSide.length !== 1) return
+    if (pdpStep3Done && scpPrintSizeChosen) return
+    setScpPrintSizeChosen(true)
+    setPdpStep3Done(true)
+    setPdpStep((s) => (s > 3 ? s : 4))
+  }, [embedded, allowedSizesForCurrentSide, pdpStep3Done, scpPrintSizeChosen])
+
+  /**
+   * Mirror of the above but for step 2 (print location). When the product
+   * only allows one print location — hats are front-only — the side picker
+   * has nothing to choose from. Auto-advance so the wizard doesn't dead-end
+   * on a single-tile picker.
+   */
+  useEffect(() => {
+    if (!embedded) return
+    if (allowedPrintSides.length !== 1) return
+    if (pdpStep2Done) return
+    setPdpStep2Done(true)
+    setPdpStep((s) => (s > 2 ? s : 3))
+  }, [embedded, allowedPrintSides, pdpStep2Done])
   const pdpHasVariantOptions = (selectedProduct.variants?.length ?? 0) > 1
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
@@ -1482,11 +1538,15 @@ export default function CustomizerTemplate({
 
     // Per-side cap. Each top-level object becomes one transfer in
     // production, so leaving this unbounded creates orders the print room
-    // can't realistically fulfil.
+    // can't realistically fulfil. Hats are tighter — only one print on the
+    // crown is realistic — so they get their own lower cap.
+    const perSideCap = productIsHat ? MAX_PRINTS_PER_SIDE_HAT : MAX_PRINTS_PER_SIDE
     const currentCount = canvas.getObjects().length
-    if (currentCount >= MAX_PRINTS_PER_SIDE) {
+    if (currentCount >= perSideCap) {
       setUploadError(
-        `Up to ${MAX_PRINTS_PER_SIDE} prints per location. Remove one before adding another.`
+        productIsHat
+          ? "Hats only support one print on the front. Remove the existing print to add a different one."
+          : `Up to ${perSideCap} prints per location. Remove one before adding another.`
       )
       return
     }
@@ -2620,7 +2680,11 @@ export default function CustomizerTemplate({
                   {currentSide.replace("_", " ")}
                 </span>
               </div>
-              <SideSelector currentSide={currentSide} onSelectSide={switchSide} />
+              <SideSelector
+                currentSide={currentSide}
+                onSelectSide={switchSide}
+                allowedSides={allowedPrintSides}
+              />
               <p className="text-xs text-ui-fg-subtle">
                 Switch sides to place art on the front, back, or sleeves. Each side is saved separately.
               </p>
@@ -2855,20 +2919,9 @@ export default function CustomizerTemplate({
     // chip with a "Change" link once completed. Mirrors the reference
     // /Customizer.mov flow.
     const hasStep1 = showPdpLabeledOptionsStep
-    // Some product types only have front/back surfaces — no sleeves or tag.
-    // Covers bottom-half garments (pants/shorts) and bags/totes/accessories.
-    const productTags = getStoreProductTagValues(selectedProduct).map((t) => t.toLowerCase())
-    const productTitleLower = (selectedProduct.title ?? "").toLowerCase()
-    const isFrontBackOnlyProduct =
-      productTags.some((t) =>
-        /\b(pants?|shorts?|trousers?|jeans?|leggings?|skirts?|tote|totes|bags?|backpacks?|pouch|pouches|cap|caps|hat|hats|beanie|beanies|apron|aprons|towel|towels)\b/.test(
-          t
-        )
-      ) ||
-      /\b(tote|bag|backpack|pouch|cap|hat|beanie|apron|towel)\b/.test(productTitleLower)
-    const allowedPrintSides: GarmentSide[] = isFrontBackOnlyProduct
-      ? ["front", "back"]
-      : ["front", "back", "left_sleeve", "right_sleeve", "printed_tag"]
+    // `allowedPrintSides` is hoisted to the component body so the standalone
+    // rail can share it; here we just react to the customer landing on a
+    // disallowed side (e.g. via a stale `?side=back` querystring on a hat).
     if (!allowedPrintSides.includes(currentSide)) {
       // Snap back to a valid side without blocking render.
       Promise.resolve().then(() => switchSide("front"))
@@ -3076,14 +3129,21 @@ export default function CustomizerTemplate({
                     num={stepNum(2)}
                     title={decoratedCount > 0 ? "Add / change print positions" : "Print location"}
                     done={pdpStep2Done && pdpStep > 2}
-                    onChange={() => {
-                      setPdpStep(2)
-                      // Going back to add/change another print location means
-                      // the customer is restarting the size flow for the next
-                      // location — clear the "chosen" highlight so the size
-                      // tiles aren't pre-selected when they reach step 3.
-                      setScpPrintSizeChosen(false)
-                    }}
+                    // Single-side products (hats) have nothing to change —
+                    // the picker would just bounce the customer through a
+                    // no-op back to the auto-advanced state.
+                    onChange={
+                      allowedPrintSides.length > 1
+                        ? () => {
+                            setPdpStep(2)
+                            // Going back to add/change another print location means
+                            // the customer is restarting the size flow for the next
+                            // location — clear the "chosen" highlight so the size
+                            // tiles aren't pre-selected when they reach step 3.
+                            setScpPrintSizeChosen(false)
+                          }
+                        : undefined
+                    }
                   />
 
                   {decoratedCount > 0 ? (
@@ -3147,12 +3207,22 @@ export default function CustomizerTemplate({
                 num={stepNum(3)}
                 title="Print size"
                 done={pdpStep3Done && pdpStep > 3}
-                onChange={() => {
-                  setPdpStep(3)
-                  // Re-pick: clear highlight so the customer makes a fresh
-                  // choice rather than seeing the previous size pre-selected.
-                  setScpPrintSizeChosen(false)
-                }}
+                // Hide the "Change" link when the side only allows one size
+                // (hats, printed_tag, short-sleeve sleeves) — there's nothing
+                // to switch to, so the link would just bounce the customer
+                // back into a non-interactive picker and our auto-advance
+                // would immediately re-complete the step.
+                onChange={
+                  allowedSizesForCurrentSide.length > 1
+                    ? () => {
+                        setPdpStep(3)
+                        // Re-pick: clear highlight so the customer makes a
+                        // fresh choice rather than seeing the previous size
+                        // pre-selected.
+                        setScpPrintSizeChosen(false)
+                      }
+                    : undefined
+                }
               />
               {pdpStep === 3 ? (
                 <>
@@ -3204,12 +3274,14 @@ export default function CustomizerTemplate({
                       )
                     })}
                   </div>
-                  <p className="text-xs text-ui-fg-subtle">
-                    Want prints in more than one spot? Pick a size for this location, then tap{" "}
-                    <span className="font-medium text-ui-fg-base">Change</span> on{" "}
-                    <span className="font-medium text-ui-fg-base">Print location</span> above to
-                    add another.
-                  </p>
+                  {allowedPrintSides.length > 1 ? (
+                    <p className="text-xs text-ui-fg-subtle">
+                      Want prints in more than one spot? Pick a size for this location, then tap{" "}
+                      <span className="font-medium text-ui-fg-base">Change</span> on{" "}
+                      <span className="font-medium text-ui-fg-base">Print location</span> above to
+                      add another.
+                    </p>
+                  ) : null}
                 </>
               ) : (
                 <div className="space-y-2">
@@ -3228,19 +3300,21 @@ export default function CustomizerTemplate({
                       <span className="text-[11px] font-normal text-ui-fg-subtle">ea / location</span>
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setPdpStep(2)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--brand-secondary)] bg-ui-bg-subtle/40 px-3 py-2 text-left text-xs text-ui-fg-subtle transition-colors hover:bg-ui-bg-subtle hover:text-ui-fg-base"
-                  >
-                    <span>
-                      <span className="font-semibold text-ui-fg-base">+ Add another print location</span>
-                      <span className="block text-[11px] text-ui-fg-muted">
-                        Go back to step {stepNum(2)} to print on a different spot too.
+                  {allowedPrintSides.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setPdpStep(2)}
+                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--brand-secondary)] bg-ui-bg-subtle/40 px-3 py-2 text-left text-xs text-ui-fg-subtle transition-colors hover:bg-ui-bg-subtle hover:text-ui-fg-base"
+                    >
+                      <span>
+                        <span className="font-semibold text-ui-fg-base">+ Add another print location</span>
+                        <span className="block text-[11px] text-ui-fg-muted">
+                          Go back to step {stepNum(2)} to print on a different spot too.
+                        </span>
                       </span>
-                    </span>
-                    <span aria-hidden className="text-ui-fg-muted">›</span>
-                  </button>
+                      <span aria-hidden className="text-ui-fg-muted">›</span>
+                    </button>
+                  ) : null}
                 </div>
               )}
             </div>

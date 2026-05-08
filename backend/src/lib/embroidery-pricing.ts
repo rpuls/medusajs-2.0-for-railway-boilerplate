@@ -63,17 +63,23 @@ const resolveStitchTierIndex = (stitchCount: number): number => {
  * components for breakdown display. Throws when `stitchCount` is outside
  * the auto-priced range — callers must check first and route POA designs
  * through the quote flow.
+ *
+ * `placementCount` defaults to 1 (front-only or back-only). Pass 2 for
+ * "both sides" beanies — multiplies the decoration unit but leaves the
+ * digitizing fee at 1× (same file runs on both passes).
  */
 export const calculateEmbroideryUnitPriceMajor = (input: {
   stitchCount: number
   quantity: number
   includeDigitizing?: boolean
+  placementCount?: number
 }): {
   unitPriceMajor: number
   unitDecorationMajor: number
   digitizingFeeMajor: number
   tierIndex: number
   tierLabel: string
+  placementCount: number
 } => {
   if (input.stitchCount > MAX_AUTO_PRICED_STITCHES) {
     throw new Error(
@@ -81,6 +87,7 @@ export const calculateEmbroideryUnitPriceMajor = (input: {
     )
   }
   const safeQuantity = Math.max(1, Math.floor(input.quantity))
+  const safePlacementCount = Math.max(1, Math.floor(input.placementCount ?? 1))
   const { tierIndex, label } = resolveEmbroideryQuantityTier(safeQuantity)
   const stitchTierIndex = resolveStitchTierIndex(input.stitchCount)
   if (stitchTierIndex < 0) {
@@ -90,7 +97,8 @@ export const calculateEmbroideryUnitPriceMajor = (input: {
       `Stitch count ${input.stitchCount} did not match any tier — rate card may be out of date.`
     )
   }
-  const unitDecorationMajor = STITCH_TIERS[stitchTierIndex].prices[tierIndex] ?? 0
+  const perPlacementPriceMajor = STITCH_TIERS[stitchTierIndex].prices[tierIndex] ?? 0
+  const unitDecorationMajor = round2(perPlacementPriceMajor * safePlacementCount)
   const digitizingFeeMajor =
     input.includeDigitizing === false ? 0 : DIGITIZING_FEE_MAJOR
   const unitPriceMajor = round2(unitDecorationMajor + digitizingFeeMajor / safeQuantity)
@@ -100,5 +108,6 @@ export const calculateEmbroideryUnitPriceMajor = (input: {
     digitizingFeeMajor,
     tierIndex,
     tierLabel: label,
+    placementCount: safePlacementCount,
   }
 }

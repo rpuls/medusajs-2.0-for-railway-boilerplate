@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from "react"
 import StitchEstimator from "./stitch-estimator"
-import type { EmbroideryDesign } from "../lib/types"
+import type { EmbroideryDesign, EmbroideryPlacement } from "../lib/types"
+import { placementCount as resolvePlacementCount } from "../lib/types"
 import {
   addEmbroideryLineItemToCartSafe,
 } from "@lib/data/cart"
@@ -20,6 +21,24 @@ type EmbroideryPanelProps = {
   countryCode?: string
   onAdded?: () => void
   onDesignChange?: (design: EmbroideryDesign | null) => void
+  /**
+   * When supplied, renders a placement picker above the estimator.
+   * Beanies offer ["front", "back", "both"]; other embroidery products
+   * default to front-only (omit the prop to hide the picker entirely).
+   */
+  availablePlacements?: EmbroideryPlacement[]
+}
+
+const PLACEMENT_LABEL: Record<EmbroideryPlacement, string> = {
+  front: "Front",
+  back: "Back",
+  both: "Both sides",
+}
+
+const PLACEMENT_HINT: Record<EmbroideryPlacement, string> = {
+  front: "Single embroidery on the front.",
+  back: "Single embroidery on the back.",
+  both: "Same design on front and back — decoration cost doubles, digitizing fee stays the same.",
 }
 
 const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
@@ -27,12 +46,19 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
   countryCode,
   onAdded,
   onDesignChange,
+  availablePlacements,
 }) => {
   const [quantity, setQuantity] = useState(24)
   const [design, setDesign] = useState<EmbroideryDesign | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [placement, setPlacement] = useState<EmbroideryPlacement>(
+    availablePlacements?.[0] ?? "front"
+  )
+
+  const showPlacementPicker = (availablePlacements?.length ?? 0) > 0
+  const placementMultiplier = resolvePlacementCount(placement)
 
   const handleDesignChange = (next: EmbroideryDesign | null) => {
     setDesign(next)
@@ -93,13 +119,17 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
         rushTier: "standard",
         details: { method: "embroidery", stitchCount: design.stitchCount },
       }
-      const metadata = buildEmbroideryMetadata(design, decoration)
+      // Stash the placement on the unified design payload so admin/order
+      // views can read it without a second metadata key.
+      const designWithPlacement: EmbroideryDesign = { ...design, placement }
+      const metadata = buildEmbroideryMetadata(designWithPlacement, decoration)
       const result = await addEmbroideryLineItemToCartSafe({
         variantId,
         quantity,
         countryCode,
         metadata,
         stitchCount: design.stitchCount,
+        placement,
       })
       if (!result.ok) {
         setError(result.error)
@@ -116,6 +146,39 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {showPlacementPicker && availablePlacements ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-ui-border-base bg-ui-bg-subtle/40 p-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
+            Embroidery placement
+          </span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {availablePlacements.map((option) => {
+              const selected = placement === option
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setPlacement(option)}
+                  className={`flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left text-sm transition-colors ${
+                    selected
+                      ? "border-ui-border-interactive bg-ui-bg-base-pressed"
+                      : "border-ui-border-base bg-ui-bg-base hover:bg-ui-bg-subtle"
+                  }`}
+                >
+                  <span className="font-semibold text-ui-fg-base">
+                    {PLACEMENT_LABEL[option]}
+                  </span>
+                  <span className="text-[11px] text-ui-fg-subtle">
+                    {option === "both" ? "2× decoration cost" : "1× decoration cost"}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[11px] text-ui-fg-muted">{PLACEMENT_HINT[placement]}</p>
+        </div>
+      ) : null}
+
       <label className="flex items-center gap-3 text-sm">
         <span className="w-28 text-ui-fg-subtle">Quantity</span>
         <input
@@ -127,7 +190,11 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
           className="w-28 rounded-md border border-ui-border-base px-3 py-2"
         />
       </label>
-      <StitchEstimator quantity={quantity} onDesignChange={handleDesignChange} />
+      <StitchEstimator
+        quantity={quantity}
+        onDesignChange={handleDesignChange}
+        placementCount={placementMultiplier}
+      />
 
       {/*
         Cart-add CTA only renders when the parent supplied variant + country.

@@ -77,6 +77,33 @@ describe("calculatePrice", () => {
     expect(RETAIL_CONFIG).toBe(STANDARD_CONFIG)
   })
 
+  it("doubles the decoration unit when placementCount is 2 (both sides)", () => {
+    const single = calculatePrice({
+      stitchCount: 6000,
+      quantity: 10,
+      placementCount: 1,
+      includeDigitizing: false,
+    })
+    const both = calculatePrice({
+      stitchCount: 6000,
+      quantity: 10,
+      placementCount: 2,
+      includeDigitizing: false,
+    })
+    expect(both.unitDecorationPrice).toBeCloseTo(single.unitDecorationPrice * 2, 4)
+    expect(both.decorationSubtotal).toBeCloseTo(single.decorationSubtotal * 2, 4)
+  })
+
+  it("does not double the digitizing fee for placementCount 2 (same file, two passes)", () => {
+    const both = calculatePrice({
+      stitchCount: 6000,
+      quantity: 10,
+      placementCount: 2,
+      includeDigitizing: true,
+    })
+    expect(both.digitizingFee).toBe(60)
+  })
+
   it("flags belowMinimum only for quantities below 1 (effectively never)", () => {
     // Minimum is 1 unit; calculator clamps quantity at 1 so this is mostly
     // a no-op sanity check that the field is still wired correctly.

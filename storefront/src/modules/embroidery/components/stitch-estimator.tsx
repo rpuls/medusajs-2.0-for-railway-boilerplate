@@ -23,6 +23,12 @@ type Props = {
   priceLevels?: PricingConfig[]
   initialDesign?: EmbroideryDesign | null
   onDesignChange?: (design: EmbroideryDesign | null) => void
+  /**
+   * Number of embroidery passes per garment (1 = front-only or back-only,
+   * 2 = both sides). Multiplies the per-garment decoration cost in the
+   * displayed breakdown. Defaults to 1.
+   */
+  placementCount?: number
 }
 
 const DEFAULT_LETTERING: LetteringConfig = {
@@ -37,6 +43,7 @@ const StitchEstimator: React.FC<Props> = ({
   priceLevels = PRICE_LEVELS,
   initialDesign = null,
   onDesignChange,
+  placementCount = 1,
 }) => {
   const [tab, setTab] = useState<Tab>(initialDesign?.type === "artwork" ? "artwork" : "lettering")
   const [config, setConfig] = useState<PricingConfig>(
@@ -65,8 +72,9 @@ const StitchEstimator: React.FC<Props> = ({
         quantity,
         consolidatedQuantity: consolidated,
         includeDigitizing,
+        placementCount,
       }),
-    [config, stitchCount, quantity, consolidated, includeDigitizing]
+    [config, stitchCount, quantity, consolidated, includeDigitizing, placementCount]
   )
 
   useEffect(() => {

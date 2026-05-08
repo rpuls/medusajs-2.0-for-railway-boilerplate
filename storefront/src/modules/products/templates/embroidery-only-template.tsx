@@ -42,6 +42,9 @@ const EmbroideryPanelWithVariant: React.FC<{
     <EmbroideryPanel
       variantId={variant?.id ?? null}
       countryCode={countryCode}
+      // Beanies are decorated front, back, or both — no other placements
+      // are realistic on a knit pull-on cap.
+      availablePlacements={["front", "back", "both"]}
     />
   )
 }

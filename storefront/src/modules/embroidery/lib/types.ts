@@ -79,10 +79,29 @@ export type ArtworkConfig = {
   }
 }
 
+/**
+ * Where on the garment the embroidery sits. Beanies offer front, back, or
+ * both sides. "both" means the same design appears on both sides — pricing
+ * multiplies the decoration unit accordingly while keeping a single
+ * digitizing fee. Other embroidery products default to "front".
+ */
+export type EmbroideryPlacement = "front" | "back" | "both"
+
+/**
+ * Number of physical embroidery passes per garment for a given placement.
+ * Used by the pricing model to multiply the per-unit decoration cost; the
+ * digitizing fee stays at 1× because it's a per-design setup (same logo on
+ * both sides reuses the digitised file).
+ */
+export const placementCount = (placement: EmbroideryPlacement): number =>
+  placement === "both" ? 2 : 1
+
 export type EmbroideryDesign = {
   type: "lettering" | "artwork"
   stitchCount: number
   lettering?: LetteringConfig
   artwork?: ArtworkConfig
   pricing: Breakdown
+  /** Where the embroidery is placed on the garment. Defaults to "front" when omitted. */
+  placement?: EmbroideryPlacement
 }

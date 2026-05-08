@@ -508,6 +508,8 @@ export async function addEmbroideryLineItemToCart(input: {
   stitchCount: number
   /** Defaults to true; set false on reorders so the digitizing fee isn't re-charged. */
   includeDigitizing?: boolean
+  /** Where the embroidery sits — "both" doubles the decoration cost. Defaults to "front". */
+  placement?: "front" | "back" | "both"
 }) {
   const {
     variantId,
@@ -516,6 +518,7 @@ export async function addEmbroideryLineItemToCart(input: {
     metadata,
     stitchCount,
     includeDigitizing = true,
+    placement = "front",
   } = input
 
   if (!variantId) throw new Error("Missing variant ID when adding to cart")
@@ -528,6 +531,7 @@ export async function addEmbroideryLineItemToCart(input: {
     variantId,
     quantity,
     stitchCount,
+    placement,
   })
 
   try {
@@ -539,6 +543,7 @@ export async function addEmbroideryLineItemToCart(input: {
         version: 1,
         stitch_count: stitchCount,
         include_digitizing: includeDigitizing,
+        placement,
       },
     })
     cartDebug("addEmbroideryLineItemToCart:success", { cartId: cart.id })
@@ -565,6 +570,7 @@ export async function addEmbroideryLineItemToCartSafe(input: {
   metadata?: Record<string, unknown>
   stitchCount: number
   includeDigitizing?: boolean
+  placement?: "front" | "back" | "both"
 }): Promise<AddToCartResult> {
   try {
     await addEmbroideryLineItemToCart(input)

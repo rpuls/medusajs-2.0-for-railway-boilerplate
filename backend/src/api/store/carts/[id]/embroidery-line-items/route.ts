@@ -25,6 +25,13 @@ const embroiderySchema = z.object({
   stitch_count: z.coerce.number().int().min(0),
   /** When false, skip the per-design digitizing fee (e.g. reorder of a previously digitized file). */
   include_digitizing: z.boolean().optional().default(true),
+  /**
+   * Where on the garment the embroidery sits. "both" doubles the decoration
+   * unit (each garment gets two passes); the digitizing fee stays at 1× —
+   * same digitised file runs on both sides. Defaults to "front" when the
+   * client doesn't supply it (back-compat with single-placement embroidery).
+   */
+  placement: z.enum(["front", "back", "both"]).optional().default("front"),
 })
 
 const bodySchema = z.object({
@@ -102,11 +109,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // Per-garment embroidery price + amortised digitizing fee. Returning a
   // single unit_price keeps the Medusa storage model simple; the breakdown
   // lives in metadata so the storefront / admin can display it.
+  const placementCountFor = embroidery.placement === "both" ? 2 : 1
   const { unitPriceMajor, unitDecorationMajor, digitizingFeeMajor, tierIndex, tierLabel } =
     calculateEmbroideryUnitPriceMajor({
       stitchCount: embroidery.stitch_count,
       quantity,
       includeDigitizing: embroidery.include_digitizing,
+      placementCount: placementCountFor,
     })
 
   const garmentMajor = await resolveGarmentUnitAmountMajor({
@@ -138,10 +147,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   mergedMetadata.decorationDesign = {
     ...decorationDesign,
     method: "embroidery",
+    placement: embroidery.placement,
     serverPricing: {
       mode: "embroidery",
       version: EMBROIDERY_PRICING_VERSION,
       stitch_count: embroidery.stitch_count,
+      placement: embroidery.placement,
+      placement_count: placementCountFor,
       tier_index: tierIndex,
       quantity_tier_label: tierLabel,
       unit_decoration_major: unitDecorationMajor,
