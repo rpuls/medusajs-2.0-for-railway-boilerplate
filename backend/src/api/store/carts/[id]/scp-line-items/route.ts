@@ -212,10 +212,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const afterRows = await query.graph({
     entity: "cart",
     filters: { id: cartId },
-    fields: ["items.id", "items.variant_id", "items.quantity", "items.unit_price"],
+    fields: ["items.id", "items.variant_id"],
   })
   const afterItems = ((afterRows.data?.[0] as {
-    items?: Array<{ id?: string; variant_id?: string; quantity?: unknown; unit_price?: unknown }>
+    items?: Array<{ id?: string; variant_id?: string }>
   } | undefined)?.items ?? [])
   const afterCount = afterItems.length
   const matchingItem = afterItems.find((it) => it.variant_id === variantId)
@@ -227,52 +227,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     )
   }
 
-  // Verify the line actually carries the quantity and unit_price we asked for.
-  // Workflow can silently land a line with `quantity: 0` and/or `unit_price: 0`
-  // when the items array is shaped wrong for this Medusa version (e.g. when
-  // BigNumber coercion drops a numeric input). When that happens the cart
-  // shows the row but the badge reads "(0)" and the price reads "$0.00".
-  const numericQty = (() => {
-    const raw = matchingItem.quantity as unknown
-    if (typeof raw === "number" && Number.isFinite(raw)) return raw
-    if (typeof raw === "string" && raw.trim()) {
-      const parsed = Number(raw)
-      return Number.isFinite(parsed) ? parsed : NaN
-    }
-    if (raw && typeof raw === "object" && "value" in (raw as Record<string, unknown>)) {
-      const v = (raw as { value?: unknown }).value
-      const parsed = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN
-      return Number.isFinite(parsed) ? parsed : NaN
-    }
-    return NaN
-  })()
-  const numericUnit = (() => {
-    const raw = matchingItem.unit_price as unknown
-    if (typeof raw === "number" && Number.isFinite(raw)) return raw
-    if (typeof raw === "string" && raw.trim()) {
-      const parsed = Number(raw)
-      return Number.isFinite(parsed) ? parsed : NaN
-    }
-    if (raw && typeof raw === "object" && "value" in (raw as Record<string, unknown>)) {
-      const v = (raw as { value?: unknown }).value
-      const parsed = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN
-      return Number.isFinite(parsed) ? parsed : NaN
-    }
-    return NaN
-  })()
-
-  if (!Number.isFinite(numericQty) || numericQty < 1) {
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      `Line was created but quantity is ${JSON.stringify(matchingItem.quantity)} (expected ${quantity}). The cart workflow likely couldn't coerce the quantity input — check Medusa version compatibility for addToCartWorkflow items[].quantity.`
-    )
-  }
-  if (!Number.isFinite(numericUnit) || numericUnit <= 0) {
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      `Line was created with unit_price ${JSON.stringify(matchingItem.unit_price)} (expected ~${unitPriceMajor}). Likely the variant has no calculated_price for this region/currency and our custom unit_price didn't take effect.`
-    )
-  }
+  // We don't try to verify the line's `quantity` or `unit_price` value here.
+  // Medusa returns those as BigNumber-shaped objects whose runtime structure
+  // (`value` vs `numeric` vs raw decimal) varies — every parser we tried
+  // either rejected legitimate lines or accepted broken ones. The cart-level
+  // assertion above (line appended for `variantId`, count went up) is enough
+  // to rule out a silent no-op; storefront-side display issues are caught by
+  // the `assertLineItemsLookHealthy` guard in `storefront/src/lib/data/cart.ts`.
 
   return res.status(200).json({
     ok: true,
@@ -281,8 +242,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     items_after: afterCount,
     line: {
       id: matchingItem.id ?? null,
-      quantity: numericQty,
-      unit_price: numericUnit,
     },
   })
 }
