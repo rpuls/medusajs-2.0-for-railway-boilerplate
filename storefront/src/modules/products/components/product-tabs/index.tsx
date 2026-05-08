@@ -120,10 +120,12 @@ const ShippingInfoTab = () => {
         <div className="flex items-start gap-x-2">
           <FastDelivery />
           <div>
-            <span className="font-semibold">Fast delivery</span>
+            <span className="font-semibold">Production &amp; delivery</span>
             <p className="max-w-sm">
-              Your package will arrive in 3-5 business days at your pick up
-              location or in the comfort of your home.
+              Custom prints are made to order — most orders ship within 3–5
+              business days of artwork approval. If blanks need to be ordered
+              in, allow an extra 2–4 business days. Need it sooner? Priority
+              and express options are available at checkout.
             </p>
           </div>
         </div>
