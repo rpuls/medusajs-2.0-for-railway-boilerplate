@@ -165,3 +165,32 @@ All audit items from the original review have been resolved. See "Fixed" below f
 - **MinIO retention is load-bearing for re-order.** If lifecycle policies GC `customer_original_files` URLs, re-order will display fine but **add-to-cart will fail to re-render print PNGs**. Set retention to indefinite for these objects, or move them to a permanent bucket on order placement.
 - **Customizer template size** ([storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx)) is ~2750 lines. New canvas-related work should consider whether it can live in a separate component before adding to this file.
 - **Hand-written migration**: the Phase 2 migration ([Migration20260507000000.ts](backend/src/modules/designs/migrations/Migration20260507000000.ts)) was hand-written to match what `npx medusa db:generate designs` produces. If you'd rather have the auto-generated one, delete it and run the generator before `db:migrate`.
+- **Production boot auto-migrates.** The backend `start` script in [backend/package.json](backend/package.json) is `init-backend && cd .medusa/server && npx medusa db:migrate && npx medusa db:sync-links && npx medusa start --verbose`. Both DB ops are idempotent and safe to run from every replica (workers included) — Mikro-ORM holds an advisory lock during migrate, so concurrent boots serialise. **Do not remove the `db:migrate` / `db:sync-links` calls** — without them, any Medusa minor that ships schema changes will silently break prod.
+
+## Upgrading Medusa — runbook
+
+The original `init-backend` script (from `medusajs-launch-utils`) only seeds + migrates on the **first** deploy (it gates on the `user` table existing). On every subsequent boot it logs "Database is already seeded. Skipping seeding." and never runs migrations. That's why the start script above runs `db:migrate` explicitly. If you change the boot sequence, preserve that.
+
+**Before bumping Medusa:**
+
+1. **Read the release notes** for every minor between current and target. Look for "breaking changes", new entities/columns, and `migrations/Migration*.ts` additions in the medusajs/medusa repo (`git log --oneline <current-tag>..<target-tag> -- '**/migrations/Migration*.ts'`). 18+ migrations shipped between 2.12.1 and 2.14.2 — that's normal for a two-minor jump.
+2. **Check the Medusa peer-deps** for the new version against your installed `@medusajs/ui`, `@medusajs/admin-sdk`, `@medusajs/icons`, etc. Bump them in lockstep.
+3. **Inspect `pnpm.patchedDependencies` in [backend/package.json](backend/package.json).** Any patch is pinned to a specific version (`@medusajs/dashboard@2.12.1` style). The bump invalidates it — you must either confirm the fixes are upstream or regenerate the patch via `pnpm patch @medusajs/dashboard@<new-version>`. If you skip this step, `pnpm install` fails with `ERR_PNPM_PATCH_NOT_APPLIED`.
+
+**Verifying the bump locally (preflight):**
+
+1. `cd backend && pnpm install` — must complete without `ERR_PNPM_PATCH_NOT_APPLIED`.
+2. `cd backend && pnpm run build` — runs `npx medusa build && node src/scripts/postBuild.js`. **This is the production build path; do not substitute `pnpm exec medusa build` alone — that skips `postBuild.js` and won't catch all class-of-error.** Needs `DATABASE_URL` set (a placeholder works, no real DB connection happens during build).
+3. `cd backend && pnpm test` — known-failing tests are documented above; new failures = regressions.
+4. `cd storefront && pnpm install && pnpm run build` — catches Next.js / React server-only-import errors that `tsc --noEmit` cannot. The storefront's `next.config.js` has `typescript.ignoreBuildErrors: true`, so a successful Next build proves the runtime composition works (server/client component boundaries, dynamic imports, etc.).
+5. **Sanity-check migrations against your prod schema** — if you have a staging environment, deploy there first and watch logs for `running migration <name>` lines.
+
+**During / after deploy:**
+
+- The backend boot will run pending migrations automatically (per the `start` script). Watch the Railway log for `Performing migration` lines.
+- If a migration fails, the boot fails and Railway will retry. Decide quickly whether to roll back the deploy or fix forward — every retry holds the migration lock briefly and blocks workers.
+- Smoke-test the admin (products list, product detail, "edit sales channels" modal) and a sample PDP on the storefront before declaring the deploy healthy.
+
+## Server / client component pattern (App Router)
+
+When a PDP variant or other view is a client component (`"use client"`) but needs server-fetched data, **render the server piece in the parent and pass it as a slot prop** — never `import` server-only modules into the client component. Reference implementation: [storefront/src/modules/customizer/components/embedded-product-customizer.tsx](storefront/src/modules/customizer/components/embedded-product-customizer.tsx) accepts an optional `integratedPdpSlots: { gallery: ReactNode; variantPickers: ReactNode }` prop; the parent server component composes those nodes from server-side data and hands them in. This avoids the "you're importing a Server Component into a Client Component" build failure that bites at deploy time, not in dev. New PDP templates (e.g. embroidery-only, sticker-only) should follow the same pattern.
