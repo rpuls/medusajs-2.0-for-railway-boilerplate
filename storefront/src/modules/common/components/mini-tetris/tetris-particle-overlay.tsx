@@ -6,6 +6,15 @@ import {
   parseHexColor,
   WORDMARK_GRADIENT,
 } from "@modules/common/lib/wordmark-gradient"
+import type { VelocityField } from "@modules/home/components/home-particle-logo-hero/velocity-field"
+import {
+  createVelocityField,
+  decayVelocityField,
+  diffuseVelocityField,
+  pressureProjectVelocityField,
+  sampleVelocityField,
+} from "@modules/home/components/home-particle-logo-hero/velocity-field"
+import { sampleCurlNoise } from "@modules/home/components/home-particle-logo-hero/curl-noise"
 
 const BOARD_W = 10
 const BOARD_H = 20
@@ -109,6 +118,62 @@ const WAVE_DECAY = 0.985
 /** Half-height of the wave's effect band (CSS px). Wider band = larger ripple. */
 const WAVE_BAND_HALF = 22
 
+/** ============================================================
+ * Velocity field — Stam-style fluid grid that drives organic
+ * vortex / curl behaviour on top of the existing spring physics.
+ * Game events (lock, line clear, rotation, hard drop, etc.) deposit
+ * velocity into the field; pressure projection makes it curl
+ * naturally; ambient particles read it bilinearly each frame and
+ * gain a small fraction of the cell velocity. Decay drains it back
+ * to zero over a few seconds.
+ * ============================================================ */
+
+/** Cells along the longer canvas axis. ~24 means each tetris cell is
+ * subdivided into ~2x2 field cells — fine enough for visible vortex
+ * shapes inside a single tetris cell, coarse enough to be cheap. */
+const FIELD_RESOLUTION = 24
+/** Fraction of cell velocity added to each ambient particle per frame. */
+const FIELD_RIDE_STRENGTH = 0.06
+/** Energy lost per second when nothing is depositing. ~0.55 = settles in
+ * 3-4 seconds, matches Newmix's pacing. */
+const FIELD_DECAY_PER_SEC = 0.55
+/** Lateral diffusion per frame — cells bleed energy to 4 neighbours. */
+const FIELD_DIFFUSION = 0.05
+/** Pressure projection strength (Stam fluid solver). 0.4 = clean curls. */
+const FIELD_PRESSURE_STRENGTH = 0.4
+/** How many pressure-projection passes per frame. 1 is enough at this
+ * grid resolution. */
+const FIELD_PRESSURE_ITERS = 1
+
+/** Lock event — outward radial blast at lock centroid. */
+const LOCK_FIELD_BLAST_RADIUS_CSS = 60
+const LOCK_FIELD_BLAST_MAGNITUDE = 6
+/** Line clear — downward + outward energy on cleared row. */
+const CLEAR_FIELD_DOWN_MAGNITUDE = 3.5
+const CLEAR_FIELD_OUTWARD_MAGNITUDE = 5
+/** Rotation — tangential spin around piece centroid. */
+const ROTATION_FIELD_SPIN_RADIUS_CSS = 50
+const ROTATION_FIELD_SPIN_MAGNITUDE = 4
+/** Hard drop — vertical streak deposit along the column the piece
+ * traveled. Triggered when a lock event registers a drop > 3 cells. */
+const HARDDROP_MIN_CELLS = 3
+const HARDDROP_FIELD_STREAK_MAGNITUDE = 7
+const HARDDROP_FIELD_STREAK_RADIUS_CSS = 16
+/** Soft fall / piece-following wake. Subtle; deposited every frame the
+ * piece is moving. */
+const FALL_FIELD_WAKE_MAGNITUDE = 0.6
+/** Side movement — lateral impulse at the piece's leading edge. */
+const SIDE_FIELD_PUSH_MAGNITUDE = 1.6
+/** Game-over fizzle — strong upward burst when the player loses. */
+const GAMEOVER_FIELD_UP_MAGNITUDE = 8
+
+/** Curl-noise micro-turbulence on burst particles. Cheap (~6 sin/cos
+ * per burst per frame), gives sparks an organic swirl rather than
+ * straight-line ballistic flight. */
+const BURST_CURL_AMPLITUDE = 0.18
+const BURST_CURL_SCALE = 0.018
+const BURST_CURL_HZ = 0.6
+
 /** Per-piece-type RGB palette used to render the active piece on canvas (where it
  * can be smoothly interpolated between drop ticks). Roughly matches the DOM palette
  * but uses concrete RGB so we can write directly to the pixel buffer. */
@@ -144,6 +209,7 @@ type Props = {
   board: Board
   active: Active | null
   lines: number
+  gameOver: boolean
 }
 
 /** Deterministic hash → 0..1, stable per (a, b). */
@@ -160,16 +226,18 @@ export default function TetrisParticleOverlay({
   board,
   active,
   lines,
+  gameOver,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const propsRef = useRef({ display, board, active, lines })
-  propsRef.current = { display, board, active, lines }
+  const propsRef = useRef({ display, board, active, lines, gameOver })
+  propsRef.current = { display, board, active, lines, gameOver }
   const prevRef = useRef<{
     display: Display
     board: Board
     active: Active | null
     lines: number
-  }>({ display, board, active, lines })
+    gameOver: boolean
+  }>({ display, board, active, lines, gameOver })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -210,6 +278,193 @@ export default function TetrisParticleOverlay({
        * Determines each particle's individual circular drift direction so the
        * field appears to flow gently rather than sit still. */
       drift: new Float32Array(TOTAL_AMBIENT),
+    }
+
+    /** ===== Velocity field (Stam-style) =====
+     * Allocated lazily on first resize, when canvas dimensions are known.
+     * Reallocated when the canvas resizes (so cell size matches).
+     */
+    let field: VelocityField | null = null
+    let fieldDiffuseScratch: Float32Array | null = null
+    let fieldPressureScratch: Float32Array | null = null
+    /** Reused per-frame for sampling — avoids per-call allocation. */
+    const fieldSampleOut: [number, number] = [0, 0]
+    const burstCurlOut: [number, number] = [0, 0]
+
+    /** Allocate (or reallocate) the field to match current canvas size. */
+    const rebuildField = () => {
+      const W = sizeState.cssW
+      const H = sizeState.cssH
+      if (W < 2 || H < 2) {
+        field = null
+        return
+      }
+      field = createVelocityField(W, H, FIELD_RESOLUTION)
+      fieldDiffuseScratch = new Float32Array(field.cols * field.rows * 2)
+      fieldPressureScratch = new Float32Array(field.cols * field.rows)
+    }
+
+    /** Splat radial outward velocity into the field around (cx, cy). Uses
+     * a Gaussian falloff out to `radius`. Each cell within reach gets a
+     * vector pointing FROM the centre with magnitude scaled by `mag` and
+     * the falloff. Used for lock impacts. */
+    const depositRadialBlast = (
+      cx: number,
+      cy: number,
+      radius: number,
+      mag: number
+    ): void => {
+      if (!field || mag === 0 || radius <= 0) return
+      const rCells = Math.max(
+        1,
+        Math.ceil(radius / Math.min(field.cellW, field.cellH))
+      )
+      const ci = Math.floor(cx / field.cellW)
+      const cj = Math.floor(cy / field.cellH)
+      const rSqInv = 1 / (radius * radius)
+      for (let dj = -rCells; dj <= rCells; dj++) {
+        const j = cj + dj
+        if (j < 0 || j >= field.rows) continue
+        for (let di = -rCells; di <= rCells; di++) {
+          const i = ci + di
+          if (i < 0 || i >= field.cols) continue
+          const cellCx = (i + 0.5) * field.cellW
+          const cellCy = (j + 0.5) * field.cellH
+          const dx = cellCx - cx
+          const dy = cellCy - cy
+          const distSq = dx * dx + dy * dy
+          if (distSq > radius * radius || distSq < 1) continue
+          const w = Math.exp(-3 * distSq * rSqInv) * mag
+          const dist = Math.sqrt(distSq)
+          const idx = j * field.cols + i
+          field.vx[idx]! += (dx / dist) * w
+          field.vy[idx]! += (dy / dist) * w
+        }
+      }
+    }
+
+    /** Splat tangential rotation into the field around (cx, cy). Used for
+     * piece-rotation events. `mag > 0` = counter-clockwise; `< 0` = clockwise. */
+    const depositRotationalImpulse = (
+      cx: number,
+      cy: number,
+      radius: number,
+      mag: number
+    ): void => {
+      if (!field || mag === 0 || radius <= 0) return
+      const rCells = Math.max(
+        1,
+        Math.ceil(radius / Math.min(field.cellW, field.cellH))
+      )
+      const ci = Math.floor(cx / field.cellW)
+      const cj = Math.floor(cy / field.cellH)
+      const rSqInv = 1 / (radius * radius)
+      for (let dj = -rCells; dj <= rCells; dj++) {
+        const j = cj + dj
+        if (j < 0 || j >= field.rows) continue
+        for (let di = -rCells; di <= rCells; di++) {
+          const i = ci + di
+          if (i < 0 || i >= field.cols) continue
+          const cellCx = (i + 0.5) * field.cellW
+          const cellCy = (j + 0.5) * field.cellH
+          const dx = cellCx - cx
+          const dy = cellCy - cy
+          const distSq = dx * dx + dy * dy
+          if (distSq > radius * radius || distSq < 1) continue
+          const w = Math.exp(-3 * distSq * rSqInv) * mag
+          /** Tangential = perpendicular to radial: (-dy, dx) / dist. */
+          const dist = Math.sqrt(distSq)
+          const idx = j * field.cols + i
+          field.vx[idx]! += (-dy / dist) * w
+          field.vy[idx]! += (dx / dist) * w
+        }
+      }
+    }
+
+    /** Splat a directional impulse (vx, vy) into a rectangular region —
+     * used for line-clear deposits and side-move wakes. */
+    const depositDirectionalRect = (
+      cx: number,
+      cy: number,
+      halfW: number,
+      halfH: number,
+      vx: number,
+      vy: number
+    ): void => {
+      if (!field || (vx === 0 && vy === 0)) return
+      const minI = Math.max(0, Math.floor((cx - halfW) / field.cellW))
+      const maxI = Math.min(
+        field.cols - 1,
+        Math.ceil((cx + halfW) / field.cellW)
+      )
+      const minJ = Math.max(0, Math.floor((cy - halfH) / field.cellH))
+      const maxJ = Math.min(
+        field.rows - 1,
+        Math.ceil((cy + halfH) / field.cellH)
+      )
+      for (let j = minJ; j <= maxJ; j++) {
+        for (let i = minI; i <= maxI; i++) {
+          const idx = j * field.cols + i
+          field.vx[idx]! += vx
+          field.vy[idx]! += vy
+        }
+      }
+    }
+
+    /** Splat a velocity streak from (x0, y0) to (x1, y1). Each cell in the
+     * tube around the line gets a directional impulse along the line. Used
+     * for hard-drop trails. */
+    const depositLineStreak = (
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number,
+      radius: number,
+      mag: number
+    ): void => {
+      if (!field || mag === 0) return
+      const dx = x1 - x0
+      const dy = y1 - y0
+      const lineLen = Math.hypot(dx, dy)
+      if (lineLen < 1) return
+      const ux = dx / lineLen
+      const uy = dy / lineLen
+      /** Subdivide the line into roughly cell-spaced steps; at each step
+       * splat a small radial Gaussian aligned along the direction (ux, uy). */
+      const steps = Math.max(
+        1,
+        Math.ceil(lineLen / Math.max(2, field.cellW * 0.5))
+      )
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps
+        const px = x0 + dx * t
+        const py = y0 + dy * t
+        const rCells = Math.max(
+          1,
+          Math.ceil(radius / Math.min(field.cellW, field.cellH))
+        )
+        const ci = Math.floor(px / field.cellW)
+        const cj = Math.floor(py / field.cellH)
+        const rSqInv = 1 / (radius * radius)
+        for (let dj = -rCells; dj <= rCells; dj++) {
+          const jj = cj + dj
+          if (jj < 0 || jj >= field.rows) continue
+          for (let di = -rCells; di <= rCells; di++) {
+            const ii = ci + di
+            if (ii < 0 || ii >= field.cols) continue
+            const cellCx = (ii + 0.5) * field.cellW
+            const cellCy = (jj + 0.5) * field.cellH
+            const ex = cellCx - px
+            const ey = cellCy - py
+            const eSq = ex * ex + ey * ey
+            if (eSq > radius * radius) continue
+            const w = Math.exp(-3 * eSq * rSqInv) * (mag / steps)
+            const idx = jj * field.cols + ii
+            field.vx[idx]! += ux * w
+            field.vy[idx]! += uy * w
+          }
+        }
+      }
     }
 
     /** Burst particles: object-array, size-capped pool with linear scan for free slots. */
@@ -447,6 +702,7 @@ export default function TetrisParticleOverlay({
       imageData = ctx.createImageData(W, H)
       pixBuf = imageData.data
       buildAmbient()
+      rebuildField()
     }
 
     layoutCanvas()
@@ -463,6 +719,7 @@ export default function TetrisParticleOverlay({
 
       const { display: dispNow, board: brdNow, active: actNow, lines: linesNow } =
         propsRef.current
+      const gameOverNow = propsRef.current.gameOver
       const prev = prevRef.current
 
       /** Drain any time-delayed actions whose `runAt` has passed. Used by the
@@ -471,6 +728,35 @@ export default function TetrisParticleOverlay({
         if (now >= pendingActions[i]!.runAt) {
           pendingActions[i]!.fn()
           pendingActions.splice(i, 1)
+        }
+      }
+
+      /** ===== Game-over transition deposit =====
+       * On the frame the game ends, splat a strong upward burst across the
+       * whole board into the field — locks the field at high energy. With
+       * pressure projection running, the energy curls into chaotic vortices
+       * that fade over the next 2-3 seconds. */
+      if (gameOverNow && !prev.gameOver && field) {
+        const cx = sizeState.padX + (BOARD_W * sizeState.cellW) / 2
+        const cy = sizeState.padY + (BOARD_H * sizeState.cellH) / 2
+        depositDirectionalRect(
+          cx,
+          cy,
+          (BOARD_W * sizeState.cellW) / 2,
+          (BOARD_H * sizeState.cellH) / 2,
+          0,
+          -GAMEOVER_FIELD_UP_MAGNITUDE
+        )
+        /** Add a few radial blasts for visual chaos. */
+        for (let k = 0; k < 4; k++) {
+          const rx = cx + (Math.random() - 0.5) * sizeState.cellW * BOARD_W * 0.6
+          const ry = cy + (Math.random() - 0.5) * sizeState.cellH * BOARD_H * 0.4
+          depositRadialBlast(
+            rx,
+            ry,
+            LOCK_FIELD_BLAST_RADIUS_CSS * 1.5,
+            GAMEOVER_FIELD_UP_MAGNITUDE * 0.6
+          )
         }
       }
 
@@ -506,6 +792,21 @@ export default function TetrisParticleOverlay({
               amb.vy[i] = (amb.vy[i] ?? 0) + LINE_CLEAR_FALL_IMPULSE * 0.6
               amb.excitement[i] = 0.8
             }
+          }
+          /** T=0 — field deposit: downward push across the full cleared row.
+           * Pressure projection will turn this into curling outward energy
+           * over the next second. */
+          {
+            const rowCx = sizeState.padX + (BOARD_W * sizeState.cellW) / 2
+            const rowHalfW = (BOARD_W * sizeState.cellW) / 2
+            depositDirectionalRect(
+              rowCx,
+              rowMidY,
+              rowHalfW,
+              sizeState.cellH * 0.5,
+              0,
+              CLEAR_FIELD_DOWN_MAGNITUDE
+            )
           }
 
           /** T=60 — climax: per-cell bursts + flash band. */
@@ -567,6 +868,24 @@ export default function TetrisParticleOverlay({
                   }
                 }
               }
+              /** T=200 — field deposit: outward radial blasts at each end of
+               * the cleared row. Pressure projection turns these into rolling
+               * curls that spread the released energy across the board. */
+              const leftX = sizeState.padX
+              const rightX =
+                sizeState.padX + BOARD_W * sizeState.cellW
+              depositRadialBlast(
+                leftX,
+                rowMidY,
+                LOCK_FIELD_BLAST_RADIUS_CSS * 1.4,
+                CLEAR_FIELD_OUTWARD_MAGNITUDE
+              )
+              depositRadialBlast(
+                rightX,
+                rowMidY,
+                LOCK_FIELD_BLAST_RADIUS_CSS * 1.4,
+                CLEAR_FIELD_OUTWARD_MAGNITUDE
+              )
             },
           })
 
@@ -625,12 +944,58 @@ export default function TetrisParticleOverlay({
          * lower edge) — that's where a water drop "lands" before the ripple radiates. */
         let cx = 0
         let maxBy = -1
+        let minBy = BOARD_H
         for (const c of lockedCells) {
           cx += sizeState.padX + (c.bx + 0.5) * sizeState.cellW
           if (c.by > maxBy) maxBy = c.by
+          if (c.by < minBy) minBy = c.by
         }
         cx /= lockedCells.length
         const cy = sizeState.padY + (maxBy + 1) * sizeState.cellH
+
+        /** ===== Velocity-field deposit on lock =====
+         * Outward radial blast at the impact centroid. Pressure projection
+         * over the next 1-2 seconds will turn this into curling vortices
+         * radiating from the impact point. The existing analytic ripple +
+         * burst still play on top — they punctuate the moment; the field
+         * is the lingering aftermath. */
+        const lockVelFactor = Math.max(
+          1,
+          Math.min(2.2, 1 + pieceMotion.recentVelocityCells * 0.5)
+        )
+        depositRadialBlast(
+          cx,
+          cy,
+          LOCK_FIELD_BLAST_RADIUS_CSS,
+          LOCK_FIELD_BLAST_MAGNITUDE * lockVelFactor
+        )
+
+        /** ===== Hard-drop trail =====
+         * If the piece travelled more than HARDDROP_MIN_CELLS this lock cycle,
+         * paint a vertical streak in the field down the column the piece fell
+         * through. Reads as a comet trail behind the dropped piece — the most
+         * visceral feedback for hard-drop input. */
+        if (
+          prev.active != null &&
+          maxBy - prev.active.y >= HARDDROP_MIN_CELLS
+        ) {
+          /** Piece centroid X for the streak */
+          const streakX = cx
+          const fromY =
+            sizeState.padY +
+            (prev.active.y + (maxBy - minBy + 1) * 0.5) * sizeState.cellH
+          /** Streak ends at the impact line (top edge of locked region). */
+          const toY = sizeState.padY + minBy * sizeState.cellH
+          depositLineStreak(
+            streakX,
+            fromY,
+            streakX,
+            toY,
+            HARDDROP_FIELD_STREAK_RADIUS_CSS,
+            HARDDROP_FIELD_STREAK_MAGNITUDE
+          )
+        }
+
         /** Water-drop ripple: radial wave expanding outward from impact. Particles
          * encountered by the wave's band get a radial impulse outward (with upward
          * bias since the surface is below). */
@@ -725,6 +1090,42 @@ export default function TetrisParticleOverlay({
             const moveCells = jumpDist / cellDiag
             pieceMotion.recentVelocityCells =
               pieceMotion.recentVelocityCells * 0.85 + moveCells * 0.15
+
+            /** ===== Side-move + soft-fall wake =====
+             * Each step the piece takes deposits a small directional impulse
+             * into the field at its centroid. Reads as a brushed-by wake —
+             * particles get nudged in the direction the piece moved. */
+            const cellW = sizeState.cellW
+            const cellH = sizeState.cellH
+            /** Horizontal wakes (left/right movement). dxJump > 0 means piece
+             * moved RIGHT this frame; deposit eastward push. */
+            if (Math.abs(dxJump) > cellW * 0.2) {
+              depositDirectionalRect(
+                activeCentroidX,
+                activeCentroidY,
+                cellW * 1.5,
+                cellH * 1.5,
+                Math.sign(dxJump) * SIDE_FIELD_PUSH_MAGNITUDE,
+                0
+              )
+            }
+            /** Vertical wakes (soft fall / soft drop). Always deposits some
+             * downward energy when the piece is moving down — produces a
+             * faint trail beneath the piece. Scaled by movement so a slow
+             * gravity-fall produces a tiny bias and a soft-drop produces
+             * a stronger one. */
+            if (dyJump > cellH * 0.05) {
+              const m =
+                FALL_FIELD_WAKE_MAGNITUDE * Math.min(3, dyJump / cellH)
+              depositDirectionalRect(
+                activeCentroidX,
+                activeCentroidY,
+                cellW * 1.2,
+                cellH * 1.5,
+                0,
+                m
+              )
+            }
           }
         } else if (!sameType) {
           pieceMotion.offsetX = 0
@@ -732,7 +1133,9 @@ export default function TetrisParticleOverlay({
           pieceMotion.transitionStartedAt = -1
           pieceMotion.recentVelocityCells = 0
         }
-        /** Detect rotation: same piece type, .r changed → trigger pulse. */
+        /** Detect rotation: same piece type, .r changed → trigger pulse +
+         * rotational field deposit. The visual scale-pulse is the visible
+         * punctuation; the field deposit is the surrounding-fluid reaction. */
         if (
           actNow != null &&
           actNow.t === pieceMotion.lastPieceType &&
@@ -740,6 +1143,18 @@ export default function TetrisParticleOverlay({
           pieceMotion.lastPieceRotation !== -1
         ) {
           rotationPulse.startedAt = now
+          /** Tangential impulse around the piece centroid. Sign alternates
+           * with rotation direction (ccw indicated by r increasing mod n). */
+          const rotSign =
+            ((actNow.r - pieceMotion.lastPieceRotation + 4) % 4) === 1
+              ? 1
+              : -1
+          depositRotationalImpulse(
+            activeCentroidX,
+            activeCentroidY,
+            ROTATION_FIELD_SPIN_RADIUS_CSS,
+            ROTATION_FIELD_SPIN_MAGNITUDE * rotSign
+          )
         }
         pieceMotion.lastPieceType = actNow != null ? actNow.t : -1
         pieceMotion.lastPieceRotation = actNow != null ? actNow.r : -1
@@ -965,9 +1380,30 @@ export default function TetrisParticleOverlay({
         }
       }
 
+      /** =========== Velocity field update (Stam fluid pass) ===========
+       * Order matches home-particle-logo-hero: diffuse → pressure project →
+       * decay. Game events deposit into the field elsewhere in the loop;
+       * by the time particles read it below, all this frame's energy has
+       * been redistributed. */
+      if (field) {
+        if (FIELD_DIFFUSION > 0 && fieldDiffuseScratch) {
+          diffuseVelocityField(field, FIELD_DIFFUSION, fieldDiffuseScratch)
+        }
+        if (FIELD_PRESSURE_STRENGTH > 0 && fieldPressureScratch) {
+          pressureProjectVelocityField(
+            field,
+            fieldPressureScratch,
+            FIELD_PRESSURE_STRENGTH,
+            FIELD_PRESSURE_ITERS
+          )
+        }
+        decayVelocityField(field, FIELD_DECAY_PER_SEC, 16)
+      }
+
       /** =========== Spring + integration (all ambient particles) =========== */
 
       const driftPhase = now * FIELD_DRIFT_RATE
+      const fieldRideOn = field != null && FIELD_RIDE_STRENGTH > 0
       for (let i = 0; i < TOTAL_AMBIENT; i++) {
         amb.excitement[i] = amb.excitement[i]! * EXCITEMENT_DECAY
         /** Per-particle drift: each particle's effective home oscillates in a
@@ -978,8 +1414,29 @@ export default function TetrisParticleOverlay({
         const driftHy = amb.hy[i]! + Math.sin(ang) * FIELD_DRIFT_PX
         const sx = (driftHx - amb.x[i]!) * HOME_SPRING
         const sy = (driftHy - amb.y[i]!) * HOME_SPRING
-        const nvx = (amb.vx[i]! + sx) * HOME_FRICTION
-        const nvy = (amb.vy[i]! + sy) * HOME_FRICTION
+        let nvx = (amb.vx[i]! + sx) * HOME_FRICTION
+        let nvy = (amb.vy[i]! + sy) * HOME_FRICTION
+        /** Read the velocity field at the particle's CURRENT position and add
+         * a fraction of it to velocity. Field carries energy across frames
+         * that decay/diffusion/pressure-projection have already redistributed.
+         * Excitement boosted when the field is hot at this location. */
+        if (fieldRideOn) {
+          sampleVelocityField(
+            field!,
+            amb.x[i]!,
+            amb.y[i]!,
+            fieldSampleOut
+          )
+          nvx += fieldSampleOut[0] * FIELD_RIDE_STRENGTH
+          nvy += fieldSampleOut[1] * FIELD_RIDE_STRENGTH
+          const fmag2 = fieldSampleOut[0] * fieldSampleOut[0] +
+            fieldSampleOut[1] * fieldSampleOut[1]
+          if (fmag2 > 1) {
+            const e = amb.excitement[i]!
+            const target = Math.min(1, Math.sqrt(fmag2) * 0.15)
+            if (target > e) amb.excitement[i] = target
+          }
+        }
         amb.vx[i] = nvx
         amb.vy[i] = nvy
         amb.x[i] = amb.x[i]! + nvx
@@ -988,6 +1445,8 @@ export default function TetrisParticleOverlay({
 
       /** =========== Burst physics =========== */
 
+      const burstCurlOn = BURST_CURL_AMPLITUDE > 0
+      const burstCurlT = now / 1000
       for (let i = 0; i < bursts.length; i++) {
         const p = bursts[i]!
         if (!p.alive) continue
@@ -999,6 +1458,24 @@ export default function TetrisParticleOverlay({
         p.vx *= 0.93
         p.vy *= 0.93
         p.vy += 0.1
+        /** Curl-noise micro-turbulence — bursts swirl through an organic 2D
+         * flow instead of flying in straight ballistic lines. Falls off as the
+         * burst ages so the swirl is most pronounced near birth (when the
+         * spark is brightest) and dies down toward life-end. */
+        if (burstCurlOn) {
+          const ageU = 1 - age / p.lifeMs
+          sampleCurlNoise(
+            p.x,
+            p.y,
+            burstCurlT,
+            BURST_CURL_SCALE,
+            BURST_CURL_AMPLITUDE * ageU,
+            BURST_CURL_HZ,
+            burstCurlOut
+          )
+          p.vx += burstCurlOut[0]
+          p.vy += burstCurlOut[1]
+        }
         p.x += p.vx
         p.y += p.vy
       }
@@ -1566,6 +2043,7 @@ export default function TetrisParticleOverlay({
         board: brdNow,
         active: actNow,
         lines: linesNow,
+        gameOver: propsRef.current.gameOver,
       }
     }
 

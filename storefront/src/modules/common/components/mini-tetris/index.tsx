@@ -606,6 +606,7 @@ export default function MiniTetris({ size = "default" }: MiniTetrisProps) {
               board={state.board}
               active={state.active}
               lines={state.lines}
+              gameOver={state.gameOver}
             />
           </div>
         </div>
