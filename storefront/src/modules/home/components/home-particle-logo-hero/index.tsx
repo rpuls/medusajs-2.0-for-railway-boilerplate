@@ -3488,6 +3488,15 @@ export default function HomeParticleLogoHero({
                 p.vy += (p.hy - p.y) * springKBase * springMul
                 p.vx *= frictionK
                 p.vy *= frictionK
+                /** Hard velocity clamp — see resting-branch note. */
+                if (nm.particleSpeedLimit > 0) {
+                  const sp = Math.hypot(p.vx, p.vy)
+                  if (sp > nm.particleSpeedLimit) {
+                    const k = nm.particleSpeedLimit / sp
+                    p.vx *= k
+                    p.vy *= k
+                  }
+                }
                 p.x += p.vx
                 p.y += p.vy
               } else if (
@@ -3822,29 +3831,37 @@ export default function HomeParticleLogoHero({
                 }
                 /** Compound activation: vortex impulse OR enough field velocity
                  * OR curl/flocking velocity at this position. If any is
-                 * active, run integrated motion with spring suppression so
-                 * the displacement reads visibly before the spring pulls home. */
+                 * active, run integrated motion. */
                 const fieldRideMag = Math.hypot(fieldRideX, fieldRideY)
                 const curlMag = Math.hypot(curlX, curlY)
                 const flockMag = Math.hypot(flockX, flockY)
                 const ambientMag = fieldRideMag + curlMag + flockMag
                 if (vortexSupp > 0.05 || ambientMag > 0.05) {
-                  /** Spring suppressed in proportion to vortex influence — at
-                   * full vortex (supp=1) spring is fully off, letting the
-                   * tangential motion travel; as supp decays, spring returns.
-                   * Field velocity also suppresses the spring proportionally
-                   * to its magnitude so resting particles can drift on the
-                   * field's lingering momentum without instantly snapping back. */
-                  const fieldSupp = Math.min(1, fieldRideMag * 1.5)
-                  const totalSupp = Math.min(
-                    1,
-                    Math.max(vortexSupp, fieldSupp)
-                  )
-                  const springMul = Math.max(0, 1 - totalSupp * 1.6)
+                  /** Spring is ALWAYS strong (Newmix-style) — the field nudges
+                   * particles, friction damps them, the spring continually pulls
+                   * them home. Without this, particles ride field flow lines
+                   * indefinitely and trace long arcs across the screen.
+                   *
+                   * Vortex suppression remains as a separate concession because
+                   * it's a brief impulse (~93%/frame decay) that needs a moment
+                   * to develop into a visible curl. Field activity does NOT
+                   * suppress the spring. */
+                  const springMul = Math.max(0, 1 - vortexSupp * 1.6)
                   p.vx += (p.hx - p.x) * springKBase * springMul
                   p.vy += (p.hy - p.y) * springKBase * springMul
                   p.vx *= frictionK
                   p.vy *= frictionK
+                  /** Hard velocity clamp (Newmix uses 30 px/frame). Without
+                   * this, a hot field can accelerate particles to escape
+                   * velocities the spring + friction can't counter. */
+                  if (nm.particleSpeedLimit > 0) {
+                    const sp = Math.hypot(p.vx, p.vy)
+                    if (sp > nm.particleSpeedLimit) {
+                      const k = nm.particleSpeedLimit / sp
+                      p.vx *= k
+                      p.vy *= k
+                    }
+                  }
                   p.x += p.vx
                   p.y += p.vy
                   /** Decay vortex influence each frame so the particle

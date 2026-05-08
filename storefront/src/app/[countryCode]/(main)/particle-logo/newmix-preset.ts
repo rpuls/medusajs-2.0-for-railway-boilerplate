@@ -53,21 +53,25 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   wakeAlphaMult: 1,
   /** Vortex emitters disabled. */
   vortexStrength: 0,
-  /** Field — the heavy lifter. */
+  /** Field — heavy lifter for the lingering momentum, but particles only
+   * gently sample it (Newmix uses ride ≈ 0.06). With the spring always strong
+   * (no field-based suppression) and a hard 30 px/frame velocity clamp,
+   * particles sit close to home and read flow lines without escaping. */
   fieldStrength: 1,
   fieldGridResolution: 48,
   fieldInjectRadiusBmp: 48,
-  fieldInjectStrength: 1.6,
-  fieldDecayPerSec: 0.55,
+  fieldInjectStrength: 1.0,
+  fieldDecayPerSec: 0.45,
   fieldDiffusion: 0.05,
-  fieldRideStrength: 0.18,
+  fieldRideStrength: 0.06,
   fieldPressureStrength: 0.4,
   fieldPressureIterations: 1,
   fieldDrivenCursor: 1,
   fieldStrokeSubdivisionPx: 6,
-  /** Hard particle damping — particles are mostly passive flow tracers,
-   * they shouldn't carry residual momentum once the cell field calms down. */
+  /** Hard particle damping + velocity clamp — particles are passive tracers
+   * with no escape from the spring's pull. */
   friction: 0.4,
+  particleSpeedLimit: 30,
   springStiffnessMult: 0.9,
   homeSpringSuppress: 0.85,
   homeReturnMs: 800,

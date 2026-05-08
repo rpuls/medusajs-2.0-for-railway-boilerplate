@@ -261,6 +261,14 @@ export type NewmixLiveTuning = {
    * Newmix uses 6px. 0 = no subdivision (only inject at endpoint). */
   fieldStrokeSubdivisionPx: number
 
+  /** Hard ceiling on per-particle velocity (bitmap px / frame). After every
+   * velocity update, if `hypot(vx, vy) > limit`, the velocity is rescaled to
+   * the limit. Newmix uses 30 px/frame — without this, a hot velocity field
+   * can accelerate particles past the spring + friction's ability to counter,
+   * producing long thin arcs that trace flow lines across the screen.
+   * 0 disables the clamp. */
+  particleSpeedLimit: number
+
   /** Asymmetric paddling — biases the cursor's force toward particles that
    * are BROADSIDE to the motion direction (perpendicular to heading), away
    * from particles that are along the heading. 0 = no bias (current
@@ -363,6 +371,8 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   /** Crema layer — disabled by default. */
   foamFraction: 0.0,
   foamForceMultiplier: 1.6,
+  /** Hard particle velocity clamp — Newmix uses 30 px/frame. */
+  particleSpeedLimit: 30,
   /** Asymmetric paddling — disabled by default. */
   paddleSharpness: 0.0,
 })

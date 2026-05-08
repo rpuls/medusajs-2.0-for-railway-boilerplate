@@ -555,6 +555,17 @@ const GROUPS: Group[] = [
         step: 1,
         format: (v) => (v <= 0 ? "off" : `${Math.round(v)}px`),
       },
+      {
+        key: "particleSpeedLimit",
+        label: "Particle speed limit",
+        description:
+          "Hard ceiling on per-particle velocity (px/frame). Newmix uses 30. Lower = particles always pulled back hard, swirl stays tight; higher = particles can fly further on hot field flow lines (long thin arcs). 0 = no clamp.",
+        min: 0,
+        max: 100,
+        step: 1,
+        format: (v) =>
+          v <= 0 ? "off" : `${Math.round(v)} px/frame`,
+      },
     ],
   },
   {
