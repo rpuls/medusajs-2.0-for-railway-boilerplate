@@ -8,7 +8,7 @@ import { applyDisplayPriceCorrectionToOrder } from "@lib/util/apply-display-pric
 import { HttpTypes } from "@medusajs/types"
 
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 async function getOrder(id: string) {
@@ -33,7 +33,8 @@ export const metadata: Metadata = {
 }
 
 export default async function OrderConfirmedPage({ params }: Props) {
-  const order = await getOrder(params.id)
+  const { id } = await params
+  const order = await getOrder(id)
   if (!order) {
     return notFound()
   }

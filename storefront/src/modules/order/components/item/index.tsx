@@ -5,6 +5,7 @@ import { convertMinorToLocale } from "@lib/util/money"
 import LineItemOptions from "@modules/common/components/line-item-options"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
+import LineItemDesignPreview from "@modules/customizer/components/line-item-design-preview"
 import LineItemMockupPreview from "@modules/customizer/components/line-item-mockup-preview"
 import {
   getCustomizerMetadata,
@@ -67,9 +68,23 @@ const Item = ({ item, currencyCode }: ItemProps) => {
         )}
         {customizerMetadata && (
           <>
-            <Text className="txt-small text-ui-fg-subtle mt-1">
-              Custom design archived with print-ready assets.
-            </Text>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Text className="txt-small text-ui-fg-subtle">
+                Custom design archived with print-ready assets.
+              </Text>
+              {/*
+                Mirrors the customizer's "Preview design" affordance on the
+                order page. Uses the persisted server-rendered mockups
+                already on the line metadata — no Fabric, no recompute, just
+                a lightbox over the saved PNGs.
+              */}
+              {mockupArtifacts.length > 0 ? (
+                <LineItemDesignPreview
+                  mockups={mockupArtifacts}
+                  itemLabel={item.title ?? undefined}
+                />
+              ) : null}
+            </div>
             {showSplit && (
               <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-ui-fg-subtle max-w-xs">
                 <span>Garment / unit</span>
