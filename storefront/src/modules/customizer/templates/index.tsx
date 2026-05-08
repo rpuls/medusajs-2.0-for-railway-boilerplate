@@ -155,9 +155,9 @@ type CustomizerTemplateProps = {
 // chest print rather than swallowing the whole tee, otherwise customers expect
 // a print larger than what they're paying for. A6 is small enough already.
 const SCP_PRINT_SIZE_CM: Record<ScpPrintSizeId, { w: number; h: number }> = {
-  up_to_a6: { w: 10, h: 15 },
-  up_to_a4: { w: 17, h: 24 },
-  up_to_a3: { w: 23, h: 33 },
+  up_to_a6: { w: 8, h: 12 },
+  up_to_a4: { w: 14, h: 20 },
+  up_to_a3: { w: 19, h: 27 },
   oversize: { w: 38, h: 48 },
 }
 const SCP_BASE_REF = SCP_PRINT_SIZE_CM.oversize
@@ -2344,6 +2344,21 @@ export default function CustomizerTemplate({
                     canRemoveImage={canRemoveImage}
                     onDeleteUpload={(uploadId) =>
                       setSessionUploads((current) => current.filter((entry) => entry.id !== uploadId))
+                    }
+                    enabled={!embedded || (pdpStep1Done && pdpStep3Done)}
+                    disabledMessage={
+                      !pdpStep1Done
+                        ? {
+                            title: "Customize first",
+                            body: 'Click "Customize this product" on the right to start.',
+                          }
+                        : !pdpStep3Done
+                        ? {
+                            title: "Choose a print size",
+                            body:
+                              "Pick a print size on the right. Once that's done, you can upload artwork here.",
+                          }
+                        : undefined
                     }
                     className="border-0 bg-transparent p-0"
                   />
