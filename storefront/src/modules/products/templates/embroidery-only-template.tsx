@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, type ReactNode } from "react"
+import React, { useMemo } from "react"
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductTabs from "@modules/products/components/product-tabs"
@@ -18,13 +18,18 @@ type EmbroideryOnlyTemplateProps = {
   region: HttpTypes.StoreRegion
   countryCode: string
   /**
-   * Server-component slots — `ProductActionsWrapper` and `RelatedProducts`
-   * transitively import `server-only`, so they cannot live inside a
-   * `"use client"` component. Render them in the server parent and pass
-   * through. Mirrors `EmbeddedProductCustomizer`'s `integratedPdpSlots`.
+   * Pre-rendered slots passed in from the parent server component. Both
+   * `<ProductActionsWrapper/>` and `<RelatedProducts/>` are server components
+   * that pull `getProductsById` / `getProductsList` from a "server-only"
+   * module — they cannot be imported into this client file directly without
+   * forcing Next.js to bundle the data layer for the client (which fails
+   * the build with `You're importing a component that needs "server-only"`).
+   *
+   * The slot-prop pattern mirrors how `<EmbeddedProductCustomizer>` already
+   * receives `integratedPdpSlots` from the same parent.
    */
-  productActions?: ReactNode
-  relatedProducts?: ReactNode
+  productActions: React.ReactNode
+  relatedProducts: React.ReactNode
 }
 
 /**
@@ -68,7 +73,7 @@ const EmbroideryPanelWithVariant: React.FC<{
  */
 const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
   product,
-  region,
+  region: _region,
   countryCode,
   productActions,
   relatedProducts,
@@ -114,14 +119,12 @@ const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
         </ProductOptionsProvider>
       </div>
 
-      {relatedProducts ? (
-        <div
-          className="content-container my-16 small:my-32"
-          data-testid="related-products-container"
-        >
-          {relatedProducts}
-        </div>
-      ) : null}
+      <div
+        className="content-container my-16 small:my-32"
+        data-testid="related-products-container"
+      >
+        {relatedProducts}
+      </div>
     </>
   )
 }
