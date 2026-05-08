@@ -60,7 +60,7 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   fieldStrength: 1,
   fieldGridResolution: 48,
   fieldInjectRadiusBmp: 48,
-  fieldInjectStrength: 1.0,
+  fieldInjectStrength: 2.0,
   fieldDecayPerSec: 0.45,
   fieldDiffusion: 0.05,
   fieldRideStrength: 0.06,

@@ -774,40 +774,32 @@ function applyNewmixCaptureImpulse(
     }
   }
   const finalScale = motionScale * speedCouplingMult * paddleMult * massMult
-  /** Newmix-style cursor-pushes-field path: instead of writing the impulse to
-   * the particle's own velocity, deposit it into the velocity-field cell at
-   * the particle's current position. Particles then read the field bilinearly
-   * later in the loop, so the cursor's effect persists across frames in the
-   * field rather than being lost the moment the cursor moves on. */
-  if (
-    fieldForInjection != null &&
-    t.fieldDrivenCursor > 0.5 &&
-    t.fieldStrength > 0
-  ) {
-    /** Reuse `injectVelocity` semantics by writing directly to one cell —
-     * tighter than a Gaussian splat because we're already at the particle's
-     * exact position. The field's diffusion pass then spreads it. */
-    const ci = Math.max(
-      0,
-      Math.min(
-        fieldForInjection.cols - 1,
-        Math.floor(p.x / fieldForInjection.cellW)
-      )
-    )
-    const cj = Math.max(
-      0,
-      Math.min(
-        fieldForInjection.rows - 1,
-        Math.floor(p.y / fieldForInjection.cellH)
-      )
-    )
-    const cellIdx = cj * fieldForInjection.cols + ci
-    fieldForInjection.vx[cellIdx]! += ax * finalScale
-    fieldForInjection.vy[cellIdx]! += ay * finalScale
-  } else {
-    p.vx += ax * finalScale
-    p.vy += ay * finalScale
+  /** Two interaction modes:
+   *
+   * 1. **Field-driven cursor (Newmix style).** When `fieldDrivenCursor` is on,
+   *    the velocity field is the SINGLE source of cursor influence: the
+   *    per-frame `injectVelocity()` call splats cursor velocity into cells
+   *    around the cursor with a 1/r-style falloff, particles read the field
+   *    bilinearly later in the loop, pressure projection holds the curl
+   *    shape. There is NO per-particle cursor impulse — that would deposit
+   *    a second, fragmented force into individual cells and fight pressure
+   *    projection, which empirically smears rings into a diffuse halo.
+   *    So we skip both the field deposit and the particle deposit here.
+   *
+   * 2. **Direct cursor push (legacy).** When `fieldDrivenCursor` is off, the
+   *    cursor's swirl/push profile (sideSwirl + frontPush + backInward, etc.)
+   *    is applied directly to particle velocity. Used by older modes.
+   *
+   * `fieldForInjection` is only forwarded to keep the call site shape stable;
+   * we no longer write to it (kept as a parameter so future changes can
+   * re-enable the per-particle deposit if needed). */
+  void fieldForInjection
+  if (t.fieldDrivenCursor > 0.5 && t.fieldStrength > 0) {
+    /** Skip — bulk inject is the sole cursor → field path. */
+    return
   }
+  p.vx += ax * finalScale
+  p.vy += ay * finalScale
 }
 
 /**
