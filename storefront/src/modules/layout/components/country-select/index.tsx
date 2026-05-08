@@ -21,27 +21,28 @@ type CountrySelectProps = {
 }
 
 const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
-  const [current, setCurrent] = useState<
-    | { country: string | undefined; region: string; label: string | undefined }
-    | undefined
-  >(undefined)
+  const [current, setCurrent] = useState<CountryOption | undefined>(undefined)
 
   const { countryCode } = useParams()
   const currentPath = usePathname().split(`/${countryCode}`)[1]
 
   const { state, close } = toggleState
 
-  const options = useMemo(() => {
+  const options = useMemo<CountryOption[]>(() => {
     return regions
-      ?.map((r) => {
-        return r.countries?.map((c) => ({
-          country: c.iso_2,
-          region: r.id,
-          label: c.display_name,
-        }))
-      })
-      .flat()
-      .sort((a, b) => (a?.label ?? "").localeCompare(b?.label ?? ""))
+      ?.flatMap((r) =>
+        (r.countries ?? [])
+          .filter(
+            (c): c is typeof c & { iso_2: string; display_name: string } =>
+              !!c.iso_2 && !!c.display_name
+          )
+          .map((c) => ({
+            country: c.iso_2,
+            region: r.id,
+            label: c.display_name,
+          }))
+      )
+      .sort((a, b) => a.label.localeCompare(b.label)) ?? []
   }, [regions])
 
   useEffect(() => {
