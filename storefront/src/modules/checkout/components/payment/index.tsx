@@ -6,7 +6,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useTransition,
 } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { RadioGroup } from "@headlessui/react"
@@ -37,7 +36,6 @@ const Payment = ({
   )
 
   const [isLoading, setIsLoading] = useState(false)
-  const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [cardBrand, setCardBrand] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
@@ -104,11 +102,16 @@ const Payment = ({
         !activeSession ||
         activeSession.provider_id !== selectedPaymentMethod
 
+      // Don't combine `router.refresh()` with a transition-wrapped
+      // `router.push()` — the two reconcilers can leave React's transition
+      // state pending indefinitely, which keeps the button stuck on its
+      // spinner with no "Continue to review" text. `initiatePaymentSession`
+      // already calls `revalidateTag("cart")`, so `router.push` will pick
+      // up the new payment session on its own.
       if (needsPaymentInit) {
         await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })
-        router.refresh()
       }
 
       // Stripe requires a complete card element before leaving this step (first submit may only create session).
@@ -116,14 +119,12 @@ const Payment = ({
         return
       }
 
-      startTransition(() => {
-        router.push(
-          pathname + "?" + createQueryString("step", "review"),
-          {
-            scroll: false,
-          }
-        )
-      })
+      router.push(
+        pathname + "?" + createQueryString("step", "review"),
+        {
+          scroll: false,
+        }
+      )
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -235,11 +236,10 @@ const Payment = ({
             variant="primary"
             className="checkout-primary-action mt-6 w-full small:w-auto"
             onClick={handleSubmit}
-            isLoading={isLoading || isPending}
+            isLoading={isLoading}
             disabled={
               (stripeSelected && stripeSessionReady && !cardComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard) ||
-              isPending
+              (!selectedPaymentMethod && !paidByGiftcard)
             }
             data-testid="submit-payment-button"
           >

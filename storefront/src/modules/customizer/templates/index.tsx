@@ -2168,9 +2168,14 @@ export default function CustomizerTemplate({
         const lineItemMetadata: CustomizerMetadata = {
           ...metadataBase,
           variantId: quantityEntry.variant.id,
-          // Cart line metadata must stay small for Medusa; print files live in `artifacts`.
-          // Full Fabric state stays in-browser only (not persisted on the line item).
-          sideLayouts: DESIGN_SIDES.map((side) => ({ side, objects: [] })),
+          // Keep `sideLayouts` (with Fabric objects) on the line metadata so
+          // `?reorder=<order_id>:<line_item_id>` can replay the design onto
+          // the canvas. Previously this was overridden to empty arrays to
+          // "keep the payload small" — but it broke re-order completely
+          // (customer landed on a blank canvas, see screenshot in support).
+          // `sanitizeCustomizerDesignForCart` already strips large `data:`
+          // image URLs; what remains (positions, scales, rotations, fills,
+          // hosted image URLs) is a few KB per side at most.
         }
 
         const addResult = await addScpLineItemToCartSafe({
