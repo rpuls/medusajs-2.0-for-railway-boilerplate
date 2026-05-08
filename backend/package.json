@@ -37,12 +37,14 @@
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
   },
   "dependencies": {
+    "@agilo/medusa-analytics-plugin": "^1.4.0",
     "@medusajs/admin-sdk": "2.12.1",
     "@medusajs/admin-shared": "2.12.1",
     "@medusajs/cli": "2.12.1",
     "@medusajs/dashboard": "2.12.1",
     "@medusajs/draft-order": "2.12.1",
     "@medusajs/framework": "2.12.1",
+    "@medusajs/icons": "2.12.1",
     "@medusajs/js-sdk": "2.12.1",
     "@medusajs/medusa": "2.12.1",
     "@medusajs/notification-sendgrid": "2.12.1",

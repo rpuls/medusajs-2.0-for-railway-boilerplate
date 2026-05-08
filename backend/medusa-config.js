@@ -260,6 +260,10 @@ const medusaConfig = {
           },
         }]
       : []),
+    {
+      resolve: '@agilo/medusa-analytics-plugin',
+      options: {},
+    },
   ],
 };
 
