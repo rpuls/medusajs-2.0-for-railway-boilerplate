@@ -56,7 +56,7 @@
     "medusajs-launch-utils": "0.0.19",
     "minio": "^8.0.7",
     "pg": "^8.20.0",
-    "resend": "4.0.1",
+    "resend": "6.12.3",
     "sharp": "^0.34.4",
     "ulid": "^3.0.2",
     "zod": "^4.4.3"

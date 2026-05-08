@@ -81,13 +81,19 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       bcc: emailOptions.bcc,
       tags: emailOptions.tags,
       text: emailOptions.text,
+      // Resend v6's Attachment shape is { content, filename, path, contentType, contentId }.
+      // Medusa's input uses snake_case + a `disposition` field; map them across:
+      //   content_type            -> contentType (rename)
+      //   disposition: 'inline'   -> contentId (Resend uses contentId presence to mark inline)
+      //   disposition: 'attachment' is the implicit default — no field needed
       attachments: Array.isArray(notification.attachments)
         ? notification.attachments.map((attachment) => ({
             content: attachment.content,
             filename: attachment.filename,
-            content_type: attachment.content_type,
-            disposition: attachment.disposition ?? 'attachment',
-            id: attachment.id ?? undefined
+            contentType: attachment.content_type,
+            ...(attachment.disposition === 'inline' && attachment.id
+              ? { contentId: attachment.id }
+              : {}),
           }))
         : undefined,
       scheduledAt: emailOptions.scheduledAt
