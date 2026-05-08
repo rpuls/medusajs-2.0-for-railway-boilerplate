@@ -1,14 +1,10 @@
 "use client"
 
-import React, { Suspense, useMemo } from "react"
+import React, { useMemo, type ReactNode } from "react"
 
 import ImageGallery from "@modules/products/components/image-gallery"
-import ProductActions from "@modules/products/components/product-actions"
 import ProductTabs from "@modules/products/components/product-tabs"
-import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
-import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
-import ProductActionsWrapper from "./product-actions-wrapper"
 import { EmbroideryPanel } from "@modules/embroidery/components"
 import {
   ProductOptionsProvider,
@@ -21,6 +17,14 @@ type EmbroideryOnlyTemplateProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   countryCode: string
+  /**
+   * Server-component slots — `ProductActionsWrapper` and `RelatedProducts`
+   * transitively import `server-only`, so they cannot live inside a
+   * `"use client"` component. Render them in the server parent and pass
+   * through. Mirrors `EmbeddedProductCustomizer`'s `integratedPdpSlots`.
+   */
+  productActions?: ReactNode
+  relatedProducts?: ReactNode
 }
 
 /**
@@ -66,6 +70,8 @@ const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
   product,
   region,
   countryCode,
+  productActions,
+  relatedProducts,
 }) => {
   if (!product || !product.id) {
     return null
@@ -78,22 +84,7 @@ const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
           <div className="grid grid-cols-1 gap-y-10 lg:grid-cols-12 lg:items-start lg:gap-x-8 lg:gap-y-8">
             <aside className="flex flex-col gap-y-6 py-8 small:sticky small:top-48 lg:col-span-4 lg:max-w-none lg:py-0">
               <ProductInfo product={product} />
-              <Suspense
-                fallback={
-                  <ProductActions
-                    disabled={true}
-                    product={product}
-                    region={region}
-                    hideInlinePurchaseControls
-                  />
-                }
-              >
-                <ProductActionsWrapper
-                  id={product.id}
-                  region={region}
-                  hideInlinePurchaseControls
-                />
-              </Suspense>
+              {productActions}
               <ProductTabs product={product} />
             </aside>
 
@@ -123,14 +114,14 @@ const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
         </ProductOptionsProvider>
       </div>
 
-      <div
-        className="content-container my-16 small:my-32"
-        data-testid="related-products-container"
-      >
-        <Suspense fallback={<SkeletonRelatedProducts />}>
-          <RelatedProducts product={product} countryCode={countryCode} />
-        </Suspense>
-      </div>
+      {relatedProducts ? (
+        <div
+          className="content-container my-16 small:my-32"
+          data-testid="related-products-container"
+        >
+          {relatedProducts}
+        </div>
+      ) : null}
     </>
   )
 }

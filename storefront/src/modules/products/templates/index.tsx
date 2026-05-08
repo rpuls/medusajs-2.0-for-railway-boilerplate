@@ -52,6 +52,33 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         product={product}
         region={region}
         countryCode={countryCode}
+        // Slot-prop pattern: ProductActionsWrapper + RelatedProducts both
+        // transitively import `server-only`, so they cannot live inside the
+        // `"use client"` template. Render them here in the server parent
+        // and pass through as ReactNode props.
+        productActions={
+          <Suspense
+            fallback={
+              <ProductActions
+                disabled={true}
+                product={product}
+                region={region}
+                hideInlinePurchaseControls
+              />
+            }
+          >
+            <ProductActionsWrapper
+              id={product.id}
+              region={region}
+              hideInlinePurchaseControls
+            />
+          </Suspense>
+        }
+        relatedProducts={
+          <Suspense fallback={<SkeletonRelatedProducts />}>
+            <RelatedProducts product={product} countryCode={countryCode} />
+          </Suspense>
+        }
       />
     )
   }
