@@ -432,9 +432,18 @@ const TETRIS_SIZES = {
 export type MiniTetrisProps = {
   /** `"lg"` = 1.5× cells; `"xl"` = ~2.25× cells (enlarged 404 layout). */
   size?: "default" | "lg" | "xl"
+  /** Fired whenever the game score changes. Used by the 404 page rotation
+   * shell to display a single unified score line outside the game canvas. */
+  onScoreChange?: (score: number) => void
+  /** Fired when the game-over state flips. */
+  onGameOverChange?: (gameOver: boolean) => void
 }
 
-export default function MiniTetris({ size = "default" }: MiniTetrisProps) {
+export default function MiniTetris({
+  size = "default",
+  onScoreChange,
+  onGameOverChange,
+}: MiniTetrisProps) {
   const s = TETRIS_SIZES[size]
   const gridContainerRef = useRef<HTMLDivElement | null>(null)
   const [state, dispatch] = useReducer(
@@ -450,6 +459,20 @@ export default function MiniTetris({ size = "default" }: MiniTetrisProps) {
     mq.addEventListener("change", h)
     return () => mq.removeEventListener("change", h)
   }, [])
+
+  /** Emit score / game-over changes to the parent (used by the 404 game-rotation
+   * shell to render a unified score line). Both refs are stable across renders
+   * so the effects only refire on the underlying state value. */
+  const onScoreChangeRef = useRef(onScoreChange)
+  onScoreChangeRef.current = onScoreChange
+  const onGameOverChangeRef = useRef(onGameOverChange)
+  onGameOverChangeRef.current = onGameOverChange
+  useEffect(() => {
+    onScoreChangeRef.current?.(state.score)
+  }, [state.score])
+  useEffect(() => {
+    onGameOverChangeRef.current?.(state.gameOver)
+  }, [state.gameOver])
 
   const dropMs = useMemo(
     () => (reduceMotion ? 1100 : 700),

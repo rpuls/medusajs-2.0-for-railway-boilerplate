@@ -3,7 +3,7 @@ import { Text } from "@medusajs/ui"
 import { Metadata } from "next"
 import Link from "next/link"
 
-import NotFoundTetrisSection from "@modules/common/components/not-found-tetris-section"
+import GameRotation from "@modules/common/components/games/game-rotation"
 import MainStoreShell from "@modules/layout/templates/main-store-shell"
 
 import NotFoundBodyBg from "./[countryCode]/(main)/not-found-body-bg"
@@ -48,7 +48,7 @@ export default function NotFound() {
             className="group-hover:rotate-45 ease-in-out duration-150 text-white"
           />
         </Link>
-        <NotFoundTetrisSection />
+        <GameRotation />
       </div>
     </MainStoreShell>
   )

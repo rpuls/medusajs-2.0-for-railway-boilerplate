@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 
 import InteractiveLink from "@modules/common/components/interactive-link"
-import NotFoundTetrisSection from "@modules/common/components/not-found-tetris-section"
+import GameRotation from "@modules/common/components/games/game-rotation"
 
 import NotFoundBodyBg from "./not-found-body-bg"
 
@@ -50,7 +50,7 @@ export default function NotFound() {
           The page you tried to access does not exist.
         </p>
         <InteractiveLink href="/">Go to frontpage</InteractiveLink>
-        <NotFoundTetrisSection />
+        <GameRotation />
       </div>
     </>
   )

@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 
 import InteractiveLink from "@modules/common/components/interactive-link"
-import NotFoundTetrisSection from "@modules/common/components/not-found-tetris-section"
+import GameRotation from "@modules/common/components/games/game-rotation"
 
 export const metadata: Metadata = {
   title: "404",
@@ -19,7 +19,7 @@ export default function NotFound() {
         again.
       </p>
       <InteractiveLink href="/">Go to frontpage</InteractiveLink>
-      <NotFoundTetrisSection />
+      <GameRotation />
     </div>
   )
 }
