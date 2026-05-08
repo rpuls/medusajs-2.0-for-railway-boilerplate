@@ -9,8 +9,8 @@ import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 type Props = {
-  params: { category: string[]; countryCode: string }
-  searchParams: {
+  params: Promise<{ category: string[]; countryCode: string }>
+  searchParams: Promise<{
     sortBy?: SortOptions
     page?: string
     minPrice?: string
@@ -18,7 +18,7 @@ type Props = {
     inStock?: string
     brand?: string
     fabric?: string
-  }
+  }>
 }
 
 const parsePositiveNumber = (value?: string) => {
@@ -63,9 +63,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { product_categories } = await getCategoryByHandle(
-      params.category
-    )
+    const { category, countryCode } = await params
+    const { product_categories } = await getCategoryByHandle(category)
 
     const title = product_categories
       .map((category: StoreProductCategory) => category.name)
@@ -79,10 +78,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       alternates: {
-        canonical: `/${params.countryCode}/categories/${params.category.join("/")}`,
+        canonical: `/${countryCode}/categories/${category.join("/")}`,
       },
       openGraph: {
-        url: buildAbsoluteUrl(`/${params.countryCode}/categories/${params.category.join("/")}`),
+        url: buildAbsoluteUrl(`/${countryCode}/categories/${category.join("/")}`),
         title: `${title} | ${SEO.siteName}`,
         description,
       },
@@ -98,11 +97,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const { sortBy, page, minPrice, maxPrice, inStock, brand, fabric } = searchParams
+  const { category, countryCode } = await params
+  const { sortBy, page, minPrice, maxPrice, inStock, brand, fabric } = await searchParams
 
-  const { product_categories } = await getCategoryByHandle(
-    params.category
-  )
+  const { product_categories } = await getCategoryByHandle(category)
 
   if (!product_categories) {
     notFound()
@@ -118,7 +116,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       inStock={inStock === "1"}
       brand={brand?.trim() || undefined}
       fabric={fabric?.trim() || undefined}
-      countryCode={params.countryCode}
+      countryCode={countryCode}
     />
   )
 }

@@ -12,8 +12,8 @@ import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 type Props = {
-  params: { handle: string; countryCode: string }
-  searchParams: {
+  params: Promise<{ handle: string; countryCode: string }>
+  searchParams: Promise<{
     page?: string
     sortBy?: SortOptions
     minPrice?: string
@@ -21,7 +21,7 @@ type Props = {
     inStock?: string
     brand?: string
     fabric?: string
-  }
+  }>
 }
 
 const parsePositiveNumber = (value?: string) => {
@@ -71,7 +71,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const collection = await getCollectionByHandle(params.handle)
+  const { handle, countryCode } = await params
+  const collection = await getCollectionByHandle(handle)
 
   if (!collection) {
     notFound()
@@ -81,10 +82,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: collection.title,
     description: `${collection.title} collection`,
     alternates: {
-      canonical: `/${params.countryCode}/collections/${collection.handle}`,
+      canonical: `/${countryCode}/collections/${collection.handle}`,
     },
     openGraph: {
-      url: buildAbsoluteUrl(`/${params.countryCode}/collections/${collection.handle}`),
+      url: buildAbsoluteUrl(`/${countryCode}/collections/${collection.handle}`),
       title: `${collection.title} | ${SEO.siteName}`,
       description: `${collection.title} collection`,
     },
@@ -99,9 +100,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {
-  const { sortBy, page, minPrice, maxPrice, inStock, brand, fabric } = searchParams
+  const { handle, countryCode } = await params
+  const { sortBy, page, minPrice, maxPrice, inStock, brand, fabric } = await searchParams
 
-  const collection = await getCollectionByHandle(params.handle).then(
+  const collection = await getCollectionByHandle(handle).then(
     (collection: StoreCollection) => collection
   )
 
@@ -119,7 +121,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
       inStock={inStock === "1"}
       brand={brand?.trim() || undefined}
       fabric={fabric?.trim() || undefined}
-      countryCode={params.countryCode}
+      countryCode={countryCode}
     />
   )
 }
