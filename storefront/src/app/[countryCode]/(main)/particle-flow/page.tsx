@@ -2,7 +2,8 @@ import { Metadata } from "next"
 
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import ParticleFlowTuner from "./particle-flow-tuner"
+import NewmixTunerExperience from "@modules/common/components/newmix-tuner-experience"
+import { V3_TUNING } from "./v3-splash"
 
 type MetadataProps = {
   params: Promise<{ countryCode: string }>
@@ -45,7 +46,12 @@ export default function ParticleFlowPage() {
         </div>
       </div>
       <div className="pt-14">
-        <ParticleFlowTuner />
+        <NewmixTunerExperience
+          lsKeyPrefix="particle-flow"
+          initialTuning={V3_TUNING}
+          sectionAriaLabel="SC Prints — particle flow"
+          bodyClassWhileMounted="particle-flow-page"
+        />
       </div>
     </div>
   )

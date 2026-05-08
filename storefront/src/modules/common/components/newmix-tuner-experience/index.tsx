@@ -6,14 +6,6 @@ import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-he
 import type { NewmixLiveTuning } from "@modules/home/components/home-particle-logo-hero/newmix-live-tuning"
 import { mergeNewmixLiveTuning } from "@modules/home/components/home-particle-logo-hero/newmix-live-tuning"
 
-import { V3_TUNING } from "./v3-splash"
-
-const LS_KEY = "particle-flow-tuning-v1"
-const LS_DISABLED_KEY = "particle-flow-disabled-groups-v1"
-const LS_DISABLED_SLIDERS_KEY = "particle-flow-disabled-sliders-v1"
-const LS_RENDER_KEY = "particle-flow-render-v1"
-const LS_GRADIENT_KEY = "particle-flow-gradient-v1"
-
 /** Render-only knobs that don't fit in the NewmixLiveTuning shape (those are
  * physics; these are visuals). Persisted separately so they don't pollute the
  * tuning payload. */
@@ -524,6 +516,45 @@ const GROUPS: Group[] = [
         max: 0.5,
         step: 0.01,
       },
+      {
+        key: "fieldPressureStrength",
+        label: "Pressure projection",
+        description:
+          "Stam-style fluid-solver step that subtracts the divergent component of the velocity field — vortices form/persist instead of smearing outward. The single most important knob for making the field feel like fluid. 0 = disabled (gas-like); 0.25-0.5 = clean curling; >0.7 may lock up.",
+        min: 0,
+        max: 1,
+        step: 0.02,
+      },
+      {
+        key: "fieldPressureIterations",
+        label: "Pressure iterations",
+        description:
+          "Number of pressure-projection passes per frame. More = closer to true incompressibility but more expensive. 1-2 covers most cases at this grid resolution.",
+        min: 1,
+        max: 4,
+        step: 1,
+        format: (v) => `${Math.round(v)}×`,
+      },
+      {
+        key: "fieldDrivenCursor",
+        label: "Cursor pushes field",
+        description:
+          "Newmix-style toggle. OFF (0) = cursor force pushes particles directly (classic). ON (1) = cursor force is deposited into the field cell, particles read the field bilinearly. Combined with pressure projection, makes the cursor feel like stirring fluid instead of pushing a rake through sand.",
+        min: 0,
+        max: 1,
+        step: 1,
+        format: (v) => (v >= 0.5 ? "ON" : "OFF"),
+      },
+      {
+        key: "fieldStrokeSubdivisionPx",
+        label: "Stroke subdivide",
+        description:
+          "When the cursor moves more than this many bitmap pixels in a frame (a flick), the cursor inject is subdivided so velocity is deposited at every step along the path — fast cursor movement deposits everywhere it travelled, not just at the endpoint. Newmix uses 6px. 0 = no subdivision.",
+        min: 0,
+        max: 30,
+        step: 1,
+        format: (v) => (v <= 0 ? "off" : `${Math.round(v)}px`),
+      },
     ],
   },
   {
@@ -858,23 +889,62 @@ const INT_KEYS = new Set<keyof NewmixLiveTuning>([
   "idleThresholdMs",
 ])
 
-function loadTuning(): NewmixLiveTuning {
-  const merged = mergeNewmixLiveTuning(V3_TUNING)
+/** Page-specific configuration. Each instance (one per route) gets its own
+ * `lsKeyPrefix` so localStorage state stays isolated. */
+export type NewmixTunerExperienceProps = {
+  /** Prefix for all localStorage keys this instance touches. */
+  lsKeyPrefix: string
+  /** Default tuning values used when localStorage is empty + on Reset. */
+  initialTuning?: Partial<NewmixLiveTuning>
+  /** Default render values (particle size + count). */
+  initialRender?: Partial<RenderTuning>
+  /** Default gradient preset id. */
+  initialGradientId?: string
+  /** Aria label for the canvas section. */
+  sectionAriaLabel?: string
+  /** Body class applied while this experience is mounted, used to hide the
+   * site footer + chat widget so they don't overlap the tuner panel. */
+  bodyClassWhileMounted?: string
+}
+
+type LsKeys = {
+  tuning: string
+  disabled: string
+  disabledSliders: string
+  render: string
+  gradient: string
+}
+
+function buildLsKeys(prefix: string): LsKeys {
+  return {
+    tuning: `${prefix}-tuning-v1`,
+    disabled: `${prefix}-disabled-groups-v1`,
+    disabledSliders: `${prefix}-disabled-sliders-v1`,
+    render: `${prefix}-render-v1`,
+    gradient: `${prefix}-gradient-v1`,
+  }
+}
+
+function loadTuning(
+  keys: LsKeys,
+  initial: Partial<NewmixLiveTuning>
+): NewmixLiveTuning {
+  const merged = mergeNewmixLiveTuning(initial)
   if (typeof window === "undefined") return merged
   try {
-    const raw = localStorage.getItem(LS_KEY)
+    const raw = localStorage.getItem(keys.tuning)
     if (!raw) return merged
     const parsed = JSON.parse(raw) as Partial<NewmixLiveTuning>
-    return mergeNewmixLiveTuning({ ...V3_TUNING, ...parsed })
+    return mergeNewmixLiveTuning({ ...initial, ...parsed })
   } catch {
     return merged
   }
 }
 
-function loadDisabledGroups(): Set<string> {
+function loadDisabledGroups(keys: LsKeys): Set<string> {
   if (typeof window === "undefined") return new Set()
   try {
-    const raw = localStorage.getItem(LS_DISABLED_KEY)
+    const raw = localStorage.getItem(keys.disabled)
     if (!raw) return new Set()
     const parsed = JSON.parse(raw) as string[]
     return new Set(parsed)
@@ -883,22 +953,26 @@ function loadDisabledGroups(): Set<string> {
   }
 }
 
-function loadRender(): RenderTuning {
-  if (typeof window === "undefined") return { ...RENDER_DEFAULTS }
+function loadRender(
+  keys: LsKeys,
+  initial: Partial<RenderTuning>
+): RenderTuning {
+  const base = { ...RENDER_DEFAULTS, ...initial }
+  if (typeof window === "undefined") return base
   try {
-    const raw = localStorage.getItem(LS_RENDER_KEY)
-    if (!raw) return { ...RENDER_DEFAULTS }
+    const raw = localStorage.getItem(keys.render)
+    if (!raw) return base
     const parsed = JSON.parse(raw) as Partial<RenderTuning>
-    return { ...RENDER_DEFAULTS, ...parsed }
+    return { ...base, ...parsed }
   } catch {
-    return { ...RENDER_DEFAULTS }
+    return base
   }
 }
 
-function loadDisabledSliders(): Set<keyof NewmixLiveTuning> {
+function loadDisabledSliders(keys: LsKeys): Set<keyof NewmixLiveTuning> {
   if (typeof window === "undefined") return new Set()
   try {
-    const raw = localStorage.getItem(LS_DISABLED_SLIDERS_KEY)
+    const raw = localStorage.getItem(keys.disabledSliders)
     if (!raw) return new Set()
     const parsed = JSON.parse(raw) as string[]
     return new Set(parsed as Array<keyof NewmixLiveTuning>)
@@ -907,15 +981,15 @@ function loadDisabledSliders(): Set<keyof NewmixLiveTuning> {
   }
 }
 
-function loadGradientId(): string {
-  if (typeof window === "undefined") return DEFAULT_GRADIENT_ID
+function loadGradientId(keys: LsKeys, fallback: string): string {
+  if (typeof window === "undefined") return fallback
   try {
-    const raw = localStorage.getItem(LS_GRADIENT_KEY)
-    if (!raw) return DEFAULT_GRADIENT_ID
+    const raw = localStorage.getItem(keys.gradient)
+    if (!raw) return fallback
     const found = GRADIENT_PRESETS.find((p) => p.id === raw)
-    return found ? found.id : DEFAULT_GRADIENT_ID
+    return found ? found.id : fallback
   } catch {
-    return DEFAULT_GRADIENT_ID
+    return fallback
   }
 }
 
@@ -930,22 +1004,43 @@ function formatVal(spec: SliderSpec, v: number): string {
   return v.toFixed(2)
 }
 
-export default function ParticleFlowTuner() {
-  const [tuning, setTuning] = useState<NewmixLiveTuning>(() => loadTuning())
-  const [render, setRender] = useState<RenderTuning>(() => loadRender())
-  const [gradientId, setGradientId] = useState<string>(() => loadGradientId())
+export default function NewmixTunerExperience(
+  props: NewmixTunerExperienceProps
+) {
+  const {
+    lsKeyPrefix,
+    initialTuning = {},
+    initialRender = {},
+    initialGradientId = DEFAULT_GRADIENT_ID,
+    sectionAriaLabel = "SC Prints — particle flow",
+    bodyClassWhileMounted = "particle-flow-page",
+  } = props
+  /** Memoize keys so the load* identity is stable. */
+  const lsKeys = useMemo(() => buildLsKeys(lsKeyPrefix), [lsKeyPrefix])
+  const initialTuningRef = useRef(initialTuning)
+  const initialRenderRef = useRef(initialRender)
+  const initialGradientIdRef = useRef(initialGradientId)
+  const [tuning, setTuning] = useState<NewmixLiveTuning>(() =>
+    loadTuning(lsKeys, initialTuningRef.current)
+  )
+  const [render, setRender] = useState<RenderTuning>(() =>
+    loadRender(lsKeys, initialRenderRef.current)
+  )
+  const [gradientId, setGradientId] = useState<string>(() =>
+    loadGradientId(lsKeys, initialGradientIdRef.current)
+  )
   const [disabledGroups, setDisabledGroups] = useState<Set<string>>(() =>
-    loadDisabledGroups()
+    loadDisabledGroups(lsKeys)
   )
   const [disabledSliders, setDisabledSliders] = useState<
     Set<keyof NewmixLiveTuning>
-  >(() => loadDisabledSliders())
+  >(() => loadDisabledSliders(lsKeys))
 
   /** Debounce particleCount changes — every 1k bump otherwise rebuilds the
    * 55k-particle field and causes a flash. We commit to the prop only after
    * the slider has been still for ~250ms. */
   const [appliedParticleCount, setAppliedParticleCount] = useState<number>(
-    () => loadRender().particleCount
+    () => loadRender(lsKeys, initialRenderRef.current).particleCount
   )
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -957,13 +1052,14 @@ export default function ParticleFlowTuner() {
   const [activeGroup, setActiveGroup] = useState<string>(GROUPS[0]!.id)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
-  /** Hide the (main) layout's footer + chat widget while this page is mounted. */
+  /** Hide the (main) layout's footer + chat widget while this experience is
+   * mounted. The class itself is page-configurable. */
   useEffect(() => {
-    document.body.classList.add("particle-flow-page")
+    document.body.classList.add(bodyClassWhileMounted)
     return () => {
-      document.body.classList.remove("particle-flow-page")
+      document.body.classList.remove(bodyClassWhileMounted)
     }
-  }, [])
+  }, [bodyClassWhileMounted])
 
   useEffect(() => {
     if (!open) return
@@ -1013,38 +1109,38 @@ export default function ParticleFlowTuner() {
       for (const k of Array.from(ALL_SLIDER_KEYS)) {
         ;(payload as Record<string, number>)[k as string] = tuning[k as keyof NewmixLiveTuning]
       }
-      localStorage.setItem(LS_KEY, JSON.stringify(payload))
+      localStorage.setItem(lsKeys.tuning, JSON.stringify(payload))
       localStorage.setItem(
-        LS_DISABLED_KEY,
+        lsKeys.disabled,
         JSON.stringify(Array.from(disabledGroups))
       )
       localStorage.setItem(
-        LS_DISABLED_SLIDERS_KEY,
+        lsKeys.disabledSliders,
         JSON.stringify(Array.from(disabledSliders))
       )
-      localStorage.setItem(LS_RENDER_KEY, JSON.stringify(render))
-      localStorage.setItem(LS_GRADIENT_KEY, gradientId)
+      localStorage.setItem(lsKeys.render, JSON.stringify(render))
+      localStorage.setItem(lsKeys.gradient, gradientId)
     } catch {
       /* ignore quota */
     }
-  }, [tuning, disabledGroups, disabledSliders, render, gradientId])
+  }, [tuning, disabledGroups, disabledSliders, render, gradientId, lsKeys])
 
-  const resetToV3 = useCallback(() => {
-    setTuning(mergeNewmixLiveTuning(V3_TUNING))
+  const resetToInitial = useCallback(() => {
+    setTuning(mergeNewmixLiveTuning(initialTuningRef.current))
     setDisabledGroups(new Set())
     setDisabledSliders(new Set())
-    setRender({ ...RENDER_DEFAULTS })
-    setGradientId(DEFAULT_GRADIENT_ID)
+    setRender({ ...RENDER_DEFAULTS, ...initialRenderRef.current })
+    setGradientId(initialGradientIdRef.current)
     try {
-      localStorage.removeItem(LS_KEY)
-      localStorage.removeItem(LS_DISABLED_KEY)
-      localStorage.removeItem(LS_DISABLED_SLIDERS_KEY)
-      localStorage.removeItem(LS_RENDER_KEY)
-      localStorage.removeItem(LS_GRADIENT_KEY)
+      localStorage.removeItem(lsKeys.tuning)
+      localStorage.removeItem(lsKeys.disabled)
+      localStorage.removeItem(lsKeys.disabledSliders)
+      localStorage.removeItem(lsKeys.render)
+      localStorage.removeItem(lsKeys.gradient)
     } catch {
       /* ignore */
     }
-  }, [])
+  }, [lsKeys])
 
   /** Compute the effective tuning the hero will use: per-group overrides
    * applied for any group whose toggle is off. Live — every slider drag or
@@ -1100,26 +1196,26 @@ export default function ParticleFlowTuner() {
   )
   const activeIsEnabled = !disabledGroups.has(activeGroupSpec.id)
 
+  /** Inline `<style>` block: scoped to the page-configurable body class so
+   * each tuner instance hides only its own host page's chrome. */
+  const bodyHideCss = `
+    body.${bodyClassWhileMounted} > footer,
+    body.${bodyClassWhileMounted} footer.relative,
+    body.${bodyClassWhileMounted} button[aria-label="Open chat"],
+    body.${bodyClassWhileMounted} button[aria-label="Close chat"] {
+      display: none !important;
+    }
+  `
+
   return (
     <>
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            body.particle-flow-page > footer,
-            body.particle-flow-page footer.relative,
-            body.particle-flow-page button[aria-label="Open chat"],
-            body.particle-flow-page button[aria-label="Close chat"] {
-              display: none !important;
-            }
-          `,
-        }}
-      />
+      <style dangerouslySetInnerHTML={{ __html: bodyHideCss }} />
 
       <HomeParticleLogoHero
         presentation="embedded"
         interactionMode="newmix"
         animatedParticleCap={appliedParticleCount}
-        sectionAriaLabel="SC Prints — particle flow"
+        sectionAriaLabel={sectionAriaLabel}
         newmixLiveTuning={effectiveTuning}
         wordmarkGradient={{
           angleDeg: activeGradient.angleDeg,
@@ -1435,7 +1531,7 @@ export default function ParticleFlowTuner() {
             <div className="flex gap-1.5">
               <button
                 type="button"
-                onClick={resetToV3}
+                onClick={resetToInitial}
                 className="rounded-md border border-white/15 bg-transparent px-2.5 py-1 text-[11px] font-medium text-white/65 transition-colors hover:bg-white/5 hover:text-white/90"
               >
                 Reset

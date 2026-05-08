@@ -195,19 +195,40 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   })
   const beforeCount = ((beforeRows.data?.[0] as { items?: unknown[] } | undefined)?.items ?? []).length
 
-  await addToCartWorkflow(req.scope).run({
-    input: {
-      cart_id: cartId,
-      items: [
-        {
-          variant_id: variantId,
-          quantity,
-          unit_price: unitPriceMajor,
-          metadata: mergedMetadata,
-        },
-      ],
-    },
-  })
+  // Wrap the workflow run so internal failures (workflow steps, DB errors,
+  // anything that throws a plain `Error` rather than a `MedusaError`)
+  // surface their actual message to the storefront. Without this wrap, the
+  // Medusa framework error-handler middleware catches the un-typed error
+  // and replies with the generic "An unknown error occurred." — which is
+  // exactly what we were seeing in the customizer.
+  try {
+    await addToCartWorkflow(req.scope).run({
+      input: {
+        cart_id: cartId,
+        items: [
+          {
+            variant_id: variantId,
+            quantity,
+            unit_price: unitPriceMajor,
+            metadata: mergedMetadata,
+          },
+        ],
+      },
+    })
+  } catch (workflowError) {
+    // Re-throw as a typed MedusaError so the framework's default branch
+    // doesn't replace the message. INVALID_DATA → 400; UNEXPECTED_STATE →
+    // 500. We pick UNEXPECTED_STATE so retries are obvious to the customer
+    // (it isn't a payload validation problem).
+    const detail =
+      workflowError instanceof Error
+        ? `${workflowError.name}: ${workflowError.message}`
+        : String(workflowError)
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `addToCartWorkflow failed for variant ${variantId}, qty ${quantity}, unit_price ${unitPriceMajor}. ${detail}`
+    )
+  }
 
   const afterRows = await query.graph({
     entity: "cart",

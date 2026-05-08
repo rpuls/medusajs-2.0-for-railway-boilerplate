@@ -72,6 +72,10 @@ import type { ViscousCoffeeLiveTuning } from "./viscous-coffee-live-tuning"
 import { mergeViscousCoffeeLiveTuning } from "./viscous-coffee-live-tuning"
 import type { NewmixLiveTuning } from "./newmix-live-tuning"
 import { mergeNewmixLiveTuning } from "./newmix-live-tuning"
+import type { FlowLiveTuning } from "./flow-live-tuning"
+import { mergeFlowLiveTuning } from "./flow-live-tuning"
+import type { DisplacedLiveTuning } from "./displaced-live-tuning"
+import { mergeDisplacedLiveTuning } from "./displaced-live-tuning"
 import type { VelocityField } from "./velocity-field"
 import {
   clearVelocityField,
@@ -79,6 +83,7 @@ import {
   decayVelocityField,
   diffuseVelocityField,
   injectVelocity,
+  pressureProjectVelocityField,
   sampleVelocityField,
 } from "./velocity-field"
 import { sampleCurlNoise } from "./curl-noise"
@@ -88,10 +93,6 @@ import {
   ensureSpatialHash,
   pickNeighbor,
 } from "./spatial-hash"
-import type { FlowLiveTuning } from "./flow-live-tuning"
-import { mergeFlowLiveTuning } from "./flow-live-tuning"
-import type { DisplacedLiveTuning } from "./displaced-live-tuning"
-import { mergeDisplacedLiveTuning } from "./displaced-live-tuning"
 
 const DEFAULT_LOGO_SRC = "/branding/sc-prints-logo-transparent.png"
 const FALLBACK_SRC = "/branding/sc-prints-logo-white.png"
@@ -649,7 +650,12 @@ function applyNewmixCaptureImpulse(
   gy: number,
   /** Mouse speed (bitmap px / frame). Forces fade to zero below `motionGateSpeed`. */
   mouseSpeed: number,
-  t: NewmixLiveTuning
+  t: NewmixLiveTuning,
+  /** When provided AND `t.fieldDrivenCursor > 0.5`, the computed cursor
+   * impulse is INJECTED INTO THE FIELD at the particle's location instead of
+   * applied to the particle directly. Newmix-style: cursor pushes the field,
+   * particles then read the field bilinearly elsewhere in the loop. */
+  fieldForInjection: VelocityField | null = null
 ): void {
   if (cx <= -9000 || radius <= 0) {
     return
@@ -768,8 +774,40 @@ function applyNewmixCaptureImpulse(
     }
   }
   const finalScale = motionScale * speedCouplingMult * paddleMult * massMult
-  p.vx += ax * finalScale
-  p.vy += ay * finalScale
+  /** Newmix-style cursor-pushes-field path: instead of writing the impulse to
+   * the particle's own velocity, deposit it into the velocity-field cell at
+   * the particle's current position. Particles then read the field bilinearly
+   * later in the loop, so the cursor's effect persists across frames in the
+   * field rather than being lost the moment the cursor moves on. */
+  if (
+    fieldForInjection != null &&
+    t.fieldDrivenCursor > 0.5 &&
+    t.fieldStrength > 0
+  ) {
+    /** Reuse `injectVelocity` semantics by writing directly to one cell —
+     * tighter than a Gaussian splat because we're already at the particle's
+     * exact position. The field's diffusion pass then spreads it. */
+    const ci = Math.max(
+      0,
+      Math.min(
+        fieldForInjection.cols - 1,
+        Math.floor(p.x / fieldForInjection.cellW)
+      )
+    )
+    const cj = Math.max(
+      0,
+      Math.min(
+        fieldForInjection.rows - 1,
+        Math.floor(p.y / fieldForInjection.cellH)
+      )
+    )
+    const cellIdx = cj * fieldForInjection.cols + ci
+    fieldForInjection.vx[cellIdx]! += ax * finalScale
+    fieldForInjection.vy[cellIdx]! += ay * finalScale
+  } else {
+    p.vx += ax * finalScale
+    p.vy += ay * finalScale
+  }
 }
 
 /**
@@ -1834,18 +1872,14 @@ type Props = {
    */
   animatedParticleCap?: number
   /**
-   * `"fluidWake"` — radial wake disks. `"blackHole"` — capture disk + trail follow.
-   * `"viscousCoffee"` — polyline path memory (tangent + shear), viscous slow fill-in.
-   * `"newmix"` — direction-aware capture swirl + 3s wake follow (newmixcoffee.com style).
+   * `"newmix"` — Newmix-style cursor-pushes-field with pressure projection;
+   * particles ride the field bilinearly. The only supported interactive mode.
+   * `"default"` — kept for back-compat; behaves the same as `newmix` at runtime.
+   *
+   * Earlier modes (`fluidWake`, `blackHole`, `viscousCoffee`, `flow`, `displaced`)
+   * are no longer wired up — every caller in the codebase uses `"newmix"`.
    */
-  interactionMode?:
-    | "default"
-    | "fluidWake"
-    | "blackHole"
-    | "viscousCoffee"
-    | "newmix"
-    | "flow"
-    | "displaced"
+  interactionMode?: "default" | "newmix"
   /** Overrides default `aria-label` on the outer `<section>` (embedded). */
   sectionAriaLabel?: string
   /**
@@ -1961,6 +1995,10 @@ export default function HomeParticleLogoHero({
   /** Scratch buffer (length cols*rows*2) reused across frames by the diffusion
    * pass. Resized in lockstep with the field. */
   const newmixVelocityFieldScratchRef = useRef<Float32Array | null>(null)
+  /** Separate scratch buffer (length cols*rows) for the pressure-projection
+   * pass — holds the per-cell pressure scalar between the divergence and
+   * gradient steps. */
+  const newmixVelocityFieldPressureRef = useRef<Float32Array | null>(null)
   /** Scratch tuple reused across the per-particle field-sample call to avoid
    * per-frame `[number, number]` allocation. */
   const newmixVelocityFieldSampleRef = useRef<[number, number]>([0, 0])
@@ -2389,15 +2427,8 @@ export default function HomeParticleLogoHero({
     canvasCCtxRef.current = ctx2
     particlesRef.current = particles
     logoInteractBoundsRef.current = logoHomeBounds(particles)
-    if (interactionModeRef.current === "viscousCoffee") {
-      viscousCoffeeWakeParticlesRef.current = createCoffeeWakeParticlePool(
-        W,
-        H,
-        viscousCoffeeLiveMergedRef.current.wakeParticleCount
-      )
-      viscousWakeBuiltCountRef.current =
-        viscousCoffeeLiveMergedRef.current.wakeParticleCount
-    } else {
+    /** viscousCoffee mode is no longer wired up — always nullify the wake pool. */
+    {
       viscousCoffeeWakeParticlesRef.current = null
     }
     const { sx, sy } = canvasScale(c0)
@@ -2446,9 +2477,10 @@ export default function HomeParticleLogoHero({
   buildRef.current = build
 
   useEffect(() => {
-    if (interactionModeRef.current !== "viscousCoffee") {
-      return
-    }
+    /** viscousCoffee wake pool was the only consumer of this rebuild effect;
+     * with that mode removed the effect is a no-op. Kept as a placeholder
+     * so the surrounding hook order doesn't shift. */
+    return
     if (!portalReady || !layerReady) {
       return
     }
@@ -2711,13 +2743,17 @@ export default function HomeParticleLogoHero({
           }
         }
 
-        const fluidWake = interactionModeRef.current === "fluidWake"
-        const blackHole = interactionModeRef.current === "blackHole"
-        const viscousCoffee =
-          interactionModeRef.current === "viscousCoffee"
+        /** Dead modes (`fluidWake`, `blackHole`, `viscousCoffee`, `flow`,
+         * `displaced`) are no longer reachable — every caller uses `"newmix"`.
+         * Hard-coding them to `false` lets TypeScript narrow the conditionals
+         * in the per-particle dispatch below; the dead branches stay as
+         * unreachable code (deleted in a follow-up cleanup pass). */
+        const fluidWake = false as boolean
+        const blackHole = false as boolean
+        const viscousCoffee = false as boolean
         const newmix = interactionModeRef.current === "newmix"
-        const flow = interactionModeRef.current === "flow"
-        const displaced = interactionModeRef.current === "displaced"
+        const flow = false as boolean
+        const displaced = false as boolean
         const vc = viscousCoffee ? viscousCoffeeLiveMergedRef.current : null
         const nm = newmix ? newmixLiveMergedRef.current : null
         const fl = flow ? flowLiveMergedRef.current : null
@@ -3083,28 +3119,69 @@ export default function HomeParticleLogoHero({
             newmixVelocityFieldScratchRef.current = new Float32Array(
               nf.cols * nf.rows * 2
             )
+            newmixVelocityFieldPressureRef.current = new Float32Array(
+              nf.cols * nf.rows
+            )
           }
           velocityField = newmixVelocityFieldRef.current
           if (velocityField) {
             /** Inject the cursor's smoothed velocity into cells around the cursor
              * — only when the cursor is actually moving. A still cursor adds
              * nothing, so the field gets to coast on whatever was deposited by
-             * the last stroke. */
+             * the last stroke. Stroke subdivision: when the cursor moves more
+             * than `fieldStrokeSubdivisionPx` in a single frame (a flick), we
+             * inject at every step along the path so the entire stroke
+             * deposits velocity, not just the endpoint — Newmix uses 6px. */
             if (
               cursorOk &&
               inNewmixStipple &&
               !entranceActive &&
               newmixSpoonSpeed > 0.05
             ) {
-              injectVelocity(
-                velocityField,
-                currentMouseX,
-                currentMouseY,
-                newmixSpoonGx,
-                newmixSpoonGy,
-                nm.fieldInjectRadiusBmp,
-                nm.fieldInjectStrength
-              )
+              const prev = newmixTickPrevCursorRef.current
+              const haveValidPrev =
+                prev.x > -9000 &&
+                prev.y > -9000 &&
+                Number.isFinite(prev.x) &&
+                Number.isFinite(prev.y)
+              const subdivPx = Math.max(0, nm.fieldStrokeSubdivisionPx)
+              if (haveValidPrev && subdivPx > 0) {
+                const dxStroke = currentMouseX - prev.x
+                const dyStroke = currentMouseY - prev.y
+                const strokeDist = Math.hypot(dxStroke, dyStroke)
+                const steps = Math.max(
+                  1,
+                  Math.ceil(strokeDist / subdivPx)
+                )
+                /** Spread total inject across the steps so accumulated
+                 * energy doesn't scale with cursor speed (a flick at 100
+                 * px/frame would otherwise deposit 16× more than a slow
+                 * drag — the flick already deposits along a longer path,
+                 * which is the only fair amplification). */
+                const perStepStrength = nm.fieldInjectStrength / steps
+                for (let s = 1; s <= steps; s++) {
+                  const u = s / steps
+                  injectVelocity(
+                    velocityField,
+                    prev.x + dxStroke * u,
+                    prev.y + dyStroke * u,
+                    newmixSpoonGx,
+                    newmixSpoonGy,
+                    nm.fieldInjectRadiusBmp,
+                    perStepStrength
+                  )
+                }
+              } else {
+                injectVelocity(
+                  velocityField,
+                  currentMouseX,
+                  currentMouseY,
+                  newmixSpoonGx,
+                  newmixSpoonGy,
+                  nm.fieldInjectRadiusBmp,
+                  nm.fieldInjectStrength
+                )
+              }
             }
             /** Lateral diffusion — energy seeps outward from the inject site
              * each frame so the swirl spreads beyond the cursor's path. */
@@ -3116,6 +3193,22 @@ export default function HomeParticleLogoHero({
                 velocityField,
                 nm.fieldDiffusion,
                 newmixVelocityFieldScratchRef.current
+              )
+            }
+            /** Pressure projection — Stam-style fluid-solver step that
+             * subtracts the divergent component of the velocity field so
+             * vortices form/persist instead of smearing. Run AFTER diffusion
+             * but BEFORE decay so the projected field is what particles
+             * sample this frame. */
+            if (
+              nm.fieldPressureStrength > 0 &&
+              newmixVelocityFieldPressureRef.current
+            ) {
+              pressureProjectVelocityField(
+                velocityField,
+                newmixVelocityFieldPressureRef.current,
+                nm.fieldPressureStrength,
+                nm.fieldPressureIterations
               )
             }
             /** Per-frame decay (frame-rate-correct via dt). */
@@ -3235,73 +3328,7 @@ export default function HomeParticleLogoHero({
           let __pIdx = -1
           for (const p of particles) {
             __pIdx++
-            if (blackHole) {
-              if (
-                p.bhTrailUntilMs != null &&
-                nowTick >= p.bhTrailUntilMs
-              ) {
-                p.bhTrailUntilMs = null
-              }
-
-              const distM = cursorOk
-                ? Math.hypot(
-                    p.x - currentMouseX,
-                    p.y - currentMouseY
-                  )
-                : Infinity
-              const inCaptureDiskGeom =
-                cursorOk && distM < bhRadius
-              const captured =
-                inBlackHoleStipple && inCaptureDiskGeom
-
-              if (captured) {
-                p.bhTrailUntilMs = null
-                applyBlackHoleImpulse(
-                  p,
-                  currentMouseX,
-                  currentMouseY,
-                  bhRadius
-                )
-              } else if (
-                p.bhPrevInRadius &&
-                !inCaptureDiskGeom
-              ) {
-                p.bhTrailUntilMs = nowTick + BLACK_HOLE_TRAIL_FOLLOW_MS
-              }
-
-              const trailing =
-                p.bhTrailUntilMs != null &&
-                nowTick < p.bhTrailUntilMs &&
-                !inCaptureDiskGeom
-
-              if (trailing && cursorOk) {
-                applyBlackHoleTrailFollow(
-                  p,
-                  currentMouseX,
-                  currentMouseY
-                )
-              }
-
-              let springMul = 1
-              if (captured && distM < bhRadius * 1.05) {
-                const u = Math.max(0, 1 - distM / (bhRadius * 1.05))
-                springMul =
-                  1 - BLACK_HOLE_HOME_SPRING_SUPPRESS * u * u
-              }
-
-              const homeSpring = trailing ? 0 : 1
-
-              p.vx +=
-                (p.hx - p.x) * springKBase * springMul * homeSpring
-              p.vy +=
-                (p.hy - p.y) * springKBase * springMul * homeSpring
-              p.vx *= frictionK
-              p.vy *= frictionK
-              p.x += p.vx
-              p.y += p.vy
-
-              p.bhPrevInRadius = inCaptureDiskGeom
-            } else if (newmix && nm != null) {
+            if (newmix && nm != null) {
               /** Expire the wake timer if the deadline has passed — start home return.
                * Also force-expire ALL trailing particles when the cursor is idle, so the
                * wordmark fills back in promptly when the user stops moving the mouse rather
@@ -3370,7 +3397,9 @@ export default function HomeParticleLogoHero({
               )
 
               if (captured) {
-                /** Apply the swirl impulse — particle is being curled around the cursor. */
+                /** Apply the swirl impulse — particle is being curled around the cursor.
+                 * When `fieldDrivenCursor` is on AND the field is active, the impulse
+                 * is rerouted into the field cell instead of into the particle. */
                 applyNewmixCaptureImpulse(
                   p,
                   currentMouseX,
@@ -3379,7 +3408,8 @@ export default function HomeParticleLogoHero({
                   newmixSpoonGx,
                   newmixSpoonGy,
                   newmixSpoonSpeed,
-                  nm
+                  nm,
+                  velocityField
                 )
                 /** In-disk carry-along: particle advects with the cursor at `inDiskCarryFactor`
                  * of mouse velocity. Produces the "spoon scooping up coffee" feel — captured
@@ -3866,318 +3896,8 @@ export default function HomeParticleLogoHero({
                   }
                 }
               }
-            } else if (flow && fl != null) {
-              /** FLUID FLOW with CARRY-STATE TRAIL. Three modes per particle:
-               *  1. INSIDE RADIUS: displace to rim + start/refresh carry timer.
-               *  2. CARRIED (timer not expired): receive cursor velocity each frame, very
-               *     low home-spring; particles travel along cursor's path producing the
-               *     long visible trail.
-               *  3. FREE: spring + friction + gravity drift home.
-               */
-              p.bhPrevInRadius = false
-              const dxc = p.x - currentMouseX
-              const dyc = p.y - currentMouseY
-              const dist = cursorOk ? Math.hypot(dxc, dyc) : Infinity
-              const inRadius =
-                cursorOk &&
-                inFlowStipple &&
-                dist < flowRadius &&
-                dist > 1e-6
-              const sv = flowSpoonVelRef.current
-              const cursorSpeed = Math.hypot(sv.vx, sv.vy)
-              const motionScale = Math.min(
-                1,
-                cursorSpeed / Math.max(0.01, fl.motionGateSpeed)
-              )
-
-              if (inRadius) {
-                /** DISPLACEMENT to rim with tangential slide-around bias. */
-                const inv = 1 / dist
-                const ux = dxc * inv
-                const uy = dyc * inv
-                const tangX = -uy
-                const tangY = ux
-                const dot = tangX * sv.vx + tangY * sv.vy
-                const sgn = dot >= 0 ? 1 : -1
-                const tangAmp = flowRadius * fl.tangentialBias * sgn
-                const targetX =
-                  currentMouseX + ux * flowRadius + tangX * tangAmp
-                const targetY =
-                  currentMouseY + uy * flowRadius + tangY * tangAmp
-                const lerp = Math.max(
-                  0,
-                  Math.min(1, fl.displacementStrength)
-                )
-                p.x = p.x + (targetX - p.x) * lerp
-                p.y = p.y + (targetY - p.y) * lerp
-                /** Initial velocity handoff (motion-gated). */
-                const handoffWeight =
-                  Math.max(0, Math.min(1, fl.velocityHandoff)) *
-                  motionScale
-                const newVx = sv.vx * fl.carryFactor
-                const newVy = sv.vy * fl.carryFactor
-                p.vx = p.vx * (1 - handoffWeight) + newVx * handoffWeight
-                p.vy = p.vy * (1 - handoffWeight) + newVy * handoffWeight
-                /** Mark as carried and refresh the carry deadline. Each pass through the
-                 * cursor refreshes the timer so particles inside the disk don't expire. */
-                p.bhTrailUntilMs = nowTick + fl.carryDurationMs
-              }
-
-              const carried =
-                p.bhTrailUntilMs != null &&
-                nowTick < p.bhTrailUntilMs
-              if (
-                p.bhTrailUntilMs != null &&
-                nowTick >= p.bhTrailUntilMs
-              ) {
-                /** Carry expired — drop into free physics. */
-                p.bhTrailUntilMs = null
-              }
-
-              if (carried && !inRadius) {
-                /** CARRIED PARTICLE — outside the radius but still in the carry window.
-                 * Continuously accelerate toward the cursor's smoothed velocity vector so
-                 * the particle is dragged along the cursor's path. Home spring is
-                 * suppressed so the trail can extend far from home. Carry friction is
-                 * high so velocity persists through the carry window. */
-                const targetVx = sv.vx * fl.carryFactor
-                const targetVy = sv.vy * fl.carryFactor
-                /** Acceleration toward target velocity (motion-gated so stationary cursor
-                 * doesn't keep re-accelerating particles). */
-                p.vx +=
-                  (targetVx - p.vx) * fl.carryStrength * motionScale
-                p.vy +=
-                  (targetVy - p.vy) * fl.carryStrength * motionScale
-                /** Suppressed home spring — typically ~0 contribution while carried. */
-                const homeFactor = 1 - fl.carryHomeSpringSuppress
-                p.vx += (p.hx - p.x) * fl.springStiffness * homeFactor
-                p.vy += (p.hy - p.y) * fl.springStiffness * homeFactor
-                /** Slight gravity even while carried — adds the "particles slowly fall"
-                 * character to the trail. */
-                p.vy += fl.gravity * 0.3
-                /** High friction — preserves velocity along the trail. */
-                p.vx *= fl.carryFriction
-                p.vy *= fl.carryFriction
-                p.x += p.vx
-                p.y += p.vy
-              } else if (!inRadius) {
-                /** FREE PHYSICS: spring + friction + gravity drift home. */
-                p.vx += (p.hx - p.x) * fl.springStiffness
-                p.vy += (p.hy - p.y) * fl.springStiffness
-                p.vy += fl.gravity
-                p.vx *= fl.friction
-                p.vy *= fl.friction
-                p.x += p.vx
-                p.y += p.vy
-                /** Snap to home when close + slow. */
-                const dxh = p.hx - p.x
-                const dyh = p.hy - p.y
-                if (
-                  dxh * dxh + dyh * dyh < 0.5 &&
-                  p.vx * p.vx + p.vy * p.vy < 0.05
-                ) {
-                  p.x = p.hx
-                  p.y = p.hy
-                  p.vx = 0
-                  p.vy = 0
-                }
-              }
-            } else if (displaced && dp != null) {
-              /** SET-POSITION DISPLACED MODEL.
-               * When the cursor moves through a particle (within radius), SET its position
-               * to the cursor's perpendicular rim on the side of the cursor's motion that
-               * the particle was on. The particle then HOLDS that displaced position with
-               * a very weak home spring + high friction for `displaceTimeMs`. After the
-               * timer expires, normal physics drift it home with gravity (sand-fall).
-               *
-               * The wake is the cumulative pattern of held-position particles along the
-               * cursor's path — they don't move forward, they stay put and slowly fade. */
-              p.bhPrevInRadius = false
-
-              const distM = cursorOk
-                ? Math.hypot(
-                    p.x - currentMouseX,
-                    p.y - currentMouseY
-                  )
-                : Infinity
-              const inRadius =
-                cursorOk &&
-                distM < displacedRadius &&
-                distM > 1e-6
-
-              const sv = flowSpoonVelRef.current
-              const cursorSpeed = Math.hypot(sv.vx, sv.vy)
-              const cursorMoving = cursorSpeed > dp.motionThreshold
-
-              if (
-                inRadius &&
-                cursorMoving &&
-                inDisplacedStipple
-              ) {
-                /** Compute cursor heading direction (unit vector) and perpendicular. */
-                const ux = sv.vx / cursorSpeed
-                const uy = sv.vy / cursorSpeed
-                const perpX = -uy
-                const perpY = ux
-                /** Determine which side of the cursor's motion direction the particle is on. */
-                const dx = p.x - currentMouseX
-                const dy = p.y - currentMouseY
-                const sideDot = dx * perpX + dy * perpY
-                const sideSign = sideDot >= 0 ? 1 : -1
-                /** SET position to the rim on that side, perpendicular to cursor motion. */
-                p.x =
-                  currentMouseX + perpX * sideSign * displacedRadius
-                p.y =
-                  currentMouseY + perpY * sideSign * displacedRadius
-                p.vx = 0
-                p.vy = 0
-                /** Mark as displaced with timer; record swirl side. */
-                p.bhTrailUntilMs = nowTick + dp.displaceTimeMs
-                p.newmixSwirlSide = sideSign
-              }
-
-              const stillDisplaced =
-                p.bhTrailUntilMs != null &&
-                nowTick < p.bhTrailUntilMs
-
-              if (
-                p.bhTrailUntilMs != null &&
-                nowTick >= p.bhTrailUntilMs
-              ) {
-                /** Timer just expired — clear state, drop into free physics next branch. */
-                p.bhTrailUntilMs = null
-                p.newmixSwirlSide = undefined
-              }
-
-              if (stillDisplaced && !inRadius) {
-                /** HOLD displaced position. Very weak home spring + high friction so the
-                 * particle barely drifts — it "stays in place" until the timer expires. */
-                p.vx += (p.hx - p.x) * dp.holdSpring
-                p.vy += (p.hy - p.y) * dp.holdSpring
-                p.vx *= dp.holdFriction
-                p.vy *= dp.holdFriction
-                p.x += p.vx
-                p.y += p.vy
-              } else if (!inRadius) {
-                /** FREE PHYSICS — drift home with gravity (sand-fall). */
-                p.vx += (p.hx - p.x) * dp.returnSpring
-                p.vy += (p.hy - p.y) * dp.returnSpring
-                p.vy += dp.returnGravity
-                p.vx *= dp.returnFriction
-                p.vy *= dp.returnFriction
-                p.x += p.vx
-                p.y += p.vy
-                /** Snap to home when close + slow. */
-                const dxh = p.hx - p.x
-                const dyh = p.hy - p.y
-                if (
-                  dxh * dxh + dyh * dyh < 0.5 &&
-                  p.vx * p.vx + p.vy * p.vy < 0.05
-                ) {
-                  p.x = p.hx
-                  p.y = p.hy
-                  p.vx = 0
-                  p.vy = 0
-                }
-              }
-            } else if (viscousCoffee && vc != null) {
-              p.bhPrevInRadius = false
-              p.bhTrailUntilMs = null
-
-              applyViscousCoffeeAlongPath(
-                p,
-                viscousCoffeeTrailRef.current,
-                vc
-              )
-
-              if (applyCoffeeSpoon) {
-                applyViscousCoffeeSpoonField(
-                  p,
-                  currentMouseX,
-                  currentMouseY,
-                  spoonGx,
-                  spoonGy,
-                  vc
-                )
-              }
-
-              p.vx += (p.hx - p.x) * springKBase
-              p.vy += (p.hy - p.y) * springKBase
-              p.vx *= frictionK
-              p.vy *= frictionK
-              p.x += p.vx
-              p.y += p.vy
-            } else {
-              p.bhPrevInRadius = false
-              p.bhTrailUntilMs = null
-
-              applyRadialSwirlImpulse(
-                p,
-                currentMouseX,
-                currentMouseY,
-                DRAG_RADIUS,
-                1,
-                1
-              )
-
-              if (fluidWake && trailSnap.length > 1) {
-                const nTrail = trailSnap.length
-                const maxReach =
-                  DRAG_RADIUS * (1 + WAKE_TRAIL_RADIUS_FRAC)
-                for (let i = 0; i < nTrail - 1; i++) {
-                  const pt = trailSnap[i]!
-                  if (
-                    Math.abs(p.x - pt.x) > maxReach ||
-                    Math.abs(p.y - pt.y) > maxReach
-                  ) {
-                    continue
-                  }
-                  if (Math.hypot(p.x - pt.x, p.y - pt.y) > maxReach) {
-                    continue
-                  }
-                  const age = nTrail - 1 - i
-                  const w =
-                    WAKE_TRAIL_FORCE_FRAC *
-                    Math.pow(WAKE_TRAIL_AGE_DECAY, age)
-                  applyRadialSwirlImpulse(
-                    p,
-                    pt.x,
-                    pt.y,
-                    DRAG_RADIUS * WAKE_TRAIL_RADIUS_FRAC,
-                    w,
-                    WAKE_TRAIL_SWIRL_FRAC
-                  )
-                }
-              }
-
-              let springMul = 1
-
-              p.vx += (p.hx - p.x) * springKBase * springMul
-              p.vy += (p.hy - p.y) * springKBase * springMul
-              p.vx *= frictionK
-              p.vy *= frictionK
-              p.x += p.vx
-              p.y += p.vy
             }
           }
-        }
-
-        const coffeeWake = viscousCoffeeWakeParticlesRef.current
-        if (
-          viscousCoffee &&
-          !entranceActive &&
-          coffeeWake != null &&
-          coffeeWake.length > 0
-        ) {
-          assignCoffeeWakeTargets(
-            coffeeWake,
-            viscousCoffeeTrailRef.current,
-            viscousCoffeeLiveMergedRef.current
-          )
-          integrateCoffeeWakeParticles(
-            coffeeWake,
-            viscousCoffeeLiveMergedRef.current
-          )
         }
 
         const dotDprTick = c2.width / Math.max(1, c2.clientWidth)
@@ -4204,7 +3924,7 @@ export default function HomeParticleLogoHero({
           parallaxY,
           applyCanvasParallax,
           renderSize,
-          viscousCoffee ? viscousCoffeeWakeParticlesRef.current : null,
+          null,
           newmix && nm != null ? nm.wakeAlphaMult : 1,
           /** Newmix mode uses crisp single-pass rendering; other modes keep the dual-pass bloom. */
           !newmix,
@@ -4295,15 +4015,9 @@ export default function HomeParticleLogoHero({
       const parts = particlesRef.current
       const b = logoInteractBoundsRef.current
       const stippleR =
-        interactionModeRef.current === "viscousCoffee"
-          ? viscousCoffeeLiveMergedRef.current.dragRadius
-          : interactionModeRef.current === "newmix"
-            ? newmixLiveMergedRef.current.radius
-            : interactionModeRef.current === "flow"
-              ? flowLiveMergedRef.current.radius
-              : interactionModeRef.current === "displaced"
-                ? displacedLiveMergedRef.current.radius
-                : DRAG_RADIUS
+        interactionModeRef.current === "newmix"
+          ? newmixLiveMergedRef.current.radius
+          : DRAG_RADIUS
       const nearStipple = pointerInStippleInteractionRange(
         mx,
         my,

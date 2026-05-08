@@ -240,6 +240,27 @@ export type NewmixLiveTuning = {
    * mass). 1 = foam behaves identically to non-foam (effectively disabled). */
   foamForceMultiplier: number
 
+  /** Pressure projection strength (0..1). Stam-style fluid-solver step that
+   * subtracts the divergent component of the velocity field — without it, the
+   * field smears uniformly outward; with it, vortices form and persist
+   * naturally. 0 = disabled; 0.25-0.5 = clean curling; >0.7 may lock up. */
+  fieldPressureStrength: number
+  /** Number of pressure-projection passes per frame. More = closer to true
+   * incompressibility, more expensive. 1-2 is usually enough. */
+  fieldPressureIterations: number
+  /** When > 0.5, the cursor force is INJECTED INTO THE FIELD (Newmix-style)
+   * instead of pushed onto particles directly. The cursor force profile
+   * (sideSwirl, frontPush, etc.) is preserved but it deposits velocity into
+   * cells, which particles then read bilinearly. Combined with pressure
+   * projection this is what makes the effect feel like stirring fluid
+   * rather than pushing a rake through sand. */
+  fieldDrivenCursor: number
+  /** Cursor-stroke subdivision distance (bitmap px). When the cursor moves
+   * more than this in a single frame, the inject is applied at every step
+   * along the path so a fast flick deposits velocity everywhere it travelled.
+   * Newmix uses 6px. 0 = no subdivision (only inject at endpoint). */
+  fieldStrokeSubdivisionPx: number
+
   /** Asymmetric paddling — biases the cursor's force toward particles that
    * are BROADSIDE to the motion direction (perpendicular to heading), away
    * from particles that are along the heading. 0 = no bias (current
@@ -332,6 +353,13 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   metaballGlowRadius: 8,
   metaballBlurPx: 12,
   metaballThreshold: 0.45,
+  /** Pressure projection — disabled by default; turn on alongside the field. */
+  fieldPressureStrength: 0.0,
+  fieldPressureIterations: 1,
+  /** Cursor-driven field — disabled by default. Toggle on to switch to
+   * Newmix-style cursor-pushes-field behaviour. */
+  fieldDrivenCursor: 0,
+  fieldStrokeSubdivisionPx: 6,
   /** Crema layer — disabled by default. */
   foamFraction: 0.0,
   foamForceMultiplier: 1.6,

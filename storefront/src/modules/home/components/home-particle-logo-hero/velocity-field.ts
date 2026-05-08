@@ -146,6 +146,110 @@ export function diffuseVelocityField(
   vy.set(sy)
 }
 
+/**
+ * Pressure projection — Stam-style fluid-solver pass that subtracts the
+ * divergent component of the velocity field. Without this, energy injected by
+ * the cursor smears outward uniformly and the swirl looks like spreading
+ * gas instead of curling fluid. With it, vortices preserve their shape and
+ * eddies form naturally.
+ *
+ * The pass is a Sobel-like convolution: each cell's "pressure" scalar is
+ * computed as the divergence of the velocity at that cell, then the
+ * pressure gradient is subtracted from each cell's velocity. Reference:
+ * Newmix's particle code does exactly this with a 3x3 Sobel kernel.
+ *
+ * Allocates nothing if `scratch` is correctly pre-sized.
+ *
+ * @param field      The velocity field to project.
+ * @param scratch    Buffer of length `cols * rows` for the pressure scalar.
+ *                   Caller-allocated to avoid per-frame alloc.
+ * @param strength   How strongly to subtract the gradient (0..1). 0 = no
+ *                   correction; 1 = full Stam-style projection. 0.25-0.5
+ *                   is a good range — enough to make swirls curl, not so
+ *                   much that the field locks up.
+ * @param iterations How many projection passes to run. More = closer to
+ *                   true incompressibility but more expensive. 1-2 is
+ *                   usually enough at this grid resolution.
+ */
+export function pressureProjectVelocityField(
+  field: VelocityField,
+  scratch: Float32Array,
+  strength: number,
+  iterations: number
+): void {
+  if (strength <= 0 || iterations <= 0) return
+  const { cols, rows, vx, vy } = field
+  const k = Math.max(0, Math.min(1, strength)) * 0.25
+  const passes = Math.max(1, Math.min(8, Math.floor(iterations)))
+  for (let pass = 0; pass < passes; pass++) {
+    /** Step 1: compute pressure scalar at each cell as the divergence of
+     * velocity, sampled with a Sobel-like kernel for smoother results than
+     * the bare 4-neighbor finite difference. */
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const idx = j * cols + i
+        const left = i > 0 ? idx - 1 : idx
+        const right = i < cols - 1 ? idx + 1 : idx
+        const up = j > 0 ? idx - cols : idx
+        const down = j < rows - 1 ? idx + cols : idx
+        const upLeft = j > 0 && i > 0 ? idx - cols - 1 : idx
+        const upRight = j > 0 && i < cols - 1 ? idx - cols + 1 : idx
+        const downLeft = j < rows - 1 && i > 0 ? idx + cols - 1 : idx
+        const downRight =
+          j < rows - 1 && i < cols - 1 ? idx + cols + 1 : idx
+        /** Sobel-x on vx (horizontal gradient of horizontal velocity). */
+        const dvx =
+          0.5 * vx[upLeft]! +
+          vx[left]! +
+          0.5 * vx[downLeft]! -
+          0.5 * vx[upRight]! -
+          vx[right]! -
+          0.5 * vx[downRight]!
+        /** Sobel-y on vy (vertical gradient of vertical velocity). */
+        const dvy =
+          0.5 * vy[upLeft]! +
+          vy[up]! +
+          0.5 * vy[upRight]! -
+          0.5 * vy[downLeft]! -
+          vy[down]! -
+          0.5 * vy[downRight]!
+        scratch[idx] = (dvx + dvy) * k
+      }
+    }
+    /** Step 2: subtract pressure gradient from velocity. */
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const idx = j * cols + i
+        const left = i > 0 ? idx - 1 : idx
+        const right = i < cols - 1 ? idx + 1 : idx
+        const up = j > 0 ? idx - cols : idx
+        const down = j < rows - 1 ? idx + cols : idx
+        const upLeft = j > 0 && i > 0 ? idx - cols - 1 : idx
+        const upRight = j > 0 && i < cols - 1 ? idx - cols + 1 : idx
+        const downLeft = j < rows - 1 && i > 0 ? idx + cols - 1 : idx
+        const downRight =
+          j < rows - 1 && i < cols - 1 ? idx + cols + 1 : idx
+        const gx =
+          0.5 * scratch[upLeft]! +
+          scratch[left]! +
+          0.5 * scratch[downLeft]! -
+          0.5 * scratch[upRight]! -
+          scratch[right]! -
+          0.5 * scratch[downRight]!
+        const gy =
+          0.5 * scratch[upLeft]! +
+          scratch[up]! +
+          0.5 * scratch[upRight]! -
+          0.5 * scratch[downLeft]! -
+          scratch[down]! -
+          0.5 * scratch[downRight]!
+        vx[idx]! += gx * k
+        vy[idx]! += gy * k
+      }
+    }
+  }
+}
+
 /** Bilinearly sample the field at a bitmap coordinate. Returns `[vx, vy]`. */
 export function sampleVelocityField(
   field: VelocityField,
