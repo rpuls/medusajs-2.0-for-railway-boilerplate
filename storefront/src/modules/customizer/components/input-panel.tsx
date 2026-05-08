@@ -13,6 +13,15 @@ type InputPanelProps = {
   canRemoveImage: boolean
   /** When provided, each upload tile shows a bin icon that removes it from "My uploads" after confirmation. */
   onDeleteUpload?: (uploadId: string) => void
+  /**
+   * When false, the panel hides the uploader, "My uploads", and Remove button
+   * behind a placeholder telling the customer which wizard step to finish
+   * first. When undefined, the panel is fully enabled (back-compat for the
+   * standalone /customizer route).
+   */
+  enabled?: boolean
+  /** Optional copy shown in the placeholder when `enabled` is false. */
+  disabledMessage?: { title: string; body: string }
   className?: string
 }
 
@@ -25,6 +34,8 @@ export default function InputPanel({
   onRemoveSelectedImage,
   canRemoveImage,
   onDeleteUpload,
+  enabled = true,
+  disabledMessage,
   className,
 }: InputPanelProps) {
   const [text, setText] = useState("Your Brand")
@@ -53,12 +64,26 @@ export default function InputPanel({
         <p className="mt-1 text-xs text-ui-fg-subtle">Upload art and text.</p>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-ui-fg-subtle">Image uploader (PNG/JPG/SVG)</label>
-        <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={onFileChange} className="w-full text-sm" />
-      </div>
+      {!enabled ? (
+        <div className="rounded-lg border border-dashed border-ui-border-base bg-ui-bg-subtle/60 p-3">
+          <p className="text-xs font-semibold text-ui-fg-base">
+            {disabledMessage?.title ?? "Customize first"}
+          </p>
+          <p className="mt-1 text-xs text-ui-fg-subtle">
+            {disabledMessage?.body ??
+              "Pick your colour, print location, and print size on the right. Once that's done, you can upload artwork here."}
+          </p>
+        </div>
+      ) : null}
 
-      {uploads.length > 0 ? (
+      {enabled ? (
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-ui-fg-subtle">Image uploader (PNG/JPG/SVG)</label>
+          <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={onFileChange} className="w-full text-sm" />
+        </div>
+      ) : null}
+
+      {enabled && uploads.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <label className="text-xs font-medium text-ui-fg-subtle">My uploads</label>
@@ -123,7 +148,7 @@ export default function InputPanel({
         </div>
       ) : null}
 
-      {pendingDeleteId && onDeleteUpload && typeof document !== "undefined"
+      {enabled && pendingDeleteId && onDeleteUpload && typeof document !== "undefined"
         ? createPortal(
             <div
               className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
@@ -165,15 +190,17 @@ export default function InputPanel({
           )
         : null}
 
-      <button
-        type="button"
-        className="w-full rounded-md border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-900 hover:bg-rose-100 disabled:opacity-50"
-        onClick={onRemoveSelectedImage}
-        disabled={!canRemoveImage}
-        title={canRemoveImage ? "Remove selected image from the canvas" : "Select an image layer first"}
-      >
-        Remove image
-      </button>
+      {enabled ? (
+        <button
+          type="button"
+          className="w-full rounded-md border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-900 hover:bg-rose-100 disabled:opacity-50"
+          onClick={onRemoveSelectedImage}
+          disabled={!canRemoveImage}
+          title={canRemoveImage ? "Remove selected image from the canvas" : "Select an image layer first"}
+        >
+          Remove image
+        </button>
+      ) : null}
 
       {/*
        * Text / curved text input was removed pending a redesign — the freeform

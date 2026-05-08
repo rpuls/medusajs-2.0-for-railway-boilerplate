@@ -2345,6 +2345,21 @@ export default function CustomizerTemplate({
                     onDeleteUpload={(uploadId) =>
                       setSessionUploads((current) => current.filter((entry) => entry.id !== uploadId))
                     }
+                    enabled={!embedded || (pdpStep1Done && pdpStep3Done)}
+                    disabledMessage={
+                      !pdpStep1Done
+                        ? {
+                            title: "Customize first",
+                            body: 'Click "Customize this product" on the right to start.',
+                          }
+                        : !pdpStep3Done
+                        ? {
+                            title: "Choose a print size",
+                            body:
+                              "Pick a print size on the right. Once that's done, you can upload artwork here.",
+                          }
+                        : undefined
+                    }
                     className="border-0 bg-transparent p-0"
                   />
                 </div>
