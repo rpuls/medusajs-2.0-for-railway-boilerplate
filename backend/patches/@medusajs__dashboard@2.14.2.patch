@@ -1,0 +1,122 @@
+diff --git a/dist/chunk-IQBAUTU5.mjs b/dist/chunk-IQBAUTU5.mjs
+index e3a72ee54ee1c53baaeae0ff7b3218352eacdba9..d0226b8e6c797794604bfe9ca60c0e6661d7f952 100644
+--- a/dist/chunk-IQBAUTU5.mjs
++++ b/dist/chunk-IQBAUTU5.mjs
+@@ -6,6 +6,9 @@ import {
+ import { useTranslation } from "react-i18next";
+ import { jsx, jsxs } from "react/jsx-runtime";
+ var ProductCell = ({ product }) => {
++  if (!product || typeof product !== "object") {
++    return /* @__PURE__ */ jsx("div", { className: "flex h-full w-full max-w-[250px] items-center gap-x-3 overflow-hidden", children: /* @__PURE__ */ jsx("span", { className: "truncate text-ui-fg-muted", children: "—" }) });
++  }
+   return /* @__PURE__ */ jsxs("div", { className: "flex h-full w-full max-w-[250px] items-center gap-x-3 overflow-hidden", children: [
+     /* @__PURE__ */ jsx("div", { className: "w-fit flex-shrink-0", children: /* @__PURE__ */ jsx(Thumbnail, { src: product.thumbnail }) }),
+     /* @__PURE__ */ jsx("span", { title: product.title, className: "truncate", children: product.title })
+diff --git a/dist/chunk-R65S6ZZV.mjs b/dist/chunk-R65S6ZZV.mjs
+index 41454fdc59eab04fcd0ce55551ae21a4ffe0bdc8..e26b94ec2e750889725c28e1b1c2dae65fe0185b 100644
+--- a/dist/chunk-R65S6ZZV.mjs
++++ b/dist/chunk-R65S6ZZV.mjs
+@@ -3,6 +3,14 @@ import {
+ } from "./chunk-C76H5USB.mjs";
+ 
+ // src/hooks/table/query/use-product-table-query.tsx
++var safeJsonParse = (raw) => {
++  if (!raw) return void 0;
++  try {
++    return JSON.parse(raw);
++  } catch {
++    return void 0;
++  }
++};
+ var DEFAULT_FIELDS = (
+   // TODO: Remove exclusion once we avoid including unnecessary relations by default in the query config
+   "id,title,handle,status,*collection,*sales_channels,variants.id,thumbnail,-type,-options,-tags,-images,-variants"
+@@ -47,8 +55,8 @@ var useProductTableQuery = ({
+     limit: pageSize,
+     offset: offset ? Number(offset) : 0,
+     sales_channel_id: sales_channel_id?.split(","),
+-    created_at: created_at ? JSON.parse(created_at) : void 0,
+-    updated_at: updated_at ? JSON.parse(updated_at) : void 0,
++    created_at: safeJsonParse(created_at),
++    updated_at: safeJsonParse(updated_at),
+     category_id: category_id?.split(","),
+     collection_id: collection_id?.split(","),
+     is_giftcard: is_giftcard ? is_giftcard === "true" : void 0,
+diff --git a/dist/chunk-V2CZ23VK.mjs b/dist/chunk-V2CZ23VK.mjs
+index 0377a7ffd0d505338789d64b9344c64b332dbff0..262abc544b0802391a9c7fcc2f898cdbb2997d7c 100644
+--- a/dist/chunk-V2CZ23VK.mjs
++++ b/dist/chunk-V2CZ23VK.mjs
+@@ -9,10 +9,14 @@ import {
+ import { useTranslation } from "react-i18next";
+ import { jsx } from "react/jsx-runtime";
+ var CollectionCell = ({ collection }) => {
+-  if (!collection) {
++  if (!collection || typeof collection !== "object" || Array.isArray(collection)) {
+     return /* @__PURE__ */ jsx(PlaceholderCell, {});
+   }
+-  return /* @__PURE__ */ jsx("div", { className: "flex h-full w-full items-center overflow-hidden", children: /* @__PURE__ */ jsx("span", { className: "truncate", children: collection.title }) });
++  const collTitle = collection.title;
++  if (collTitle == null || collTitle === "") {
++    return /* @__PURE__ */ jsx(PlaceholderCell, {});
++  }
++  return /* @__PURE__ */ jsx("div", { className: "flex h-full w-full items-center overflow-hidden", children: /* @__PURE__ */ jsx("span", { className: "truncate", children: collTitle }) });
+ };
+ var CollectionHeader = () => {
+   const { t } = useTranslation();
+@@ -24,12 +28,15 @@ import { useTranslation as useTranslation2 } from "react-i18next";
+ import { jsx as jsx2 } from "react/jsx-runtime";
+ var ProductStatusCell = ({ status }) => {
+   const { t } = useTranslation2();
+-  const [color, text] = {
++  const mapping = {
+     draft: ["grey", t("products.productStatus.draft")],
+     proposed: ["orange", t("products.productStatus.proposed")],
+     published: ["green", t("products.productStatus.published")],
+     rejected: ["red", t("products.productStatus.rejected")]
+-  }[status];
++  };
++  const entry = mapping[status];
++  const color = entry?.[0] ?? "grey";
++  const text = entry?.[1] ?? (status != null && status !== "" ? String(status) : "—");
+   return /* @__PURE__ */ jsx2(StatusCell, { color, children: text });
+ };
+ var ProductStatusHeader = () => {
+diff --git a/dist/product-detail-ZF64CTWE.mjs b/dist/product-detail-ZF64CTWE.mjs
+index 471c72e74d40cc72392c5174048ba653658cf937..4b2e0cedaff88af501c0a68801e2be1c2308bc3f 100644
+--- a/dist/product-detail-ZF64CTWE.mjs
++++ b/dist/product-detail-ZF64CTWE.mjs
+@@ -669,7 +669,7 @@ var ProductOrganizationSection = ({
+       SectionRow,
+       {
+         title: t("fields.categories"),
+-        value: product.categories?.length ? product.categories.map((pcat) => /* @__PURE__ */ jsx6(
++        value: product.categories?.length ? product.categories.filter((pcat) => pcat != null && typeof pcat === "object").map((pcat) => /* @__PURE__ */ jsx6(
+           OrganizationTag,
+           {
+             label: pcat.name,
+diff --git a/dist/product-sales-channels-QQ3DC5W3.mjs b/dist/product-sales-channels-QQ3DC5W3.mjs
+index 96c3d8a52361695db82b88c13d519a841644e7e8..4636c6be69a09f97c9a51e2b109452d744c2d241 100644
+--- a/dist/product-sales-channels-QQ3DC5W3.mjs
++++ b/dist/product-sales-channels-QQ3DC5W3.mjs
+@@ -58,17 +58,18 @@ var EditSalesChannelsForm = ({
+ }) => {
+   const { t } = useTranslation();
+   const { handleSuccess } = useRouteModal();
++  const safeSalesChannels = (product.sales_channels ?? []).filter((sc) => sc != null && typeof sc === "object" && sc.id != null);
+   const form = useForm({
+     defaultValues: {
+-      sales_channels: product.sales_channels?.map((sc) => sc.id) ?? []
++      sales_channels: safeSalesChannels.map((sc) => sc.id)
+     },
+     resolver: zodResolver(EditSalesChannelsSchema)
+   });
+   const { setValue } = form;
+-  const initialState = product.sales_channels?.reduce((acc, curr) => {
++  const initialState = safeSalesChannels.reduce((acc, curr) => {
+     acc[curr.id] = true;
+     return acc;
+-  }, {}) ?? {};
++  }, {});
+   const [rowSelection, setRowSelection] = useState(initialState);
+   useEffect(() => {
+     const ids = Object.keys(rowSelection);
