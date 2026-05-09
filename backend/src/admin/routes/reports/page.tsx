@@ -42,6 +42,7 @@ import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
 import { EmailChannelRoiChart } from "../../components/reports/email-channel-roi-chart"
 import { AnnotationsManager } from "../../components/reports/annotations-manager"
 import { OperationalTiles } from "../../components/reports/operational-tiles"
+import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -206,6 +207,11 @@ const ReportsPage = () => {
         <Tabs.Content value="production">
           <div className="grid grid-cols-1 gap-3">
             <SlaBreachChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <ReprintRateChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
