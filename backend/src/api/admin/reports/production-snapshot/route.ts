@@ -3,6 +3,7 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 import {
   PRODUCTION_STAGES,
+  STAGE_SLA_DAYS,
   type ProductionStage,
   isProductionStage,
 } from "../../../../lib/production-stage"
@@ -69,19 +70,6 @@ const dayCount = (fromIso: string | null | undefined): number => {
   if (!Number.isFinite(t)) return 0
   const ms = Date.now() - t
   return Math.max(0, Math.floor(ms / 86_400_000))
-}
-
-const STAGE_SLA_DAYS: Record<ProductionStage, number | null> = {
-  received: 1,
-  art_review: 1,
-  awaiting_approval: 2,
-  approved: 1,
-  blanks_ordered: 5,
-  blanks_arrived: 1,
-  in_production: 3,
-  quality_check: 1,
-  shipped: 7,
-  delivered: null,
 }
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {

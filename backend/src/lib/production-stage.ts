@@ -97,6 +97,27 @@ export const STAGES_THAT_EMAIL: ReadonlySet<ProductionStage> = new Set<Productio
 ])
 
 /**
+ * Per-stage SLA defaults (days). An order whose dwell at a stage exceeds
+ * the SLA is considered "breached"; >2× SLA is "severely breached".
+ * `null` means the stage has no SLA — `delivered` is terminal, not stuck.
+ *
+ * Calibrate against real throughput once a few weeks of history exist;
+ * these are starting points reflecting a typical SC Prints flow.
+ */
+export const STAGE_SLA_DAYS: Record<ProductionStage, number | null> = {
+  received: 1,
+  art_review: 1,
+  awaiting_approval: 2,
+  approved: 1,
+  blanks_ordered: 5,
+  blanks_arrived: 1,
+  in_production: 3,
+  quality_check: 1,
+  shipped: 7,
+  delivered: null,
+}
+
+/**
  * Decides whether a `from → to` stage transition should fire a customer email.
  *
  * Rules (in order):

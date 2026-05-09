@@ -31,6 +31,7 @@ import { AcquisitionTab } from "../../components/reports/acquisition-tab"
 import { FunnelChart } from "../../components/reports/funnel-chart"
 import { RfmChart } from "../../components/reports/rfm-chart"
 import { AovBySourceChart } from "../../components/reports/aov-by-source-chart"
+import { SlaBreachChart } from "../../components/reports/sla-breach-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -182,6 +183,11 @@ const ReportsPage = () => {
 
         <Tabs.Content value="production">
           <div className="grid grid-cols-1 gap-3">
+            <SlaBreachChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <TimeInStageChart
               fromIso={fromIso}
               toIso={toIso}
