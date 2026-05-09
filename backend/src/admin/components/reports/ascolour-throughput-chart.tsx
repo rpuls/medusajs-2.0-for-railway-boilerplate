@@ -100,6 +100,15 @@ regionId,
     <ReportCard
       title="AS Colour throughput"
       caption="Lead time = days between blanks_ordered and blanks_arrived stage transitions. Failure rate = orders with ascolour_status='failed'. Spike in p90 lead time means AS Colour is unreliable, not just slow."
+      help={{
+        title: "AS Colour throughput",
+        body: "How AS Colour is performing as a supplier. Lead time = days between the blanks_ordered and blanks_arrived stages on each order. Failure rate = orders the AS Colour API marked as 'failed'.",
+        bullets: [
+          "p90 lead time spiking but median holding = occasional bad batches; might be a fulfilment-warehouse issue. Worth flagging to your AS Colour rep.",
+          "Median creeping up = a real pattern — AS Colour is genuinely slower right now. Bake the new lead time into your customer ETAs.",
+          "Failure rate >5% triggers a red callout — chase a credit and consider a dual-supplier strategy if it persists.",
+        ],
+      }}
       loading={loading}
       error={error}
     >

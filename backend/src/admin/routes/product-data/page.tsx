@@ -2,6 +2,7 @@ import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Container, Heading, Tabs, Text } from "@medusajs/ui"
 import { CogSixTooth } from "@medusajs/icons"
 
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import ProductBulkDeletePage from "../product-bulk-delete/page"
 import SpreadsheetSyncPage from "../spreadsheet-sync/page"
 import SpreadsheetSyncUpdatePage from "../spreadsheet-sync-update/page"
@@ -25,7 +26,21 @@ const ProductDataPage = () => {
   return (
     <div className="flex flex-col gap-y-4">
       <Container className="flex flex-col gap-y-2">
-        <Heading level="h1">Product data</Heading>
+        <Heading level="h1" className="flex items-center">
+          Product data
+          <HelpTooltip
+            text={{
+              title: "Product data",
+              body: "Three bulk-catalog workflows on a single page. Each tab is a different surgical instrument — pick the right one before running.",
+              bullets: [
+                "Import new products: from a supplier CSV (DNC, FashionBiz, AS Colour, etc.). Creates products that don't exist yet — never use to tweak existing ones.",
+                "Update existing: patches columns on already-imported products. Matches by SKU; only patches the columns you tick.",
+                "Bulk delete: permanently removes products in batches. No undo. Use only for trimming retired ranges.",
+                "Result logs are scoped to your last action — they clear when you start a new sync or pick a new file.",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-subtle">
           Bulk operations on the product catalog. Each tab is a separate
           workflow — read the description before running, especially the

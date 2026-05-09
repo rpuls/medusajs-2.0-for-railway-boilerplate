@@ -118,6 +118,15 @@ regionId,
     <ReportCard
       title="Reorder rate & repeat customers"
       caption="Repeat-customer rate validates the loyalty signal. Reorder-line share measures the Phase 3 'Re-order from history' feature — high values mean customers find it useful."
+      help={{
+        title: "Reorder rate & repeat customers",
+        body: "Two signals: how many customers placed more than one order in the window (repeat-customer rate), and what share of all order lines were created via the 'Re-order' button on order history (reorder-line share).",
+        bullets: [
+          "Repeat-customer rate is the broad loyalty signal. Healthy stores see 30–50% in any 90-day window once they've been running long enough.",
+          "Reorder-line share validates the 'Re-order from history' feature — if it's high, customers are finding the button and using it. If it's near zero with otherwise good repeat rates, the button may be hidden.",
+          "Repeat orders without using the re-order button = customers rebuilding the design from scratch each time. That's friction worth fixing in onboarding copy.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

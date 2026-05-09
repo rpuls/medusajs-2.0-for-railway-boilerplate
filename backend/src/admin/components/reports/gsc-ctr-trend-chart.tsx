@@ -93,7 +93,16 @@ export const GscCtrTrendChart = ({
     <ReportCard
       title="GSC click-through rate trend"
       caption="Top 100 queries by impressions, with CTR vs the prior equal-length window. Losing queries usually mean stable rank but stale title/meta — a refresh often recovers."
-      help="Pulled from Google Search Console. CTR delta = (current CTR - prior CTR) / prior CTR. Position = average rank in SERPs. Investigate big CTR drops at stable position first — those are usually competitor pressure."
+      help={{
+        title: "GSC click-through rate trend",
+        body: "Top 100 search queries from Google Search Console, with click-through rate vs the prior equal-length window. Catches queries where you're losing clicks even though your ranking hasn't moved.",
+        bullets: [
+          "Big CTR drop + stable position = competitors changing their snippets / titles. Refresh your meta description and you usually recover.",
+          "CTR delta = (current CTR − prior CTR) ÷ prior CTR. Position is the average rank in SERPs over the window.",
+          "Queries where position is improving but CTR is dropping = likely cannibalisation; you have two pages competing for the same intent.",
+          "GSC data trails real time by 2–3 days, so the most recent window may show partial numbers.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

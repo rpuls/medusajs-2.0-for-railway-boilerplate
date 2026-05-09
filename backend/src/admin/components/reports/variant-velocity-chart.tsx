@@ -104,7 +104,16 @@ export const VariantVelocityChart = ({
     <ReportCard
       title="Variant velocity (12-week)"
       caption="Units sold per week per variant, with momentum classification. Hot SKUs need more inventory; cold ones need clearance."
-      help="Momentum = (units in last 6 weeks) / (units in previous 6 weeks). Hot ≥ 2×, Warm ≥ 1.25×, Steady 0.75-1.25×, Cooling 0.4-0.75×, Cold < 0.4×. Variants with no sales in 12 weeks are excluded — see the dead-stock report instead."
+      help={{
+        title: "Variant velocity (12-week)",
+        body: "Units sold per week per variant over the last 12 weeks, with momentum classification (Hot / Warm / Steady / Cooling / Cold). Tells you which variants are accelerating and which are losing steam — at the variant level, where reorders happen.",
+        bullets: [
+          "Hot variants (≥2× last 6 weeks vs prior 6) need more inventory before they stock-out and momentum dies.",
+          "Cold variants (<0.4×) need clearance — flash sale, bundle, or markdown before the working-capital cost compounds.",
+          "Steady is fine; reorder on standard cadence. Warm and Cooling are watch-list — confirm with another data point before acting.",
+          "Variants with no sales at all in 12 weeks are excluded from this report — see the aging-inventory report for those.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

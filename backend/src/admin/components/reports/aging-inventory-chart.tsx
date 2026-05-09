@@ -108,6 +108,16 @@ export const AgingInventoryChart = ({
     <ReportCard
       title="Aging inventory"
       caption="Stocked variants bucketed by days since last sale. Dead + Never-sold (red + grey) is working capital you should clear via flash sale, bundle, or markdown."
+      help={{
+        title: "Aging inventory",
+        body: "Every variant currently in stock, grouped by how long it's been since the last unit sold. The red and grey buckets — dead stock and never-sold — are working capital sitting idle.",
+        bullets: [
+          "Dead (>180 days since last sale) = clear via flash sale, free with another order, or charity donate (depending on cost basis).",
+          "Never sold = the SKU has stock but has never moved. Either marketing visibility, pricing, or product-fit is the issue. Pull and review.",
+          "Tail (90–180 days) = warning zone. Push it through a bundle or campaign before it tips into dead.",
+          "Stock levels read from the inventory↔variant link; if a variant is missing, sync the link table.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

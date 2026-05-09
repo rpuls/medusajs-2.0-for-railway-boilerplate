@@ -72,6 +72,15 @@ regionId,
     <ReportCard
       title="My Designs feature utilization"
       caption="Designs the customer saved to their personal library. Reuse rate measures whether saved designs translate into repeat orders — Phase 2 success signal."
+      help={{
+        title: "My Designs feature utilization",
+        body: "Two angles on the saved-designs feature: how many designs customers have saved to their personal library, and what share of those saved designs end up purchased (reuse rate).",
+        bullets: [
+          "High saves + low reuse = customers are parking designs as a 'maybe-later' but not coming back. The reorder reminder cron is the right tool to nudge them.",
+          "Low saves overall = the 'Save to my designs' button isn't visible enough or its value isn't clear. Worth A/B testing the affordance.",
+          "Reuse rate >40% means the feature is genuinely earning its keep — push it harder on the customizer landing.",
+        ],
+      }}
       loading={loading}
       error={error}
     >

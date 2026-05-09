@@ -128,6 +128,16 @@ export const SlaBreachChart = ({
     <ReportCard
       title="Stage SLA breach"
       caption="On-time vs breach (1-2× SLA) vs severe breach (>2× SLA), per stage. SLAs are defined in backend/src/lib/production-stage.ts. Stages with no recent transitions show no bars; calibrate SLAs against real data, not gut feel."
+      help={{
+        title: "Stage SLA breach",
+        body: "For each production stage, the share of orders that exited on-time, in breach (1–2× the SLA), or in severe breach (>2× the SLA). Pinpoints where the pipeline drags so you fix the right stage, not the symptom.",
+        bullets: [
+          "If 'art_review' is your worst breach, the bottleneck is reviewer capacity — not production. No amount of press time will fix it.",
+          "Severe-breach orders almost always hide a process gap (waiting on customer approval, missing artwork). Tag and triage them weekly.",
+          "SLAs live in backend/src/lib/production-stage.ts. If a stage shows >30% breach week-over-week, the SLA is wrong, not the team — bump it to match reality.",
+          "Stages with no recent transitions show no bars; just means nothing exited that stage in the window.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

@@ -104,7 +104,15 @@ export const PdpConversionChart = ({
     <ReportCard
       title="PDP conversion rate"
       caption="For each product page, GA4 page-views ÷ orders containing that product. Sort by views to find high-traffic-low-conversion pages — that's where the biggest copy / pricing / mockup wins live."
-      help="Conversion rate = (orders containing this product / page-views on /products/[handle]). Revenue per view = total line revenue / page-views. Note that GA4 page paths use the product handle, so renamed products lose history."
+      help={{
+        title: "PDP conversion rate",
+        body: "For each product detail page (PDP), how many GA4 page-views it received and how many of those views ended in an order containing that product. Sort by views to find your high-traffic-low-conversion pages — that's where copy / pricing / mockup tweaks pay best.",
+        bullets: [
+          "Conversion rate = orders containing this product ÷ page-views on /products/[handle].",
+          "Revenue per view ranks pages by how much they earn each time they're seen — better than raw conversion when comparing across price tiers.",
+          "GA4 page paths key off the product handle; renaming a product loses its history. Plan slug changes deliberately and merge totals manually if needed.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

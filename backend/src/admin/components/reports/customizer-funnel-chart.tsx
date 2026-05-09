@@ -83,6 +83,15 @@ export const CustomizerFunnelChart = ({
     <ReportCard
       title="Customizer abandonment funnel"
       caption="Design started → Added to cart → Purchased. Drop-off between Started and Cart is your biggest hidden conversion problem; drop-off between Cart and Purchased is checkout friction. Save-to-Designs is shown as a side action since it's a different intent path (saved-then-purchased is a different report)."
+      help={{
+        title: "Customizer abandonment funnel",
+        body: "Three steps: someone opens the customizer, finishes a design and adds it to cart, then purchases. The biggest hidden conversion lever in the store is usually the first drop — design-started → added-to-cart.",
+        bullets: [
+          "Big drop Started → Cart = the customizer is hard to use, the price reveal shocks them, or the artwork upload fails. Sit a friend down and watch them try; a usability test beats analytics here.",
+          "Big drop Cart → Purchased = checkout-friction. Same diagnosis as the main funnel — shipping shock, payment problems, login walls.",
+          "Save-to-Designs is shown alongside, not as a step in the funnel — it's a different intent (parking the design for later).",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

@@ -130,6 +130,16 @@ export const ChurnQueueChart = () => {
     <ReportCard
       title="Predicted churn / win-back queue"
       caption="Customers past 2× their typical reorder gap, classified by severity. Highest-LTV customers first — sending in bulk is risky, so the in-app 'Send batch' caps at 25 per run."
+      help={{
+        title: "Predicted churn / win-back queue",
+        body: "Each customer has a typical gap between orders (e.g. every 6 weeks). When they pass 2× that gap without ordering, they show up here as a churn risk. Severity escalates the further past that mark they go.",
+        bullets: [
+          "Highest-LTV customers appear first — losing one big customer is worse than losing five small ones.",
+          "The 'Send batch' button caps at 25 per run on purpose — sending personal-feeling emails in bulk de-risks the inbox-reputation hit and lets you watch reply quality.",
+          "Three severity tiers map to three different email variants (gentle nudge, stronger ask, last-chance). Tone is calibrated so the rude one only goes to people who are basically gone.",
+          "Send rate over a long period: don't email the same customer twice in a 60-day window.",
+        ],
+      }}
       loading={loading}
       error={error}
       rightAccessory={

@@ -224,6 +224,15 @@ regionId,
       <ReportCard
         title="Sales over time"
         caption={`${data?.granularity === "week" ? "Weekly" : "Daily"} totals over the selected window. Dashed grey line is the same window 365 days ago — for like-for-like comparison rather than rolling 30d.`}
+        help={{
+          title: "Sales over time",
+          body: "Revenue per day or week across the selected window. The dashed grey line is the same dates 365 days ago — a like-for-like seasonal benchmark rather than a rolling trailing comparison.",
+          bullets: [
+            "Pinned annotations from the strip above appear as vertical guides — useful for explaining spikes (campaigns, supplier delays, outages).",
+            "Compare against the orders chart below: rising sales + flat orders means AOV is climbing (you're winning on basket size, not acquisition).",
+            "Granularity flips automatically — narrow ranges (≤14 days) group daily, wider ranges group weekly.",
+          ],
+        }}
         loading={loading}
         error={error}
       >
@@ -306,6 +315,15 @@ regionId,
       <ReportCard
         title="Orders over time"
         caption="Order count per bucket. Compare against the sales chart above — a flat order count with rising sales means AOV is climbing (you're winning on basket size, not customer acquisition)."
+        help={{
+          title: "Orders over time",
+          body: "Order count per bucket — the volume side of the revenue equation. The dashed grey line shows last year's count for the same dates.",
+          bullets: [
+            "Flat orders + rising revenue → AOV is up (basket size winning, not acquisition).",
+            "Flat revenue + rising orders → AOV is down (discount creep, lower-margin SKUs, smaller bulk orders).",
+            "A sudden orders dip without revenue change usually means one or two big-ticket orders carried the day — risk if they don't repeat.",
+          ],
+        }}
         loading={loading}
         error={error}
       >
@@ -374,6 +392,15 @@ regionId,
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <ReportCard
           title="Top regions by sales"
+          help={{
+            title: "Top regions by sales",
+            body: "Revenue ranked by Medusa region in the selected window. Driven by the region attached to each order at checkout — typically tied to currency / country.",
+            bullets: [
+              "High revenue but low order count = wholesale or team buyers worth nurturing one-on-one.",
+              "Use this to prioritise where region-specific shipping promos or copy would land.",
+              "If a region you expected is missing, check Settings → Regions to confirm it's enabled and has products assigned.",
+            ],
+          }}
           loading={loading}
           error={error}
         >
@@ -417,6 +444,15 @@ regionId,
 
         <ReportCard
           title="Order status breakdown"
+          help={{
+            title: "Order status breakdown",
+            body: "Distribution of orders by Medusa status — pending / completed / archived / canceled. Reflects checkout completion, not production progress (use the Production tab for that).",
+            bullets: [
+              "A heavy 'pending' tail without payment usually means abandoned guest checkouts; cross-check Cart-to-order conversion below.",
+              "Sustained 'requires_action' means Stripe is asking for 3DS confirmation that customers aren't completing — review fraud rules.",
+              "Steady 'canceled' >5% in a window is worth digging into — usually a product issue or shipping shock.",
+            ],
+          }}
           loading={loading}
           error={error}
         >

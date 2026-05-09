@@ -12,6 +12,7 @@ import {
 } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import { sdk } from "../../lib/sdk"
 
 /** Minimal fields for list + variant count (+variants loads ids only via expansion). */
@@ -258,7 +259,21 @@ const ProductBulkDeletePage = () => {
   return (
     <div className="flex flex-col gap-6 p-8">
       <div className="flex flex-col gap-2">
-        <Heading level="h1">Product bulk delete</Heading>
+        <Heading level="h1" className="flex items-center">
+          Product bulk delete
+          <HelpTooltip
+            text={{
+              title: "Product bulk delete",
+              body: "Permanently delete products in batches via the Admin product batch API. There is no undo — deleted products and their variants, prices, and link rows are gone for good. Use only for trimming retired ranges out of the catalogue.",
+              bullets: [
+                "Workflow: search → select rows on each page (the checkbox) → 'Delete selected' → confirm in the modal that pops up.",
+                "Selection clears when you change page, page size, or the search filter — to delete across pages, do one page at a time.",
+                "Always verify your search filter is doing what you think it's doing before ticking the page-header checkbox. The page-header checkbox selects every row currently shown.",
+                "Search uses the same query as the main Products list (title, handle, description).",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-muted max-w-xl">
           Select products on each page using the checkboxes below, then confirm
           deletion. Selection is cleared when you change page, page size, or search.
@@ -270,8 +285,19 @@ const ProductBulkDeletePage = () => {
       <Container className="divide-y p-0">
         <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
           <div className="flex min-w-0 max-w-md flex-1 flex-col gap-2">
-            <Text size="small" weight="plus">
+            <Text size="small" weight="plus" className="flex items-center">
               Search
+              <HelpTooltip
+                text={{
+                  title: "Search",
+                  body: "Filter the product list by free-text. Same query semantics as the main Products page — matches across title, handle, and description.",
+                  bullets: [
+                    "Use a uniquely-identifying substring (e.g. 'as-colour-staple') rather than vague terms — the more specific, the safer to bulk-delete.",
+                    "Wildcards aren't supported; the search is a contains-match on the indexed fields.",
+                    "Search-first, select-second is the safe order. If you delete without filtering, the page-header checkbox selects whatever happens to be on screen.",
+                  ],
+                }}
+              />
             </Text>
             <Input
               type="search"

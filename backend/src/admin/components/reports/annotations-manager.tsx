@@ -12,6 +12,7 @@ import { Trash } from "@medusajs/icons"
 import { useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "./help-tooltip"
 
 type Annotation = {
   id: string
@@ -133,8 +134,19 @@ export const AnnotationsManager = () => {
     <Container className="flex flex-col gap-y-3 p-4">
       <div className="flex items-center justify-between gap-x-3">
         <div>
-          <Heading level="h2" className="text-base font-semibold">
+          <Heading level="h2" className="text-base font-semibold flex items-center">
             Annotations
+            <HelpTooltip
+              text={{
+                title: "Annotations",
+                body: "Pin a labelled marker to a specific date. The marker overlays as a vertical line on every time-series chart in Reports — so spikes, dips, and inflection points have an explanation instead of being mysteries.",
+                bullets: [
+                  "Use it for: campaign launches, ad pauses, supplier disruptions, outages, big single orders, public holidays, weather events.",
+                  "The label appears on the chart; the description (optional) shows in the annotations list here. Keep labels short — they show in chart space.",
+                  "Colour-code by category so you can scan a chart and see at a glance which type of event drove which spike (e.g. red for outages, green for campaigns).",
+                ],
+              }}
+            />
           </Heading>
           <Text size="xsmall" className="text-ui-fg-subtle">
             Pin events to dates so future-you reads patterns instead of

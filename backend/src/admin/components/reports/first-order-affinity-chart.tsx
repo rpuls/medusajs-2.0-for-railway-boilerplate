@@ -88,7 +88,15 @@ export const FirstOrderAffinityChart = ({
     <ReportCard
       title="First-order product affinity"
       caption="For customers whose only order to date fell in this window, which product they bought first. The top of this list is your 'front door' SKU — the one to feature for new visitors and cold ad traffic."
-      help="A customer counts as 'new' here if their first ever order falls in the window. We group by the highest-revenue line on that first order, so a $200 hoodie wins over a $5 sticker bundle they grabbed alongside."
+      help={{
+        title: "First-order product affinity",
+        body: "For customers whose only-ever order falls inside the window, which product they bought first. The top of this list is your 'front door' SKU — what to feature for cold ad traffic and new-visitor PDPs.",
+        bullets: [
+          "A customer counts as 'new' if their first-ever order falls in the window — repeat customers are excluded.",
+          "We group by the highest-revenue line on that first order, so a $200 hoodie wins over a $5 sticker bundle they grabbed alongside.",
+          "A short, concentrated list is healthy — too long and your homepage is confusing first-time visitors.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

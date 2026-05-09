@@ -71,6 +71,15 @@ export const CohortsChart = ({ regionId }: { regionId: string | null }) => {
     <ReportCard
       title="Cohort retention"
       caption="Each row is a cohort of customers who placed their first order in that month. Columns show that cohort's revenue in subsequent months. Darker = more revenue. Diagonal fade-out = cohorts dying off; bright far-right cells = active long-term loyalty."
+      help={{
+        title: "Cohort retention",
+        body: "Reading a cohort table: each row is the group of customers who placed their first order in a given month, and each column is how much that group spent in the months that followed. Darker cell = more revenue from that cohort that month.",
+        bullets: [
+          "Diagonal fade-out (top-left dark, bottom-right pale) = the typical 'cohorts die over time' pattern; healthy if not too steep.",
+          "Bright cells far to the right = a cohort that's still active years later. Those are your most valuable customers — find what they have in common and acquire more like them.",
+          "A row that suddenly goes pale before the others is a flagged month — something happened in the customer experience just after they signed up. Worth investigating.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

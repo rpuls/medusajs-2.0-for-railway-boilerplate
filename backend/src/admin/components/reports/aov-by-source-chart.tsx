@@ -107,6 +107,15 @@ export const AovBySourceChart = ({
     <ReportCard
       title="AOV by traffic source"
       caption="Average order value per source / medium, with prior-period delta. High-AOV channels with rising deltas are where ad spend pays back fastest. Channels without purchases in window are excluded from the bar but listed in the CSV."
+      help={{
+        title: "AOV by traffic source",
+        body: "Average order value broken down by GA4 source/medium, with the change vs the prior equal window. The mix tells you which channel pulls higher-spend buyers — that's where extra ad budget goes furthest.",
+        bullets: [
+          "High AOV + positive delta = scaling sweet-spot. Each extra session there is worth more than a session from a low-AOV channel.",
+          "Low AOV but high session volume = a 'top of funnel' channel; useful for awareness, costly for direct ROI.",
+          "Channels with zero purchases in the window are hidden from the chart but listed in the CSV — sometimes those are leaking sessions to a closer-attributed channel.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

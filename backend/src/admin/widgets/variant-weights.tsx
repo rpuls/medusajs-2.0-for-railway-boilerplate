@@ -3,6 +3,7 @@ import type { DetailWidgetProps, AdminProduct } from "@medusajs/framework/types"
 import { Button, Container, Heading, Input, Text, Tooltip } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { sdk } from "../lib/sdk"
 
 type VariantRow = {
@@ -131,7 +132,21 @@ const VariantWeightsWidget = ({ data }: DetailWidgetProps<AdminProduct>) => {
     <Container className="p-0 divide-y">
       <div className="flex items-center justify-between gap-2 px-6 py-4">
         <div>
-          <Heading level="h2">Variant weights (grams)</Heading>
+          <Heading level="h2" className="flex items-center">
+            Variant weights (grams)
+            <HelpTooltip
+              text={{
+                title: "Variant weights (grams)",
+                body: "Per-variant weights in grams. Drives the storefront's flat-rate vs live-quote shipping decision: total cart weight ≤3kg gets flat-rate, >3kg goes to ShipStation for a live quote.",
+                bullets: [
+                  "Get the weight from the supplier spec sheet — usually listed per garment in grams already.",
+                  "'Apply to all' copies the first row's draft value to every variant. Useful when a supplier publishes the same weight across all sizes (it rarely is, but it's a quick reset).",
+                  "0 is a valid weight (digital products, stickers below the freight threshold). Leave blank if you genuinely don't know — the cart will fall back to a default.",
+                  "After saving, re-test the storefront cart with a few variants of this product to confirm the right shipping rate appears at checkout.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle">
             Drives the cart-weight threshold (≤3kg flat-rate / &gt;3kg ShipStation live quote).
           </Text>

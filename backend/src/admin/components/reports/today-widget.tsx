@@ -2,6 +2,7 @@ import { Container, Heading, Text } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "./help-tooltip"
 import { Sparkline } from "./sparkline"
 
 type Response = {
@@ -168,8 +169,19 @@ export const TodayWidget = ({
   return (
     <Container className="flex flex-col gap-y-3 p-4">
       <div>
-        <Heading level="h2" className="text-base font-semibold">
+        <Heading level="h2" className="text-base font-semibold flex items-center">
           {greeting(new Date(), firstName ?? null)}
+          <HelpTooltip
+            text={{
+              title: "Today widget",
+              body: "A quick-glance pulse of how today is tracking. Refreshes every few minutes; the comparison sentence reads against the same weekday last week so Mondays are compared to Mondays.",
+              bullets: [
+                "The KPI tiles show today's revenue, orders, ships-today, ships-this-week, and largest order so far.",
+                "The 'on this day last year' line is a long-memory benchmark — useful for catching seasonal weeks (Christmas-rush, EOFY, etc.).",
+                "If the milestones row mentions a record, it's tracking your all-time bests for revenue/orders since SC Prints went live.",
+              ],
+            }}
+          />
         </Heading>
         <Text size="small" className="text-ui-fg-subtle">
           {compareSentence(todayRev, priorRev, todayOrders, priorOrders)}

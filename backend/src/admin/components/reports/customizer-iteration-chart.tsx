@@ -82,7 +82,16 @@ export const CustomizerIterationChart = ({
     <ReportCard
       title="Customizer iteration depth"
       caption="How much fiddling each customizer session takes before adding to cart. High actions-per-cart-add ratio = friction in the design experience."
-      help="Counts customizer_action_taken events from GA4 (throttled to 1 every 250ms client-side). avg_actions_per_session is the median fiddle count; actions_per_cart_add is the volume per actual conversion. If the second is ≫ the first, drop-off mid-design is the issue."
+      help={{
+        title: "Customizer iteration depth",
+        body: "How much fiddling each customizer session involves before the customer either adds to cart or gives up. Two numbers tell different stories.",
+        bullets: [
+          "avg_actions_per_session is the median fiddle count across every session — quick or abandoned, all counted.",
+          "actions_per_cart_add is the fiddle count per *successful* conversion. If this is much higher than the per-session average, customers who give up are giving up early — drop-off mid-design is the real issue.",
+          "Counts customizer_action_taken events from GA4 (throttled to 1 every 250ms client-side, so rapid drag-resize doesn't inflate).",
+          "Trend graph below smooths over weekly windows — useful for spotting whether a recent change made the customizer harder to use.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

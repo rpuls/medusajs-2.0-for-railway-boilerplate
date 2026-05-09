@@ -12,6 +12,7 @@ import { Trash } from "@medusajs/icons"
 import { useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "./help-tooltip"
 
 type Metric = {
   key: string
@@ -184,8 +185,20 @@ export const AlertsManager = () => {
     <Container className="flex flex-col gap-y-3 p-4">
       <div className="flex items-center justify-between gap-x-3">
         <div>
-          <Heading level="h2" className="text-base font-semibold">
+          <Heading level="h2" className="text-base font-semibold flex items-center">
             Threshold alerts
+            <HelpTooltip
+              text={{
+                title: "Threshold alerts",
+                body: "Configure alerts that watch a chosen metric and email you when it crosses a threshold. The daily run-report-alerts cron evaluates every enabled alert at 23:45 UTC; the 'Run now' button fires the same evaluator on demand.",
+                bullets: [
+                  "Pick a metric (e.g. refund rate, ASCol failure rate, daily revenue), a comparator (above/below), and a threshold value.",
+                  "Per-alert cooldown stops the same alert spamming day after day — you'll get one email per breach window, not one per day.",
+                  "Alerts go to the email addresses listed in MONTHLY_DIGEST_RECIPIENTS env var. Set this if alerts aren't arriving.",
+                  "Use 'Run now' after changing thresholds to confirm the alert fires (or doesn't) right away rather than waiting until tomorrow.",
+                ],
+              }}
+            />
           </Heading>
           <Text size="xsmall" className="text-ui-fg-subtle">
             Daily cron checks each enabled alert against the live metric

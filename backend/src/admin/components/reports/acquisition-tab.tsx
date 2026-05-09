@@ -146,6 +146,15 @@ export const AcquisitionTab = ({
       <ReportCard
         title="Traffic by source / medium"
         caption="Where sessions come from. Engagement rate is sessions where the user actually interacted vs. just bounced. Channels with high sessions but low engagement are wasted spend."
+        help={{
+          title: "Traffic by source / medium",
+          body: "GA4 sessions grouped by source/medium pair (e.g. google/organic, meta/paid, mailchimp/email). Engagement rate = sessions where the user did more than land and leave.",
+          bullets: [
+            "High sessions + low engagement = the channel is sending the wrong audience. Pause or fix landing-page targeting.",
+            "Low sessions + high engagement is your sweet spot for scaling — those visitors convert; you just need more of them.",
+            "Direct/none traffic is mostly returning customers and unattributed referrals; not actionable on its own.",
+          ],
+        }}
         loading={loading}
         error={error}
         csv={
@@ -216,6 +225,15 @@ export const AcquisitionTab = ({
       <ReportCard
         title="Top landing pages"
         caption="Entry pages that started a session. Without ecommerce events (Tier C) we can't attribute revenue here yet — sessions only."
+        help={{
+          title: "Top landing pages",
+          body: "Pages that started a GA4 session — the first thing visitors saw on your site. Tells you which content is doing the work of pulling people in.",
+          bullets: [
+            "If your top landing page is the homepage, your traffic is mostly direct/branded; if a PDP or blog post leads, that page is your real front door.",
+            "A high-session, low-engagement landing page = bad first impression; rewrite copy or change the campaign that points there.",
+            "Once Tier C ecommerce events are flowing, this report will gain a revenue column so you can rank by earned dollars, not just visits.",
+          ],
+        }}
         loading={loading}
         error={error}
         csv={
@@ -283,6 +301,15 @@ export const AcquisitionTab = ({
       <ReportCard
         title="Bounce rate by device"
         caption="Mobile bounce >> desktop bounce is a flag — your responsive design or mobile loading speed needs attention. Vercel Speed Insights surfaces the actual culprit."
+        help={{
+          title: "Bounce rate by device",
+          body: "Share of sessions on each device (mobile / desktop / tablet) that left without engaging. Big mobile-vs-desktop gap means the responsive build is failing in some way.",
+          bullets: [
+            "Mobile bounce >>10pp higher than desktop is the canonical 'fix mobile' flag — usually slow LCP, hidden CTAs, or input fields that zoom on focus.",
+            "Vercel Speed Insights (linked in the operational tile up top) shows the actual page-load culprit so you can target the fix.",
+            "If desktop bounce is also high (>50%), the issue isn't responsive — it's positioning. The audience landing doesn't match what the page promises.",
+          ],
+        }}
         loading={loading}
         error={error}
         csv={

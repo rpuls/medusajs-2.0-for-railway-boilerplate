@@ -131,6 +131,15 @@ export const NewVsReturningChart = ({
     <ReportCard
       title="New vs returning customer revenue"
       caption="Where the money's coming from: first-time buyers vs. repeat customers. A low returning-revenue share means you're treadmilling on acquisition; spend more on retention."
+      help={{
+        title: "New vs returning customer revenue",
+        body: "Splits weekly revenue between customers placing their first-ever order vs customers ordering again. The healthy mix depends on your stage — too much either way is a warning.",
+        bullets: [
+          "Returning revenue <30% = you're treadmilling. Acquisition is doing the heavy lifting; first-order experience needs work to convert one-and-done buyers.",
+          "Returning revenue >70% = great retention but acquisition is anaemic. Healthy short-term but you're not adding customers to replace natural attrition.",
+          "Rising returning share over months is the strongest signal a store is compounding — new customers acquired earlier are now generating reorders.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

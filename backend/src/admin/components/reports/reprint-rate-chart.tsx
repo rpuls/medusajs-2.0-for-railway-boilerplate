@@ -103,6 +103,16 @@ export const ReprintRateChart = ({
     <ReportCard
       title="Reprint / failure rate"
       caption="Stage rollbacks (e.g. quality_check → in_production) flag failed prints. Bucket by source stage to see *where* failures land, by decoration method to see *which* technique fails most."
+      help={{
+        title: "Reprint / failure rate",
+        body: "Stage rollbacks — when an order moves backwards in the production pipeline (e.g. quality_check → in_production) — are the proxy for failed prints. The breakdown by source stage tells you where failures are caught; by method tells you which technique is least reliable.",
+        bullets: [
+          "Most rollbacks landing at quality_check = your QC is catching defects (good — better than the customer catching them).",
+          "Most rollbacks landing at in_production = real reprints; check raw-materials, calibration, operator notes for that week.",
+          "If one decoration method spikes, it's usually a process variable: ink temp, embroidery thread tension, vinyl batch. Compare against the by-method bars to confirm.",
+          "Rollbacks measured against orders that *exited* in window, not orders still mid-flight.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

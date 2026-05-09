@@ -96,7 +96,15 @@ export const GeoHeatmapChart = ({
     <ReportCard
       title="Geographic distribution"
       caption="Orders + revenue per postcode. Top of the list is your strongest organic catchment — candidate for popups, postcards, or referral incentives."
-      help="Pulls shipping_address.postal_code from each in-window order. Postcodes with very low order counts often indicate one happy customer worth following up with."
+      help={{
+        title: "Geographic distribution",
+        body: "Orders + revenue per shipping postcode in the window. The top of the list is your strongest organic catchment — natural candidate for postcards, popups, or referral incentives.",
+        bullets: [
+          "Postcodes with one order but high revenue are usually one happy customer worth a personal follow-up.",
+          "Heavy concentration in 1–2 postcodes near your shop = local-foot-traffic drives the business; prioritise that geography for shopfront/event marketing.",
+          "Pulls shipping_address.postal_code from each in-window order — orders without a shipping address (digital-only or pickup) are excluded.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

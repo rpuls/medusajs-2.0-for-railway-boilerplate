@@ -2,6 +2,7 @@ import { Container, Heading, Text } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "./help-tooltip"
 
 type StorageResponse = {
   configured: boolean
@@ -60,8 +61,20 @@ export const OperationalTiles = () => {
 
   return (
     <Container className="flex flex-col gap-y-2 p-4">
-      <Heading level="h2" className="text-base font-semibold">
+      <Heading level="h2" className="text-base font-semibold flex items-center">
         Operational tiles
+        <HelpTooltip
+          text={{
+            title: "Operational tiles",
+            body: "Quick-link tiles to external systems whose own dashboards are richer than anything we'd re-build here. Each tile shows a one-glance signal and a click-through to the real tool.",
+            bullets: [
+              "Object storage = MinIO bucket size + object count. Watch the trend; rising fast usually means customizer artifacts aren't being garbage-collected.",
+              "Speed Insights links to the Vercel Web Vitals dashboard for the storefront. Use it when bounce rates spike — it's the fastest way to see if a perf regression is the cause.",
+              "PostHog links to your event analytics. Useful for replays and funnel analysis that GA4 can't do.",
+              "Tiles render placeholder copy when their env vars aren't set — see the env vars table in CLAUDE.md.",
+            ],
+          }}
+        />
       </Heading>
       <Text size="xsmall" className="text-ui-fg-subtle mb-2">
         External-data signals. Click through for the full dashboard.

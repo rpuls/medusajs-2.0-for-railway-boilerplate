@@ -176,6 +176,17 @@ export const FunnelChart = ({
       <ReportCard
         title="E-commerce funnel"
         caption="Session → product view → cart add → checkout → purchase. Big drop-off between two adjacent steps tells you where to focus UX work."
+        help={{
+          title: "E-commerce funnel",
+          body: "The classic five-step ecommerce funnel from GA4 Enhanced Ecommerce events. Each row is the count of sessions reaching that step — the drop between two rows tells you where customers fall off.",
+          bullets: [
+            "Big drop session → view-item: people land but don't browse — landing-page mismatch.",
+            "Big drop view-item → add-to-cart: PDP isn't selling — fix copy, mockups, pricing clarity.",
+            "Big drop add-to-cart → begin-checkout: customers reconsidering at the cart step — usually shipping shock or unclear total.",
+            "Big drop begin-checkout → purchase: payment flow friction — failing cards, 3DS prompts, address validation.",
+            "Empty for 24–48h after a fresh deploy while GA4 events accumulate. If still empty, check NEXT_PUBLIC_GA_MEASUREMENT_ID on the storefront.",
+          ],
+        }}
         loading={loading}
         error={error}
         csv={
@@ -217,6 +228,15 @@ export const FunnelChart = ({
       <ReportCard
         title="Conversion rate by channel"
         caption="Source/medium ranked by sessions, with the funnel collapsed into a single conversion %. Channels with high sessions but low conversion are wasted spend; the inverse is your sweet spot to scale."
+        help={{
+          title: "Conversion rate by channel",
+          body: "The same funnel above, but collapsed into a single sessions-to-purchase percentage and split by GA4 source/medium. Lets you compare channel quality on a like-for-like basis.",
+          bullets: [
+            "High sessions + low conversion is wasted spend — the audience the channel sends doesn't match what your store sells.",
+            "Low sessions + high conversion is your scaling sweet spot. Each extra dollar there earns more than in the noisy channels.",
+            "Conversion reasonable for your industry: 1–3% is a healthy range for paid social, 2–5% for organic search; below 0.5% on a paid channel is a kill signal.",
+          ],
+        }}
         loading={loading}
         error={error}
         csv={

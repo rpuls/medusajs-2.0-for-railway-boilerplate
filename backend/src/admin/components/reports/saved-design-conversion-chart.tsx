@@ -87,6 +87,15 @@ export const SavedDesignConversionChart = ({
     <ReportCard
       title="Saved-design conversion"
       caption="What share of designs saved to 'My Designs' end up purchased? Top-converting designs are starter-template candidates — feature them on the customizer landing for new visitors and lift conversion."
+      help={{
+        title: "Saved-design conversion",
+        body: "Looks at every design saved to a customer's 'My Designs' library and tracks whether that design ended up in a purchased order. Surfaces the designs that are pulling weight — and the ones gathering dust.",
+        bullets: [
+          "Top-converting designs are starter-template candidates — feature them on the customizer landing for new visitors and lift conversion across the funnel.",
+          "Compare against the saved-designs reuse rate report: high saves + low conversion suggests customers save speculatively but lose interest. Time the reorder-reminder email earlier.",
+          "Designs older than ~90 days that have never converted are usually dead intent — fine to deprioritise from any 'inspiration' galleries you build.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

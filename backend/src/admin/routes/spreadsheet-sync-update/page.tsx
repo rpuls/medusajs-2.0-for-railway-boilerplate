@@ -1,6 +1,8 @@
 import { Button, Checkbox, Container, Heading, Text } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { HelpTooltip } from "../../components/reports/help-tooltip"
+
 import {
   applySpreadsheetHeaderAliases,
   chunkCreates,
@@ -352,7 +354,21 @@ const SpreadsheetSyncUpdatePage = () => {
   return (
     <div className="flex flex-col gap-6 p-8">
       <div>
-        <Heading level="h1">Spreadsheet sync (updates)</Heading>
+        <Heading level="h1" className="flex items-center">
+          Spreadsheet sync (updates)
+          <HelpTooltip
+            text={{
+              title: "Spreadsheet sync (updates)",
+              body: "Patch existing products and variants from a CSV. Only updates the columns you tick — every other column on every row is ignored. Matches by Product Id (prod_…) so a typo or rename in the title can't accidentally hit the wrong product.",
+              bullets: [
+                "Workflow: upload → review preview → tick the columns you want patched → Confirm sync.",
+                "Product-level columns: value taken from the first row per Product Id. Variant-level columns (PDP images): value taken from each individual row matched by SKU.",
+                "Variant garment images live under variant metadata.garment_images, NOT in the variant Media panel — that one only shows files uploaded to Medusa.",
+                "Never use this tab to create new products — it skips rows whose Product Id doesn't already exist.",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-muted mt-1">
           <strong>Updates existing products only</strong>: product fields use{" "}
           <code className="text-xs">sdk.admin.product.batch</code> (<code className="text-xs">update</code>); per-variant
@@ -372,8 +388,19 @@ const SpreadsheetSyncUpdatePage = () => {
 
       <Container className="divide-y p-0">
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             1. Upload CSV
+            <HelpTooltip
+              text={{
+                title: "Upload CSV",
+                body: "Pick the CSV holding the product/variant patches. Each row must include a Product Id (prod_…) — that's how the importer matches rows to existing products.",
+                bullets: [
+                  "Easiest source: export Products → 'Export products' from Medusa, edit the columns you want to change in Excel/Sheets, save as CSV, upload here.",
+                  "Variant-level updates (per-colour PDP images) need every row to also include Variant SKU.",
+                  "Empty cells are ignored — they don't blank-out the existing field. To remove a value, you'd need a separate workflow.",
+                ],
+              }}
+            />
           </Text>
           <input
             type="file"
@@ -394,8 +421,20 @@ const SpreadsheetSyncUpdatePage = () => {
         </div>
 
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             2. Preview
+            <HelpTooltip
+              text={{
+                title: "Preview",
+                body: "Dry-run check before any database writes happen. Shows what will be patched and any rows that would be skipped or rejected.",
+                bullets: [
+                  "Distinct Product Ids = how many products will receive at least one update.",
+                  "Variant rows in file = total CSV rows; only relevant if you're patching per-variant fields.",
+                  "Validation errors block the Confirm sync button. Common gotchas: missing Product Id column, missing Variant SKU when variant fields are ticked.",
+                  "If 'Variant garment images — PDP metadata' is unticked but your CSV has per-row image URLs, you'll see a warning — leaving that off means each colour's image stays unset on the storefront.",
+                ],
+              }}
+            />
           </Text>
           {!rawCsvText ? (
             <Text size="small" className="text-ui-fg-muted">
@@ -460,8 +499,19 @@ const SpreadsheetSyncUpdatePage = () => {
               {preview.validationErrors.length === 0 ? (
                 <div className="mt-2 flex flex-col gap-3 rounded-md border border-ui-border-base bg-ui-bg-subtle px-4 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Text weight="plus" size="small">
+                    <Text weight="plus" size="small" className="flex items-center">
                       Columns to update
+                      <HelpTooltip
+                        text={{
+                          title: "Columns to update",
+                          body: "Pick which CSV columns get applied as patches. Anything you don't tick is ignored — even if it's in the CSV. This is the safety mechanism that lets you re-use the same source CSV for different patch passes.",
+                          bullets: [
+                            "Most product-level columns read from the FIRST row per Product Id. So if rows 1, 2, 3 all share a Product Id but disagree on title, row 1 wins.",
+                            "'Variant garment images — PDP metadata' is the exception: it reads EVERY row (matching by Variant SKU) so each colour can have its own image set.",
+                            "If you only want to update one column, untick the rest — every column you tick adds an extra write to the batch and a chance for a row-level error.",
+                          ],
+                        }}
+                      />
                     </Text>
                     <div className="flex flex-wrap gap-2">
                       <Button

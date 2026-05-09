@@ -198,6 +198,16 @@ regionId,
     <ReportCard
       title="Decoration mix"
       caption="Revenue and unit-volume share by method. Compare side-by-side: a method that's a small revenue slice but a big unit slice is your low-margin bulk work; the inverse is your premium offering."
+      help={{
+        title: "Decoration mix",
+        body: "Two side-by-side donuts: how revenue splits across decoration methods, and how units split. The mismatch between the two is the most useful read.",
+        bullets: [
+          "Big unit slice + small revenue slice = your low-margin bulk method. Worth keeping for volume but don't lean on it for margin growth.",
+          "Big revenue slice + small unit slice = your premium method. Protect the price; don't discount casually.",
+          "If both donuts look identical, you have no margin diversification — every method earns the same per unit. Consider repositioning your highest-quality method as a flagship.",
+          "Methods are read from line metadata; un-decorated catalog products don't appear here.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={
