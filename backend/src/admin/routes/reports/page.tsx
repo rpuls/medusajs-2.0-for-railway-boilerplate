@@ -52,6 +52,12 @@ import { FirstOrderAffinityChart } from "../../components/reports/first-order-af
 import { GeoHeatmapChart } from "../../components/reports/geo-heatmap-chart"
 import { OrderTimeHeatmapChart } from "../../components/reports/order-time-heatmap-chart"
 import { VariantVelocityChart } from "../../components/reports/variant-velocity-chart"
+import { PdpConversionChart } from "../../components/reports/pdp-conversion-chart"
+import { GscCtrTrendChart } from "../../components/reports/gsc-ctr-trend-chart"
+import { PaymentMixChart } from "../../components/reports/payment-mix-chart"
+import { OrderEditFrequencyChart } from "../../components/reports/order-edit-frequency-chart"
+import { EmbroideryStitchesChart } from "../../components/reports/embroidery-stitches-chart"
+import { CustomizerIterationChart } from "../../components/reports/customizer-iteration-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -224,6 +230,21 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <PdpConversionChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <PaymentMixChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <OrderEditFrequencyChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
@@ -232,6 +253,7 @@ const ReportsPage = () => {
           <div className="mt-3 grid grid-cols-1 gap-3">
             <AovBySourceChart fromIso={fromIso} toIso={toIso} />
             <EmailChannelRoiChart fromIso={fromIso} toIso={toIso} />
+            <GscCtrTrendChart fromIso={fromIso} toIso={toIso} />
             <FunnelChart fromIso={fromIso} toIso={toIso} />
           </div>
         </Tabs.Content>
@@ -254,6 +276,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <BlanksForecastChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <EmbroideryStitchesChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
@@ -316,6 +343,7 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <CustomizerIterationChart fromIso={fromIso} toIso={toIso} />
             <ReorderRateChart
               fromIso={fromIso}
               toIso={toIso}
