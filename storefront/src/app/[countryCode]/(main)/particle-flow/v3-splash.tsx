@@ -75,7 +75,7 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   /** ------ Field — the heavy lifter ------ */
   fieldStrength: 1,
   fieldGridResolution: 48,
-  fieldInjectRadiusBmp: 36,
+  fieldInjectRadiusBmp: 20,
   fieldInjectStrength: 1.0,
   fieldDecayPerSec: 0.5,
   fieldDiffusion: 0.05,
