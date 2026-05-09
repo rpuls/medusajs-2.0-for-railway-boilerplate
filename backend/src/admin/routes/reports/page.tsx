@@ -29,6 +29,7 @@ import { TimeToPurchaseChart } from "../../components/reports/time-to-purchase-c
 import { SiteSearchChart } from "../../components/reports/site-search-chart"
 import { AcquisitionTab } from "../../components/reports/acquisition-tab"
 import { FunnelChart } from "../../components/reports/funnel-chart"
+import { RfmChart } from "../../components/reports/rfm-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -200,6 +201,11 @@ const ReportsPage = () => {
 
         <Tabs.Content value="customers">
           <div className="grid grid-cols-1 gap-3">
+            <RfmChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <NewVsReturningChart
               fromIso={fromIso}
               toIso={toIso}
