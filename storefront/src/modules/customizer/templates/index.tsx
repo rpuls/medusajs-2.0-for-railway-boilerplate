@@ -3237,11 +3237,18 @@ export default function CustomizerTemplate({
 
     return (
       <div id="customize" className="contents">
-        <div className="lg:col-span-6 flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
+        {/*
+          Column order is swapped on mobile via Tailwind `order-*` so the
+          customer sees the Customize and checkout wizard (with the
+          prominent "Customize this product" CTA in step 1) above the
+          gallery / canvas. Desktop keeps the original side-by-side
+          layout (col-span sits on lg, where order-* is reset to none).
+        */}
+        <div className="order-2 lg:col-span-6 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
           {integratedPdpSlots.gallery}
           {editorColumn}
         </div>
-        <div className="flex min-w-0 flex-col gap-3 self-start lg:col-span-3 lg:sticky lg:top-24 lg:pr-1">
+        <div className="order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:col-span-3 lg:sticky lg:top-24 lg:pr-1">
           <div className="space-y-1 border-b border-ui-border-base pb-4">
             <p className="text-xl font-semibold text-ui-fg-base">Customize and checkout</p>
             <p className="text-xs text-ui-fg-subtle">
