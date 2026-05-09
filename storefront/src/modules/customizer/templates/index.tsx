@@ -1365,6 +1365,11 @@ export default function CustomizerTemplate({
       "customizerLabel",
       "sourceWidthPx",
       "sourceHeightPx",
+      // Tag attached on add — links a canvas object back to the upload it
+      // came from so the cart-add flow only attaches the customer-original
+      // files actually referenced on the canvas (not stale items from the
+      // persistent "My uploads" tray).
+      "customizerUploadId",
     ])
     sideLayoutsRef.current[currentSideRef.current] = (serialized.objects ?? []) as Record<
       string,
@@ -1612,6 +1617,13 @@ export default function CustomizerTemplate({
     type: string
     dataUrl?: string
     svgText?: string
+    /**
+     * Persistent id from the "My uploads" tray. Stamped onto the resulting
+     * canvas object so the cart-add flow can resolve which uploads are
+     * actually referenced on this design (vs stale items in the tray from
+     * earlier sessions / orders).
+     */
+    uploadId?: string
   }) => {
     if (asset.type === "image/svg+xml") {
       const svg = asset.svgText ?? ""
@@ -1622,6 +1634,7 @@ export default function CustomizerTemplate({
       svgObject.set({
         customizerLabel: asset.name || "SVG",
         sourceWidthPx: Number(svgObject.width ?? 0),
+        ...(asset.uploadId ? { customizerUploadId: asset.uploadId } : {}),
       })
       if (effectivePrintSizeIdForArea === "oversize") {
         svgObject.scaleToWidth?.(getTargetArtworkWidth(printArea.width))
@@ -1645,6 +1658,7 @@ export default function CustomizerTemplate({
       customizerLabel: asset.name || "Image",
       sourceWidthPx: getFabricImageSourceWidthPx(imageObject),
       sourceHeightPx: getFabricImageSourceHeightPx(imageObject),
+      ...(asset.uploadId ? { customizerUploadId: asset.uploadId } : {}),
     })
     if (effectivePrintSizeIdForArea === "oversize") {
       imageObject.scaleToWidth?.(getTargetArtworkWidth(printArea.width))
@@ -1662,6 +1676,29 @@ export default function CustomizerTemplate({
     const payload = { source, product_id: productId, variant_id: variantId }
     trackCustomizerFunnel("design_started", payload)
     phCapture("customizer_design_started", payload)
+  }
+
+  /**
+   * Walk every decorated side's serialised layout and collect the set of
+   * `customizerUploadId` values referenced. Used to filter the persistent
+   * "My uploads" tray down to only those uploads actually placed on the
+   * current design — without it, every cart-add or "save to my designs"
+   * also attached unrelated images from earlier sessions, which then
+   * showed up as confusing "Customer upload" downloads on the admin
+   * order page.
+   */
+  const collectReferencedUploadIds = (): Set<string> => {
+    const seen = new Set<string>()
+    DESIGN_SIDES.forEach((side) => {
+      const objects = sideLayoutsRef.current[side] ?? []
+      objects.forEach((raw) => {
+        const id = (raw as Record<string, unknown>).customizerUploadId
+        if (typeof id === "string" && id.length > 0) {
+          seen.add(id)
+        }
+      })
+    })
+    return seen
   }
 
   const handleUploadFile = async (file: File) => {
@@ -1696,7 +1733,12 @@ export default function CustomizerTemplate({
           ...(originalStorageUrl ? { originalStorageUrl } : {}),
         }
         setSessionUploads((current) => [nextAsset, ...current.filter((entry) => entry.dataUrl !== dataUrl)])
-        await addUploadedAssetToCanvas({ name: nextAsset.name, type: nextAsset.type, svgText: svg })
+        await addUploadedAssetToCanvas({
+          name: nextAsset.name,
+          type: nextAsset.type,
+          svgText: svg,
+          uploadId: nextAsset.id,
+        })
         return
       }
 
@@ -1718,7 +1760,12 @@ export default function CustomizerTemplate({
         ...(originalStorageUrl ? { originalStorageUrl } : {}),
       }
       setSessionUploads((current) => [nextAsset, ...current.filter((entry) => entry.dataUrl !== dataUrl)])
-      await addUploadedAssetToCanvas({ name: nextAsset.name, type: nextAsset.type, dataUrl })
+      await addUploadedAssetToCanvas({
+        name: nextAsset.name,
+        type: nextAsset.type,
+        dataUrl,
+        uploadId: nextAsset.id,
+      })
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Could not upload image.")
     }
@@ -1738,10 +1785,20 @@ export default function CustomizerTemplate({
         const prefix = "data:image/svg+xml;charset=utf-8,"
         const encoded = asset.dataUrl.startsWith(prefix) ? asset.dataUrl.slice(prefix.length) : ""
         const svgText = encoded ? decodeURIComponent(encoded) : ""
-        await addUploadedAssetToCanvas({ name: asset.name, type: asset.type, svgText })
+        await addUploadedAssetToCanvas({
+          name: asset.name,
+          type: asset.type,
+          svgText,
+          uploadId: asset.id,
+        })
         return
       }
-      await addUploadedAssetToCanvas({ name: asset.name, type: asset.type, dataUrl: asset.dataUrl })
+      await addUploadedAssetToCanvas({
+        name: asset.name,
+        type: asset.type,
+        dataUrl: asset.dataUrl,
+        uploadId: asset.id,
+      })
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Could not reuse uploaded image.")
     }
@@ -2218,13 +2275,20 @@ export default function CustomizerTemplate({
           artifacts: [],
           scpPrintSizeId,
           printNotes,
-          customerOriginalFiles: sessionUploads
-            .filter((u) => u.originalStorageUrl)
-            .map((u) => ({
-              url: u.originalStorageUrl!,
-              fileName: u.name,
-              mimeType: u.type,
-            })),
+          // Only attach the uploads referenced on this design's canvas —
+          // the "My uploads" tray persists across sessions, so attaching
+          // every entry would dump unrelated artwork into the saved
+          // design's metadata.
+          customerOriginalFiles: (() => {
+            const referenced = collectReferencedUploadIds()
+            return sessionUploads
+              .filter((u) => u.originalStorageUrl && referenced.has(u.id))
+              .map((u) => ({
+                url: u.originalStorageUrl!,
+                fileName: u.name,
+                mimeType: u.type,
+              }))
+          })(),
           activeSide: currentSideRef.current,
           prints: printSpecs,
         }),
@@ -2300,7 +2364,15 @@ export default function CustomizerTemplate({
           : Math.max(500, Math.round(printArea.height / 0.72))
       const effectiveCanvas = { width: canvasW, height: canvasH }
 
-      const uploadsWithoutArchive = sessionUploads.filter((u) => !u.originalStorageUrl)
+      // Only fail the cart-add when an upload **actually used on this
+      // design** is missing its archived copy. Stale entries in the
+      // persistent "My uploads" tray that the customer didn't place on
+      // this canvas are irrelevant — they used to block cart-add even
+      // though they don't go on the order.
+      const referencedUploadsCheck = collectReferencedUploadIds()
+      const uploadsWithoutArchive = sessionUploads.filter(
+        (u) => referencedUploadsCheck.has(u.id) && !u.originalStorageUrl
+      )
       if (uploadsWithoutArchive.length > 0) {
         setUploadError(
           "Could not archive your uploaded file(s). On the Railway Medusa server set MinIO vars (MINIO_*), STORE_CORS to include your Vercel URL, " +
@@ -2392,8 +2464,15 @@ export default function CustomizerTemplate({
         .trim()
         .slice(0, CUSTOMIZER_PRINT_NOTES_MAX_LENGTH)
 
+      // Only attach uploads referenced on this design's canvas. "My
+      // uploads" is a persistent tray (sessionStorage) so customers can
+      // reuse files across sessions; without this filter, the cart-add
+      // would attach every prior upload too, which then showed up as
+      // confusing customer-upload downloads on unrelated orders in the
+      // admin.
+      const referencedUploadIdsForCart = collectReferencedUploadIds()
       const originalFilesPayload = sessionUploads
-        .filter((u) => u.originalStorageUrl)
+        .filter((u) => u.originalStorageUrl && referencedUploadIdsForCart.has(u.id))
         .map((u) => ({
           url: u.originalStorageUrl!,
           fileName: u.name,
