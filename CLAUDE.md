@@ -87,6 +87,9 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | --- | --- | --- |
 | `STOREFRONT_URL` | Used in stage-change emails to build the "View order" link. | none — emails still send, just without a CTA button |
 | `STOREFRONT_DEFAULT_COUNTRY_CODE` | Country-code prefix to inject into the storefront URL (e.g. `au` → `/au/account/orders/...`). | none |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full JSON key for a service account with read access to GSC + GA4. Powers the `/app/seo-analytics` admin page. | none — page shows "empty" state |
+| `GSC_SITE_URL` | GSC property URL (exact form from Search Console, e.g. `https://sc-prints.com.au/` or `sc-domain:sc-prints.com.au`). | none |
+| `GA4_PROPERTY_ID` | Numeric GA4 property ID (not the measurement ID). | none |
 
 All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 
@@ -110,6 +113,19 @@ All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.)
    - Copy the **variant ID** (not product ID) into `NEXT_PUBLIC_VECTORIZATION_VARIANT_ID`
 5. Add the new env vars from the table above.
 6. Restart both apps.
+
+## SEO analytics page (GSC + GA4)
+
+Admin sidebar entry at `/app/seo-analytics` showing 28-day Search Console + GA4 metrics. Service-account auth (read-only). A daily cron pulls metrics into the container cache (48h TTL) so the page loads instantly; a "Refresh now" button re-runs the same workload on demand.
+
+| Component | Path |
+| --- | --- |
+| Service code (auth, GSC client, GA4 client, summary builder, cache) | [backend/src/services/seo-analytics/](backend/src/services/seo-analytics/) |
+| Daily cron (`schedule: "0 5 * * *"`) | [backend/src/jobs/refresh-seo-analytics.ts](backend/src/jobs/refresh-seo-analytics.ts) |
+| Admin GET / POST refresh | [backend/src/api/admin/seo-analytics/route.ts](backend/src/api/admin/seo-analytics/route.ts) + [refresh/route.ts](backend/src/api/admin/seo-analytics/refresh/route.ts) |
+| Admin page | [backend/src/admin/routes/seo-analytics/page.tsx](backend/src/admin/routes/seo-analytics/page.tsx) |
+
+If `GOOGLE_SERVICE_ACCOUNT_JSON` is unset the cron and routes no-op silently — dev environments without Google credentials still boot.
 
 ## Tests
 
