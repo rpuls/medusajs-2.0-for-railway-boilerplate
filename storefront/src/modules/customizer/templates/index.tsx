@@ -1780,8 +1780,16 @@ export default function CustomizerTemplate({
   const removeSelectedImage = () => {
     const canvas = fabricCanvasRef.current
     const active = canvas?.getActiveObject?.()
-    if (!active || active.type !== "image") {
-      setUploadError("Select an image layer first.")
+    // Any selectable, non-locked object the customer placed counts —
+    // raster images load as `image`, SVG uploads as `group`, text as
+    // `i-text`. Previously the gate only matched `image`, so removing
+    // an SVG logo or a text layer silently no-op'd.
+    if (!active) {
+      setUploadError("Select a layer to remove first.")
+      return
+    }
+    if (active.lockMovementX || active.lockMovementY) {
+      setUploadError("That layer is locked. Unlock it first, then remove.")
       return
     }
 
@@ -1794,8 +1802,13 @@ export default function CustomizerTemplate({
   }
 
   const canRemoveImage = useMemo(() => {
+    // Same relaxation — enable Remove for any selected, non-locked
+    // top-level layer (image / svg-group / text). Locked layers stay
+    // disabled because the explicit lock should prevent accidental
+    // removal too.
     const layer = layers.find((l) => l.id === selectedLayerId)
-    return layer?.type === "image"
+    if (!layer) return false
+    return !layer.locked
   }, [layers, selectedLayerId])
 
   const selectLayer = (id: string) => {

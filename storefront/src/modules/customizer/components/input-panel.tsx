@@ -196,9 +196,13 @@ export default function InputPanel({
           className="w-full rounded-md border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-900 hover:bg-rose-100 disabled:opacity-50"
           onClick={onRemoveSelectedImage}
           disabled={!canRemoveImage}
-          title={canRemoveImage ? "Remove selected image from the canvas" : "Select an image layer first"}
+          title={
+            canRemoveImage
+              ? "Remove the currently selected layer from the canvas"
+              : "Select a layer (click on it in the preview) first"
+          }
         >
-          Remove image
+          Remove selected
         </button>
       ) : null}
 
