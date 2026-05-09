@@ -473,7 +473,11 @@ function ParticleField({
         const radF = cursorForce * ff2 * dt
         vx += (dx / dist) * radF
         vy += (dy / dist) * radF
-        /** Side swirl: tangential force, contained orbital curl. */
+        /** Side swirl: tangential force, contained orbital curl.
+         * Fixed magnitude (NOT scaled by mouseSpeed) so the spring can
+         * contain it and particles stay near the wordmark. At fast cursor
+         * speed the wake/radial forces dominate; at slow speed this swirl
+         * produces the Newmix-style contained two-lobe orbit. */
         if (haveMotion && sideSwirl > 0) {
           const ux = dx / dist
           const uy = dy / dist
@@ -481,19 +485,19 @@ function ParticleField({
           const ccwY = ux
           const perp = dx * mrx + dy * mry
           const vSgn = perp >= 0 ? -1 : 1
-          const swirlF =
-            sideSwirl * ff2 * dt * Math.min(mouseSpeed, 1500)
+          /** dt*60 normalises to ~1 unit/frame per unit of sideSwirl at 60fps. */
+          const swirlF = sideSwirl * ff2 * dt * 60
           vx += vSgn * ccwX * swirlF
           vy += vSgn * ccwY * swirlF
         }
         /** Bilateral lateral push: particles in cursor disk get pushed
          * AWAY from the motion line (perpendicular to motion), with sign
-         * by which side they're on. Creates the two-lobe wake split. */
+         * by which side they're on. Creates the two-lobe wake split.
+         * Fixed magnitude so spring naturally limits how far particles stray. */
         if (haveMotion && lateralPush > 0) {
           const perp = dx * mrx + dy * mry
           const sgn = perp >= 0 ? 1 : -1
-          const pushF =
-            lateralPush * ff2 * dt * Math.min(mouseSpeed, 1500)
+          const pushF = lateralPush * ff2 * dt * 60
           vx += sgn * mrx * pushF
           vy += sgn * mry * pushF
         }
@@ -515,7 +519,9 @@ function ParticleField({
           /** CCW tangent at point (dlx, dly): (-dly, dlx) / dlDist. */
           const tlx = -dly / dlDist
           const tly = dlx / dlDist
-          const lF = vortexStr * lFf2 * dt * vortexSpeedFactor * 100
+          /** Multiplier 30 puts vortex on same dt*60-normalised scale as
+           * swirl/push forces; vortexSpeedFactor fades it at high speed. */
+          const lF = vortexStr * lFf2 * dt * vortexSpeedFactor * 30
           vx += tlx * lF
           vy += tly * lF
         }
@@ -530,7 +536,7 @@ function ParticleField({
           /** CW tangent at point (drx, dry): (dry, -drx) / drDist. */
           const trx = dry / drDist
           const try_ = -drx / drDist
-          const rF = vortexStr * rFf2 * dt * vortexSpeedFactor * 100
+          const rF = vortexStr * rFf2 * dt * vortexSpeedFactor * 30
           vx += trx * rF
           vy += try_ * rF
         }
