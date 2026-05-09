@@ -14,17 +14,24 @@ export type ThreeTuning = {
    * into in-disk particles each frame. 0 = no wake, just radial; 1 =
    * particle picks up nearly full mouse velocity. */
   wakeStrength: number
+  /** Tangential side-swirl force. Particles in the cursor disk receive a
+   * force PERPENDICULAR to their direction from cursor center, with the
+   * sign flipped based on which side of the cursor's motion line they're
+   * on. This is what produces the contained orbital curl Newmix shows
+   * (rather than straight-line flame trails from pure velocity transfer). */
+  sideSwirlForce: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   particleCount: 140000,
-  cursorRadius: 150,
-  cursorForce: 1200,
+  cursorRadius: 80,
+  cursorForce: 400,
   mouseVelocityScale: 0.6,
-  springStiffness: 2.5,
-  friction: 1.5,
+  springStiffness: 6,
+  friction: 4,
   pointSize: 2.5,
-  wakeStrength: 0.6,
+  wakeStrength: 0.2,
+  sideSwirlForce: 5,
 }
 
 type SliderDef = {
@@ -74,7 +81,17 @@ const SLIDERS: SliderDef[] = [
     step: 0.05,
     format: (v) => v.toFixed(2),
     description:
-      "How much of the cursor's velocity is transferred to in-disk particles. The directional wake force.",
+      "How much of the cursor's velocity is transferred to in-disk particles. The directional wake force (linear).",
+  },
+  {
+    key: "sideSwirlForce",
+    label: "Side swirl",
+    min: 0,
+    max: 20,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    description:
+      "Tangential force around cursor — particles on opposite sides of motion vector swirl in opposite directions. THE force that produces the Newmix-style contained curl. 0 = no swirl. 5-10 = strong orbit.",
   },
   {
     key: "mouseVelocityScale",

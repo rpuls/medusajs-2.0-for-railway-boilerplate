@@ -263,6 +263,21 @@ function ParticleField({
     const mvyc = mvyRaw * mvScale
     const wake = t.wakeStrength
     const cursorForce = t.cursorForce
+    const sideSwirl = t.sideSwirlForce
+    /** Mouse motion direction unit vector + perpendicular. Used for the
+     * orbital swirl force: particles on opposite sides of the motion line
+     * get opposite-signed tangential force, producing curl. */
+    const haveMotion = mouseSpeed > 0.001
+    let mfx = 0
+    let mfy = 0
+    let mrx = 0
+    let mry = 0
+    if (haveMotion) {
+      mfx = mvxRaw / mouseSpeed
+      mfy = mvyRaw / mouseSpeed
+      mrx = -mfy
+      mry = mfx
+    }
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
       const px = positions[i3]!
@@ -290,6 +305,24 @@ function ParticleField({
           const radF = cursorForce * ff2 * dt
           vx += (dx / dist) * radF
           vy += (dy / dist) * radF
+          /** Side swirl: tangential force perpendicular to particle's
+           * direction from cursor center, signed by which side of the
+           * cursor's motion line the particle is on. THE Newmix curl
+           * force — produces contained orbital swirl rather than
+           * straight-line flame trails. Scales with cursor speed so
+           * stationary cursor doesn't spin particles. */
+          if (haveMotion && sideSwirl > 0) {
+            const ux = dx / dist
+            const uy = dy / dist
+            const ccwX = -uy
+            const ccwY = ux
+            const perp = dx * mrx + dy * mry
+            const vSgn = perp >= 0 ? -1 : 1
+            const swirlF =
+              sideSwirl * ff2 * dt * Math.min(mouseSpeed, 1500)
+            vx += vSgn * ccwX * swirlF
+            vy += vSgn * ccwY * swirlF
+          }
         }
       }
 
