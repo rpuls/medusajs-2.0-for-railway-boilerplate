@@ -229,6 +229,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/automation-rule",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {
