@@ -313,6 +313,20 @@ const ProductionPage = () => {
             <Button
               size="small"
               variant="secondary"
+              onClick={() => {
+                window.open(
+                  "/admin/reports/print-tomorrow?format=html&days=2",
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }}
+              title="Open a printable cheat sheet of orders shipping in the next 48h"
+            >
+              Print tomorrow
+            </Button>
+            <Button
+              size="small"
+              variant="secondary"
               onClick={() => setRefreshNonce((n) => n + 1)}
               disabled={loading}
             >

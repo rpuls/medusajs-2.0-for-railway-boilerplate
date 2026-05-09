@@ -5,6 +5,7 @@ import CustomerNote from "./models/customer-note"
 import OrderComment from "./models/order-comment"
 import AuditLog from "./models/audit-log"
 import AdminBookmark from "./models/admin-bookmark"
+import AdminPresence from "./models/admin-presence"
 
 class AdminWorkspaceService extends MedusaService({
   CustomerTag,
@@ -12,6 +13,7 @@ class AdminWorkspaceService extends MedusaService({
   OrderComment,
   AuditLog,
   AdminBookmark,
+  AdminPresence,
 }) {}
 
 export default AdminWorkspaceService
