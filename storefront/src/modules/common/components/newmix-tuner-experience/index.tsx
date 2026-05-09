@@ -842,9 +842,9 @@ const GROUPS: Group[] = [
         key: "particleCount",
         label: "Particle count",
         description:
-          "Total number of animated particles sampled from the wordmark. Higher = denser stipple. Costs more CPU per frame; 10k-30k is light, 50k-80k is rich, 100k+ is heavy. The field briefly rebuilds when you release the slider.",
+          "Total number of animated particles sampled from the wordmark. Higher = denser stipple. Costs more CPU per frame; 10k-30k is light, 50k-80k is rich, 100k+ is heavy, 200k+ may struggle on Canvas 2D. Newmix runs ~140k. The field briefly rebuilds when you release the slider.",
         min: 5000,
-        max: 100000,
+        max: 300000,
         step: 1000,
         format: (v) => `${(v / 1000).toFixed(0)}k`,
       },
