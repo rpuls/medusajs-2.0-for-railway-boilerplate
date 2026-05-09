@@ -79,6 +79,7 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   fieldInjectStrength: 1.0,
   fieldInjectMinSpeedPxPerFrame: 8,
   fieldDecayPerSec: 0.5,
+  fieldAdvectionStrength: 0.6,
   fieldDiffusion: 0.05,
   fieldRideStrength: 0.06,
   fieldPressureStrength: 0.5,

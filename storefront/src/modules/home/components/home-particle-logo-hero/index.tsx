@@ -80,6 +80,7 @@ import type { VelocityField } from "./velocity-field"
 import {
   clearVelocityField,
   createVelocityField,
+  advectVelocityField,
   decayVelocityField,
   diffuseVelocityField,
   injectVelocity,
@@ -3201,6 +3202,21 @@ export default function HomeParticleLogoHero({
                   nm.fieldInjectStrength
                 )
               }
+            }
+            /** Self-advection — velocity moves itself, so deposited energy
+             * travels in its own direction. Run BEFORE diffusion so the
+             * trail forms first, then softens at its edges. Stam-style
+             * semi-Lagrangian step is unconditionally stable. */
+            if (
+              nm.fieldAdvectionStrength > 0 &&
+              newmixVelocityFieldScratchRef.current
+            ) {
+              advectVelocityField(
+                velocityField,
+                newmixVelocityFieldScratchRef.current,
+                nm.fieldAdvectionStrength,
+                16
+              )
             }
             /** Lateral diffusion — energy seeps outward from the inject site
              * each frame so the swirl spreads beyond the cursor's path. */

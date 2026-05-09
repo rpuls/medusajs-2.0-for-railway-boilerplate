@@ -500,6 +500,15 @@ const GROUPS: Group[] = [
         format: (v) => (v <= 0 ? "off" : `${v.toFixed(1)} px/frame`),
       },
       {
+        key: "fieldAdvectionStrength",
+        label: "Advection (trail)",
+        description:
+          "Self-advection — velocity moves itself each frame (Stam-style fluid). 0 = no trail, deposited energy stays where you put it and forms blobs/rings only. 1 = full velocity×dt step, deposited energy TRAVELS in its own direction so the cursor leaves a crescent wake behind it. 0.4-0.8 reads as 'stir the coffee.' THIS is the step that turns the cursor from a stamp into a stir.",
+        min: 0,
+        max: 1,
+        step: 0.02,
+      },
+      {
         key: "fieldDecayPerSec",
         label: "Decay rate",
         description:

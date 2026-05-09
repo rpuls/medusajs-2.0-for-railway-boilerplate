@@ -169,6 +169,15 @@ export type NewmixLiveTuning = {
    * within a frame (no lingering). 0.4-0.7 reads as "stir, watch it spin
    * down over a couple of seconds". */
   fieldDecayPerSec: number
+  /** Self-advection strength (0..1). Each frame the velocity grid moves
+   * itself by `velocity * dt * strength` (Stam-style semi-Lagrangian step).
+   * 0 = no advection — deposited energy sits where the cursor put it and
+   * dissipates radially via diffusion (blobs, rings, no trail).
+   * 1 = full velocity*dt advection — energy TRAVELS in its own direction,
+   * so a moving cursor leaves a directional crescent wake behind it.
+   * 0.4-0.8 reads as "stir the coffee — there's a clear trail behind the
+   * spoon." This is THE step that turns the cursor from a stamp into a stir. */
+  fieldAdvectionStrength: number
   /** Per-frame lateral diffusion (0..0.25). Each cell averages a fraction of
    * its 4 neighbours' velocity into itself, so injected energy seeps outward
    * — crucial for "the swirl spreads beyond where the cursor went". 0 skips
@@ -358,6 +367,7 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   fieldInjectStrength: 1.0,
   fieldInjectMinSpeedPxPerFrame: 0.0,
   fieldDecayPerSec: 0.55,
+  fieldAdvectionStrength: 0.0,
   fieldDiffusion: 0.06,
   fieldRideStrength: 0.12,
   /** Curl-noise micro-turbulence — disabled by default. */

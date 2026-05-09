@@ -117,6 +117,71 @@ export function decayVelocityField(
   }
 }
 
+/** Semi-Lagrangian self-advection — the canonical Stam fluid-solver step that
+ * makes velocity move with itself. Without it, deposited energy stays where
+ * the cursor put it and dissipates radially via diffusion → blobs and rings.
+ * With it, the velocity blob TRAVELS in its own direction → a moving cursor
+ * leaves a directional crescent wake (Newmix's signature stir-the-coffee look).
+ *
+ * For each cell, trace BACKWARD by velocity*dt to find the source position,
+ * bilinearly sample the field there, and write to scratch. After the loop,
+ * scratch becomes the new field. Stable for any timestep (unconditional).
+ *
+ * @param field     Velocity field to advect.
+ * @param scratch   Float32Array of length cols*rows*2 (vx', vy'). May be the
+ *                  same buffer used for diffusion (caller schedules them).
+ * @param strength  0 = no advection (current behavior); 1 = full velocity*dt
+ *                  step. 0.4-0.8 reads as "trails form behind the cursor
+ *                  without numerical chaos."
+ * @param dtMs      Frame delta in ms (normalized internally to 60fps reference).
+ */
+export function advectVelocityField(
+  field: VelocityField,
+  scratch: Float32Array,
+  strength: number,
+  dtMs: number
+): void {
+  if (strength <= 0) return
+  const { cols, rows, cellW, cellH, vx, vy } = field
+  const dtFrame = dtMs / 16
+  const scaleX = (strength * dtFrame) / cellW
+  const scaleY = (strength * dtFrame) / cellH
+  const n = cols * rows
+  const sx = scratch.subarray(0, n)
+  const sy = scratch.subarray(n, n * 2)
+  const colsMaxF = cols - 1.001
+  const rowsMaxF = rows - 1.001
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const idx = j * cols + i
+      const u = vx[idx]!
+      const v = vy[idx]!
+      let srcX = i - u * scaleX
+      let srcY = j - v * scaleY
+      if (srcX < 0) srcX = 0
+      else if (srcX > colsMaxF) srcX = colsMaxF
+      if (srcY < 0) srcY = 0
+      else if (srcY > rowsMaxF) srcY = rowsMaxF
+      const i0 = Math.floor(srcX)
+      const j0 = Math.floor(srcY)
+      const fx = srcX - i0
+      const fy = srcY - j0
+      const idx00 = j0 * cols + i0
+      const idx10 = idx00 + 1
+      const idx01 = idx00 + cols
+      const idx11 = idx01 + 1
+      const ax = vx[idx00]! * (1 - fx) + vx[idx10]! * fx
+      const bx = vx[idx01]! * (1 - fx) + vx[idx11]! * fx
+      const ay = vy[idx00]! * (1 - fx) + vy[idx10]! * fx
+      const by = vy[idx01]! * (1 - fx) + vy[idx11]! * fx
+      sx[idx] = ax * (1 - fy) + bx * fy
+      sy[idx] = ay * (1 - fy) + by * fy
+    }
+  }
+  vx.set(sx)
+  vy.set(sy)
+}
+
 /** Optional lateral diffusion pass — each cell averages a tiny fraction of its
  * 4-neighbours into itself, so injected energy seeps outward over time. Skip
  * if `amount <= 0` to save the buffer pass. Uses a single ping-pong buffer
