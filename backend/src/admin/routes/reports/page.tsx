@@ -27,6 +27,7 @@ import { NewVsReturningChart } from "../../components/reports/new-vs-returning-c
 import { CartConversionChart } from "../../components/reports/cart-conversion-chart"
 import { TimeToPurchaseChart } from "../../components/reports/time-to-purchase-chart"
 import { SiteSearchChart } from "../../components/reports/site-search-chart"
+import { AcquisitionTab } from "../../components/reports/acquisition-tab"
 import {
   buildPreset,
   formatDateRange,
@@ -141,6 +142,7 @@ const ReportsPage = () => {
         <Container className="p-0">
           <Tabs.List className="px-4 pt-2 flex-wrap">
             <Tabs.Trigger value="sales">Sales overview</Tabs.Trigger>
+            <Tabs.Trigger value="acquisition">Acquisition</Tabs.Trigger>
             <Tabs.Trigger value="production">Production</Tabs.Trigger>
             <Tabs.Trigger value="customers">Customers</Tabs.Trigger>
             <Tabs.Trigger value="catalog">Catalog & supply</Tabs.Trigger>
@@ -165,6 +167,10 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
           </div>
+        </Tabs.Content>
+
+        <Tabs.Content value="acquisition">
+          <AcquisitionTab fromIso={fromIso} toIso={toIso} />
         </Tabs.Content>
 
         <Tabs.Content value="production">
