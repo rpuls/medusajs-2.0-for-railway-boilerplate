@@ -46,6 +46,12 @@ import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
 import { CapacityChart } from "../../components/reports/capacity-chart"
 import { AlertsManager } from "../../components/reports/alerts-manager"
 import { BlanksForecastChart } from "../../components/reports/blanks-forecast-chart"
+import { CohortLtvChart } from "../../components/reports/cohort-ltv-chart"
+import { RefundRateChart } from "../../components/reports/refund-rate-chart"
+import { FirstOrderAffinityChart } from "../../components/reports/first-order-affinity-chart"
+import { GeoHeatmapChart } from "../../components/reports/geo-heatmap-chart"
+import { OrderTimeHeatmapChart } from "../../components/reports/order-time-heatmap-chart"
+import { VariantVelocityChart } from "../../components/reports/variant-velocity-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -198,6 +204,26 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <RefundRateChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <FirstOrderAffinityChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <GeoHeatmapChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <OrderTimeHeatmapChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
@@ -264,6 +290,11 @@ const ReportsPage = () => {
         <Tabs.Content value="customers">
           <div className="grid grid-cols-1 gap-3">
             <RfmChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <CohortLtvChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
@@ -336,6 +367,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <AgingInventoryChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <VariantVelocityChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
