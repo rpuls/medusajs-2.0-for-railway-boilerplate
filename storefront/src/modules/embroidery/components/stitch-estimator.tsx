@@ -425,31 +425,41 @@ const ArtworkEstimateBlock: React.FC<{
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-md border border-dashed border-ui-border-base p-4 text-sm">
+    <div className="flex flex-col gap-4 min-w-0">
+      <div className="rounded-md border border-dashed border-ui-border-base p-4 text-sm min-w-0">
         <p className="mb-3 text-ui-fg-subtle">
           Upload your artwork, set the embroidered size, and we'll estimate the
           stitch count with Claude — or skip the upload and type a count below.
         </p>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
-            <span className="text-ui-fg-subtle">Artwork file (PNG/JPG/SVG)</span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) void handleFile(file)
-              }}
-              className="text-sm"
-            />
-            {imageFileName ? (
-              <span className="text-[11px] text-ui-fg-muted">Loaded: {imageFileName}</span>
-            ) : null}
-          </label>
+        {/*
+          File input is its own full-width row so a long filename can wrap
+          cleanly below it; previous side-by-side layout pushed the
+          Width/Height inputs off-screen on narrow columns whenever the
+          customer uploaded a file with a verbose name. Width/Height sit
+          on a second row in a 2-column grid for stable alignment at any
+          width.
+        */}
+        <label className="flex flex-col gap-1 text-sm min-w-0">
+          <span className="text-ui-fg-subtle">Artwork file (PNG/JPG/SVG)</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void handleFile(file)
+            }}
+            className="text-xs file:mr-2 file:rounded file:border file:border-ui-border-base file:bg-ui-bg-subtle file:px-2 file:py-1 file:text-xs file:text-ui-fg-base"
+          />
+          {imageFileName ? (
+            <span className="break-all text-[11px] text-ui-fg-muted">
+              Loaded: {imageFileName}
+            </span>
+          ) : null}
+        </label>
 
-          <label className="flex w-28 flex-col gap-1 text-sm">
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm min-w-0">
             <span className="text-ui-fg-subtle">Width (mm)</span>
             <input
               type="number"
@@ -457,10 +467,10 @@ const ArtworkEstimateBlock: React.FC<{
               step={1}
               value={widthMm}
               onChange={(e) => setWidthMm(Math.max(1, Number(e.target.value) || 0))}
-              className="rounded-md border border-ui-border-base px-2 py-1.5"
+              className="w-full rounded-md border border-ui-border-base px-2 py-1.5"
             />
           </label>
-          <label className="flex w-28 flex-col gap-1 text-sm">
+          <label className="flex flex-col gap-1 text-sm min-w-0">
             <span className="text-ui-fg-subtle">Height (mm)</span>
             <input
               type="number"
@@ -468,7 +478,7 @@ const ArtworkEstimateBlock: React.FC<{
               step={1}
               value={heightMm}
               onChange={(e) => setHeightMm(Math.max(1, Number(e.target.value) || 0))}
-              className="rounded-md border border-ui-border-base px-2 py-1.5"
+              className="w-full rounded-md border border-ui-border-base px-2 py-1.5"
             />
           </label>
         </div>

@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from "next/server"
 export const runtime = "nodejs"
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-const MODEL = "claude-sonnet-4-5-20251001"
+// Match the chat route's model — that one is verified working in production,
+// and stitch estimation with a well-constrained system prompt is well within
+// Haiku's wheelhouse. Previously hard-coded a Sonnet alias that wasn't a
+// real model id, which caused every estimate request to 4xx upstream and
+// the route surfaced it as a generic "busy right now" 502.
+const MODEL = "claude-haiku-4-5-20251001"
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024 // 6 MB after base64 — Anthropic limit is ~5 MB raw
 
 const SYSTEM_PROMPT = `You estimate stitch counts for embroidered logos and artwork
@@ -156,10 +161,25 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       const detail = await response.text().catch(() => "")
       console.error("Stitch estimator upstream error", response.status, detail.slice(0, 500))
+      // Surface the actual upstream status so a misconfigured API key,
+      // unknown model id, or quota issue is visible from the storefront
+      // instead of hiding behind a generic "busy" message that lasts
+      // forever.
+      const friendlyDetail =
+        response.status === 401 || response.status === 403
+          ? "API authentication failed — admin needs to check ANTHROPIC_API_KEY."
+          : response.status === 404
+          ? "Model not found — admin needs to check the configured model id."
+          : response.status === 429
+          ? "Rate limit hit — try again in a minute."
+          : response.status >= 500
+          ? "Anthropic API is having issues — try again shortly."
+          : "Stitch analysis failed — enter the count manually."
       return NextResponse.json(
         {
           error: "upstream_error",
-          message: "Stitch analysis is busy right now. Please try again shortly or enter the count manually.",
+          status: response.status,
+          message: `${friendlyDetail} (upstream ${response.status})`,
         },
         { status: 502 }
       )

@@ -54,7 +54,12 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
   onDesignChange,
   availablePlacements,
 }) => {
-  const [quantity, setQuantity] = useState(24)
+  // Default to 1 — the customer can scale up from there. Previously
+  // defaulted to 24 (a sensible mid-tier number for the legacy wholesale
+  // rate card) but that misleads single-piece shoppers into thinking
+  // there's a minimum quantity, which there isn't on the new single-rate
+  // card.
+  const [quantity, setQuantity] = useState(1)
   const [design, setDesign] = useState<EmbroideryDesign | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
