@@ -217,6 +217,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/report-annotation",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {

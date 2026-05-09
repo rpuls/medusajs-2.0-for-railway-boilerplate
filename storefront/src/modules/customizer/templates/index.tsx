@@ -2616,6 +2616,17 @@ export default function CustomizerTemplate({
               lineItemMetadata,
               dataUrlToHostedUrl
             ),
+            // When the customer entered the customizer via `?design=<id>`,
+            // tag the resulting line so saved-design conversion reporting
+            // can attribute the purchase back to the original design row.
+            // Stored under both keys: `source_design_id` (current canonical)
+            // and `designId` (legacy, kept so older reports still work).
+            ...(designIdFromUrl
+              ? {
+                  source_design_id: designIdFromUrl,
+                  designId: designIdFromUrl,
+                }
+              : {}),
             // Fallback display fields — if the cart later loses the
             // variant→product join (custom add path, deleted variant, or
             // partial fields population), the cart UI still has a title and

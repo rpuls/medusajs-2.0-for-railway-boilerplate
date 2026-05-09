@@ -5,6 +5,7 @@ import {
 } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
+import { tagUrl } from "../lib/email-utm"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 import {
   PRODUCTION_STAGE_EVENT,
@@ -91,7 +92,11 @@ export default async function orderProductionStageChangedHandler({
         order,
         stage: data.to_stage,
         customerFirstName: firstName,
-        portalUrl: buildPortalUrl(data.order_id),
+        portalUrl: tagUrl(buildPortalUrl(data.order_id), {
+          medium: "transactional",
+          campaign: `production_stage_${data.to_stage}`,
+          content: "view_order",
+        }),
       },
     })
   } catch (error) {

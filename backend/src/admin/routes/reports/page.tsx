@@ -37,6 +37,11 @@ import { VectorizationFunnelChart } from "../../components/reports/vectorization
 import { DiscountProfitabilityChart } from "../../components/reports/discount-profitability-chart"
 import { ReturnsChart } from "../../components/reports/returns-chart"
 import { CustomizerFunnelChart } from "../../components/reports/customizer-funnel-chart"
+import { SavedDesignConversionChart } from "../../components/reports/saved-design-conversion-chart"
+import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
+import { EmailChannelRoiChart } from "../../components/reports/email-channel-roi-chart"
+import { AnnotationsManager } from "../../components/reports/annotations-manager"
+import { OperationalTiles } from "../../components/reports/operational-tiles"
 import {
   buildPreset,
   formatDateRange,
@@ -146,6 +151,12 @@ const ReportsPage = () => {
         </Text>
       </Container>
 
+      {/* Annotations strip */}
+      <AnnotationsManager />
+
+      {/* Operational tiles (storage + Speed Insights link + PostHog link) */}
+      <OperationalTiles />
+
       {/* Tabs */}
       <Tabs defaultValue="sales">
         <Container className="p-0">
@@ -187,6 +198,7 @@ const ReportsPage = () => {
           <AcquisitionTab fromIso={fromIso} toIso={toIso} />
           <div className="mt-3 grid grid-cols-1 gap-3">
             <AovBySourceChart fromIso={fromIso} toIso={toIso} />
+            <EmailChannelRoiChart fromIso={fromIso} toIso={toIso} />
             <FunnelChart fromIso={fromIso} toIso={toIso} />
           </div>
         </Tabs.Content>
@@ -234,6 +246,7 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <ChurnQueueChart />
             <NewVsReturningChart
               fromIso={fromIso}
               toIso={toIso}
@@ -261,6 +274,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <DesignsUtilizationChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <SavedDesignConversionChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}

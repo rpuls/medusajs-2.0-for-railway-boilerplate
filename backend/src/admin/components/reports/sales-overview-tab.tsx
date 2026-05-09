@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,10 +13,25 @@ import {
 
 import { ReportCard } from "./report-card"
 import { PALETTE } from "../../lib/reports/palette"
+import { COLOR_HEX_BY_KEY } from "./annotations-manager"
+
+type Annotation = {
+  id: string
+  date: string
+  label: string
+  description: string | null
+  color: string
+}
 
 type StatusKey = string
 type TopRegion = { region_id: string; region_name: string; revenue: number }
-type SeriesPoint = { bucket: string; orders: number; revenue: number }
+type SeriesPoint = {
+  bucket: string
+  orders: number
+  revenue: number
+  yoy_orders?: number
+  yoy_revenue?: number
+}
 
 type Response = {
   from: string
@@ -105,6 +121,7 @@ regionId,
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [annotations, setAnnotations] = useState<Annotation[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -132,6 +149,48 @@ regionId,
       cancelled = true
     }
   }, [fromIso, toIso, regionId])
+
+  // Annotations overlay — fetched in parallel and best-effort: failure
+  // here just means no overlay, the chart still renders normally.
+  useEffect(() => {
+    let cancelled = false
+    const params = new URLSearchParams({ from: fromIso, to: toIso })
+    fetch(`/admin/reports/annotations?${params.toString()}`, {
+      credentials: "include",
+    })
+      .then((r) => (r.ok ? r.json() : { annotations: [] }))
+      .then((j) => {
+        if (cancelled) return
+        setAnnotations((j?.annotations as Annotation[]) ?? [])
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [fromIso, toIso])
+
+  // Map annotation dates onto the chart's bucket keys. The series uses
+  // `bucket: "YYYY-MM-DD"` for both daily + weekly granularity so a
+  // direct date-key comparison works for the daily case. For weekly
+  // granularity we round the annotation date down to the nearest bucket.
+  const bucketsInChart = (data?.series ?? []).map((p) => p.bucket)
+  const annotationLines = annotations
+    .map((a) => {
+      let bucket = a.date
+      if (data?.granularity === "week" && bucketsInChart.length > 0) {
+        // Find the latest bucket whose start ≤ annotation date.
+        const annoMs = Date.parse(a.date)
+        let chosen: string | null = null
+        for (const b of bucketsInChart) {
+          const bMs = Date.parse(b)
+          if (Number.isFinite(bMs) && bMs <= annoMs) chosen = b
+        }
+        if (chosen) bucket = chosen
+      }
+      if (!bucketsInChart.includes(bucket)) return null
+      return { ...a, bucket }
+    })
+    .filter((x): x is Annotation & { bucket: string } => x !== null)
 
   const summary = data?.summary
   const currency = data?.currency ?? "aud"
@@ -164,7 +223,7 @@ regionId,
       {/* Time series — sales over time */}
       <ReportCard
         title="Sales over time"
-        caption={`${data?.granularity === "week" ? "Weekly" : "Daily"} totals over the selected window. Smooths out individual-order spikes; the dip pattern usually traces weekends.`}
+        caption={`${data?.granularity === "week" ? "Weekly" : "Daily"} totals over the selected window. Dashed grey line is the same window 365 days ago — for like-for-like comparison rather than rolling 30d.`}
         loading={loading}
         error={error}
       >
@@ -203,8 +262,19 @@ regionId,
                 }}
                 formatter={(value: any, name: string) => {
                   if (name === "revenue") return [formatCurrency(Number(value), currency), "Revenue"]
+                  if (name === "yoy_revenue")
+                    return [formatCurrency(Number(value), currency), "vs LY (same date)"]
                   return [value, name]
                 }}
+              />
+              <Area
+                type="monotone"
+                dataKey="yoy_revenue"
+                stroke={PALETTE.stone400}
+                strokeWidth={1.5}
+                strokeDasharray="3 3"
+                fill="none"
+                isAnimationActive={false}
               />
               <Area
                 type="monotone"
@@ -213,6 +283,20 @@ regionId,
                 strokeWidth={2}
                 fill="url(#revGradient)"
               />
+              {annotationLines.map((a) => (
+                <ReferenceLine
+                  key={a.id}
+                  x={a.bucket}
+                  stroke={COLOR_HEX_BY_KEY[a.color] ?? PALETTE.slate700}
+                  strokeDasharray="3 3"
+                  label={{
+                    value: a.label,
+                    position: "top",
+                    fill: COLOR_HEX_BY_KEY[a.color] ?? PALETTE.slate700,
+                    fontSize: 10,
+                  }}
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -259,11 +343,28 @@ regionId,
               />
               <Area
                 type="monotone"
+                dataKey="yoy_orders"
+                stroke={PALETTE.stone400}
+                strokeWidth={1.5}
+                strokeDasharray="3 3"
+                fill="none"
+                isAnimationActive={false}
+              />
+              <Area
+                type="monotone"
                 dataKey="orders"
                 stroke={PALETTE.slate700}
                 strokeWidth={2}
                 fill="url(#ordersGradient)"
               />
+              {annotationLines.map((a) => (
+                <ReferenceLine
+                  key={a.id}
+                  x={a.bucket}
+                  stroke={COLOR_HEX_BY_KEY[a.color] ?? PALETTE.slate700}
+                  strokeDasharray="3 3"
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
