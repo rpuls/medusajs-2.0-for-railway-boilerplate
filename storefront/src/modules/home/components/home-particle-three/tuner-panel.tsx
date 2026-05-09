@@ -40,6 +40,29 @@ export type ThreeTuning = {
    * preserves its release-time offset from cursor PLUS a random lateral
    * offset up to ±this value. Higher = wider, less rope-like wake. */
   wakeLateralSpread: number
+  /** Bilateral lateral push — particles in the cursor disk get pushed
+   * PERPENDICULAR to the cursor's motion direction (away from the motion
+   * line), with sign by side. Creates the two-lobe wake split that
+   * Newmix shows: particles flow around the cursor on both sides
+   * instead of just being repelled radially. */
+  lateralPushForce: number
+  /** Karman vortex pair: two counter-rotating vortex centers BEHIND the
+   * cursor (one on the left, one on the right). Particles within
+   * vortexRadius of either center receive a tangential force around it.
+   * This is the "two spinning lobes" Newmix shows in slow-motion. */
+  vortexStrength: number
+  /** Distance behind cursor (world units) where the Karman vortex pair
+   * sits, measured along the negative motion direction. */
+  vortexBehindOffset: number
+  /** Lateral separation between the two vortex centers (world units).
+   * They sit at ±this/2 offset perpendicular to motion. */
+  vortexLateralOffset: number
+  /** Radius of each vortex's influence zone. */
+  vortexRadius: number
+  /** Cursor speed at which vortex strength halves. Makes vortices clear
+   * at slow/moderate speed, fade smoothly to streaks at high speed —
+   * exactly the "disappears as cursor speeds up" Newmix behavior. */
+  vortexSpeedHalfLife: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
@@ -56,6 +79,12 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   trailingProbability: 0.5,
   wakePace: 0.7,
   wakeLateralSpread: 8,
+  lateralPushForce: 6,
+  vortexStrength: 12,
+  vortexBehindOffset: 35,
+  vortexLateralOffset: 50,
+  vortexRadius: 50,
+  vortexSpeedHalfLife: 600,
 }
 
 type SliderDef = {
@@ -156,6 +185,66 @@ const SLIDERS: SliderDef[] = [
     format: (v) => `${v.toFixed(0)} px`,
     description:
       "How wide the wake spreads sideways. 0 = particles trace cursor exactly (rope). 8-20 = soft band. >30 = diffuse cloud.",
+  },
+  {
+    key: "lateralPushForce",
+    label: "Lateral push",
+    min: 0,
+    max: 30,
+    step: 0.2,
+    format: (v) => v.toFixed(1),
+    description:
+      "Sideways push perpendicular to cursor's motion. Particles get pushed AWAY from the motion line, signed by side. Creates the bilateral two-lobe wake split.",
+  },
+  {
+    key: "vortexStrength",
+    label: "Vortex strength",
+    min: 0,
+    max: 40,
+    step: 0.5,
+    format: (v) => v.toFixed(1),
+    description:
+      "Strength of the Karman counter-rotating vortex pair behind the cursor. THE force that produces the visible two-lobe spiral Newmix shows in slow motion. 0 = off. 10-20 = clear vortices.",
+  },
+  {
+    key: "vortexBehindOffset",
+    label: "Vortex behind offset",
+    min: 0,
+    max: 200,
+    step: 2,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "Distance behind cursor where the vortex pair sits (along negative motion direction). Larger = trail forms further back.",
+  },
+  {
+    key: "vortexLateralOffset",
+    label: "Vortex separation",
+    min: 0,
+    max: 200,
+    step: 2,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "Lateral spacing between the two vortex centers. Larger = wider bilateral wake.",
+  },
+  {
+    key: "vortexRadius",
+    label: "Vortex radius",
+    min: 10,
+    max: 150,
+    step: 2,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "Radius of each vortex's influence zone. Particles outside don't feel the swirl.",
+  },
+  {
+    key: "vortexSpeedHalfLife",
+    label: "Vortex speed fade",
+    min: 100,
+    max: 3000,
+    step: 50,
+    format: (v) => `${v.toFixed(0)} u/s`,
+    description:
+      "Cursor speed (world-units/sec) at which vortex strength halves. Lower = vortices fade faster as cursor speeds up. Newmix-ish: 400-800.",
   },
   {
     key: "mouseVelocityScale",

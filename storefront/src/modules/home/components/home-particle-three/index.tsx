@@ -324,6 +324,29 @@ function ParticleField({
     const trailingProb = t.trailingProbability
     const wakePace = t.wakePace
     const wakeLateral = t.wakeLateralSpread
+    const lateralPush = t.lateralPushForce
+    const vortexStr = t.vortexStrength
+    const vortexBehind = t.vortexBehindOffset
+    const vortexSep = t.vortexLateralOffset
+    const vortexRad = t.vortexRadius
+    const vortexHalf = t.vortexSpeedHalfLife
+    const vortexRadSq = vortexRad * vortexRad
+    /** Karman vortex pair: two counter-rotating centers BEHIND cursor.
+     * Only meaningful when cursor is moving. Strength fades smoothly with
+     * cursor speed (1 / (1 + speed/halfLife)) so vortices read clearly
+     * at slow motion and fade to streaks at high speed. */
+    let vortexLX = 0
+    let vortexLY = 0
+    let vortexRX = 0
+    let vortexRY = 0
+    let vortexSpeedFactor = 0
+    if (haveCursor && haveMotion && vortexStr > 0) {
+      vortexLX = mx - mfx * vortexBehind - mrx * (vortexSep * 0.5)
+      vortexLY = my - mfy * vortexBehind - mry * (vortexSep * 0.5)
+      vortexRX = mx - mfx * vortexBehind + mrx * (vortexSep * 0.5)
+      vortexRY = my - mfy * vortexBehind + mry * (vortexSep * 0.5)
+      vortexSpeedFactor = 1 / (1 + mouseSpeed / vortexHalf)
+    }
     /** Sample cursor's historical position at `targetTime` (wall-clock ms).
      * Linear search backward from newest; returns null if older than buffer
      * or buffer empty. Buffer is small (256) so linear scan is fine. */
@@ -449,6 +472,54 @@ function ParticleField({
             sideSwirl * ff2 * dt * Math.min(mouseSpeed, 1500)
           vx += vSgn * ccwX * swirlF
           vy += vSgn * ccwY * swirlF
+        }
+        /** Bilateral lateral push: particles in cursor disk get pushed
+         * AWAY from the motion line (perpendicular to motion), with sign
+         * by which side they're on. Creates the two-lobe wake split. */
+        if (haveMotion && lateralPush > 0) {
+          const perp = dx * mrx + dy * mry
+          const sgn = perp >= 0 ? 1 : -1
+          const pushF =
+            lateralPush * ff2 * dt * Math.min(mouseSpeed, 1500)
+          vx += sgn * mrx * pushF
+          vy += sgn * mry * pushF
+        }
+      }
+
+      /** Karman vortex pair (BEHIND cursor): each particle within
+       * vortexRadius of either vortex center receives a CCW (left) or
+       * CW (right) tangential force, scaled by the speed-fade factor.
+       * This is what makes Newmix's signature two-lobe spiral pattern. */
+      if (vortexSpeedFactor > 0.001) {
+        /** Left vortex (CCW around vortexL). */
+        const dlx = px - vortexLX
+        const dly = py - vortexLY
+        const dlSq = dlx * dlx + dly * dly
+        if (dlSq < vortexRadSq && dlSq > 0.001) {
+          const dlDist = Math.sqrt(dlSq)
+          const lFall = 1 - dlDist / vortexRad
+          const lFf2 = lFall * lFall
+          /** CCW tangent at point (dlx, dly): (-dly, dlx) / dlDist. */
+          const tlx = -dly / dlDist
+          const tly = dlx / dlDist
+          const lF = vortexStr * lFf2 * dt * vortexSpeedFactor * 100
+          vx += tlx * lF
+          vy += tly * lF
+        }
+        /** Right vortex (CW around vortexR). */
+        const drx = px - vortexRX
+        const dry = py - vortexRY
+        const drSq = drx * drx + dry * dry
+        if (drSq < vortexRadSq && drSq > 0.001) {
+          const drDist = Math.sqrt(drSq)
+          const rFall = 1 - drDist / vortexRad
+          const rFf2 = rFall * rFall
+          /** CW tangent at point (drx, dry): (dry, -drx) / drDist. */
+          const trx = dry / drDist
+          const try_ = -drx / drDist
+          const rF = vortexStr * rFf2 * dt * vortexSpeedFactor * 100
+          vx += trx * rF
+          vy += try_ * rF
         }
       }
 
