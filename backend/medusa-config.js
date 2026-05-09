@@ -225,6 +225,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/admin-workspace",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {
