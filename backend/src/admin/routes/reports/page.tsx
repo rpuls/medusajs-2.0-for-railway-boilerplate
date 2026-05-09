@@ -33,6 +33,7 @@ import { RfmChart } from "../../components/reports/rfm-chart"
 import { AovBySourceChart } from "../../components/reports/aov-by-source-chart"
 import { SlaBreachChart } from "../../components/reports/sla-breach-chart"
 import { AgingInventoryChart } from "../../components/reports/aging-inventory-chart"
+import { VectorizationFunnelChart } from "../../components/reports/vectorization-funnel-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -201,6 +202,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <AovByMethodChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <VectorizationFunnelChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
