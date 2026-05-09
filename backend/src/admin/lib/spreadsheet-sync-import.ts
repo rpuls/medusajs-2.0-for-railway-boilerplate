@@ -3,6 +3,7 @@ import {
   PRODUCT_CATEGORY_PATH_COLUMN_COUNT,
   PRODUCT_IMAGE_URL_COLUMN_COUNT,
   PRODUCT_IMPORT_CSV_HEADERS,
+  PRODUCT_SUPPLIER_METADATA_KEY,
   PRODUCT_TAG_COLUMN_COUNT,
 } from "./product-import-template-csv"
 import {
@@ -566,6 +567,409 @@ export function expandGoldCatalogToTemplate(parsed: ParsedCsv, shippingProfileId
   return { headers, rows: rowsOut, emptyHeaderColumns: [] }
 }
 
+/** Slug a colour tag for use inside a constructed SKU. */
+function slugHoneybeeColour(colour: string): string {
+  return colour
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+function slugHoneybeeHandle(prefix: string, styleCodeRaw: string): string {
+  const slug = `${prefix}-${styleCodeRaw.trim().toLowerCase()}`
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return (slug || `${prefix}-product`).slice(0, 120)
+}
+
+/** First non-empty AUD price from `price1`..`price5` (Honeybee uses qty1=`Jan-99` Excel-mangled flat / 1-99 anchor). */
+function honeybeeFlatPriceFromRow(row: Record<string, string>): string {
+  for (const k of ["price1", "price2", "price3", "price4", "price5"]) {
+    const v = (row[k] ?? "").trim()
+    if (v) {
+      return v
+    }
+  }
+  return ""
+}
+
+/** Split semicolon-separated `category` tags; trim, dedupe (case-insensitive), cap at 10. */
+function honeybeeTagsFromRow(row: Record<string, string>): string[] {
+  const raw = (row["category"] ?? "").trim()
+  if (!raw) {
+    return []
+  }
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const part of raw.split(";")) {
+    const v = part.trim()
+    if (!v) {
+      continue
+    }
+    const k = v.toLowerCase()
+    if (seen.has(k)) {
+      continue
+    }
+    seen.add(k)
+    out.push(v)
+    if (out.length >= PRODUCT_TAG_COLUMN_COUNT) {
+      break
+    }
+  }
+  return out
+}
+
+/** Brand inferred from row URLs — controls supplier metadata stamp + handle prefix. */
+export type HoneybeeBrand = {
+  supplier: string
+  handlePrefix: string
+}
+
+const HONEYBEE_BRAND_FALLBACK: HoneybeeBrand = { supplier: "Biz Care", handlePrefix: "biz-care" }
+
+/**
+ * Inspect `product_url` / `image_url` cells across the first ~24 rows to detect which sister brand the
+ * Honeybee CSV came from. Falls back to Biz Care when no domain matches (most common shape we see).
+ */
+export function inferHoneybeeBrandFromRows(rows: ParsedCsv["rows"]): HoneybeeBrand {
+  const cap = Math.min(rows.length, 24)
+  for (let i = 0; i < cap; i++) {
+    const row = rows[i]!
+    const blob = `${row["product_url"] ?? ""} ${row["image_url"] ?? ""}`.toLowerCase()
+    if (blob.includes("biz-care.com")) {
+      return { supplier: "Biz Care", handlePrefix: "biz-care" }
+    }
+    if (blob.includes("bizcollection.com")) {
+      return { supplier: "Biz Collection", handlePrefix: "biz-collection" }
+    }
+    if (blob.includes("syzmik.com")) {
+      return { supplier: "Syzmik", handlePrefix: "syzmik" }
+    }
+    if (blob.includes("bizcorporates.com")) {
+      return { supplier: "Biz Corporates", handlePrefix: "biz-corporates" }
+    }
+  }
+  return HONEYBEE_BRAND_FALLBACK
+}
+
+function slugRamoHandle(parentCode: string): string {
+  const slug = `ramo-${parentCode.trim().toLowerCase()}`
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return (slug || "ramo-product").slice(0, 120)
+}
+
+/**
+ * Ramo Australia catalogue export. Distinct from Honeybee: real per-variant SKUs in `product_id`,
+ * variants grouped by `parent_code`, prices ex-GST, HTML descriptions, ramo.com.au URLs. One row per
+ * variant; rows for the same parent_code share name/description but vary by colour + size.
+ */
+export function detectRamoCatalog(parsed: ParsedCsv): boolean {
+  const keys = normalizedHeaderKeySet(parsed)
+  const noMedusaHandle = !columnFilledSomewhere(parsed, "product handle")
+  const hasShape =
+    keys.has("parent code") &&
+    keys.has("product id") &&
+    keys.has("attribute colours") &&
+    keys.has("price ex gst")
+  if (!noMedusaHandle || !hasShape) {
+    return false
+  }
+  /** Belt-and-braces: confirm at least one ramo.com.au URL within the first ~24 rows. */
+  const cap = Math.min(parsed.rows.length, 24)
+  for (let i = 0; i < cap; i++) {
+    const row = parsed.rows[i]!
+    const blob = `${row["product_url"] ?? ""} ${row["product_image_url"] ?? ""}`.toLowerCase()
+    if (blob.includes("ramo.com.au")) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * One Medusa product per `parent_code`; variant SKU = supplied `product_id` (already unique). Stamps
+ * `Product Supplier=Ramo`. Description carries the supplier's HTML; Variant Price AUD = `price_ex_gst`
+ * (user can mark up later). Hero image: `product_image_hero_url`; per-variant image: `product_image_url`.
+ */
+export function expandRamoCatalogToTemplate(
+  parsed: ParsedCsv,
+  shippingProfileId: string
+): ParsedCsv {
+  const headersBase = PRODUCT_IMPORT_CSV_HEADERS.map((h) => h.toLowerCase())
+  const extras = ["variant option 2 name", "variant option 2 value"]
+  const headers = [...headersBase]
+  for (const e of extras) {
+    if (!headers.includes(e)) {
+      headers.push(e)
+    }
+  }
+
+  const byParent = new Map<string, Record<string, string>[]>()
+  for (const row of parsed.rows) {
+    const pc = (row["parent_code"] ?? "").trim().toUpperCase()
+    if (!pc) {
+      continue
+    }
+    const list = byParent.get(pc)
+    if (list) {
+      list.push(row)
+    } else {
+      byParent.set(pc, [row])
+    }
+  }
+
+  const rowsOut: Record<string, string>[] = []
+
+  for (const groupRows of byParent.values()) {
+    const first = groupRows[0]!
+    const parentCode = (first["parent_code"] ?? "").trim().toUpperCase()
+    const handle = slugRamoHandle(parentCode)
+    const productTitle = (first["name"] ?? "").trim() || `Ramo ${parentCode}`
+    const description = (first["long_description"] ?? "").trim()
+    const heroImage =
+      (first["product_image_hero_url"] ?? "").trim() ||
+      (first["product_image_url"] ?? "").trim()
+    const primaryCategory = (first["primary_category"] ?? "").trim()
+    const attrType = (first["attribute_type"] ?? "").trim()
+
+    const seenSku = new Set<string>()
+
+    for (const row of groupRows) {
+      const sku = (row["product_id"] ?? "").trim()
+      if (!sku || seenSku.has(sku)) {
+        continue
+      }
+      seenSku.add(sku)
+
+      const colour = (row["attribute_colours"] ?? "").trim() || "Default"
+      const size = (row["attribute_size"] ?? "").trim() || "One Size"
+      const variantImage = (row["product_image_url"] ?? "").trim()
+      const price = (row["price_ex_gst"] ?? "").trim()
+      const productUrl = (row["product_url"] ?? "").trim()
+
+      const base = emptyTemplateRow()
+      base["variant option 2 name"] = ""
+      base["variant option 2 value"] = ""
+
+      base["product handle"] = handle
+      base["product title"] = productTitle
+      if (description) {
+        base["product description"] = description
+      }
+      /** Ramo prices are ex-GST supplier wholesale — same trust concern as Honeybee, import as draft. */
+      base["product status"] = "draft"
+      base["product discountable"] = "TRUE"
+      base["shipping profile id"] = shippingProfileId
+      base["variant sku"] = sku
+      base["variant title"] = [colour, size].filter((v) => v && v !== "One Size").join(" / ") || sku
+      base["variant price aud"] = price
+      base["variant manage inventory"] = "FALSE"
+      base["variant allow backorder"] = "TRUE"
+      base["variant option 1 name"] = "Colour"
+      base["variant option 1 value"] = colour
+      base["variant option 2 name"] = "Size"
+      base["variant option 2 value"] = size
+
+      if (heroImage) {
+        base["product thumbnail"] = heroImage
+        base["product image 1 url"] = heroImage
+      }
+      if (variantImage && variantImage !== heroImage) {
+        base["product image 2 url"] = variantImage
+      }
+
+      /** `primary_category` is a single label (e.g. "Aprons"); attribute_type adds a coarser bucket. */
+      const tagSeen = new Set<string>()
+      const tags: string[] = []
+      for (const v of [primaryCategory, attrType]) {
+        const t = v.trim()
+        if (!t) continue
+        const k = t.toLowerCase()
+        if (tagSeen.has(k)) continue
+        tagSeen.add(k)
+        tags.push(t)
+      }
+      tags.forEach((tag, i) => {
+        const col = i === 0 ? "product tag 1" : `product tag ${i + 1}`
+        base[col] = tag
+      })
+
+      if (productUrl) {
+        base["product external id"] = productUrl
+      }
+
+      base["product supplier"] = "Ramo"
+
+      rowsOut.push(base)
+    }
+  }
+
+  return { headers, rows: rowsOut, emptyHeaderColumns: [] }
+}
+
+/**
+ * Honeybee/FashionBiz CDN catalogue export shape (style_code + colour_tag + front_color_image_url).
+ * Same export format used by Biz Care, Biz Collection, Syzmik, Biz Corporates — brand is inferred from
+ * `product_url` / `image_url` domains and stamps both Product Supplier and the handle prefix accordingly.
+ * Detected before the generic FashionBiz/variant-grid heuristic since both shapes share `sku`+`style_code`+`size`+`colour`.
+ */
+export function detectHoneybeeCatalog(parsed: ParsedCsv): boolean {
+  const keys = normalizedHeaderKeySet(parsed)
+  const noMedusaHandle = !columnFilledSomewhere(parsed, "product handle")
+  /** Underscores are normalized to spaces by `normalizeSpreadsheetHeaderKey`, so use the normalized form here. */
+  const hasShape =
+    keys.has("style code") &&
+    keys.has("style name") &&
+    keys.has("colour tag") &&
+    keys.has("front color image url")
+  return noMedusaHandle && hasShape
+}
+
+/**
+ * One Medusa row per (style × colour × size); SKU is constructed (`<style_code>-<colour-slug>-<size>`)
+ * because the supplied `sku` column is a corrupted EAN repeated across variants. Stamps the inferred
+ * brand on `Product Supplier` so the metadata round-trips like every other import.
+ */
+export function expandHoneybeeCatalogToTemplate(
+  parsed: ParsedCsv,
+  shippingProfileId: string,
+  brand: HoneybeeBrand = inferHoneybeeBrandFromRows(parsed.rows)
+): ParsedCsv {
+  const headersBase = PRODUCT_IMPORT_CSV_HEADERS.map((h) => h.toLowerCase())
+  const extras = ["variant option 2 name", "variant option 2 value"]
+  const headers = [...headersBase]
+  for (const e of extras) {
+    if (!headers.includes(e)) {
+      headers.push(e)
+    }
+  }
+
+  const byStyle = new Map<string, Record<string, string>[]>()
+  for (const row of parsed.rows) {
+    const st = (row["style_code"] ?? "").trim().toUpperCase()
+    if (!st) {
+      continue
+    }
+    const list = byStyle.get(st)
+    if (list) {
+      list.push(row)
+    } else {
+      byStyle.set(st, [row])
+    }
+  }
+
+  const rowsOut: Record<string, string>[] = []
+
+  for (const groupRows of byStyle.values()) {
+    const first = groupRows[0]!
+    const styleCode = (first["style_code"] ?? "").trim().toUpperCase()
+    const handle = slugHoneybeeHandle(brand.handlePrefix, styleCode)
+    const productTitle = (first["style_name"] ?? "").trim() || `${brand.supplier} ${styleCode}`
+    const description = (first["stringified_description"] ?? "").trim()
+    const heroImage = (first["image_url"] ?? "").trim()
+    const productUrl = (first["product_url"] ?? "").trim()
+    const tagValues = honeybeeTagsFromRow(first)
+
+    let stylePriceFallback = honeybeeFlatPriceFromRow(first)
+
+    /** Skip rows that fail to add anything (no size + no colour) — defensive against trailing blank rows. */
+    const seenVariantKeys = new Set<string>()
+
+    for (const row of groupRows) {
+      const colourTag = (row["colour_tag"] ?? "").trim()
+      const colourDisplay = (row["colour"] ?? "").trim() || colourTag || "Default"
+      const size = (row["size"] ?? "").trim() || "One Size"
+      let price = honeybeeFlatPriceFromRow(row)
+      if (!price) {
+        price = stylePriceFallback
+      } else if (!stylePriceFallback) {
+        stylePriceFallback = price
+      }
+
+      const colourSlug = slugHoneybeeColour(colourTag || colourDisplay) || "DEFAULT"
+      const sizeSlug = size
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+      const sku = `${styleCode}-${colourSlug}-${sizeSlug || "ONE-SIZE"}`
+      if (seenVariantKeys.has(sku)) {
+        continue
+      }
+      seenVariantKeys.add(sku)
+
+      const base = emptyTemplateRow()
+      base["variant option 2 name"] = ""
+      base["variant option 2 value"] = ""
+
+      base["product handle"] = handle
+      base["product title"] = productTitle
+      if (description) {
+        base["product description"] = description
+      }
+      /**
+       * Honeybee CSV pricing is supplier-published wholesale and can sit below your actual cost (verified 2026-05:
+       * BA35 CSV price1=$14.20 vs supplier-login cost $16.33). Import as draft so nothing reaches customers with
+       * unreviewed prices — bulk-publish via update flow once retail prices are vetted.
+       */
+      base["product status"] = "draft"
+      base["product discountable"] = "TRUE"
+      base["shipping profile id"] = shippingProfileId
+      base["variant sku"] = sku
+      base["variant title"] = [colourDisplay, size].filter(Boolean).join(" / ") || sku
+      base["variant price aud"] = price
+      base["variant manage inventory"] = "FALSE"
+      base["variant allow backorder"] = "TRUE"
+      base["variant option 1 name"] = "Colour"
+      base["variant option 1 value"] = colourDisplay
+      base["variant option 2 name"] = "Size"
+      base["variant option 2 value"] = size
+
+      /**
+       * Map Honeybee qty bands → Medusa's 5-tier ladder so the existing tier-pricing pipeline
+       * (parseTierMinorFromRow → tierBySku → apply-variant-tier-prices) writes `bulk_pricing` correctly.
+       * Honeybee bands: price1 covers 1-99, price2 covers 100-499, price3 covers 500+. Medusa caps at 100+,
+       * so price3 is intentionally dropped (deeper discount lost) to avoid over-discounting at qty=100.
+       * Skip tier columns entirely when there's no real wholesale split (single-price Biz Care products).
+       */
+      const retailPrice = (row["price1"] ?? "").trim() || price
+      const wholesalePrice = (row["price2"] ?? "").trim()
+      if (retailPrice && wholesalePrice && wholesalePrice !== retailPrice) {
+        base["base_sale_price"] = retailPrice
+        base["tier_10_to_19_price"] = retailPrice
+        base["tier_20_to_49_price"] = retailPrice
+        base["tier_50_to_99_price"] = retailPrice
+        base["tier_100_plus_price"] = wholesalePrice
+      }
+
+      if (heroImage) {
+        base["product thumbnail"] = heroImage
+        base["product image 1 url"] = heroImage
+      }
+      const altImage = (row["alternate_image"] ?? "").trim()
+      if (altImage) {
+        base["product image 2 url"] = altImage
+      }
+
+      tagValues.forEach((tag, i) => {
+        const col = i === 0 ? "product tag 1" : `product tag ${i + 1}`
+        base[col] = tag
+      })
+
+      if (productUrl) {
+        base["product external id"] = productUrl
+      }
+
+      base["product supplier"] = brand.supplier
+
+      rowsOut.push(base)
+    }
+  }
+
+  return { headers, rows: rowsOut, emptyHeaderColumns: [] }
+}
+
 function slugDncHandle(styleCodeRaw: string): string {
   const slug = `dnc-${styleCodeRaw.trim().toLowerCase()}`
     .replace(/[^a-z0-9-]+/g, "-")
@@ -696,10 +1100,44 @@ export function expandDncWorkwearCatalogToTemplate(
   return { headers, rows: rowsOut, emptyHeaderColumns: [] }
 }
 
+/**
+ * Source format selector for the import flow:
+ * - `auto`: detect AS Colour Gold / FashionBiz / DNC by header signature; fall back to template (current behaviour).
+ * - `template`: skip auto-detection, treat as the canonical Medusa import template.
+ * - `ascolour-gold` / `fashionbiz` / `dnc-workwear`: force the matching expansion regardless of headers
+ *   (useful when a supplier's CSV has the right shape but the URL/header heuristic doesn't recognise it).
+ */
+export type SpreadsheetImportFormat =
+  | "auto"
+  | "template"
+  | "ascolour-gold"
+  | "fashionbiz"
+  | "biz-honeybee"
+  | "ramo"
+  | "dnc-workwear"
+
 export type SpreadsheetImportOptions = {
   /** Required for AS Colour–style CSVs that omit Shipping Profile Id. */
   defaultShippingProfileId?: string
+  /** When omitted, defaults to `"auto"` (existing behaviour). */
+  format?: SpreadsheetImportFormat
 }
+
+export const SPREADSHEET_IMPORT_FORMAT_OPTIONS: ReadonlyArray<{
+  value: SpreadsheetImportFormat
+  label: string
+}> = [
+  { value: "auto", label: "Auto-detect (default)" },
+  { value: "template", label: "Medusa import template (canonical)" },
+  { value: "ascolour-gold", label: "AS Colour Gold (STYLECODE + PRODUCT_NAME)" },
+  { value: "fashionbiz", label: "FashionBiz / Biz / Syzmik variant grid (SKU + style + size + colour)" },
+  {
+    value: "biz-honeybee",
+    label: "Biz Care / Biz Collection / Syzmik / Biz Corporates (Honeybee export — brand auto-detected from URL)",
+  },
+  { value: "ramo", label: "Ramo Australia (parent_code + product_id, ramo.com.au)" },
+  { value: "dnc-workwear", label: "DNC Workwear (ProductCode / Description / Description2-3)" },
+]
 
 export type NormalizeSpreadsheetResult = {
   /** Passes validation and can be sent to `buildBatchCreatesFromParsedCsv`; null until requirements are met */
@@ -713,12 +1151,72 @@ export function normalizeSpreadsheetForImport(
   opts: SpreadsheetImportOptions
 ): NormalizeSpreadsheetResult {
   const hints: string[] = []
+  const format = opts.format ?? "auto"
 
-  if (detectFashionBizVariantCatalog(rawParsed)) {
+  /** Honeybee must be checked before FashionBiz: both share `sku`+`style_code`+`size`+`colour` headers, but Honeybee has richer columns we want to preserve. */
+  const wantsHoneybee =
+    format === "biz-honeybee" || (format === "auto" && detectHoneybeeCatalog(rawParsed))
+  const wantsRamo =
+    format === "ramo" || (format === "auto" && detectRamoCatalog(rawParsed))
+  const wantsFashionBiz =
+    !wantsHoneybee &&
+    !wantsRamo &&
+    (format === "fashionbiz" || (format === "auto" && detectFashionBizVariantCatalog(rawParsed)))
+  const wantsGold =
+    format === "ascolour-gold" || (format === "auto" && detectGoldCatalogFormat(rawParsed))
+  const wantsDnc =
+    format === "dnc-workwear" || (format === "auto" && detectDncWorkwearCatalog(rawParsed))
+
+  if (wantsHoneybee) {
     const sp = opts.defaultShippingProfileId?.trim()
     if (!sp) {
       hints.push(
-        "Detected wholesale variant-grid CSV (e.g. sku / stock item + style + size + colour). Paste **Default shipping profile id** below (Settings → Shipping Profiles), then re-upload or change the field to refresh preview."
+        format === "biz-honeybee"
+          ? "Honeybee export format selected (Biz Care / Biz Collection / Syzmik / Biz Corporates). Paste **Default shipping profile id** below (Settings → Shipping Profiles) to enable preview."
+          : "Detected Honeybee export (style_code + colour_tag + front_color_image_url). Paste **Default shipping profile id** below (Settings → Shipping Profiles), then re-upload or change the field to refresh preview."
+      )
+      return { readyParsed: null, rawParsed, hints }
+    }
+    const brand = inferHoneybeeBrandFromRows(rawParsed.rows)
+    const expanded = expandHoneybeeCatalogToTemplate(rawParsed, sp, brand)
+    const distinctHandles = new Set(expanded.rows.map((r) => (r["product handle"] ?? "").trim())).size
+    hints.push(
+      `Mapped ${expanded.rows.length} variant row(s) from Honeybee export → ${brand.supplier} (${distinctHandles} product handle(s), pattern \`${brand.handlePrefix}-<style_code>\`, supplier auto-stamped).`
+    )
+    hints.push(
+      "Imported as **draft** — Honeybee CSV pricing can sit below your supplier-login cost. Vet retail prices, then bulk-publish via the update flow."
+    )
+    return { readyParsed: expanded, rawParsed, hints }
+  }
+
+  if (wantsRamo) {
+    const sp = opts.defaultShippingProfileId?.trim()
+    if (!sp) {
+      hints.push(
+        format === "ramo"
+          ? "Ramo Australia format selected. Paste **Default shipping profile id** below (Settings → Shipping Profiles) to enable preview."
+          : "Detected Ramo Australia catalogue (parent_code + product_id + ramo.com.au URLs). Paste **Default shipping profile id** below (Settings → Shipping Profiles), then re-upload or change the field to refresh preview."
+      )
+      return { readyParsed: null, rawParsed, hints }
+    }
+    const expanded = expandRamoCatalogToTemplate(rawParsed, sp)
+    const distinctHandles = new Set(expanded.rows.map((r) => (r["product handle"] ?? "").trim())).size
+    hints.push(
+      `Mapped ${expanded.rows.length} variant row(s) from Ramo (${distinctHandles} product handle(s), pattern \`ramo-<parent_code>\`, prices ex-GST — adjust after import).`
+    )
+    hints.push(
+      "Imported as **draft** — Ramo prices are ex-GST supplier wholesale. Vet retail prices, then bulk-publish via the update flow."
+    )
+    return { readyParsed: expanded, rawParsed, hints }
+  }
+
+  if (wantsFashionBiz) {
+    const sp = opts.defaultShippingProfileId?.trim()
+    if (!sp) {
+      hints.push(
+        format === "fashionbiz"
+          ? "FashionBiz / Biz variant-grid format selected. Paste **Default shipping profile id** below (Settings → Shipping Profiles) to enable preview."
+          : "Detected wholesale variant-grid CSV (e.g. sku / stock item + style + size + colour). Paste **Default shipping profile id** below (Settings → Shipping Profiles), then re-upload or change the field to refresh preview."
       )
       return { readyParsed: null, rawParsed, hints }
     }
@@ -730,11 +1228,13 @@ export function normalizeSpreadsheetForImport(
     return { readyParsed: expanded, rawParsed, hints }
   }
 
-  if (detectGoldCatalogFormat(rawParsed)) {
+  if (wantsGold) {
     const sp = opts.defaultShippingProfileId?.trim()
     if (!sp) {
       hints.push(
-        "Detected AS Colour wholesale columns (STYLECODE, PRODUCT_NAME). Paste a **Shipping profile id** below (Settings → Shipping Profiles), then the preview will validate."
+        format === "ascolour-gold"
+          ? "AS Colour Gold format selected. Paste a **Shipping profile id** below (Settings → Shipping Profiles) to enable preview."
+          : "Detected AS Colour wholesale columns (STYLECODE, PRODUCT_NAME). Paste a **Shipping profile id** below (Settings → Shipping Profiles), then the preview will validate."
       )
       return { readyParsed: null, rawParsed, hints }
     }
@@ -745,11 +1245,13 @@ export function normalizeSpreadsheetForImport(
     return { readyParsed: expanded, rawParsed, hints }
   }
 
-  if (detectDncWorkwearCatalog(rawParsed)) {
+  if (wantsDnc) {
     const sp = opts.defaultShippingProfileId?.trim()
     if (!sp) {
       hints.push(
-        "Detected DNC Workwear price CSV (ProductCode / Description / Description2–3 / URL). Paste **Default shipping profile id** below (Settings → Shipping Profiles), then re-upload or change the field to refresh preview."
+        format === "dnc-workwear"
+          ? "DNC Workwear format selected. Paste **Default shipping profile id** below (Settings → Shipping Profiles) to enable preview."
+          : "Detected DNC Workwear price CSV (ProductCode / Description / Description2–3 / URL). Paste **Default shipping profile id** below (Settings → Shipping Profiles), then re-upload or change the field to refresh preview."
       )
       return { readyParsed: null, rawParsed, hints }
     }
@@ -999,6 +1501,16 @@ const parseManageInventory = (raw: string | undefined): boolean =>
 const parseAllowBackorder = (raw: string | undefined): boolean =>
   raw !== undefined && raw !== "" ? TRUEISH(raw) : false
 
+/** Parse a length/width/height cell. Empty / non-numeric returns undefined so the field is omitted. */
+function parseDimensionCell(raw: string | undefined): number | undefined {
+  const v = (raw ?? "").trim()
+  if (v === "") {
+    return undefined
+  }
+  const n = Number(v)
+  return Number.isFinite(n) ? n : undefined
+}
+
 function buildProductViewImageMetadataFromRow(
   first: Record<string, string>
 ): Record<string, string> | undefined {
@@ -1240,6 +1752,10 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
         }
       }
 
+      const variantLength = parseDimensionCell(row["variant length"])
+      const variantWidth = parseDimensionCell(row["variant width"])
+      const variantHeight = parseDimensionCell(row["variant height"])
+
       const barcodeRaw = (row["variant barcode"] ?? "").trim()
       let barcode: string | undefined = barcodeRaw || undefined
       if (barcodeRaw) {
@@ -1263,6 +1779,9 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
         allow_backorder: parseAllowBackorder(row["variant allow backorder"]),
         manage_inventory: parseManageInventory(row["variant manage inventory"]),
         weight: weight !== undefined && Number.isFinite(weight) ? weight : undefined,
+        length: variantLength,
+        width: variantWidth,
+        height: variantHeight,
         hs_code: (row["variant hs code"] ?? "").trim() || undefined,
         origin_country: (row["variant origin country"] ?? "").trim() || undefined,
         mid_code: (row["variant mid code"] ?? "").trim() || undefined,
@@ -1278,11 +1797,19 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
     }
 
     const viewImageMetadata = buildProductViewImageMetadataFromRow(first)
+    const supplierRaw = (first["product supplier"] ?? "").trim()
+    const supplierMetadata: Record<string, unknown> | undefined = supplierRaw
+      ? { [PRODUCT_SUPPLIER_METADATA_KEY]: supplierRaw }
+      : undefined
     const mergedMetadata: Record<string, unknown> | undefined = (() => {
-      if (!viewImageMetadata && !productMetadataExtra) {
+      if (!viewImageMetadata && !productMetadataExtra && !supplierMetadata) {
         return undefined
       }
-      return { ...(productMetadataExtra ?? {}), ...(viewImageMetadata ?? {}) }
+      return {
+        ...(productMetadataExtra ?? {}),
+        ...(viewImageMetadata ?? {}),
+        ...(supplierMetadata ?? {}),
+      }
     })()
 
     creates.push({
@@ -1309,6 +1836,9 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
         const n = Number(first["product weight"])
         return Number.isFinite(n) ? n : undefined
       })(),
+      length: parseDimensionCell(first["product length"]),
+      width: parseDimensionCell(first["product width"]),
+      height: parseDimensionCell(first["product height"]),
       shipping_profile_id: shippingProfileId,
       collection_id: (first["product collection id"] ?? "").trim() || undefined,
       type_id: (first["product type id"] ?? "").trim() || undefined,

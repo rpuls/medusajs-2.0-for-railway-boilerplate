@@ -1,5 +1,6 @@
 import { resolveVariantColourFromCsvRow } from "./as-colour-csv-variant-colour"
 import type { ParsedCsv } from "./csv-import"
+import { PRODUCT_SUPPLIER_METADATA_KEY } from "./product-import-template-csv"
 
 /** Payload accepted by `sdk.admin.product.batch({ update })`. */
 export type SpreadsheetProductUpdate = Record<string, unknown>
@@ -89,6 +90,10 @@ export const PRODUCT_PATCH_COLUMN_DEFS: readonly ProductPatchColumnDef[] = [
   { csvKey: "product mid code", label: "Product MID code" },
   { csvKey: "product material", label: "Product material" },
   { csvKey: "product weight", label: "Product weight" },
+  { csvKey: "product length", label: "Product length" },
+  { csvKey: "product width", label: "Product width" },
+  { csvKey: "product height", label: "Product height" },
+  { csvKey: "product supplier", label: "Product supplier (metadata.supplier)" },
 ] as const
 
 const PATCH_CSV_KEYS = new Set(PRODUCT_PATCH_COLUMN_DEFS.map((d) => d.csvKey))
@@ -166,6 +171,18 @@ function firstRowFeedsPatch(first: Record<string, string>, csvKey: string): bool
       const n = Number(raw)
       return Number.isFinite(n)
     }
+    case "product length":
+    case "product width":
+    case "product height": {
+      const raw = (first[csvKey] ?? "").trim()
+      if (raw === "") {
+        return false
+      }
+      const n = Number(raw)
+      return Number.isFinite(n)
+    }
+    case "product supplier":
+      return !!(first["product supplier"] ?? "").trim()
     default:
       return false
   }
@@ -460,6 +477,47 @@ function applyProductPatchColumns(
       }
     }
   }
+
+  if (allow("product length")) {
+    const n = parseDimensionPatchCell(first["product length"])
+    if (n !== undefined) {
+      patch.length = n
+    }
+  }
+
+  if (allow("product width")) {
+    const n = parseDimensionPatchCell(first["product width"])
+    if (n !== undefined) {
+      patch.width = n
+    }
+  }
+
+  if (allow("product height")) {
+    const n = parseDimensionPatchCell(first["product height"])
+    if (n !== undefined) {
+      patch.height = n
+    }
+  }
+
+  if (allow("product supplier")) {
+    const supplier = (first["product supplier"] ?? "").trim()
+    if (supplier) {
+      const existing =
+        patch.metadata && typeof patch.metadata === "object" && !Array.isArray(patch.metadata)
+          ? (patch.metadata as Record<string, unknown>)
+          : {}
+      patch.metadata = { ...existing, [PRODUCT_SUPPLIER_METADATA_KEY]: supplier }
+    }
+  }
+}
+
+function parseDimensionPatchCell(raw: string | undefined): number | undefined {
+  const v = (raw ?? "").trim()
+  if (v === "") {
+    return undefined
+  }
+  const n = Number(v)
+  return Number.isFinite(n) ? n : undefined
 }
 
 /**

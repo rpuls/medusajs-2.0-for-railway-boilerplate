@@ -10,9 +10,14 @@ import {
   detectDncWorkwearCatalog,
   detectFashionBizVariantCatalog,
   detectGoldCatalogFormat,
+  detectHoneybeeCatalog,
+  detectRamoCatalog,
   expandDncWorkwearCatalogToTemplate,
   expandFashionBizCatalogToTemplate,
   expandGoldCatalogToTemplate,
+  expandHoneybeeCatalogToTemplate,
+  expandRamoCatalogToTemplate,
+  inferHoneybeeBrandFromRows,
   normalizeSpreadsheetForImport,
   parseProductMetadataJsonFromRow,
   slugifyCollectionHandle,
@@ -533,6 +538,786 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       const meta = (creates[0] as Record<string, unknown>).metadata as Record<string, unknown>
       expect(meta.image_standard_url).toBe("https://x/std.jpg")
       expect(meta.gsm).toBe(180)
+    })
+  })
+
+  describe("supplier + dimensions + format selector", () => {
+    it("buildBatchCreatesFromParsedCsv writes Product Supplier to product.metadata.supplier", () => {
+      const r = emptyRow()
+      r["product handle"] = "supplier-shirt"
+      r["product title"] = "Supplier Shirt"
+      r["product status"] = "published"
+      r["shipping profile id"] = "sp_test"
+      r["variant sku"] = "SUP-1"
+      r["variant option 1 name"] = "Size"
+      r["variant option 1 value"] = "M"
+      r["variant price aud"] = "10"
+      r["product supplier"] = "DNC Workwear"
+
+      const parsed = parseCsv(buildCsv([r]))
+      const { creates, errors } = buildBatchCreatesFromParsedCsv(parsed)
+
+      expect(errors).toEqual([])
+      const meta = (creates[0] as Record<string, unknown>).metadata as Record<string, unknown>
+      expect(meta.supplier).toBe("DNC Workwear")
+    })
+
+    it("buildBatchCreatesFromParsedCsv parses product + variant Length/Width/Height", () => {
+      const r = emptyRow()
+      r["product handle"] = "dim-shirt"
+      r["product title"] = "Dim Shirt"
+      r["product status"] = "published"
+      r["shipping profile id"] = "sp_test"
+      r["variant sku"] = "DIM-1"
+      r["variant option 1 name"] = "Size"
+      r["variant option 1 value"] = "M"
+      r["variant price aud"] = "10"
+      r["product length"] = "30"
+      r["product width"] = "20"
+      r["product height"] = "5"
+      r["variant length"] = "31"
+      r["variant width"] = "21"
+      r["variant height"] = "6"
+
+      const parsed = parseCsv(buildCsv([r]))
+      const { creates, errors } = buildBatchCreatesFromParsedCsv(parsed)
+
+      expect(errors).toEqual([])
+      const c = creates[0] as Record<string, unknown>
+      expect(c.length).toBe(30)
+      expect(c.width).toBe(20)
+      expect(c.height).toBe(5)
+      const v = (c.variants as Array<Record<string, unknown>>)[0]!
+      expect(v.length).toBe(31)
+      expect(v.width).toBe(21)
+      expect(v.height).toBe(6)
+    })
+
+    it("buildBatchCreatesFromParsedCsv leaves dimensions undefined when cells are blank or non-numeric", () => {
+      const r = emptyRow()
+      r["product handle"] = "dim-blank"
+      r["product title"] = "Dim Blank"
+      r["product status"] = "published"
+      r["shipping profile id"] = "sp_test"
+      r["variant sku"] = "DIM-B"
+      r["variant option 1 name"] = "Size"
+      r["variant option 1 value"] = "M"
+      r["variant price aud"] = "10"
+      r["product length"] = ""
+      r["product width"] = "not-a-number"
+
+      const parsed = parseCsv(buildCsv([r]))
+      const { creates, errors } = buildBatchCreatesFromParsedCsv(parsed)
+
+      expect(errors).toEqual([])
+      const c = creates[0] as Record<string, unknown>
+      expect(c.length).toBeUndefined()
+      expect(c.width).toBeUndefined()
+    })
+
+    it("normalizeSpreadsheetForImport with format=template skips DNC auto-expansion", () => {
+      const raw = `${DNC_HEADER}
+1101,Chef Jacket SS,,,,https://cdn.dncworkwear.com.au/p.jpg,https://www.dncworkwear.com.au/Product/1101,,$20.30,,,
+110110061,Chef Jacket SS Black XXS,Black,XXS,9335975124903,https://cdn.dncworkwear.com.au/v.jpg,,,$20.30,,`
+      const parsed = parseCsv(raw)
+      // Without override, auto-detects DNC.
+      expect(detectDncWorkwearCatalog(parsed)).toBe(true)
+      // With format=template, header validation kicks in instead of expansion.
+      const res = normalizeSpreadsheetForImport(parsed, {
+        defaultShippingProfileId: "sp_x",
+        format: "template",
+      })
+      expect(res.readyParsed).toBeNull()
+      expect(res.hints.some((h) => h.includes("Missing required column"))).toBe(true)
+    })
+
+    it("normalizeSpreadsheetForImport with format=dnc-workwear forces expansion even without dnc URL fingerprint", () => {
+      // URLs do NOT mention dncworkwear → auto-detect would fail.
+      const raw = `${DNC_HEADER}
+1101,Chef Jacket SS,,,,https://cdn.example.com/p.jpg,https://www.example.com/Product/1101,,$20.30,,,
+110110061,Chef Jacket SS Black XXS,Black,XXS,9335975124903,https://cdn.example.com/v.jpg,,,$20.30,,`
+      const parsed = parseCsv(raw)
+      expect(detectDncWorkwearCatalog(parsed)).toBe(false)
+
+      const res = normalizeSpreadsheetForImport(parsed, {
+        defaultShippingProfileId: "sp_x",
+        format: "dnc-workwear",
+      })
+      expect(res.readyParsed?.rows.length).toBe(1)
+      expect(res.readyParsed?.rows[0]?.["product handle"]).toBe("dnc-1101")
+      expect(res.readyParsed?.rows[0]?.["variant sku"]).toBe("110110061")
+    })
+
+    it("normalizeSpreadsheetForImport with format=ascolour-gold still requires shipping profile id", () => {
+      const raw = `${GOLD_HEADER}\n3,1000,Parcel Tote,,,,,,50,6.95,BAGS,41000,https://example.com/p`
+      const parsed = parseCsv(raw)
+      expect(normalizeSpreadsheetForImport(parsed, { format: "ascolour-gold" }).readyParsed).toBeNull()
+      expect(
+        normalizeSpreadsheetForImport(parsed, {
+          defaultShippingProfileId: "sp_x",
+          format: "ascolour-gold",
+        }).readyParsed?.rows.length
+      ).toBe(1)
+    })
+  })
+
+  describe("Honeybee wholesale catalogue (Biz Care / Biz Collection / Syzmik)", () => {
+    /** Headers + sample rows matching the supplier paste (two products, one single-size, one with two colours × three sizes). */
+    const BIZ_CARE_HEADER = [
+      "sku",
+      "style_code",
+      "style_name",
+      "category",
+      "description",
+      "stringified_description",
+      "image",
+      "image_url",
+      "alternate_image",
+      "colour_tag",
+      "colour",
+      "front_color_image",
+      "front_color_image_url",
+      "back_color_image",
+      "back_color_image_url",
+      "colour_code",
+      "size",
+      "qty1",
+      "price1",
+      "qty2",
+      "price2",
+      "qty3",
+      "price3",
+      "qty4",
+      "price4",
+      "carton_height",
+      "carton_width",
+      "carton_depth",
+      "carton_weight",
+      "carton_qty",
+      "carton_cubic",
+      "product_url",
+      "sale_status",
+    ].join(",")
+
+    /** Helper: pad a row with empty trailing cells to match BIZ_CARE_HEADER width. */
+    const bizCareRow = (cols: Record<string, string>): string => {
+      const order = BIZ_CARE_HEADER.split(",")
+      return order
+        .map((h) => {
+          const v = cols[h] ?? ""
+          return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+        })
+        .join(",")
+    }
+
+    /** One single-size accessory and one socks product across two colours × three sizes (mirrors paste). */
+    const SAMPLE_ROWS = [
+      bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "CA044U",
+        style_name: "Unisex Biz Care Tote Bag",
+        category: "accessories;bags;unisex;cotton;aged care",
+        stringified_description: "Cares: Gentle wash; Sizes: One Size.",
+        image_url: "https://cdn.fashionbizapps.nz/honeybee/CA044U_Natural.jpg",
+        colour_tag: "natural canvas",
+        colour: "Natural",
+        front_color_image_url: "https://cdn/front_natural.jpg",
+        back_color_image_url: "https://cdn/back_natural.jpg",
+        size: "FRE",
+        qty1: "Jan-99",
+        price1: "14.37",
+        product_url: "https://www.biz-care.com/product/au/ca044u/",
+        sale_status: "normal",
+      }),
+      bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "CCS149U",
+        style_name: "Unisex Happy Feet Comfort Socks",
+        category: "accessories;socks;healthwear",
+        stringified_description: "Cares: Warm wash; Sizes: S, M, L.",
+        image_url: "https://cdn/CCS149U_hero.jpg",
+        colour_tag: "sage/black",
+        colour: "Sage/Black",
+        front_color_image_url: "https://cdn/front_sage.jpg",
+        back_color_image_url: "https://cdn/back_sage.jpg",
+        size: "S",
+        qty1: "Jan-99",
+        price1: "7.99",
+        product_url: "https://www.biz-care.com/product/au/ccs149u/",
+        sale_status: "normal",
+      }),
+      bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "CCS149U",
+        style_name: "Unisex Happy Feet Comfort Socks",
+        category: "accessories;socks;healthwear",
+        stringified_description: "Cares: Warm wash; Sizes: S, M, L.",
+        image_url: "https://cdn/CCS149U_hero.jpg",
+        colour_tag: "sage/black",
+        colour: "Sage/Black",
+        front_color_image_url: "https://cdn/front_sage.jpg",
+        back_color_image_url: "https://cdn/back_sage.jpg",
+        size: "M",
+        qty1: "Jan-99",
+        price1: "7.99",
+        product_url: "https://www.biz-care.com/product/au/ccs149u/",
+        sale_status: "normal",
+      }),
+      bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "CCS149U",
+        style_name: "Unisex Happy Feet Comfort Socks",
+        category: "accessories;socks;healthwear",
+        stringified_description: "Cares: Warm wash; Sizes: S, M, L.",
+        image_url: "https://cdn/CCS149U_hero.jpg",
+        colour_tag: "navy/red",
+        colour: "Navy/Red",
+        front_color_image_url: "https://cdn/front_navy.jpg",
+        back_color_image_url: "https://cdn/back_navy.jpg",
+        size: "L",
+        qty1: "Jan-99",
+        price1: "7.99",
+        product_url: "https://www.biz-care.com/product/au/ccs149u/",
+        sale_status: "normal",
+      }),
+    ]
+    const SAMPLE_CSV = `${BIZ_CARE_HEADER}\n${SAMPLE_ROWS.join("\n")}`
+
+    it("detects Biz Care CSV shape", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      expect(detectHoneybeeCatalog(parsed)).toBe(true)
+    })
+
+    it("expandHoneybeeCatalogToTemplate groups by style_code and constructs unique variant SKUs", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      // 1 tote + 2 sock variants (sage S, sage M, navy L) = 4 rows
+      expect(exp.rows.length).toBe(4)
+
+      const handles = new Set(exp.rows.map((r) => r["product handle"]))
+      expect(handles).toEqual(new Set(["biz-care-ca044u", "biz-care-ccs149u"]))
+
+      const skus = exp.rows.map((r) => r["variant sku"])
+      // SKUs must be distinct (real `sku` column is corrupted EAN repeated across all rows)
+      expect(new Set(skus).size).toBe(skus.length)
+      expect(skus).toContain("CA044U-NATURAL-CANVAS-FRE")
+      expect(skus).toContain("CCS149U-SAGE-BLACK-S")
+      expect(skus).toContain("CCS149U-SAGE-BLACK-M")
+      expect(skus).toContain("CCS149U-NAVY-RED-L")
+    })
+
+    it("expansion stamps Product Supplier=Biz Care and surfaces Colour + Size as the two options", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      const sageS = exp.rows.find((r) => r["variant sku"] === "CCS149U-SAGE-BLACK-S")!
+      expect(sageS["product supplier"]).toBe("Biz Care")
+      expect(sageS["product status"]).toBe("draft")
+      expect(sageS["variant option 1 name"]).toBe("Colour")
+      expect(sageS["variant option 1 value"]).toBe("Sage/Black")
+      expect(sageS["variant option 2 name"]).toBe("Size")
+      expect(sageS["variant option 2 value"]).toBe("S")
+      expect(sageS["variant price aud"]).toBe("7.99")
+      expect(sageS["product description"]).toContain("Warm wash")
+      expect(sageS["product external id"]).toBe("https://www.biz-care.com/product/au/ccs149u/")
+    })
+
+    it("Honeybee imports default to draft status (supplier-published prices may sit below actual cost)", () => {
+      const csv = `${BIZ_CARE_HEADER}\n${bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "BA35",
+        style_name: "Barley Apron",
+        category: "hospitality;aprons",
+        stringified_description: "Sizes: Free.",
+        image_url: "https://cdn/x.jpg",
+        colour: "Black",
+        front_color_image_url: "https://cdn/x.jpg",
+        back_color_image_url: "https://cdn/y.jpg",
+        size: "FRE",
+        qty1: "Jan-99",
+        price1: "14.2",
+        product_url: "https://www.bizcollection.com/product/au/ba35/",
+        sale_status: "normal",
+      })}`
+      const parsed = parseCsv(csv)
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      expect(exp.rows.every((r) => r["product status"] === "draft")).toBe(true)
+
+      const res = normalizeSpreadsheetForImport(parsed, { defaultShippingProfileId: "sp_x" })
+      expect(res.hints.some((h) => h.toLowerCase().includes("draft"))).toBe(true)
+    })
+
+    it("buildBatchCreatesFromParsedCsv ingests expanded Biz Care rows with supplier metadata + tags", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      const expanded = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      const reparsed = parseCsv(
+        [
+          expanded.headers.join(","),
+          ...expanded.rows.map((row) =>
+            expanded.headers
+              .map((h) => {
+                const v = row[h] ?? ""
+                return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+              })
+              .join(",")
+          ),
+        ].join("\n")
+      )
+      const { creates, errors } = buildBatchCreatesFromParsedCsv(reparsed)
+      expect(errors).toEqual([])
+      expect(creates.length).toBe(2)
+
+      const socks = creates.find(
+        (c) => (c as Record<string, unknown>).handle === "biz-care-ccs149u"
+      ) as Record<string, unknown>
+      expect(socks.title).toBe("Unisex Happy Feet Comfort Socks")
+      expect((socks.metadata as Record<string, unknown>).supplier).toBe("Biz Care")
+      const tags = socks.tags as Array<{ value: string }>
+      expect(tags.map((t) => t.value)).toEqual(
+        expect.arrayContaining(["accessories", "socks", "healthwear"])
+      )
+      const variants = socks.variants as Array<{ sku: string }>
+      expect(variants.length).toBe(3)
+    })
+
+    it("normalizeSpreadsheetForImport routes Biz Care CSV through Biz Care expander, not generic FashionBiz", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      // Both detectors fire on this shape; Biz Care must win.
+      expect(detectHoneybeeCatalog(parsed)).toBe(true)
+      const res = normalizeSpreadsheetForImport(parsed, {
+        defaultShippingProfileId: "sp_x",
+      })
+      expect(res.readyParsed).not.toBeNull()
+      // Biz Care handles use `biz-care-` prefix; generic FashionBiz would emit `biz-collection-`.
+      const handles = new Set(
+        res.readyParsed!.rows.map((r) => (r["product handle"] ?? "").trim())
+      )
+      expect([...handles].every((h) => h.startsWith("biz-care-"))).toBe(true)
+      expect(res.hints.some((h) => h.toLowerCase().includes("biz care"))).toBe(true)
+    })
+
+    it("requires shipping profile id before expanding Biz Care", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      expect(normalizeSpreadsheetForImport(parsed, {}).readyParsed).toBeNull()
+      expect(
+        normalizeSpreadsheetForImport(parsed, { defaultShippingProfileId: "sp_x" }).readyParsed?.rows
+          .length
+      ).toBe(4)
+    })
+
+    it("format=biz-honeybee override forces expansion even if header signature drifts", () => {
+      // Header without `front_color_image_url` — auto-detect would pass to FashionBiz; explicit override forces Honeybee.
+      const headers = [
+        "sku",
+        "style_code",
+        "style_name",
+        "colour_tag",
+        "colour",
+        "size",
+        "price1",
+        "image_url",
+      ].join(",")
+      const row = [
+        "9.40104E+12",
+        "CCS999U",
+        "Test",
+        "blue",
+        "Blue",
+        "M",
+        "5.50",
+        "https://cdn/x.jpg",
+      ].join(",")
+      const parsed = parseCsv(`${headers}\n${row}`)
+      expect(detectHoneybeeCatalog(parsed)).toBe(false)
+      const res = normalizeSpreadsheetForImport(parsed, {
+        defaultShippingProfileId: "sp_x",
+        format: "biz-honeybee",
+      })
+      expect(res.readyParsed?.rows.length).toBe(1)
+      // No URL → falls back to "Biz Care" brand prefix (most common shape).
+      expect(res.readyParsed?.rows[0]?.["product handle"]).toBe("biz-care-ccs999u")
+      expect(res.readyParsed?.rows[0]?.["variant sku"]).toBe("CCS999U-BLUE-M")
+    })
+
+    it("infers Biz Collection brand + bizcollection-* handle when product_url points to bizcollection.com", () => {
+      const csv = `${BIZ_CARE_HEADER}\n${bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "BA35",
+        style_name: "Barley Apron",
+        category: "hospitality;aprons;cotton",
+        stringified_description: "Sizes: Free Size 85cm x 73cm.",
+        image_url: "https://cdn.fashionbizapps.nz/honeybee/images/BA35_Black.jpg",
+        colour: "Black",
+        front_color_image_url: "https://cdn.fashionbizapps.nz/honeybee/images/BA35_Talent_Black.jpg",
+        back_color_image_url: "https://cdn.fashionbizapps.nz/honeybee/images/BA35_bProduct_Black.jpg",
+        size: "FRE",
+        qty1: "Jan-99",
+        price1: "14.2",
+        qty2: "100-499",
+        price2: "14",
+        qty3: "500",
+        price3: "13.5",
+        product_url: "https://www.bizcollection.com/product/au/ba35/",
+        sale_status: "normal",
+      })}`
+      const parsed = parseCsv(csv)
+      expect(inferHoneybeeBrandFromRows(parsed.rows)).toEqual({
+        supplier: "Biz Collection",
+        handlePrefix: "biz-collection",
+      })
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      expect(exp.rows[0]?.["product handle"]).toBe("biz-collection-ba35")
+      expect(exp.rows[0]?.["product supplier"]).toBe("Biz Collection")
+      expect(exp.rows[0]?.["variant price aud"]).toBe("14.2")
+    })
+
+    it("maps Honeybee qty/price tiers (price1=1-99, price2=100-499) onto Medusa BASE_SALE / TIER_*_PRICE columns", () => {
+      const csv = `${BIZ_CARE_HEADER}\n${bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "BA35",
+        style_name: "Barley Apron",
+        category: "hospitality;aprons",
+        stringified_description: "Sizes: Free.",
+        image_url: "https://cdn.fashionbizapps.nz/honeybee/images/BA35.jpg",
+        colour: "Black",
+        front_color_image_url: "https://cdn/x.jpg",
+        back_color_image_url: "https://cdn/y.jpg",
+        size: "FRE",
+        qty1: "Jan-99",
+        price1: "14.2",
+        qty2: "100-499",
+        price2: "14",
+        qty3: "500",
+        price3: "13.5",
+        product_url: "https://www.bizcollection.com/product/au/ba35/",
+        sale_status: "normal",
+      })}`
+      const parsed = parseCsv(csv)
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      const row = exp.rows[0]!
+      expect(row["variant price aud"]).toBe("14.2")
+      expect(row["base_sale_price"]).toBe("14.2")
+      expect(row["tier_10_to_19_price"]).toBe("14.2")
+      expect(row["tier_20_to_49_price"]).toBe("14.2")
+      expect(row["tier_50_to_99_price"]).toBe("14.2")
+      // 100+ uses price2 (100-499 band) — price3 (500+) is intentionally dropped to avoid over-discounting at qty=100.
+      expect(row["tier_100_plus_price"]).toBe("14")
+    })
+
+    it("buildBatchCreatesFromParsedCsv writes Honeybee tier ladder to tierBySku for downstream pricing module application", () => {
+      const csv = `${BIZ_CARE_HEADER}\n${bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "BA35",
+        style_name: "Barley Apron",
+        category: "hospitality;aprons",
+        stringified_description: "Sizes: Free.",
+        image_url: "https://cdn/hero.jpg",
+        colour: "Black",
+        front_color_image_url: "https://cdn/x.jpg",
+        back_color_image_url: "https://cdn/y.jpg",
+        size: "FRE",
+        qty1: "Jan-99",
+        price1: "14.2",
+        qty2: "100-499",
+        price2: "14",
+        product_url: "https://www.bizcollection.com/product/au/ba35/",
+        sale_status: "normal",
+      })}`
+      const parsed = parseCsv(csv)
+      const expanded = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      const reparsed = parseCsv(
+        [
+          expanded.headers.join(","),
+          ...expanded.rows.map((r) =>
+            expanded.headers
+              .map((h) => {
+                const v = r[h] ?? ""
+                return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+              })
+              .join(",")
+          ),
+        ].join("\n")
+      )
+      const { creates, tierBySku, errors } = buildBatchCreatesFromParsedCsv(reparsed)
+      expect(errors).toEqual([])
+      expect(creates.length).toBe(1)
+      const sku = ((creates[0] as Record<string, unknown>).variants as Array<{ sku: string }>)[0]!.sku
+      const tiers = tierBySku.get(sku)
+      expect(tiers).toEqual({
+        t1_9: 1420,
+        t10_19: 1420,
+        t20_49: 1420,
+        t50_99: 1420,
+        t100_plus: 1400,
+      })
+    })
+
+    it("skips Honeybee tier columns for single-price products (price2 empty → flat AUD only)", () => {
+      const csv = `${BIZ_CARE_HEADER}\n${bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "CA044U",
+        style_name: "Tote",
+        category: "accessories",
+        stringified_description: "Sizes: One Size.",
+        image_url: "https://cdn/x.jpg",
+        colour: "Natural",
+        front_color_image_url: "https://cdn/x.jpg",
+        back_color_image_url: "https://cdn/y.jpg",
+        size: "FRE",
+        qty1: "Jan-99",
+        price1: "14.37",
+        product_url: "https://www.biz-care.com/product/au/ca044u/",
+        sale_status: "normal",
+      })}`
+      const parsed = parseCsv(csv)
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      const row = exp.rows[0]!
+      expect(row["variant price aud"]).toBe("14.37")
+      // No wholesale band → no tier columns written; resolveVariantRowPricing falls back to AUD-anchor derivation.
+      expect(row["base_sale_price"]).toBe("")
+      expect(row["tier_10_to_19_price"]).toBe("")
+      expect(row["tier_100_plus_price"]).toBe("")
+    })
+
+    it("infers Syzmik brand + syzmik-* handle when product_url points to syzmik.com", () => {
+      const csv = `${BIZ_CARE_HEADER}\n${bizCareRow({
+        sku: "9.40104E+12",
+        style_code: "ZC503",
+        style_name: "Mens Service Overall",
+        category: "overalls;industrial",
+        stringified_description: "Strong poly-cotton fabric.",
+        image_url: "https://cdn.fashionbizapps.nz/honeybee/products/ZC503.jpg",
+        colour: "Charcoal",
+        front_color_image_url: "https://cdn.fashionbizapps.nz/honeybee/images/ZC503_Charcoal_F.jpg",
+        back_color_image_url: "https://cdn.fashionbizapps.nz/honeybee/images/ZC503_Charcoal_B.jpg",
+        size: "82",
+        qty1: "Jan-99",
+        price1: "34.5",
+        product_url: "https://www.syzmik.com/product/au/zc503/",
+        sale_status: "normal",
+      })}`
+      const parsed = parseCsv(csv)
+      expect(inferHoneybeeBrandFromRows(parsed.rows)).toEqual({
+        supplier: "Syzmik",
+        handlePrefix: "syzmik",
+      })
+      const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
+      expect(exp.rows[0]?.["product handle"]).toBe("syzmik-zc503")
+      expect(exp.rows[0]?.["product supplier"]).toBe("Syzmik")
+    })
+  })
+
+  describe("Ramo Australia catalogue", () => {
+    /** Subset of Ramo's 50+ columns — the detector + expander only read a handful. Shippable test fixture. */
+    const RAMO_HEADER = [
+      "name",
+      "product_url",
+      "product_image_url",
+      "product_image_hero_url",
+      "primary_category",
+      "long_description",
+      "price_ex_gst",
+      "parent_code",
+      "product_id",
+      "attribute_colours",
+      "attribute_size",
+      "attribute_type",
+    ].join(",")
+
+    const ramoRow = (cols: Record<string, string>): string => {
+      const order = RAMO_HEADER.split(",")
+      return order
+        .map((h) => {
+          const v = cols[h] ?? ""
+          return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+        })
+        .join(",")
+    }
+
+    /** AP401S = Short Waist Apron with 3 colour variants; B103RG = Babies Raglan with 2 colour × 3 size variants. */
+    const SAMPLE_ROWS = [
+      ramoRow({
+        name: "Short Waist Apron - 100% cotton canvas",
+        product_url: "https://www.ramo.com.au/shop/item/short-waist-apron",
+        product_image_url: "https://www.ramo.com.au/persistent/catalogue_images/products/AP401S_Azure.jpg",
+        product_image_hero_url: "https://www.ramo.com.au/persistent/catalogue_images/products/AP401S_hero.jpg",
+        primary_category: "Aprons",
+        long_description: "<p>210 gsm 100% cotton canvas apron</p>",
+        price_ex_gst: "9",
+        parent_code: "AP401S",
+        product_id: "AP401S_AZ_S",
+        attribute_colours: "Azure",
+        attribute_size: "S",
+        attribute_type: "Apron",
+      }),
+      ramoRow({
+        name: "Short Waist Apron - 100% cotton canvas",
+        product_url: "https://www.ramo.com.au/shop/item/short-waist-apron-01",
+        product_image_url: "https://www.ramo.com.au/persistent/catalogue_images/products/AP401S_Black.jpg",
+        product_image_hero_url: "https://www.ramo.com.au/persistent/catalogue_images/products/AP401S_hero.jpg",
+        primary_category: "Aprons",
+        long_description: "<p>210 gsm 100% cotton canvas apron</p>",
+        price_ex_gst: "9",
+        parent_code: "AP401S",
+        product_id: "AP401S_BL_S",
+        attribute_colours: "Black",
+        attribute_size: "S",
+        attribute_type: "Apron",
+      }),
+      ramoRow({
+        name: "Babies Raglan T-shirt",
+        product_url: "https://www.ramo.com.au/shop/item/babies-raglan",
+        product_image_url: "https://www.ramo.com.au/persistent/catalogue_images/products/B103RG_PinkHotPink.jpg",
+        product_image_hero_url: "https://www.ramo.com.au/persistent/catalogue_images/products/B103RG_hero.jpg",
+        primary_category: "Raglan",
+        long_description: "<p>185gsm 100% organic cotton</p>",
+        price_ex_gst: "9",
+        parent_code: "B103RG",
+        product_id: "B103RG_PH_0",
+        attribute_colours: "Pink/Hot Pink",
+        attribute_size: "0",
+        attribute_type: "T-shirts",
+      }),
+      ramoRow({
+        name: "Babies Raglan T-shirt",
+        product_url: "https://www.ramo.com.au/shop/item/babies-raglan-01",
+        product_image_url: "https://www.ramo.com.au/persistent/catalogue_images/products/B103RG_PinkHotPink.jpg",
+        product_image_hero_url: "https://www.ramo.com.au/persistent/catalogue_images/products/B103RG_hero.jpg",
+        primary_category: "Raglan",
+        long_description: "<p>185gsm 100% organic cotton</p>",
+        price_ex_gst: "9",
+        parent_code: "B103RG",
+        product_id: "B103RG_PH_2",
+        attribute_colours: "Pink/Hot Pink",
+        attribute_size: "2",
+        attribute_type: "T-shirts",
+      }),
+      ramoRow({
+        name: "Babies Raglan T-shirt",
+        product_url: "https://www.ramo.com.au/shop/item/babies-raglan-10",
+        product_image_url: "https://www.ramo.com.au/persistent/catalogue_images/products/B103RG_WhiteAzure.jpg",
+        product_image_hero_url: "https://www.ramo.com.au/persistent/catalogue_images/products/B103RG_hero.jpg",
+        primary_category: "Raglan",
+        long_description: "<p>185gsm 100% organic cotton</p>",
+        price_ex_gst: "9",
+        parent_code: "B103RG",
+        product_id: "B103RG_WA_0",
+        attribute_colours: "White/Azure",
+        attribute_size: "0",
+        attribute_type: "T-shirts",
+      }),
+    ]
+    const SAMPLE_CSV = `${RAMO_HEADER}\n${SAMPLE_ROWS.join("\n")}`
+
+    it("detects Ramo CSV shape via parent_code + product_id + price_ex_gst + ramo.com.au URL", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      expect(detectRamoCatalog(parsed)).toBe(true)
+    })
+
+    it("does not detect Ramo when ramo.com.au URLs are absent (header alone is not enough)", () => {
+      const headers = [
+        "name",
+        "product_url",
+        "product_image_url",
+        "primary_category",
+        "long_description",
+        "price_ex_gst",
+        "parent_code",
+        "product_id",
+        "attribute_colours",
+        "attribute_size",
+        "attribute_type",
+      ].join(",")
+      const row = [
+        "Tee",
+        "https://example.com/x",
+        "https://example.com/x.jpg",
+        "Tees",
+        "<p>desc</p>",
+        "9",
+        "PARENT",
+        "PARENT_BL_S",
+        "Black",
+        "S",
+        "T-shirts",
+      ].join(",")
+      const parsed = parseCsv(`${headers}\n${row}`)
+      expect(detectRamoCatalog(parsed)).toBe(false)
+    })
+
+    it("expandRamoCatalogToTemplate groups by parent_code, uses product_id as variant SKU verbatim", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      const exp = expandRamoCatalogToTemplate(parsed, "sp_test")
+      expect(exp.rows.length).toBe(5)
+
+      const handles = new Set(exp.rows.map((r) => r["product handle"]))
+      expect(handles).toEqual(new Set(["ramo-ap401s", "ramo-b103rg"]))
+
+      const skus = exp.rows.map((r) => r["variant sku"])
+      // Real per-variant SKUs come straight from product_id — must round-trip unchanged.
+      expect(skus).toEqual(
+        expect.arrayContaining([
+          "AP401S_AZ_S",
+          "AP401S_BL_S",
+          "B103RG_PH_0",
+          "B103RG_PH_2",
+          "B103RG_WA_0",
+        ])
+      )
+    })
+
+    it("expansion stamps Product Supplier=Ramo, sets HTML description, attaches primary_category + attribute_type as tags", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      const exp = expandRamoCatalogToTemplate(parsed, "sp_test")
+      const apron = exp.rows.find((r) => r["variant sku"] === "AP401S_AZ_S")!
+      expect(apron["product supplier"]).toBe("Ramo")
+      expect(apron["product status"]).toBe("draft")
+      expect(apron["product description"]).toContain("210 gsm")
+      expect(apron["variant option 1 name"]).toBe("Colour")
+      expect(apron["variant option 1 value"]).toBe("Azure")
+      expect(apron["variant option 2 name"]).toBe("Size")
+      expect(apron["variant option 2 value"]).toBe("S")
+      expect(apron["variant price aud"]).toBe("9")
+      expect(apron["product external id"]).toBe("https://www.ramo.com.au/shop/item/short-waist-apron")
+      expect(apron["product tag 1"]).toBe("Aprons")
+      expect(apron["product tag 2"]).toBe("Apron")
+    })
+
+    it("buildBatchCreatesFromParsedCsv ingests expanded Ramo rows cleanly", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      const expanded = expandRamoCatalogToTemplate(parsed, "sp_test")
+      const reparsed = parseCsv(
+        [
+          expanded.headers.join(","),
+          ...expanded.rows.map((row) =>
+            expanded.headers
+              .map((h) => {
+                const v = row[h] ?? ""
+                return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+              })
+              .join(",")
+          ),
+        ].join("\n")
+      )
+      const { creates, errors } = buildBatchCreatesFromParsedCsv(reparsed)
+      expect(errors).toEqual([])
+      expect(creates.length).toBe(2)
+      const raglan = creates.find(
+        (c) => (c as Record<string, unknown>).handle === "ramo-b103rg"
+      ) as Record<string, unknown>
+      expect((raglan.metadata as Record<string, unknown>).supplier).toBe("Ramo")
+      const variants = raglan.variants as Array<{ sku: string }>
+      expect(variants.length).toBe(3)
+      expect(variants.map((v) => v.sku)).toEqual(
+        expect.arrayContaining(["B103RG_PH_0", "B103RG_PH_2", "B103RG_WA_0"])
+      )
+    })
+
+    it("normalizeSpreadsheetForImport routes Ramo CSV through Ramo expander, requires shipping profile id", () => {
+      const parsed = parseCsv(SAMPLE_CSV)
+      expect(normalizeSpreadsheetForImport(parsed, {}).readyParsed).toBeNull()
+      const res = normalizeSpreadsheetForImport(parsed, { defaultShippingProfileId: "sp_x" })
+      expect(res.readyParsed?.rows.length).toBe(5)
+      expect(res.hints.some((h) => h.toLowerCase().includes("ramo"))).toBe(true)
     })
   })
 })

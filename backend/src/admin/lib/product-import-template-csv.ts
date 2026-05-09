@@ -96,7 +96,12 @@ export const PRODUCT_IMPORT_SUPPLEMENTAL_COLUMNS = [
   ...PRODUCT_CATEGORY_PATH_COLUMNS,
   "Product Metadata JSON",
   ...PRODUCT_IMAGE_URL_EXTRA_COLUMNS,
+  /** Free-form supplier/vendor identity, persisted on `product.metadata.supplier`. */
+  "Product Supplier",
 ] as const
+
+/** Metadata key on `product.metadata` carrying the supplier identity from `Product Supplier`. */
+export const PRODUCT_SUPPLIER_METADATA_KEY = "supplier"
 
 export const PRODUCT_IMPORT_CSV_HEADERS: string[] = [
   ...PRODUCT_IMPORT_TEMPLATE_COLUMNS,
@@ -634,6 +639,9 @@ export function buildProductImportTemplateRows(products: unknown[]): string[][] 
         "",
         /** Product Image 3..N Url — placeholder; existing 1/2 already covered above. */
         ...Array.from({ length: PRODUCT_IMAGE_URL_COLUMN_COUNT - 2 }, () => ""),
+        formatCell(
+          (product.metadata as Record<string, unknown> | undefined)?.[PRODUCT_SUPPLIER_METADATA_KEY] ?? ""
+        ),
       ])
     }
   }
