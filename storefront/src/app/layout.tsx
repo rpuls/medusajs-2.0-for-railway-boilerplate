@@ -42,6 +42,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  verification: {
+    google: "oY0Zolz7R7nfAyd2YQ4uLCrKxdIi0dXVFZt6KVbJR28",
+  },
   openGraph: {
     type: "website",
     locale: SEO.locale,
