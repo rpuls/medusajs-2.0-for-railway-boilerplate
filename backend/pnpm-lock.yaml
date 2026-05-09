@@ -76,6 +76,9 @@ importers:
       pg:
         specifier: ^8.20.0
         version: 8.20.0
+      recharts:
+        specifier: 3.8.1
+        version: 3.8.1(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1)(redux@5.0.1)
       resend:
         specifier: 6.12.3
         version: 6.12.3(@react-email/render@2.0.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
