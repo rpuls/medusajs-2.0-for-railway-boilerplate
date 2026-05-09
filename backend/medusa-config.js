@@ -221,6 +221,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/report-alert",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {

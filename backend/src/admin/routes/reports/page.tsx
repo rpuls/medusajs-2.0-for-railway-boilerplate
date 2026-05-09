@@ -44,6 +44,7 @@ import { AnnotationsManager } from "../../components/reports/annotations-manager
 import { OperationalTiles } from "../../components/reports/operational-tiles"
 import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
 import { CapacityChart } from "../../components/reports/capacity-chart"
+import { AlertsManager } from "../../components/reports/alerts-manager"
 import {
   buildPreset,
   formatDateRange,
@@ -158,6 +159,9 @@ const ReportsPage = () => {
 
       {/* Operational tiles (storage + Speed Insights link + PostHog link) */}
       <OperationalTiles />
+
+      {/* Threshold alerts manager */}
+      <AlertsManager />
 
       {/* Tabs */}
       <Tabs defaultValue="sales">

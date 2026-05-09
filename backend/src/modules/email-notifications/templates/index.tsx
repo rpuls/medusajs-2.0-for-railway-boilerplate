@@ -37,6 +37,11 @@ import {
   WinbackEmail,
   isWinbackData,
 } from './winback'
+import {
+  THRESHOLD_ALERT,
+  ThresholdAlertEmail,
+  isThresholdAlertData,
+} from './threshold-alert'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -48,6 +53,7 @@ export const EmailTemplates = {
   MONTHLY_DIGEST,
   REORDER_REMINDER,
   WINBACK,
+  THRESHOLD_ALERT,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -135,6 +141,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <WinbackEmail {...data} />
 
+    case EmailTemplates.THRESHOLD_ALERT:
+      if (!isThresholdAlertData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.THRESHOLD_ALERT}"`
+        )
+      }
+      return <ThresholdAlertEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -151,4 +166,5 @@ export {
   MonthlyDigestEmail,
   ReorderReminderEmail,
   WinbackEmail,
+  ThresholdAlertEmail,
 }
