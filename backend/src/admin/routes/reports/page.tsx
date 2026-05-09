@@ -58,6 +58,10 @@ import { PaymentMixChart } from "../../components/reports/payment-mix-chart"
 import { OrderEditFrequencyChart } from "../../components/reports/order-edit-frequency-chart"
 import { EmbroideryStitchesChart } from "../../components/reports/embroidery-stitches-chart"
 import { CustomizerIterationChart } from "../../components/reports/customizer-iteration-chart"
+import { TodayWidget } from "../../components/reports/today-widget"
+import { SystemHealthPill } from "../../components/reports/system-health-pill"
+import { CronJobsCard } from "../../components/reports/cron-jobs-card"
+import { SeasonalDecoration } from "../../components/reports/seasonal-decoration"
 import {
   buildPreset,
   formatDateRange,
@@ -105,9 +109,15 @@ const ReportsPage = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
+      {/* Seasonal touches (auto-no-op outside narrow date windows) */}
+      <SeasonalDecoration />
+
       {/* Header */}
       <Container className="flex flex-col gap-y-2">
-        <Heading level="h1">Reports</Heading>
+        <div className="flex items-start justify-between gap-x-3">
+          <Heading level="h1">Reports</Heading>
+          <SystemHealthPill />
+        </div>
         <Text size="small" className="text-ui-fg-subtle">
           Trend analysis across SC Prints' core signals: sales, production
           throughput, customer engagement, decoration mix, catalog &
@@ -118,6 +128,9 @@ const ReportsPage = () => {
           page.
         </Text>
       </Container>
+
+      {/* Today widget — heartbeat KPIs vs same weekday last week */}
+      <TodayWidget />
 
       {/* Filter bar */}
       <Container className="flex flex-wrap items-end gap-3">
@@ -172,6 +185,9 @@ const ReportsPage = () => {
 
       {/* Operational tiles (storage + Speed Insights link + PostHog link) */}
       <OperationalTiles />
+
+      {/* Cron job dashboard */}
+      <CronJobsCard />
 
       {/* Threshold alerts manager */}
       <AlertsManager />
