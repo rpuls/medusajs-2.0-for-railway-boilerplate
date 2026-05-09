@@ -13,7 +13,8 @@ import type {
   PricingConfig,
 } from "../lib/types"
 import LetteringCanvas from "./lettering-canvas"
-import PriceTable from "./price-table"
+// PriceTable still lives in ./price-table for admin / reference surfaces;
+// the customer-facing panel below no longer renders it inline.
 
 type Tab = "lettering" | "artwork"
 
@@ -45,7 +46,11 @@ const StitchEstimator: React.FC<Props> = ({
   onDesignChange,
   placementCount = 1,
 }) => {
-  const [tab, setTab] = useState<Tab>(initialDesign?.type === "artwork" ? "artwork" : "lettering")
+  // Default to the Artwork tab — most embroidery customers arrive with
+  // a logo file rather than a typeset wordmark. Lettering is the niche
+  // case (one-off names / monograms). Re-hydration of a saved design
+  // still respects whatever tab the customer last used.
+  const [tab, setTab] = useState<Tab>(initialDesign?.type === "lettering" ? "lettering" : "artwork")
   const [config, setConfig] = useState<PricingConfig>(
     initialDesign?.pricing.level ?? priceLevels[0] ?? RETAIL_CONFIG
   )
@@ -93,21 +98,10 @@ const StitchEstimator: React.FC<Props> = ({
     onDesignChange(design)
   }, [tab, stitchCount, lettering, artwork, breakdown, onDesignChange])
 
-  const tierIndex = config.quantityTiers.findIndex(
-    (tier) => tier.label === breakdown.appliedTier.label
-  )
-  // Highlight the row in the price table that matches the current stitch
-  // count. Excludes POA + incremental rows from the candidate list so a
-  // 13k-stitch design highlights the POA row, not the +1k row.
-  const flatTiers = config.stitchTiers.filter(
-    (tier) => !tier.isIncrementalRow && !tier.isPoaRow
-  )
-  const rowIndex = (() => {
-    const idx = flatTiers.findIndex(
-      (tier) => tier.maxStitches !== null && stitchCount <= tier.maxStitches
-    )
-    return idx === -1 ? config.stitchTiers.length - 1 : idx
-  })()
+  // Tier-highlighting helpers used to feed the inline PriceTable; the
+  // table is no longer rendered, so the computations are gone too. If a
+  // future surface wants to re-add the table, recreate them inline at
+  // that call site rather than leaving dead state here.
 
   return (
     <div className="flex flex-col gap-y-6 rounded-lg border border-ui-border-base bg-ui-bg-base p-5">
@@ -299,18 +293,14 @@ const StitchEstimator: React.FC<Props> = ({
         </div>
       </div>
 
-      <details className="text-sm">
-        <summary className="cursor-pointer text-ui-fg-subtle hover:text-ui-fg-base">
-          See full price table
-        </summary>
-        <div className="mt-3">
-          <PriceTable
-            config={config}
-            highlightTierIndex={tierIndex >= 0 ? tierIndex : undefined}
-            highlightRowIndex={rowIndex}
-          />
-        </div>
-      </details>
+      {/*
+        Full SCP rate-card table was here as a `<details>` disclosure. It's
+        not useful on the embroidery PDP — customers want the price for
+        their design, not a 50-cell density × quantity matrix. The "Per
+        garment" / "Total" stats above already say what the customer pays
+        once an estimate has been received. The table is still exported
+        from PriceTable.tsx for any internal / admin surface that wants it.
+      */}
 
       <p className="text-xs text-ui-fg-muted">{COPY.finalEstimate}</p>
     </div>
