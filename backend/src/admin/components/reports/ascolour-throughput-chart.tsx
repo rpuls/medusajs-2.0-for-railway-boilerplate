@@ -54,9 +54,11 @@ const KpiTile = ({
 export const AsColourThroughputChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -67,6 +69,7 @@ export const AsColourThroughputChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/ascolour-throughput?${params.toString()}`, {
       credentials: "include",
     })
@@ -86,7 +89,7 @@ export const AsColourThroughputChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const summary = data?.summary
   const failurePct = summary ? (summary.failure_rate * 100).toFixed(1) : "0.0"

@@ -4,7 +4,11 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
+  pctDelta,
+  priorRange,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -19,6 +23,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
+  const { from: priorFrom, to: priorTo } = priorRange(from, to)
 
   let orders: any[] = []
   try {
@@ -41,10 +47,16 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const byKey = new Map<string, Bucket>()
 
   let totalRevenueAll = 0
+  let priorRevenueAll = 0
 
   for (const o of orders) {
-    if (!inRange(o?.created_at, from, to)) continue
+    if (!matchesRegion(o, regionFilter)) continue
     if (o?.status === "canceled") continue
+    // Track prior-period revenue for the concentration delta tile.
+    if (inRange(o?.created_at, priorFrom, priorTo)) {
+      priorRevenueAll += Number(o.total ?? 0)
+    }
+    if (!inRange(o?.created_at, from, to)) continue
     // Group by customer_id when present, falling back to email so guest
     // checkouts that re-use the same email still aggregate.
     const key = (o.customer_id as string) || (o.email as string) || "unknown"
@@ -117,6 +129,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       total_revenue: Math.round(totalRevenueAll * 100) / 100,
       top10_revenue: Math.round(topRevenue10 * 100) / 100,
       top10_revenue_share: Math.round(top10Share * 1000) / 1000,
+      prior_total_revenue: Math.round(priorRevenueAll * 100) / 100,
+      revenue_delta_pct: pctDelta(totalRevenueAll, priorRevenueAll),
     },
     customers,
   })

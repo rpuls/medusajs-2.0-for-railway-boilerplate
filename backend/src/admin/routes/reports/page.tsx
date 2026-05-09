@@ -8,7 +8,7 @@ import {
   Text,
 } from "@medusajs/ui"
 import { ChartBar } from "@medusajs/icons"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { TimeInStageChart } from "../../components/reports/time-in-stage-chart"
 import { CustomizerAdoptionChart } from "../../components/reports/customizer-adoption-chart"
@@ -37,12 +37,35 @@ const PRESETS: DateRangePreset[] = [
   "last_quarter",
 ]
 
+type Region = { id: string; name: string; currency_code: string | null }
+
+const ALL_REGIONS_VALUE = "__all__"
+
 const ReportsPage = () => {
   const [preset, setPreset] = useState<DateRangePreset>("last_30_days")
+  const [regions, setRegions] = useState<Region[]>([])
+  const [regionId, setRegionId] = useState<string>(ALL_REGIONS_VALUE)
 
   const range = useMemo(() => buildPreset(preset), [preset])
   const fromIso = useMemo(() => range.from.toISOString(), [range.from])
   const toIso = useMemo(() => range.to.toISOString(), [range.to])
+  const activeRegionId = regionId === ALL_REGIONS_VALUE ? null : regionId
+
+  // Fetch regions once on mount.
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/admin/reports/regions`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { regions: [] }))
+      .then((j) => {
+        if (cancelled) return
+        const list = (j?.regions as Region[]) ?? []
+        setRegions(list)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="flex flex-col gap-y-4">
@@ -51,8 +74,8 @@ const ReportsPage = () => {
         <Heading level="h1">Reports</Heading>
         <Text size="small" className="text-ui-fg-subtle">
           Trend analysis across SC Prints' core signals: sales, production
-          throughput, customer engagement, decoration mix, and supply
-          chain. For "what's stuck right now" see the{" "}
+          throughput, customer engagement, decoration mix, catalog &
+          supply. For "what's stuck right now" see the{" "}
           <a className="underline" href="/app/production">
             Production
           </a>{" "}
@@ -80,8 +103,31 @@ const ReportsPage = () => {
             </Select.Content>
           </Select>
         </div>
+        <div className="flex flex-col gap-y-1 min-w-[180px]">
+          <Label className="text-xs text-ui-fg-subtle">Region</Label>
+          <Select
+            value={regionId}
+            onValueChange={(v) => setRegionId(v)}
+            disabled={regions.length === 0}
+          >
+            <Select.Trigger>
+              <Select.Value />
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value={ALL_REGIONS_VALUE}>All regions</Select.Item>
+              {regions.map((r) => (
+                <Select.Item key={r.id} value={r.id}>
+                  {r.name}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select>
+        </div>
         <Text size="xsmall" className="text-ui-fg-muted pb-2">
           {formatDateRange(range)}
+          {activeRegionId
+            ? ` · ${regions.find((r) => r.id === activeRegionId)?.name ?? activeRegionId}`
+            : ""}
         </Text>
       </Container>
 
@@ -97,32 +143,81 @@ const ReportsPage = () => {
         </Container>
 
         <Tabs.Content value="sales">
-          <SalesOverviewTab fromIso={fromIso} toIso={toIso} />
+          <SalesOverviewTab
+            fromIso={fromIso}
+            toIso={toIso}
+            regionId={activeRegionId}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="production">
           <div className="grid grid-cols-1 gap-3">
-            <TimeInStageChart fromIso={fromIso} toIso={toIso} methodCsv={null} />
-            <AsColourThroughputChart fromIso={fromIso} toIso={toIso} />
-            <AovByMethodChart fromIso={fromIso} toIso={toIso} />
+            <TimeInStageChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+              methodCsv={null}
+            />
+            <AsColourThroughputChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <AovByMethodChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
         <Tabs.Content value="customers">
           <div className="grid grid-cols-1 gap-3">
-            <CustomizerAdoptionChart fromIso={fromIso} toIso={toIso} />
-            <ReorderRateChart fromIso={fromIso} toIso={toIso} />
-            <TopCustomersChart fromIso={fromIso} toIso={toIso} />
-            <DesignsUtilizationChart fromIso={fromIso} toIso={toIso} />
+            <CustomizerAdoptionChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <ReorderRateChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <TopCustomersChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <DesignsUtilizationChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
         <Tabs.Content value="catalog">
           <div className="grid grid-cols-1 gap-3">
-            <TopProductsChart fromIso={fromIso} toIso={toIso} />
-            <DecorationMixChart fromIso={fromIso} toIso={toIso} />
-            <SupplierMixChart fromIso={fromIso} toIso={toIso} />
-            <InventoryStatusChart fromIso={fromIso} toIso={toIso} />
+            <TopProductsChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <DecorationMixChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <SupplierMixChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <InventoryStatusChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
       </Tabs>

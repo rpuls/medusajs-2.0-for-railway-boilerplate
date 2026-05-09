@@ -28,9 +28,11 @@ const KpiTile = ({ label, value }: { label: string; value: string }) => (
 export const DesignsUtilizationChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -41,6 +43,7 @@ export const DesignsUtilizationChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/designs-utilization?${params.toString()}`, {
       credentials: "include",
     })
@@ -60,7 +63,7 @@ export const DesignsUtilizationChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const summary = data?.summary
   const reusePct = summary ? (summary.reuse_rate * 100).toFixed(1) : "0.0"

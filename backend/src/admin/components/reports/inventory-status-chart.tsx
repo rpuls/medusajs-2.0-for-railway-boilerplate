@@ -129,7 +129,14 @@ const VariantList = ({
   )
 }
 
-export const InventoryStatusChart = ({}: { fromIso?: string; toIso?: string }) => {
+export const InventoryStatusChart = (_props: {
+  fromIso?: string
+  toIso?: string
+  regionId?: string | null
+}) => {
+  // Inventory is a current-state signal — date range and region don't
+  // apply at the variant-stock level. Props accepted for filter-bar
+  // consistency, just ignored.
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

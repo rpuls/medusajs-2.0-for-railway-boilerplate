@@ -4,7 +4,11 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
+  pctDelta,
+  priorRange,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -24,6 +28,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
+  const { from: priorFrom, to: priorTo } = priorRange(from, to)
 
   let orders: any[] = []
   try {
@@ -42,17 +48,29 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let otherRevenue = 0
   let ascolourUnits = 0
   let otherUnits = 0
+  let priorAscolourRevenue = 0
+  let priorOtherRevenue = 0
   let currency = "aud"
 
   for (const order of orders) {
-    if (!inRange(order?.created_at, from, to)) continue
+    if (!matchesRegion(order, regionFilter)) continue
     if (order?.status === "canceled") continue
     if (typeof order.currency_code === "string") currency = order.currency_code
+
+    const inMain = inRange(order?.created_at, from, to)
+    const inPrior = !inMain && inRange(order?.created_at, priorFrom, priorTo)
+    if (!inMain && !inPrior) continue
 
     const meta = (order.metadata ?? {}) as Record<string, unknown>
     const isAscolour = typeof meta.ascolour_order_id === "string" && meta.ascolour_order_id.length > 0
 
     const revenue = Number(order.total ?? 0)
+    if (inPrior) {
+      if (isAscolour) priorAscolourRevenue += revenue
+      else priorOtherRevenue += revenue
+      continue
+    }
+
     const units = ((order.items ?? []) as Array<{ quantity?: number }>).reduce(
       (s, it) => s + Number(it.quantity ?? 0),
       0
@@ -109,6 +127,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       orders: totalOrders,
       revenue: Math.round(totalRevenue * 100) / 100,
       units: totalUnits,
+    },
+    deltas: {
+      ascolour_revenue_delta_pct: pctDelta(ascolourRevenue, priorAscolourRevenue),
+      other_revenue_delta_pct: pctDelta(otherRevenue, priorOtherRevenue),
     },
   })
 }

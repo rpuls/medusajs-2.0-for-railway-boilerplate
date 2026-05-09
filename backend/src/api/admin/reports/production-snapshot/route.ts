@@ -98,6 +98,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       )
     : null
   const supplierFilter = (req.query.supplier as string | undefined)?.trim()
+  const regionFilter = (req.query.region_id as string | undefined)?.trim() || null
   const stuckOnly = req.query.stuck === "1"
   const includeDone = req.query.include_done === "1"
 
@@ -119,6 +120,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         "total",
         "email",
         "customer_id",
+        "region_id",
         "items.id",
         "items.title",
         "items.quantity",
@@ -189,6 +191,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
   for (const order of orders ?? []) {
     if (!includeDone && order.status === "canceled") continue
+    if (regionFilter && order.region_id !== regionFilter) continue
 
     const meta = (order.metadata ?? {}) as Record<string, unknown>
     const stageRaw = meta.production_stage

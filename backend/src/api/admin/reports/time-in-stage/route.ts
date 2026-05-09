@@ -7,7 +7,9 @@ import {
   fetchOrdersForReports,
   inRange,
   itemMethod,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
   summarise,
   isDecorationMethodOrBlank,
   type DecorationMethod,
@@ -29,6 +31,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
 
   const rawMethods = (req.query.method as string | undefined)?.trim()
   const methodFilter = rawMethods
@@ -56,6 +59,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   for (const stage of PRODUCTION_STAGES) buckets.set(stage, [])
 
   for (const order of orders) {
+    if (!matchesRegion(order, regionFilter)) continue
     if (methodFilter && methodFilter.size) {
       const lineMethods = (order.items ?? []).map((it: any) => itemMethod(it))
       const matches = lineMethods.some((m: DecorationMethod) => methodFilter.has(m))

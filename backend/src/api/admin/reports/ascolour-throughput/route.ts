@@ -4,7 +4,9 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -36,6 +38,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
 
   let orders: any[] = []
   try {
@@ -63,6 +66,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let oldestPending: { order_id: string; display_id: any; days: number } | null = null
 
   for (const order of orders) {
+    if (!matchesRegion(order, regionFilter)) continue
     const meta = (order.metadata ?? {}) as Record<string, unknown>
     const ascolourId = meta.ascolour_order_id
     if (typeof ascolourId !== "string" || ascolourId.length === 0) continue

@@ -4,7 +4,9 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -23,6 +25,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
 
   // 1. Fetch designs in window.
   let designs: any[] = []
@@ -80,6 +83,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   // line item's metadata.designId across more than one order.
   const designIdToOrderIds = new Map<string, Set<string>>()
   for (const o of orders) {
+    if (!matchesRegion(o, regionFilter)) continue
     if (o?.status === "canceled") continue
     const items = (o.items ?? []) as Array<{ metadata?: any }>
     for (const it of items) {

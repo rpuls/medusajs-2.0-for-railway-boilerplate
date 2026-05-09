@@ -17,25 +17,60 @@ type Response = {
     total_line_items: number
     reorder_line_items: number
     reorder_line_share: number
+    prior_total_orders?: number
+    prior_distinct_customers?: number
+    prior_repeat_customer_rate?: number
+    prior_avg_orders_per_customer?: number
+    prior_reorder_line_share?: number
+    repeat_rate_delta_pp?: number | null
+    reorder_share_delta_pp?: number | null
+    orders_delta_pct?: number | null
   }
   top_reordered_products: Array<{ title: string; count: number }>
 }
 
-const KpiTile = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex flex-col gap-y-0.5 px-3 py-2 rounded-md bg-ui-bg-subtle/50">
-    <Text size="xsmall" className="text-ui-fg-subtle">
-      {label}
-    </Text>
-    <Text className="text-2xl font-semibold tabular-nums">{value}</Text>
-  </div>
-)
+const KpiTile = ({
+  label,
+  value,
+  deltaPp,
+  deltaPct,
+}: {
+  label: string
+  value: string
+  deltaPp?: number | null
+  deltaPct?: number | null
+}) => {
+  const delta = deltaPp ?? deltaPct ?? null
+  const positive = (delta ?? 0) >= 0
+  const suffix = deltaPp != null ? "pp" : deltaPct != null ? "%" : ""
+  return (
+    <div className="flex flex-col gap-y-0.5 px-3 py-2 rounded-md bg-ui-bg-subtle/50">
+      <Text size="xsmall" className="text-ui-fg-subtle">
+        {label}
+      </Text>
+      <Text className="text-2xl font-semibold tabular-nums">{value}</Text>
+      {delta != null ? (
+        <Text
+          size="xsmall"
+          style={{ color: positive ? PALETTE.emerald600 : PALETTE.rose600 }}
+        >
+          {positive ? "+" : ""}
+          {delta.toFixed(1)}
+          {suffix} vs prior
+        </Text>
+      ) : null}
+    </div>
+  )
+}
 
 export const ReorderRateChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -46,6 +81,7 @@ export const ReorderRateChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/reorder-rate?${params.toString()}`, {
       credentials: "include",
     })
@@ -65,7 +101,7 @@ export const ReorderRateChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const summary = data?.summary
   const top = data?.top_reordered_products ?? []
@@ -110,12 +146,20 @@ export const ReorderRateChart = ({
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiTile label="Repeat customer rate" value={`${repeatPct}%`} />
+        <KpiTile
+          label="Repeat customer rate"
+          value={`${repeatPct}%`}
+          deltaPp={summary?.repeat_rate_delta_pp ?? null}
+        />
         <KpiTile
           label="Avg orders / customer"
           value={(summary?.avg_orders_per_customer ?? 0).toFixed(2)}
         />
-        <KpiTile label="Reorder line share" value={`${reorderSharePct}%`} />
+        <KpiTile
+          label="Reorder line share"
+          value={`${reorderSharePct}%`}
+          deltaPp={summary?.reorder_share_delta_pp ?? null}
+        />
         <KpiTile
           label="Distinct customers"
           value={String(summary?.distinct_customers ?? 0)}

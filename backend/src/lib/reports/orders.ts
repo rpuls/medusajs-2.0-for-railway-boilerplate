@@ -69,6 +69,50 @@ export const parseDateRange = (
   return { from, to }
 }
 
+/**
+ * Same window length immediately preceding `[from, to]` — used by every
+ * report that wants a "vs prior period" comparison.
+ */
+export const priorRange = (
+  from: Date,
+  to: Date
+): { from: Date; to: Date } => {
+  const periodMs = to.getTime() - from.getTime()
+  const priorTo = new Date(from)
+  const priorFrom = new Date(from.getTime() - periodMs)
+  return { from: priorFrom, to: priorTo }
+}
+
+/**
+ * Pull a region_id filter out of a query string. Returns the trimmed id
+ * or null. Multi-region selection isn't supported yet — keep simple.
+ */
+export const parseRegionFilter = (
+  query: Record<string, unknown>
+): string | null => {
+  const raw = (query.region_id as string | undefined)?.trim()
+  if (!raw) return null
+  return raw
+}
+
+/**
+ * True when an order matches the active region filter (or no filter is
+ * active).
+ */
+export const matchesRegion = (order: any, regionId: string | null): boolean => {
+  if (!regionId) return true
+  return order?.region_id === regionId
+}
+
+/**
+ * Compute a percent delta safely (returns null if prior is zero —
+ * frontend should render "no prior data" rather than ∞%).
+ */
+export const pctDelta = (current: number, prior: number): number | null => {
+  if (!Number.isFinite(prior) || prior === 0) return null
+  return Math.round(((current - prior) / prior) * 1000) / 10
+}
+
 export const inRange = (
   iso: string | null | undefined,
   from: Date,

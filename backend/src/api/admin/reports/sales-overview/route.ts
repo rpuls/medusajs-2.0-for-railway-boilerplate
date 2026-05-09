@@ -5,7 +5,9 @@ import {
   buildWeekBuckets,
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -30,6 +32,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
 
   let orders: any[] = []
   try {
@@ -74,6 +77,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const inPeriod: any[] = []
   const inPriorPeriod: any[] = []
   for (const o of orders) {
+    if (!matchesRegion(o, regionFilter)) continue
     if (o?.status === "canceled") {
       // canceled still counts in status breakdown but not in KPIs.
     }

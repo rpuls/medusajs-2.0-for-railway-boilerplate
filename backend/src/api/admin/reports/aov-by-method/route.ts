@@ -6,7 +6,11 @@ import {
   fetchOrdersForReports,
   inRange,
   itemMethod,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
+  pctDelta,
+  priorRange,
   type DecorationMethod,
 } from "../../../../lib/reports/orders"
 
@@ -28,6 +32,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
+  const { from: priorFrom, to: priorTo } = priorRange(from, to)
 
   let orders: any[] = []
   try {
@@ -41,15 +47,24 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   type Bucket = { method: DecorationMethod; revenue: number; orders: number }
-  const buckets: Record<DecorationMethod, Bucket> = Object.fromEntries(
-    ALL_KEYS.map((m) => [m, { method: m, revenue: 0, orders: 0 }])
-  ) as Record<DecorationMethod, Bucket>
+  const newBuckets = (): Record<DecorationMethod, Bucket> =>
+    Object.fromEntries(
+      ALL_KEYS.map((m) => [m, { method: m, revenue: 0, orders: 0 }])
+    ) as Record<DecorationMethod, Bucket>
+
+  const main = newBuckets()
+  const prior = newBuckets()
 
   let currency = "aud"
   for (const order of orders) {
-    if (!inRange(order?.created_at, from, to)) continue
+    if (!matchesRegion(order, regionFilter)) continue
     if (order?.status === "canceled") continue
     if (typeof order.currency_code === "string") currency = order.currency_code
+
+    const inMain = inRange(order?.created_at, from, to)
+    const inPrior = !inMain && inRange(order?.created_at, priorFrom, priorTo)
+    if (!inMain && !inPrior) continue
+    const target = inMain ? main : prior
 
     const items = (order.items ?? []) as Array<{
       unit_price?: number
@@ -57,12 +72,11 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       metadata?: any
     }>
     if (items.length === 0) {
-      buckets.blank.orders += 1
-      buckets.blank.revenue += Number(order.total ?? 0)
+      target.blank.orders += 1
+      target.blank.revenue += Number(order.total ?? 0)
       continue
     }
 
-    // Determine primary method by highest line revenue.
     let topMethod: DecorationMethod = "blank"
     let topLineRevenue = -1
     for (const it of items) {
@@ -73,17 +87,22 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       }
     }
 
-    buckets[topMethod].orders += 1
-    buckets[topMethod].revenue += Number(order.total ?? 0)
+    target[topMethod].orders += 1
+    target[topMethod].revenue += Number(order.total ?? 0)
   }
 
   const rows = ALL_KEYS.map((m) => {
-    const b = buckets[m]
+    const b = main[m]
+    const p = prior[m]
+    const aov = b.orders > 0 ? b.revenue / b.orders : 0
+    const priorAov = p.orders > 0 ? p.revenue / p.orders : 0
     return {
       method: m,
       orders: b.orders,
       revenue: Math.round(b.revenue * 100) / 100,
-      aov: b.orders > 0 ? Math.round((b.revenue / b.orders) * 100) / 100 : 0,
+      aov: Math.round(aov * 100) / 100,
+      prior_aov: Math.round(priorAov * 100) / 100,
+      aov_delta_pct: pctDelta(aov, priorAov),
     }
   })
 

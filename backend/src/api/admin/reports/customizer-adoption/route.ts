@@ -5,7 +5,9 @@ import {
   buildWeekBuckets,
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -23,6 +25,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
 
   let orders: any[] = []
   try {
@@ -48,6 +51,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let customizedInRange = 0
 
   for (const order of orders) {
+    if (!matchesRegion(order, regionFilter)) continue
     if (!inRange(order.created_at, from, to)) continue
     if (order.status === "canceled") continue
 
@@ -80,6 +84,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let priorTotal = 0
   let priorCustomized = 0
   for (const order of orders) {
+    if (!matchesRegion(order, regionFilter)) continue
     if (!inRange(order.created_at, priorFrom, priorTo)) continue
     if (order.status === "canceled") continue
     const items = (order.items ?? []) as Array<{ metadata?: any }>

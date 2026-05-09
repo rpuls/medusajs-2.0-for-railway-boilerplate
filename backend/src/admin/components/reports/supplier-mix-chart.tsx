@@ -90,9 +90,11 @@ const StackedBar = ({
 export const SupplierMixChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -103,6 +105,7 @@ export const SupplierMixChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/supplier-mix?${params.toString()}`, {
       credentials: "include",
     })
@@ -122,7 +125,7 @@ export const SupplierMixChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const suppliers = data?.suppliers ?? []
   const currency = data?.currency ?? "aud"

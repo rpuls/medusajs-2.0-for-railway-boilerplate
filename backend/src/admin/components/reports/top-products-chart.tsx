@@ -37,9 +37,11 @@ const formatCurrency = (n: number, currency: string) => {
 export const TopProductsChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,6 +53,7 @@ export const TopProductsChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/top-products?${params.toString()}`, {
       credentials: "include",
     })
@@ -70,7 +73,7 @@ export const TopProductsChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const rows = sortBy === "units" ? data?.by_units ?? [] : data?.by_revenue ?? []
   const max = sortBy === "units" ? rows[0]?.units ?? 1 : rows[0]?.revenue ?? 1

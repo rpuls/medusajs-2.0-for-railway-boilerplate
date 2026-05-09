@@ -15,6 +15,10 @@ type Segment = {
   units: number
   revenue_share: number
   unit_share: number
+  prior_revenue?: number
+  prior_units?: number
+  revenue_delta_pct?: number | null
+  units_delta_pct?: number | null
 }
 
 type Response = {
@@ -23,6 +27,10 @@ type Response = {
   currency: string
   total_revenue: number
   total_units: number
+  prior_total_revenue?: number
+  prior_total_units?: number
+  revenue_delta_pct?: number | null
+  units_delta_pct?: number | null
   segments: Segment[]
 }
 
@@ -42,18 +50,35 @@ const formatCurrency = (n: number, currency: string) => {
  * A single horizontal stacked bar with a row of legend entries below.
  * Reads more clearly than a 7-slice donut once you have ≥ 5 segments.
  */
+const DeltaBadge = ({ pct }: { pct: number | null | undefined }) => {
+  if (pct == null) return null
+  const positive = pct >= 0
+  return (
+    <Text
+      size="xsmall"
+      style={{ color: positive ? "#059669" : "#e11d48" }}
+      className="tabular-nums"
+    >
+      {positive ? "+" : ""}
+      {pct.toFixed(1)}% vs prior
+    </Text>
+  )
+}
+
 const StackedBar = ({
   segments,
   shareKey,
   totalLabel,
   total,
   currency,
+  deltaPct,
 }: {
   segments: Segment[]
   shareKey: "revenue_share" | "unit_share"
   totalLabel: string
   total: string
   currency: string
+  deltaPct?: number | null
 }) => {
   // Filter out zero-share segments so the bar stays clean.
   const visible = segments.filter((s) => s[shareKey] > 0)
@@ -63,9 +88,12 @@ const StackedBar = ({
         <Text size="xsmall" className="text-ui-fg-subtle">
           {totalLabel}
         </Text>
-        <Text size="small" className="font-semibold tabular-nums">
-          {total}
-        </Text>
+        <div className="flex items-baseline gap-x-2">
+          <DeltaBadge pct={deltaPct} />
+          <Text size="small" className="font-semibold tabular-nums">
+            {total}
+          </Text>
+        </div>
       </div>
       <div className="h-8 w-full rounded overflow-hidden flex border border-ui-border-base">
         {visible.length === 0 ? (
@@ -118,9 +146,11 @@ const StackedBar = ({
 export const DecorationMixChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -131,6 +161,7 @@ export const DecorationMixChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/decoration-mix?${params.toString()}`, {
       credentials: "include",
     })
@@ -150,7 +181,7 @@ export const DecorationMixChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const segments = data?.segments ?? []
   const currency = data?.currency ?? "aud"
@@ -187,6 +218,7 @@ export const DecorationMixChart = ({
           totalLabel="Revenue"
           total={data ? formatCurrency(data.total_revenue, currency) : "—"}
           currency={currency}
+          deltaPct={data?.revenue_delta_pct}
         />
         <StackedBar
           segments={segments}
@@ -194,6 +226,7 @@ export const DecorationMixChart = ({
           totalLabel="Units decorated"
           total={data ? data.total_units.toLocaleString("en-AU") : "—"}
           currency={currency}
+          deltaPct={data?.units_delta_pct}
         />
       </div>
     </ReportCard>

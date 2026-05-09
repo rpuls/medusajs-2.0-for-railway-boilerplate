@@ -43,10 +43,12 @@ export const TimeInStageChart = ({
   fromIso,
   toIso,
   methodCsv,
+  regionId,
 }: {
   fromIso: string
   toIso: string
   methodCsv: string | null
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -58,6 +60,7 @@ export const TimeInStageChart = ({
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
     if (methodCsv) params.set("method", methodCsv)
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/time-in-stage?${params.toString()}`, {
       credentials: "include",
     })
@@ -77,7 +80,7 @@ export const TimeInStageChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso, methodCsv])
+  }, [fromIso, toIso, methodCsv, regionId])
 
   const rows = (data?.stages ?? []).map((s) => ({
     stage: STAGE_LABELS[s.stage] ?? s.stage,

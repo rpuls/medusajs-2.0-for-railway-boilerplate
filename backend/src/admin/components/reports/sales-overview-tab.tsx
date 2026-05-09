@@ -96,9 +96,11 @@ const KpiTile = ({
 export const SalesOverviewTab = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -109,6 +111,7 @@ export const SalesOverviewTab = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/sales-overview?${params.toString()}`, {
       credentials: "include",
     })
@@ -128,7 +131,7 @@ export const SalesOverviewTab = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const summary = data?.summary
   const currency = data?.currency ?? "aud"

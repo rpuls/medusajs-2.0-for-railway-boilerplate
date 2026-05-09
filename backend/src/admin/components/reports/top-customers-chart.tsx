@@ -53,9 +53,11 @@ const formatDate = (iso: string) => {
 export const TopCustomersChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -66,6 +68,7 @@ export const TopCustomersChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/top-customers?${params.toString()}`, {
       credentials: "include",
     })
@@ -85,7 +88,7 @@ export const TopCustomersChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const sharePct = data ? (data.summary.top10_revenue_share * 100).toFixed(1) : "0.0"
   const concentrationBand =

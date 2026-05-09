@@ -38,9 +38,11 @@ const formatCurrency = (n: number, currency: string) => {
 export const AovByMethodChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,6 +53,7 @@ export const AovByMethodChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/aov-by-method?${params.toString()}`, {
       credentials: "include",
     })
@@ -70,7 +73,7 @@ export const AovByMethodChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const rows = (data?.rows ?? []).filter((r) => r.orders > 0)
   const maxAov = rows.reduce((m, r) => Math.max(m, r.aov), 0)

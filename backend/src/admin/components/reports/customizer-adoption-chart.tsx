@@ -69,9 +69,11 @@ const KpiTile = ({
 export const CustomizerAdoptionChart = ({
   fromIso,
   toIso,
+regionId,
 }: {
   fromIso: string
   toIso: string
+  regionId: string | null
 }) => {
   const [data, setData] = useState<Response | null>(null)
   const [loading, setLoading] = useState(false)
@@ -82,6 +84,7 @@ export const CustomizerAdoptionChart = ({
     setLoading(true)
     setError(null)
     const params = new URLSearchParams({ from: fromIso, to: toIso })
+    if (regionId) params.set("region_id", regionId)
     fetch(`/admin/reports/customizer-adoption?${params.toString()}`, {
       credentials: "include",
     })
@@ -101,7 +104,7 @@ export const CustomizerAdoptionChart = ({
     return () => {
       cancelled = true
     }
-  }, [fromIso, toIso])
+  }, [fromIso, toIso, regionId])
 
   const summary = data?.summary
   const adoptionPct =

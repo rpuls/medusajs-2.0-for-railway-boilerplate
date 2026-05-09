@@ -4,7 +4,9 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import {
   fetchOrdersForReports,
   inRange,
+  matchesRegion,
   parseDateRange,
+  parseRegionFilter,
 } from "../../../../lib/reports/orders"
 
 /**
@@ -20,6 +22,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const { from, to } = parseDateRange(req.query as Record<string, unknown>)
+  const regionFilter = parseRegionFilter(req.query as Record<string, unknown>)
 
   let orders: any[] = []
   try {
@@ -45,6 +48,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let currency = "aud"
 
   for (const o of orders) {
+    if (!matchesRegion(o, regionFilter)) continue
     if (!inRange(o?.created_at, from, to)) continue
     if (o?.status === "canceled") continue
     if (typeof o.currency_code === "string") currency = o.currency_code
