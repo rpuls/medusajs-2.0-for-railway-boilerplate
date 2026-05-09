@@ -30,6 +30,7 @@ import { SiteSearchChart } from "../../components/reports/site-search-chart"
 import { AcquisitionTab } from "../../components/reports/acquisition-tab"
 import { FunnelChart } from "../../components/reports/funnel-chart"
 import { RfmChart } from "../../components/reports/rfm-chart"
+import { AovBySourceChart } from "../../components/reports/aov-by-source-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -173,7 +174,8 @@ const ReportsPage = () => {
 
         <Tabs.Content value="acquisition">
           <AcquisitionTab fromIso={fromIso} toIso={toIso} />
-          <div className="mt-3">
+          <div className="mt-3 grid grid-cols-1 gap-3">
+            <AovBySourceChart fromIso={fromIso} toIso={toIso} />
             <FunnelChart fromIso={fromIso} toIso={toIso} />
           </div>
         </Tabs.Content>
