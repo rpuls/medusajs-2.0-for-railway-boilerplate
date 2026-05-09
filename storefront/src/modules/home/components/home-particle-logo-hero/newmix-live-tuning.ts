@@ -157,6 +157,13 @@ export type NewmixLiveTuning = {
    * field. Higher = a single mouse stroke deposits more momentum, so the
    * field carries longer / spins harder after the cursor leaves. */
   fieldInjectStrength: number
+  /** Minimum cursor speed (px/frame) used for inject. If the cursor moves
+   * slower than this, its velocity vector is scaled up (direction preserved)
+   * to this magnitude before being injected into the field. Boosts slow
+   * strokes so they still produce visible swirls without amplifying fast
+   * strokes that already have plenty of energy. 0 = no floor (raw speed).
+   * 4-10 px/frame reads as "slow drag still makes the wordmark dance". */
+  fieldInjectMinSpeedPxPerFrame: number
   /** Fraction of the field's energy LOST per second when the cursor isn't
    * adding to it. 0 = field never decays (chaotic build-up); 1 = field dies
    * within a frame (no lingering). 0.4-0.7 reads as "stir, watch it spin
@@ -349,6 +356,7 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   fieldGridResolution: 36,
   fieldInjectRadiusBmp: 70,
   fieldInjectStrength: 1.0,
+  fieldInjectMinSpeedPxPerFrame: 0.0,
   fieldDecayPerSec: 0.55,
   fieldDiffusion: 0.06,
   fieldRideStrength: 0.12,

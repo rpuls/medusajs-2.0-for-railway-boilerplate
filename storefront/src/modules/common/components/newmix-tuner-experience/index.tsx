@@ -490,6 +490,16 @@ const GROUPS: Group[] = [
         step: 0.1,
       },
       {
+        key: "fieldInjectMinSpeedPxPerFrame",
+        label: "Slow-stroke floor",
+        description:
+          "Minimum cursor speed (px/frame) used for inject. Slow movement is scaled up to at least this magnitude so the wordmark still reacts visibly to gentle strokes. Fast strokes are unaffected. 0 = off (raw cursor velocity). 6-10 reads as Newmix-style fluid response to slow drag.",
+        min: 0,
+        max: 30,
+        step: 0.5,
+        format: (v) => (v <= 0 ? "off" : `${v.toFixed(1)} px/frame`),
+      },
+      {
         key: "fieldDecayPerSec",
         label: "Decay rate",
         description:

@@ -3145,6 +3145,18 @@ export default function HomeParticleLogoHero({
               !entranceActive &&
               newmixSpoonSpeed > 0.05
             ) {
+              /** Slow-stroke velocity floor: scale cursor velocity up to at
+               * least nm.fieldInjectMinSpeedPxPerFrame while preserving
+               * direction. Slow drags still deposit visible energy; fast
+               * strokes are unaffected. */
+              let injectGx = newmixSpoonGx
+              let injectGy = newmixSpoonGy
+              const minSpeed = Math.max(0, nm.fieldInjectMinSpeedPxPerFrame)
+              if (minSpeed > 0 && newmixSpoonSpeed < minSpeed) {
+                const boost = minSpeed / newmixSpoonSpeed
+                injectGx *= boost
+                injectGy *= boost
+              }
               const prev = newmixTickPrevCursorRef.current
               const haveValidPrev =
                 prev.x > -9000 &&
@@ -3172,8 +3184,8 @@ export default function HomeParticleLogoHero({
                     velocityField,
                     prev.x + dxStroke * u,
                     prev.y + dyStroke * u,
-                    newmixSpoonGx,
-                    newmixSpoonGy,
+                    injectGx,
+                    injectGy,
                     nm.fieldInjectRadiusBmp,
                     perStepStrength
                   )
@@ -3183,8 +3195,8 @@ export default function HomeParticleLogoHero({
                   velocityField,
                   currentMouseX,
                   currentMouseY,
-                  newmixSpoonGx,
-                  newmixSpoonGy,
+                  injectGx,
+                  injectGy,
                   nm.fieldInjectRadiusBmp,
                   nm.fieldInjectStrength
                 )

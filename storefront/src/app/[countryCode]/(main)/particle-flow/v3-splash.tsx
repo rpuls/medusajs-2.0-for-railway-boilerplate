@@ -77,6 +77,7 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   fieldGridResolution: 48,
   fieldInjectRadiusBmp: 20,
   fieldInjectStrength: 1.0,
+  fieldInjectMinSpeedPxPerFrame: 8,
   fieldDecayPerSec: 0.5,
   fieldDiffusion: 0.05,
   fieldRideStrength: 0.06,
