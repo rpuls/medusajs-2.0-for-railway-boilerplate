@@ -75,6 +75,18 @@ export type NewmixLiveTuning = {
   /** Alpha multiplier applied to particles in trailing state. Lower = wake reads more
    * ghostly / translucent so the wordmark dominates visually. */
   wakeAlphaMult: number
+  /** Color-invert effect when a particle is captured / in wake state.
+   * 0 = OFF (particle keeps its gradient color always)
+   * 1 = SNAP (color inverts the moment cursor touches it; smooth fade back home)
+   * 2 = FADE (color smoothly fades toward inverted over captureColorInvertFadeMs;
+   *           same smooth fade back home).
+   * Render lerps between original RGB and (255-r, 255-g, 255-b) by per-particle mix. */
+  captureColorInvertMode: number
+  /** Fade-in duration (ms) for FADE mode. How long it takes the particle's color
+   * to transition from original to fully inverted while inside the cursor disk
+   * or in wake-trail state. Ignored when mode is OFF or SNAP. 80-200ms reads as
+   * elegant; >300ms can feel laggy. */
+  captureColorInvertFadeMs: number
   friction: number
   springStiffnessMult: number
   homeSpringSuppress: number
@@ -335,6 +347,8 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   coreEjectionForce: 0.0,
   coreEjectionRadiusFrac: 0.15,
   wakeAlphaMult: 1.0,
+  captureColorInvertMode: 0,
+  captureColorInvertFadeMs: 150,
   /** Resume v2-era values. */
   friction: 0.94,
   springStiffnessMult: 0.55,

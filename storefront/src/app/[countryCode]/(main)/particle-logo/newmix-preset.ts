@@ -54,6 +54,8 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   coreEjectionForce: 5,
   coreEjectionRadiusFrac: 0.15,
   wakeAlphaMult: 1.2,
+  captureColorInvertMode: 1,
+  captureColorInvertFadeMs: 150,
   /** Vortex emitters disabled. */
   vortexStrength: 0,
   /** Field — heavy lifter for the lingering momentum, but particles only
