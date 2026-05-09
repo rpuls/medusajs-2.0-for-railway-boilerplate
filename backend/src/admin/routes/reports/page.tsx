@@ -34,6 +34,8 @@ import { AovBySourceChart } from "../../components/reports/aov-by-source-chart"
 import { SlaBreachChart } from "../../components/reports/sla-breach-chart"
 import { AgingInventoryChart } from "../../components/reports/aging-inventory-chart"
 import { VectorizationFunnelChart } from "../../components/reports/vectorization-funnel-chart"
+import { DiscountProfitabilityChart } from "../../components/reports/discount-profitability-chart"
+import { ReturnsChart } from "../../components/reports/returns-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -172,6 +174,11 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <DiscountProfitabilityChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
@@ -207,6 +214,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <VectorizationFunnelChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <ReturnsChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
