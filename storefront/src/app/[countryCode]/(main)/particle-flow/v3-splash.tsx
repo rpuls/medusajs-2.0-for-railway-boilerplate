@@ -44,27 +44,34 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   falloffPower: 1.6,
   motionGateSpeed: 1.5,
 
-  /** ------ Wake-history mechanics OFF ------
-   * The field replaces this. Trail playback fights field-driven flow. */
-  trailFollowMs: 0,
-  wakePace: 1,
-  wakePaceJitter: 0,
-  wakeLateralSpreadBmp: 0,
-  wakeReleaseStaggerMs: 0,
-  wakeBandSpreadBmp: 0,
-  wakeAlongStretchBmp: 0,
+  /** ------ Wake-history mechanics ON ------
+   * Particles in the cursor disk are CAPTURED (carried along at
+   * inDiskCarryFactor of mouse velocity), then on exit a fraction
+   * (trailingProbability) enter wake state — they trace the cursor's
+   * historical path for trailFollowMs at wakePace. This is the actual
+   * Newmix "stir the coffee" mechanism; the field provides flow context
+   * but the wake is what makes particles physically follow the cursor. */
+  trailFollowMs: 1000,
+  wakePace: 0.7,
+  wakePaceJitter: 0.25,
+  wakeLateralSpreadBmp: 6,
+  wakeReleaseStaggerMs: 200,
+  wakeBandSpreadBmp: 5,
+  wakeAlongStretchBmp: 5,
   wakeDiffusionBmp: 0,
   wakeDiffusionHz: 0.6,
-  wakeTimeOffsetMs: 0,
+  wakeTimeOffsetMs: 600,
   releaseVelocityKeep: 0,
-  exitVelocityBoostBmp: 0,
-  leadingEdgePullForce: 0,
-  trailingProbability: 0,
-  inDiskCarryFactor: 0,
-  wakeBandTaperPower: 0,
-  coreEjectionForce: 0,
+  exitVelocityBoostBmp: 4,
+  leadingEdgePullForce: 0.4,
+  trailingProbability: 0.3,
+  inDiskCarryFactor: 0.85,
+  wakeBandTaperPower: 1.0,
+  coreEjectionForce: 5,
   coreEjectionRadiusFrac: 0.15,
-  wakeAlphaMult: 1,
+  wakeAlphaMult: 1.2,
+  captureColorInvertMode: 1,
+  captureColorInvertFadeMs: 150,
 
   /** ------ Vortex emitters OFF ------
    * Newmix has no orbital capture mechanic. Rings are PATH-shaped, not
@@ -77,10 +84,12 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   fieldGridResolution: 48,
   fieldInjectRadiusBmp: 20,
   fieldInjectStrength: 1.0,
+  fieldInjectMinSpeedPxPerFrame: 8,
   fieldDecayPerSec: 0.5,
+  fieldAdvectionStrength: 0.7,
   fieldDiffusion: 0.05,
-  fieldRideStrength: 0.06,
-  fieldPressureStrength: 0.5,
+  fieldRideStrength: 0.15,
+  fieldPressureStrength: 0.7,
   fieldPressureIterations: 1,
   fieldDrivenCursor: 1,
   fieldStrokeSubdivisionPx: 6,

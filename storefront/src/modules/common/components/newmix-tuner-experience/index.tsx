@@ -347,6 +347,27 @@ const GROUPS: Group[] = [
         max: 30,
         step: 0.5,
       },
+      {
+        key: "captureColorInvertMode",
+        label: "Capture color invert",
+        description:
+          "Colour inversion when the cursor captures a particle. OFF = no colour change. SNAP = colour flips to inverted instantly when cursor touches the particle (dramatic). FADE = colour smoothly transitions to inverted over the fade duration (elegant). Either mode fades back to original colour during home-return.",
+        min: 0,
+        max: 2,
+        step: 1,
+        format: (v) =>
+          v <= 0 ? "OFF" : v < 1.5 ? "SNAP" : "FADE",
+      },
+      {
+        key: "captureColorInvertFadeMs",
+        label: "Invert fade time",
+        description:
+          "How long the colour-invert transition takes when mode is FADE (ms). Inside the cursor disk the particle's colour eases from original toward inverted over this duration; ignored in OFF/SNAP modes. 80-200ms reads as elegant; >300ms feels laggy.",
+        min: 0,
+        max: 600,
+        step: 10,
+        format: (v) => `${Math.round(v)} ms`,
+      },
     ],
   },
   {
@@ -488,6 +509,25 @@ const GROUPS: Group[] = [
         min: 0,
         max: 5,
         step: 0.1,
+      },
+      {
+        key: "fieldInjectMinSpeedPxPerFrame",
+        label: "Slow-stroke floor",
+        description:
+          "Minimum cursor speed (px/frame) used for inject. Slow movement is scaled up to at least this magnitude so the wordmark still reacts visibly to gentle strokes. Fast strokes are unaffected. 0 = off (raw cursor velocity). 6-10 reads as Newmix-style fluid response to slow drag.",
+        min: 0,
+        max: 30,
+        step: 0.5,
+        format: (v) => (v <= 0 ? "off" : `${v.toFixed(1)} px/frame`),
+      },
+      {
+        key: "fieldAdvectionStrength",
+        label: "Advection (trail)",
+        description:
+          "Self-advection — velocity moves itself each frame (Stam-style fluid). 0 = no trail, deposited energy stays where you put it and forms blobs/rings only. 1 = full velocity×dt step, deposited energy TRAVELS in its own direction so the cursor leaves a crescent wake behind it. 0.4-0.8 reads as 'stir the coffee.' THIS is the step that turns the cursor from a stamp into a stir.",
+        min: 0,
+        max: 1,
+        step: 0.02,
       },
       {
         key: "fieldDecayPerSec",

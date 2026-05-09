@@ -37,7 +37,6 @@
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
   },
   "dependencies": {
-    "@agilo/medusa-analytics-plugin": "^1.4.0",
     "@google-analytics/data": "^5.2.0",
     "@medusajs/admin-sdk": "2.14.2",
     "@medusajs/admin-shared": "2.14.2",
@@ -58,6 +57,7 @@
     "medusajs-launch-utils": "0.0.19",
     "minio": "^8.0.7",
     "pg": "^8.20.0",
+    "recharts": "3.8.1",
     "resend": "6.12.3",
     "sharp": "^0.34.4",
     "ulid": "^3.0.2",

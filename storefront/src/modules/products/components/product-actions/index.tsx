@@ -18,6 +18,7 @@ import { resolveVariantFromOptions } from "@modules/products/lib/variant-options
 
 import ProductPrice from "../product-price"
 import { addScpLineItemToCartSafe, addToCartSafe } from "@lib/data/cart"
+import { productToItem, trackAddToCart } from "@lib/analytics"
 import {
   DEFAULT_SCP_PRINT_SIZE_ID,
   SCP_PRINT_SIZE_OPTIONS,
@@ -201,6 +202,20 @@ export default function ProductActions({
     if (!addResult.ok) {
       setAddToCartError(addResult.error)
     } else {
+      // Fire GA4 add_to_cart with the line we just added. Skipped on
+      // failure so the funnel matches reality. The wrapper is a no-op
+      // when the GA4 measurement id isn't set.
+      const item = productToItem(selectedVariant as any, quantity)
+      if (item) {
+        // Tag the SCP / customizer-cart adds so GA4 can slice by it.
+        if (shouldUseScpCart) {
+          item.decoration_method = "screen"
+        }
+        trackAddToCart(
+          [item],
+          (selectedVariant as any)?.calculated_price?.currency_code?.toUpperCase() ?? "AUD"
+        )
+      }
       router.refresh()
     }
     setIsAdding(false)

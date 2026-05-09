@@ -75,6 +75,18 @@ export type NewmixLiveTuning = {
   /** Alpha multiplier applied to particles in trailing state. Lower = wake reads more
    * ghostly / translucent so the wordmark dominates visually. */
   wakeAlphaMult: number
+  /** Color-invert effect when a particle is captured / in wake state.
+   * 0 = OFF (particle keeps its gradient color always)
+   * 1 = SNAP (color inverts the moment cursor touches it; smooth fade back home)
+   * 2 = FADE (color smoothly fades toward inverted over captureColorInvertFadeMs;
+   *           same smooth fade back home).
+   * Render lerps between original RGB and (255-r, 255-g, 255-b) by per-particle mix. */
+  captureColorInvertMode: number
+  /** Fade-in duration (ms) for FADE mode. How long it takes the particle's color
+   * to transition from original to fully inverted while inside the cursor disk
+   * or in wake-trail state. Ignored when mode is OFF or SNAP. 80-200ms reads as
+   * elegant; >300ms can feel laggy. */
+  captureColorInvertFadeMs: number
   friction: number
   springStiffnessMult: number
   homeSpringSuppress: number
@@ -157,11 +169,27 @@ export type NewmixLiveTuning = {
    * field. Higher = a single mouse stroke deposits more momentum, so the
    * field carries longer / spins harder after the cursor leaves. */
   fieldInjectStrength: number
+  /** Minimum cursor speed (px/frame) used for inject. If the cursor moves
+   * slower than this, its velocity vector is scaled up (direction preserved)
+   * to this magnitude before being injected into the field. Boosts slow
+   * strokes so they still produce visible swirls without amplifying fast
+   * strokes that already have plenty of energy. 0 = no floor (raw speed).
+   * 4-10 px/frame reads as "slow drag still makes the wordmark dance". */
+  fieldInjectMinSpeedPxPerFrame: number
   /** Fraction of the field's energy LOST per second when the cursor isn't
    * adding to it. 0 = field never decays (chaotic build-up); 1 = field dies
    * within a frame (no lingering). 0.4-0.7 reads as "stir, watch it spin
    * down over a couple of seconds". */
   fieldDecayPerSec: number
+  /** Self-advection strength (0..1). Each frame the velocity grid moves
+   * itself by `velocity * dt * strength` (Stam-style semi-Lagrangian step).
+   * 0 = no advection — deposited energy sits where the cursor put it and
+   * dissipates radially via diffusion (blobs, rings, no trail).
+   * 1 = full velocity*dt advection — energy TRAVELS in its own direction,
+   * so a moving cursor leaves a directional crescent wake behind it.
+   * 0.4-0.8 reads as "stir the coffee — there's a clear trail behind the
+   * spoon." This is THE step that turns the cursor from a stamp into a stir. */
+  fieldAdvectionStrength: number
   /** Per-frame lateral diffusion (0..0.25). Each cell averages a fraction of
    * its 4 neighbours' velocity into itself, so injected energy seeps outward
    * — crucial for "the swirl spreads beyond where the cursor went". 0 skips
@@ -319,6 +347,8 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   coreEjectionForce: 0.0,
   coreEjectionRadiusFrac: 0.15,
   wakeAlphaMult: 1.0,
+  captureColorInvertMode: 0,
+  captureColorInvertFadeMs: 150,
   /** Resume v2-era values. */
   friction: 0.94,
   springStiffnessMult: 0.55,
@@ -349,7 +379,9 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   fieldGridResolution: 36,
   fieldInjectRadiusBmp: 70,
   fieldInjectStrength: 1.0,
+  fieldInjectMinSpeedPxPerFrame: 0.0,
   fieldDecayPerSec: 0.55,
+  fieldAdvectionStrength: 0.0,
   fieldDiffusion: 0.06,
   fieldRideStrength: 0.12,
   /** Curl-noise micro-turbulence — disabled by default. */

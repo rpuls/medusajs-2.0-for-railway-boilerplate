@@ -4,6 +4,8 @@ import { Plus_Jakarta_Sans } from "next/font/google"
 import "styles/globals.css"
 import { ViewTransitions } from "next-view-transitions"
 import ConditionalCursorDot from "@modules/layout/components/conditional-cursor-dot"
+import { Ga4Script } from "@modules/common/components/ga4-script"
+import { PostHogProvider } from "@modules/common/components/posthog-provider"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
@@ -41,6 +43,9 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  verification: {
+    google: "oY0Zolz7R7nfAyd2YQ4uLCrKxdIi0dXVFZt6KVbJR28",
   },
   openGraph: {
     type: "website",
@@ -103,9 +108,11 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <ViewTransitions>
       <html lang="en" data-mode="light" className="scroll-smooth">
-        <body 
+        <body
           className={`${plusJakartaSans.className} antialiased selection:bg-[#FF2E63] selection:text-[#EEEEEE]`}
         >
+          <Ga4Script />
+          <PostHogProvider>
           <ConditionalCursorDot />
           <script
             type="application/ld+json"
@@ -116,6 +123,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           <main className="relative min-h-dvh bg-[var(--brand-background)] text-[var(--brand-primary)]">
             {props.children}
           </main>
+          </PostHogProvider>
         </body>
       </html>
     </ViewTransitions>

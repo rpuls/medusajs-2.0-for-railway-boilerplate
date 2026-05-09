@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
+import { BeginCheckoutTracker } from "@modules/checkout/components/begin-checkout-tracker"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 import { applyDisplayPriceCorrectionToCart } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
@@ -34,6 +35,7 @@ export default async function Checkout() {
 
   return (
     <div className="content-container py-8 small:py-10 pb-14">
+      <BeginCheckoutTracker cart={cart} />
       <div className="mb-8 small:mb-10 max-w-2xl">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-secondary)]">
           Secure checkout

@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 import {
   PRODUCTION_STAGES,
@@ -86,6 +86,7 @@ const STAGE_SLA_DAYS: Record<ProductionStage, number | null> = {
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const logger = (req.scope as any).resolve?.("logger") ?? console
 
   const rawMethods = (req.query.method as string | undefined)?.trim()
   const methodFilter = rawMethods
@@ -97,35 +98,75 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       )
     : null
   const supplierFilter = (req.query.supplier as string | undefined)?.trim()
+  const regionFilter = (req.query.region_id as string | undefined)?.trim() || null
   const stuckOnly = req.query.stuck === "1"
   const includeDone = req.query.include_done === "1"
 
   // Pull all orders we may need; filter in-memory because production_stage
-  // lives in JSONB metadata which doesn't index nicely. With ~1000s of
-  // orders this is fine; revisit with a materialised view if it gets
-  // slow.
-  const { data: orders } = (await query.graph({
-    entity: "order",
-    fields: [
-      "id",
-      "display_id",
-      "created_at",
-      "status",
-      "metadata",
-      "currency_code",
-      "total",
-      "email",
-      "customer.id",
-      "customer.first_name",
-      "customer.last_name",
-      "customer.email",
-      "items.id",
-      "items.title",
-      "items.quantity",
-      "items.metadata",
-    ],
-    pagination: { take: 5000 },
-  })) as { data: any[] }
+  // lives in JSONB metadata which doesn't index nicely. Customer name is
+  // fetched in a follow-up batch query so the order graph only needs
+  // first-class fields (avoids brittleness around the customer module link).
+  let orders: any[] = []
+  try {
+    const { data } = await query.graph({
+      entity: "order",
+      fields: [
+        "id",
+        "display_id",
+        "created_at",
+        "status",
+        "metadata",
+        "currency_code",
+        "total",
+        "email",
+        "customer_id",
+        "region_id",
+        "items.id",
+        "items.title",
+        "items.quantity",
+        "items.metadata",
+      ],
+      pagination: { take: 1000, skip: 0 },
+    })
+    orders = (data as any[]) ?? []
+  } catch (err: any) {
+    logger.error?.(
+      `[production-snapshot] order graph query failed: ${err?.message ?? err}`
+    )
+    return res.status(500).json({
+      error: "Failed to load orders",
+      detail: String(err?.message ?? err),
+    })
+  }
+
+  // Best-effort customer name lookup. If this fails we still render rows
+  // with the email — never block the page on it.
+  const customerIds = Array.from(
+    new Set(
+      orders
+        .map((o: any) => o?.customer_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  )
+  const customerNameMap = new Map<string, string>()
+  if (customerIds.length > 0) {
+    try {
+      const { data: customers } = await query.graph({
+        entity: "customer",
+        fields: ["id", "first_name", "last_name", "email"],
+        filters: { id: customerIds },
+        pagination: { take: customerIds.length, skip: 0 },
+      })
+      for (const c of (customers as any[]) ?? []) {
+        const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim()
+        if (c?.id) customerNameMap.set(c.id, name || c?.email || "")
+      }
+    } catch (err: any) {
+      logger.warn?.(
+        `[production-snapshot] customer lookup failed (non-fatal): ${err?.message ?? err}`
+      )
+    }
+  }
 
   type OrderSummary = {
     id: string
@@ -150,6 +191,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
   for (const order of orders ?? []) {
     if (!includeDone && order.status === "canceled") continue
+    if (regionFilter && order.region_id !== regionFilter) continue
 
     const meta = (order.metadata ?? {}) as Record<string, unknown>
     const stageRaw = meta.production_stage
@@ -183,16 +225,15 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     if (stuckOnly && !isStuck) continue
 
     const customerName =
-      [order.customer?.first_name, order.customer?.last_name]
-        .filter(Boolean)
-        .join(" ")
-        .trim() || (order.customer?.email ?? order.email ?? "Guest")
+      (order.customer_id ? customerNameMap.get(order.customer_id) : "") ||
+      order.email ||
+      "Guest"
 
     stageBuckets[stage].push({
       id: order.id,
       display_id: order.display_id ?? null,
       customer: customerName,
-      customer_email: order.customer?.email ?? order.email ?? "",
+      customer_email: order.email ?? "",
       items_count: (order.items ?? []).reduce(
         (sum: number, it: any) => sum + Number(it.quantity ?? 0),
         0
@@ -254,10 +295,6 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   })
 }
 
-export const config = {
-  routes: [{ matcher: "/admin/reports/production-snapshot", method: ["GET"] }],
-}
-
 // Re-export the type for the admin frontend so it doesn't have to re-declare
 // the response shape.
 export type ProductionSnapshotResponse = {
@@ -299,4 +336,3 @@ export type ProductionSnapshotResponse = {
 // with the storefront's source of truth — caught at first request, not
 // at deploy.
 void DECORATION_METHODS
-void MedusaError

@@ -80,6 +80,7 @@ import type { VelocityField } from "./velocity-field"
 import {
   clearVelocityField,
   createVelocityField,
+  advectVelocityField,
   decayVelocityField,
   diffuseVelocityField,
   injectVelocity,
@@ -349,6 +350,11 @@ type ParallaxParticle = {
   entranceOpacity: number
   /** Black hole: was inside capture disk (geom) last frame — exit edge starts trail. */
   bhPrevInRadius: boolean
+  /** Color-invert mix (0 = original gradient color, 1 = fully inverted RGB).
+   * Driven toward 1 when particle is captured / in wake state (SNAP sets instantly,
+   * FADE eases over captureColorInvertFadeMs); always eases back toward 0 over the
+   * home-return duration once the particle is no longer captured. */
+  captureColorMix?: number
   /** Black hole: `performance.now()` deadline for escort-toward-cursor; null if inactive. */
   bhTrailUntilMs: number | null
   /** Viscous coffee wake pool only: unit tangent along stroke at this particle’s trail slot. */
@@ -1766,9 +1772,15 @@ function drawLayer(
       const localT = segPos - segIdx
       const c1 = gradStops[segIdx]!
       const c2 = gradStops[segIdx + 1]!
-      const r = Math.round(c1[0]! + (c2[0]! - c1[0]!) * localT)
-      const g = Math.round(c1[1]! + (c2[1]! - c1[1]!) * localT)
-      const b = Math.round(c1[2]! + (c2[2]! - c1[2]!) * localT)
+      let r = Math.round(c1[0]! + (c2[0]! - c1[0]!) * localT)
+      let g = Math.round(c1[1]! + (c2[1]! - c1[1]!) * localT)
+      let b = Math.round(c1[2]! + (c2[2]! - c1[2]!) * localT)
+      const invMix = p.captureColorMix
+      if (invMix != null && invMix > 0) {
+        r = Math.round(r * (1 - invMix) + (255 - r) * invMix)
+        g = Math.round(g * (1 - invMix) + (255 - g) * invMix)
+        b = Math.round(b * (1 - invMix) + (255 - b) * invMix)
+      }
       ctx.globalAlpha = alpha
       ctx.fillStyle = `rgb(${r},${g},${b})`
       const half = d * 0.5
@@ -3145,6 +3157,18 @@ export default function HomeParticleLogoHero({
               !entranceActive &&
               newmixSpoonSpeed > 0.05
             ) {
+              /** Slow-stroke velocity floor: scale cursor velocity up to at
+               * least nm.fieldInjectMinSpeedPxPerFrame while preserving
+               * direction. Slow drags still deposit visible energy; fast
+               * strokes are unaffected. */
+              let injectGx = newmixSpoonGx
+              let injectGy = newmixSpoonGy
+              const minSpeed = Math.max(0, nm.fieldInjectMinSpeedPxPerFrame)
+              if (minSpeed > 0 && newmixSpoonSpeed < minSpeed) {
+                const boost = minSpeed / newmixSpoonSpeed
+                injectGx *= boost
+                injectGy *= boost
+              }
               const prev = newmixTickPrevCursorRef.current
               const haveValidPrev =
                 prev.x > -9000 &&
@@ -3172,8 +3196,8 @@ export default function HomeParticleLogoHero({
                     velocityField,
                     prev.x + dxStroke * u,
                     prev.y + dyStroke * u,
-                    newmixSpoonGx,
-                    newmixSpoonGy,
+                    injectGx,
+                    injectGy,
                     nm.fieldInjectRadiusBmp,
                     perStepStrength
                   )
@@ -3183,12 +3207,27 @@ export default function HomeParticleLogoHero({
                   velocityField,
                   currentMouseX,
                   currentMouseY,
-                  newmixSpoonGx,
-                  newmixSpoonGy,
+                  injectGx,
+                  injectGy,
                   nm.fieldInjectRadiusBmp,
                   nm.fieldInjectStrength
                 )
               }
+            }
+            /** Self-advection — velocity moves itself, so deposited energy
+             * travels in its own direction. Run BEFORE diffusion so the
+             * trail forms first, then softens at its edges. Stam-style
+             * semi-Lagrangian step is unconditionally stable. */
+            if (
+              nm.fieldAdvectionStrength > 0 &&
+              newmixVelocityFieldScratchRef.current
+            ) {
+              advectVelocityField(
+                velocityField,
+                newmixVelocityFieldScratchRef.current,
+                nm.fieldAdvectionStrength,
+                16
+              )
             }
             /** Lateral diffusion — energy seeps outward from the inject site
              * each frame so the swirl spreads beyond the cursor's path. */
@@ -3386,6 +3425,30 @@ export default function HomeParticleLogoHero({
                 p.newmixHomeReturnFromX = undefined
                 p.newmixHomeReturnFromY = undefined
                 p.newmixHomeReturnStartMs = undefined
+              }
+
+              /** Capture color invert: drive captureColorMix toward 1 while the
+               * particle is captured or in wake state, back toward 0 otherwise.
+               * Mode 0 = off (no inversion); 1 = snap (instant on capture);
+               * 2 = fade (smooth ramp over captureColorInvertFadeMs). Fade-out
+               * always uses homeReturnMs so the particle heals smoothly. */
+              const colorInvertMode = nm.captureColorInvertMode | 0
+              if (colorInvertMode > 0) {
+                const inverted = captured || trailingActive
+                const curMix = p.captureColorMix ?? 0
+                if (inverted) {
+                  if (colorInvertMode === 1) {
+                    p.captureColorMix = 1
+                  } else {
+                    const fadeMs = Math.max(1, nm.captureColorInvertFadeMs)
+                    p.captureColorMix = Math.min(1, curMix + 16 / fadeMs)
+                  }
+                } else if (curMix > 0) {
+                  const recoverMs = Math.max(1, nm.homeReturnMs)
+                  p.captureColorMix = Math.max(0, curMix - 16 / recoverMs)
+                }
+              } else if ((p.captureColorMix ?? 0) > 0) {
+                p.captureColorMix = 0
               }
 
               /** Dual vortex emitters — continuous tangential force, magnitude

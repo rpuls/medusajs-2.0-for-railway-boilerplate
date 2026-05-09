@@ -19,6 +19,7 @@ import { isBeanieGarmentProduct } from "@modules/products/lib/variant-options"
 import { HttpTypes } from "@medusajs/types"
 import { PrintPlacementProvider } from "@modules/products/context/print-placement-context"
 import { ProductOptionsProvider } from "@modules/products/context/product-options-context"
+import { ViewItemTracker } from "@modules/products/components/view-item-tracker"
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
@@ -117,6 +118,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
 
   return (
     <>
+      <ViewItemTracker product={product} />
       <div className="content-container py-6 relative" data-testid="product-container">
         <PrintPlacementProvider>
           <ProductOptionsProvider product={product}>
