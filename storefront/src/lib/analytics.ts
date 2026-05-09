@@ -220,6 +220,26 @@ export const trackSearch = (searchTerm: string, resultsCount?: number) => {
   })
 }
 
+/* ---------- vectorization upsell funnel -------------------------- */
+
+export type VectorizationFunnelStep =
+  | "modal_shown"
+  | "modal_dismissed"
+  | "modal_reupload"
+  | "accepted"
+
+/**
+ * Customizer low-DPI modal funnel. Fired alongside the equivalent
+ * PostHog capture (`phCapture(`vectorization_${step}`, ...)`) so both
+ * GA4 funnel reports and PostHog Insights have the same source of truth.
+ */
+export const trackVectorizationFunnel = (
+  step: VectorizationFunnelStep,
+  payload: Record<string, any> = {}
+) => {
+  fire(`vectorization_${step}`, payload)
+}
+
 /* ---------- helpers for converting Medusa shapes ------------------ */
 
 type AnyVariant = {

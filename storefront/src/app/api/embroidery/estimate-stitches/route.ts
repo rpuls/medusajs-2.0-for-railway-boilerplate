@@ -12,22 +12,91 @@ const MODEL = "claude-haiku-4-5-20251001"
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024 // 6 MB after base64 — Anthropic limit is ~5 MB raw
 
 const SYSTEM_PROMPT = `You estimate stitch counts for embroidered logos and artwork
-on apparel. You receive an image plus the intended embroidered size (width / height
-in millimetres) and return a stitch-count range, a complexity rating, and brief notes.
+on apparel, calibrated against the output of professional auto-digitizing
+software (Wilcom, Hatch, Embird) at production-grade density.
 
-How to estimate:
-- Embroidery uses fill stitches (tightly packed inside shapes), satin stitches
-  (parallel passes outlining or filling narrow shapes), and run stitches
-  (single-line outlines / details).
-- A useful rule of thumb is 1,500–2,200 stitches per square inch (≈ 232–340 per
-  cm²) for typical fill-heavy designs at production density. Outline-only or
-  text-only designs run lighter (300–800 stitches per cm²).
-- Multiply by the area implied by the supplied dimensions, adjust for the
-  visual density (lots of solid fills → upper bound; line-art / text → lower
-  bound).
-- Cap your maximum at 50,000. Designs over 12,000 stitches will be flagged
-  for manual quote on our side, so accuracy matters most in the 0–12,000 range.
+You receive an image plus the intended embroidered size (width / height in
+millimetres) and return a stitch-count range, a complexity rating, and brief
+notes.
 
+============================================================
+CRITICAL: WHAT COUNTS AS FILL-HEAVY (most designs you'll see)
+============================================================
+A design is FILL-HEAVY if **any** of these are true:
+- It has solid-colour shapes or characters that occupy >30% of the bounding
+  box (mascots, cartoon characters, logos with filled letters, sports
+  shields, crests, club emblems).
+- It has overlapping coloured shapes (a chibi Pokemon with green hood +
+  yellow body + red mouth = fill-heavy, even though there's whitespace in
+  the bounding box).
+- The image looks like illustrated artwork rather than line-art / text.
+
+Auto-digitizing tools like Wilcom add tatami fills, underlay, satin
+borders, and outline runs that ALL contribute stitches. The customer's
+"line drawing intuition" massively underestimates what the machine
+actually sews — bias up, not down, when uncertain.
+
+============================================================
+DENSITY BANDS (stitches per cm² at the supplied dimensions)
+============================================================
+Pick the density band first, then multiply by area in cm².
+
+- **Outline-only / text-only / single-colour line-art** → 80–200 stitches/cm²
+  Examples: a wordmark, a single-colour monogram, a thin-line crest.
+- **Mixed (fill + outline, simple 2-3 colour logo, modest fills)** → 200–280
+  stitches/cm²
+  Examples: a 2-colour shield with one filled shape, a corporate logo with
+  one filled banner.
+- **Fill-heavy production density** → 280–360 stitches/cm²
+  Examples: chibi characters, mascots, multi-colour illustrated logos,
+  anything where solid colour fills dominate. This is by far the most
+  common case for the artwork people send.
+- **Very dense / multi-layer / photographic** → 360–450 stitches/cm²
+  Use sparingly — only when the design is clearly multi-layered with
+  many small detail elements.
+
+============================================================
+WORKED EXAMPLES (calibrated to Wilcom auto-digitize output)
+============================================================
+1. 80×80 mm chibi character with green hood, yellow body, red accents,
+   black outlines, small text: AREA = 64 cm². FILL-HEAVY (solid colour
+   shapes dominate). Density 280–360 → 17,920–23,040 stitches. **Wilcom
+   real-world: ~18,000.**
+
+2. 50×30 mm 2-colour wordmark "Acme Corp" with one filled banner: AREA =
+   15 cm². MIXED. Density 200–280 → 3,000–4,200 stitches.
+
+3. 70×70 mm sports shield with solid filled crest, outlined text,
+   3 colours: AREA = 49 cm². FILL-HEAVY. Density 280–360 → 13,720–17,640
+   stitches.
+
+4. 30×30 mm single-line monogram: AREA = 9 cm². OUTLINE-ONLY. Density
+   80–200 → 720–1,800 stitches.
+
+============================================================
+RANGE WIDTH
+============================================================
+Make the range tight enough to be useful. If your midpoint is 18,000,
+return ~15,000–22,000 (not 5,000–35,000). Customers seed pricing from
+the midpoint, so a wide range loosens that anchor.
+
+Cap your maximum at 50,000. Designs over 12,000 stitches get flagged
+for manual quote on our side, so accuracy matters most in the
+0–12,000 range — but DO NOT bias your range downward to stay under
+12,000. Honesty here saves the customer from sticker shock at quote
+time.
+
+============================================================
+COMPLEXITY RATING
+============================================================
+- "low": outline-only / text-only / simple monogram
+- "medium": 1–2 fills + outlines, modest colour count
+- "high": multi-colour illustrated artwork, characters, dense fills,
+  fine detail
+
+============================================================
+OUTPUT FORMAT
+============================================================
 Output STRICT JSON only — no prose, no markdown — matching this schema:
 {
   "stitchesMin": <integer>,
@@ -37,11 +106,20 @@ Output STRICT JSON only — no prose, no markdown — matching this schema:
 }
 
 Notes guidance:
-- Mention if very fine details may not stitch cleanly (text under 5 mm tall,
-  line widths under 1 mm).
-- If the artwork looks unsuitable for embroidery (photographic gradient,
-  hundreds of colours, halftones), say so and bias to the upper bound.
-- Keep notes under 240 characters.`
+- Mention if very fine details may not stitch cleanly (text under 5 mm
+  tall, line widths under 1 mm, gradients, drop shadows).
+- If the artwork looks unsuitable for embroidery as-is (photographic
+  gradient, hundreds of colours, halftones), say so and bias to the
+  upper bound.
+- Keep notes under 240 characters.
+
+Reasoning checklist before responding:
+1. Classify density band based on whether solid fills dominate (be
+   honest — most cartoon / mascot / illustrated work IS fill-heavy).
+2. Compute area in cm² from supplied dimensions.
+3. Multiply density × area for min and max.
+4. Sanity-check against the worked examples above — your number
+   should be in the same ballpark as those.`
 
 type EstimateBody = {
   /** Base64-encoded image data (data: URL or raw base64). */
@@ -112,6 +190,26 @@ export async function POST(req: NextRequest) {
         message: "Image is too large for stitch analysis. Resize under 5 MB and try again.",
       },
       { status: 413 }
+    )
+  }
+
+  // Anthropic's vision endpoint only accepts raster formats. Reject SVG
+  // (and anything else off-list) up front with an actionable message
+  // instead of letting Anthropic 400 us. The storefront converts SVG to
+  // PNG before posting, so reaching this guard means a stale client.
+  const VISION_OK_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ])
+  if (!VISION_OK_TYPES.has(mediaType)) {
+    return NextResponse.json(
+      {
+        error: "unsupported_format",
+        message: `${mediaType} isn't supported for AI stitch analysis. Re-upload as PNG or JPG, or enter the count manually.`,
+      },
+      { status: 415 }
     )
   }
 

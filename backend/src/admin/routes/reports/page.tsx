@@ -29,6 +29,13 @@ import { TimeToPurchaseChart } from "../../components/reports/time-to-purchase-c
 import { SiteSearchChart } from "../../components/reports/site-search-chart"
 import { AcquisitionTab } from "../../components/reports/acquisition-tab"
 import { FunnelChart } from "../../components/reports/funnel-chart"
+import { RfmChart } from "../../components/reports/rfm-chart"
+import { AovBySourceChart } from "../../components/reports/aov-by-source-chart"
+import { SlaBreachChart } from "../../components/reports/sla-breach-chart"
+import { AgingInventoryChart } from "../../components/reports/aging-inventory-chart"
+import { VectorizationFunnelChart } from "../../components/reports/vectorization-funnel-chart"
+import { DiscountProfitabilityChart } from "../../components/reports/discount-profitability-chart"
+import { ReturnsChart } from "../../components/reports/returns-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -167,18 +174,29 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <DiscountProfitabilityChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
         <Tabs.Content value="acquisition">
           <AcquisitionTab fromIso={fromIso} toIso={toIso} />
-          <div className="mt-3">
+          <div className="mt-3 grid grid-cols-1 gap-3">
+            <AovBySourceChart fromIso={fromIso} toIso={toIso} />
             <FunnelChart fromIso={fromIso} toIso={toIso} />
           </div>
         </Tabs.Content>
 
         <Tabs.Content value="production">
           <div className="grid grid-cols-1 gap-3">
+            <SlaBreachChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <TimeInStageChart
               fromIso={fromIso}
               toIso={toIso}
@@ -195,11 +213,26 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <VectorizationFunnelChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <ReturnsChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
         <Tabs.Content value="customers">
           <div className="grid grid-cols-1 gap-3">
+            <RfmChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <NewVsReturningChart
               fromIso={fromIso}
               toIso={toIso}
@@ -252,6 +285,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <InventoryStatusChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <AgingInventoryChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}

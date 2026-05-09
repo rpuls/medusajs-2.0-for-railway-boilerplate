@@ -13,7 +13,8 @@ import type {
   PricingConfig,
 } from "../lib/types"
 import LetteringCanvas from "./lettering-canvas"
-import PriceTable from "./price-table"
+// PriceTable still lives in ./price-table for admin / reference surfaces;
+// the customer-facing panel below no longer renders it inline.
 
 type Tab = "lettering" | "artwork"
 
@@ -45,7 +46,11 @@ const StitchEstimator: React.FC<Props> = ({
   onDesignChange,
   placementCount = 1,
 }) => {
-  const [tab, setTab] = useState<Tab>(initialDesign?.type === "artwork" ? "artwork" : "lettering")
+  // Default to the Artwork tab — most embroidery customers arrive with
+  // a logo file rather than a typeset wordmark. Lettering is the niche
+  // case (one-off names / monograms). Re-hydration of a saved design
+  // still respects whatever tab the customer last used.
+  const [tab, setTab] = useState<Tab>(initialDesign?.type === "lettering" ? "lettering" : "artwork")
   const [config, setConfig] = useState<PricingConfig>(
     initialDesign?.pricing.level ?? priceLevels[0] ?? RETAIL_CONFIG
   )
@@ -93,21 +98,10 @@ const StitchEstimator: React.FC<Props> = ({
     onDesignChange(design)
   }, [tab, stitchCount, lettering, artwork, breakdown, onDesignChange])
 
-  const tierIndex = config.quantityTiers.findIndex(
-    (tier) => tier.label === breakdown.appliedTier.label
-  )
-  // Highlight the row in the price table that matches the current stitch
-  // count. Excludes POA + incremental rows from the candidate list so a
-  // 13k-stitch design highlights the POA row, not the +1k row.
-  const flatTiers = config.stitchTiers.filter(
-    (tier) => !tier.isIncrementalRow && !tier.isPoaRow
-  )
-  const rowIndex = (() => {
-    const idx = flatTiers.findIndex(
-      (tier) => tier.maxStitches !== null && stitchCount <= tier.maxStitches
-    )
-    return idx === -1 ? config.stitchTiers.length - 1 : idx
-  })()
+  // Tier-highlighting helpers used to feed the inline PriceTable; the
+  // table is no longer rendered, so the computations are gone too. If a
+  // future surface wants to re-add the table, recreate them inline at
+  // that call site rather than leaving dead state here.
 
   return (
     <div className="flex flex-col gap-y-6 rounded-lg border border-ui-border-base bg-ui-bg-base p-5">
@@ -299,18 +293,14 @@ const StitchEstimator: React.FC<Props> = ({
         </div>
       </div>
 
-      <details className="text-sm">
-        <summary className="cursor-pointer text-ui-fg-subtle hover:text-ui-fg-base">
-          See full price table
-        </summary>
-        <div className="mt-3">
-          <PriceTable
-            config={config}
-            highlightTierIndex={tierIndex >= 0 ? tierIndex : undefined}
-            highlightRowIndex={rowIndex}
-          />
-        </div>
-      </details>
+      {/*
+        Full SCP rate-card table was here as a `<details>` disclosure. It's
+        not useful on the embroidery PDP — customers want the price for
+        their design, not a 50-cell density × quantity matrix. The "Per
+        garment" / "Total" stats above already say what the customer pays
+        once an estimate has been received. The table is still exported
+        from PriceTable.tsx for any internal / admin surface that wants it.
+      */}
 
       <p className="text-xs text-ui-fg-muted">{COPY.finalEstimate}</p>
     </div>
@@ -349,6 +339,50 @@ const ArtworkEstimateBlock: React.FC<{
   const [estimating, setEstimating] = useState(false)
   const [estimateError, setEstimateError] = useState<string | null>(null)
 
+  /**
+   * Rasterise an SVG data URL to a PNG data URL. Anthropic's vision API
+   * only accepts raster formats (jpeg/png/gif/webp), so SVG uploads must
+   * be converted before they're sent. Renders at 2× the requested mm
+   * size in pixels (capped) so Claude has enough resolution to see fine
+   * detail like text and outlines.
+   */
+  const rasterizeSvgToPng = (svgDataUrl: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => {
+        const naturalW = img.naturalWidth || 800
+        const naturalH = img.naturalHeight || 800
+        // Cap output at 1600px on the longest edge — keeps the request
+        // body well under Anthropic's 5 MB limit while preserving detail.
+        const longest = Math.max(naturalW, naturalH)
+        const scale = longest > 1600 ? 1600 / longest : 1
+        const targetW = Math.max(1, Math.round(naturalW * scale))
+        const targetH = Math.max(1, Math.round(naturalH * scale))
+        const canvas = document.createElement("canvas")
+        canvas.width = targetW
+        canvas.height = targetH
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          reject(new Error("Canvas 2D context unavailable"))
+          return
+        }
+        // White background so transparent SVGs come through with the
+        // intended look — prevents Claude from interpreting transparent
+        // pixels as artwork.
+        ctx.fillStyle = "#ffffff"
+        ctx.fillRect(0, 0, targetW, targetH)
+        ctx.drawImage(img, 0, 0, targetW, targetH)
+        try {
+          resolve(canvas.toDataURL("image/png"))
+        } catch (err) {
+          reject(err)
+        }
+      }
+      img.onerror = () => reject(new Error("Could not load SVG for rasterization"))
+      img.src = svgDataUrl
+    })
+
   const handleFile = async (file: File) => {
     setEstimateError(null)
     if (file.size > 5 * 1024 * 1024) {
@@ -356,14 +390,28 @@ const ArtworkEstimateBlock: React.FC<{
       return
     }
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       const dataUrl = typeof reader.result === "string" ? reader.result : null
-      if (dataUrl) {
-        setImageDataUrl(dataUrl)
-        setImageMediaType(file.type || "image/png")
-        setImageFileName(file.name)
-        setArtwork({ ...artwork, fileName: file.name, fileSize: file.size })
+      if (!dataUrl) return
+      // Rasterise SVG to PNG so Claude's vision API accepts it. Other
+      // formats pass through untouched.
+      let finalDataUrl = dataUrl
+      let finalMediaType = file.type || "image/png"
+      if (file.type === "image/svg+xml" || /\.svg$/i.test(file.name)) {
+        try {
+          finalDataUrl = await rasterizeSvgToPng(dataUrl)
+          finalMediaType = "image/png"
+        } catch (err) {
+          setEstimateError(
+            "Couldn't rasterize that SVG for AI analysis — try a PNG/JPG export instead, or enter the count manually."
+          )
+          return
+        }
       }
+      setImageDataUrl(finalDataUrl)
+      setImageMediaType(finalMediaType)
+      setImageFileName(file.name)
+      setArtwork({ ...artwork, fileName: file.name, fileSize: file.size })
     }
     reader.onerror = () => setEstimateError("Could not read that file. Try a different image.")
     reader.readAsDataURL(file)
