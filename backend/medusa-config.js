@@ -260,10 +260,14 @@ const medusaConfig = {
           },
         }]
       : []),
-    {
-      resolve: '@agilo/medusa-analytics-plugin',
-      options: {},
-    },
+    // @agilo/medusa-analytics-plugin removed in favour of the in-house
+    // /app/reports + /app/production pages, which provide the same
+    // headline KPIs (total orders, total sales, orders/sales over time,
+    // top regions, order status breakdown) plus SC-Prints-specific
+    // signals the Agilo plugin couldn't surface (production funnel,
+    // decoration mix, customizer adoption, AS Colour throughput, etc.).
+    // To roll back: re-add `{ resolve: '@agilo/medusa-analytics-plugin', options: {} }`
+    // here and `pnpm add @agilo/medusa-analytics-plugin`.
   ],
 };
 
