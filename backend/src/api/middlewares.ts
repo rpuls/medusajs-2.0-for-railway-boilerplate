@@ -25,6 +25,16 @@ export default defineMiddlewares({
       bodyParser: { sizeLimit: CUSTOMIZER_BODY_LIMIT },
     },
     {
+      matcher: "/store/carts/:id/scp-line-items",
+      methods: ["POST"],
+      bodyParser: { sizeLimit: "4mb" },
+    },
+    {
+      matcher: "/store/carts/:id/embroidery-line-items",
+      methods: ["POST"],
+      bodyParser: { sizeLimit: "4mb" },
+    },
+    {
       // ShipStation v2 webhook endpoint. Preserve the raw request body so we
       // can verify the HMAC-SHA256 signature header.
       matcher: "/hooks/shipstation",
