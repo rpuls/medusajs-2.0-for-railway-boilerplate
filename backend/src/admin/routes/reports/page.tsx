@@ -43,6 +43,7 @@ import { EmailChannelRoiChart } from "../../components/reports/email-channel-roi
 import { AnnotationsManager } from "../../components/reports/annotations-manager"
 import { OperationalTiles } from "../../components/reports/operational-tiles"
 import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
+import { CapacityChart } from "../../components/reports/capacity-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -206,6 +207,11 @@ const ReportsPage = () => {
 
         <Tabs.Content value="production">
           <div className="grid grid-cols-1 gap-3">
+            <CapacityChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <SlaBreachChart
               fromIso={fromIso}
               toIso={toIso}
