@@ -331,10 +331,27 @@ function ParticleField({
     const vortexRad = t.vortexRadius
     const vortexHalf = t.vortexSpeedHalfLife
     const vortexRadSq = vortexRad * vortexRad
+    /** Mouse motion direction unit vector + perpendicular (right of motion).
+     * MUST be computed before the vortex block that reads haveMotion/mfx/mfy.
+     * Used for: orbital swirl force, bilateral lateral push, vortex placement,
+     * and wake-offset projection. */
+    const haveMotion = mouseSpeed > 0.001
+    let mfx = 0
+    let mfy = 0
+    let mrx = 0
+    let mry = 0
+    if (haveMotion) {
+      mfx = mvxRaw / mouseSpeed
+      mfy = mvyRaw / mouseSpeed
+      /** Perpendicular (rightward) = rotate forward 90° CCW. */
+      mrx = -mfy
+      mry = mfx
+    }
     /** Karman vortex pair: two counter-rotating centers BEHIND cursor.
-     * Only meaningful when cursor is moving. Strength fades smoothly with
-     * cursor speed (1 / (1 + speed/halfLife)) so vortices read clearly
-     * at slow motion and fade to streaks at high speed. */
+     * Strength fades smoothly with cursor speed (1 / (1 + speed/halfLife))
+     * so vortices read clearly at slow motion and fade to streaks at high
+     * speed — exactly the "disappears as cursor speeds up" Newmix behavior.
+     * NOTE: this block REQUIRES haveMotion/mfx/mfy/mrx/mry computed above. */
     let vortexLX = 0
     let vortexLY = 0
     let vortexRX = 0
@@ -345,6 +362,7 @@ function ParticleField({
       vortexLY = my - mfy * vortexBehind - mry * (vortexSep * 0.5)
       vortexRX = mx - mfx * vortexBehind + mrx * (vortexSep * 0.5)
       vortexRY = my - mfy * vortexBehind + mry * (vortexSep * 0.5)
+      /** Slow speed → strong vortex; fast speed → fades to streaks. */
       vortexSpeedFactor = 1 / (1 + mouseSpeed / vortexHalf)
     }
     /** Sample cursor's historical position at `targetTime` (wall-clock ms).
@@ -382,20 +400,6 @@ function ParticleField({
       }
       return null
     }
-    /** Mouse motion direction unit vector + perpendicular. Used for the
-     * orbital swirl force: particles on opposite sides of the motion line
-     * get opposite-signed tangential force, producing curl. */
-    const haveMotion = mouseSpeed > 0.001
-    let mfx = 0
-    let mfy = 0
-    let mrx = 0
-    let mry = 0
-    if (haveMotion) {
-      mfx = mvxRaw / mouseSpeed
-      mfy = mvyRaw / mouseSpeed
-      mrx = -mfy
-      mry = mfx
-    }
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
       const px = positions[i3]!
@@ -418,30 +422,39 @@ function ParticleField({
       /** Wake-history playback branch. If this particle is in active wake
        * state, drive its position toward the cursor's HISTORICAL position
        * (replayed at wakePace), with a preserved lateral offset so wakes
-       * spread laterally instead of all tracing the same line. */
+       * spread bilaterally instead of all tracing the same line.
+       * Re-capture: if the cursor re-enters the disk while in wake, drop
+       * wake state immediately and let cursor forces take over — matches
+       * Newmix's "cursor captures particles again on second pass". */
       const wu = wakeUntil[i]!
       const inWake = wu > now && trailFollowMs > 0
       if (inWake) {
-        const elapsed = now - wakeStart[i]!
-        /** Replay path at pace. wakePace=1 → particle stays at current cursor;
-         * <1 → particle lags behind, tracing older positions. */
-        const targetT = now - elapsed * (1 - wakePace)
-        const sample = sampleHistory(targetT)
-        if (sample != null) {
-          const tx = sample.x + wakeOffsetX[i]!
-          const ty = sample.y + wakeOffsetY[i]!
-          /** Hard set position toward target — wake state overrides physics
-           * so the trail traces cleanly. Small lerp avoids snapping. */
-          const lerp = 0.35
-          positions[i3] = px + (tx - px) * lerp
-          positions[i3 + 1] = py + (ty - py) * lerp
-          velocities[i3] = 0
-          velocities[i3 + 1] = 0
-          prevInDisk[i] = inDisk ? 1 : 0
-          continue
+        /** Re-capture: cursor passed over this particle again. */
+        if (inDisk) {
+          wakeUntil[i] = 0
+          /** Fall through to normal cursor-force handling below. */
+        } else {
+          const elapsed = now - wakeStart[i]!
+          /** Replay path at pace. wakePace=1 → particle stays at current cursor;
+           * <1 → particle lags behind, tracing older positions. */
+          const targetT = now - elapsed * (1 - wakePace)
+          const sample = sampleHistory(targetT)
+          if (sample != null) {
+            const tx = sample.x + wakeOffsetX[i]!
+            const ty = sample.y + wakeOffsetY[i]!
+            /** Smooth lerp toward target — small value = fluid trail,
+             * large value = snappy follow. 0.15 reads as flowing liquid. */
+            const lerp = 0.18
+            positions[i3] = px + (tx - px) * lerp
+            positions[i3 + 1] = py + (ty - py) * lerp
+            velocities[i3] = 0
+            velocities[i3 + 1] = 0
+            prevInDisk[i] = 0
+            continue
+          }
+          /** History sample missing (target older than buffer) — release. */
+          wakeUntil[i] = 0
         }
-        /** History sample missing (target older than buffer) — release. */
-        wakeUntil[i] = 0
       }
 
       /** Spring back to home. */
@@ -525,7 +538,10 @@ function ParticleField({
 
       /** Wake-state entry: particle WAS in disk last frame, NOT in disk
        * this frame, and rolled the dice. Capture mouse-relative offset so
-       * the wake replay preserves the particle's release-side. */
+       * the wake replay preserves the particle's release-side.
+       * Lateral spread is projected onto the perpendicular-to-motion axis
+       * so the two-lobe bilateral structure is preserved as particles
+       * trace the historical cursor path. */
       if (
         prevInDisk[i] === 1 &&
         !inDisk &&
@@ -536,12 +552,17 @@ function ParticleField({
       ) {
         wakeStart[i] = now
         wakeUntil[i] = now + trailFollowMs
-        /** Offset = particle's current displacement from cursor + per-particle
-         * lateral noise so the wake spreads sideways. */
-        wakeOffsetX[i] =
-          dx + (Math.random() * 2 - 1) * wakeLateral
-        wakeOffsetY[i] =
-          dy + (Math.random() * 2 - 1) * wakeLateral
+        /** Project release-position onto perpendicular axis for spread.
+         * When moving: noiseAmt along mrx/mry keeps lobes separated.
+         * When still (no motion): pure random spread. */
+        const noiseAmt = (Math.random() * 2 - 1) * wakeLateral
+        if (haveMotion) {
+          wakeOffsetX[i] = dx + noiseAmt * mrx
+          wakeOffsetY[i] = dy + noiseAmt * mry
+        } else {
+          wakeOffsetX[i] = dx + noiseAmt
+          wakeOffsetY[i] = dy + (Math.random() * 2 - 1) * wakeLateral
+        }
       }
 
       /** Friction. */

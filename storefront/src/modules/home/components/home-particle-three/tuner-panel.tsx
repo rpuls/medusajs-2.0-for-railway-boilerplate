@@ -67,24 +67,31 @@ export type ThreeTuning = {
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   particleCount: 140000,
-  cursorRadius: 80,
-  cursorForce: 400,
-  mouseVelocityScale: 0.6,
-  springStiffness: 6,
-  friction: 4,
+  cursorRadius: 90,
+  cursorForce: 350,
+  mouseVelocityScale: 0.5,
+  springStiffness: 5,
+  friction: 3.5,
   pointSize: 2.5,
-  wakeStrength: 0.2,
-  sideSwirlForce: 5,
-  trailFollowMs: 1000,
-  trailingProbability: 0.5,
-  wakePace: 0.7,
-  wakeLateralSpread: 8,
-  lateralPushForce: 6,
-  vortexStrength: 12,
-  vortexBehindOffset: 35,
-  vortexLateralOffset: 50,
-  vortexRadius: 50,
-  vortexSpeedHalfLife: 600,
+  /** Directional velocity inheritance — gentle so it doesn't fling particles. */
+  wakeStrength: 0.15,
+  /** Side-swirl at low magnitude — provides contained orbital curl. */
+  sideSwirlForce: 4,
+  trailFollowMs: 1200,
+  trailingProbability: 0.55,
+  wakePace: 0.65,
+  /** Wider bilateral spread so the two-lobe wake is clearly visible. */
+  wakeLateralSpread: 20,
+  lateralPushForce: 5,
+  /** Vortex was never active before (ordering bug). Now active — start
+   * at a clearly visible strength so the two-lobe effect is immediately
+   * apparent on first load. */
+  vortexStrength: 22,
+  vortexBehindOffset: 30,
+  vortexLateralOffset: 55,
+  vortexRadius: 60,
+  /** Fade threshold: vortices full-strength below ~400 u/s, halved at 500. */
+  vortexSpeedHalfLife: 500,
 }
 
 type SliderDef = {
