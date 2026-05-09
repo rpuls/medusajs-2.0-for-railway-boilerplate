@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import StitchEstimator from "./stitch-estimator"
 import type { EmbroideryDesign, EmbroideryPlacement } from "../lib/types"
 import { placementCount as resolvePlacementCount } from "../lib/types"
@@ -59,6 +60,7 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
   // rate card) but that misleads single-piece shoppers into thinking
   // there's a minimum quantity, which there isn't on the new single-rate
   // card.
+  const router = useRouter()
   const [quantity, setQuantity] = useState(1)
   const [design, setDesign] = useState<EmbroideryDesign | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -147,6 +149,12 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
         return
       }
       setSuccess(`Added ${quantity} × embroidery line to your cart.`)
+      // revalidateTag("cart") on the server side invalidates the
+      // fetch cache, but the navbar Cart counter is rendered with a
+      // server-fetched snapshot taken on initial page load; without a
+      // router.refresh() it keeps showing the stale "Cart (0)" until
+      // the customer navigates. Same pattern the customizer uses.
+      router.refresh()
       onAdded?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add to cart.")
