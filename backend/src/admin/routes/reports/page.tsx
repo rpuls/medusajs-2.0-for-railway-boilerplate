@@ -62,6 +62,8 @@ import { TodayWidget } from "../../components/reports/today-widget"
 import { SystemHealthPill } from "../../components/reports/system-health-pill"
 import { CronJobsCard } from "../../components/reports/cron-jobs-card"
 import { SeasonalDecoration } from "../../components/reports/seasonal-decoration"
+import { OnboardingChecklist } from "../../components/reports/onboarding-checklist"
+import { PrintStyles } from "../../lib/reports/print-styles"
 import {
   buildPreset,
   formatDateRange,
@@ -111,6 +113,12 @@ const ReportsPage = () => {
     <div className="flex flex-col gap-y-4">
       {/* Seasonal touches (auto-no-op outside narrow date windows) */}
       <SeasonalDecoration />
+
+      {/* Inject @media print stylesheet so Cmd+P produces a clean snapshot */}
+      <PrintStyles />
+
+      {/* Setup checklist — auto-hides once everything's green */}
+      <OnboardingChecklist />
 
       {/* Header */}
       <Container className="flex flex-col gap-y-2">
