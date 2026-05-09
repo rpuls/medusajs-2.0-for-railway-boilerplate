@@ -115,6 +115,26 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Anthropic's vision endpoint only accepts raster formats. Reject SVG
+  // (and anything else off-list) up front with an actionable message
+  // instead of letting Anthropic 400 us. The storefront converts SVG to
+  // PNG before posting, so reaching this guard means a stale client.
+  const VISION_OK_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ])
+  if (!VISION_OK_TYPES.has(mediaType)) {
+    return NextResponse.json(
+      {
+        error: "unsupported_format",
+        message: `${mediaType} isn't supported for AI stitch analysis. Re-upload as PNG or JPG, or enter the count manually.`,
+      },
+      { status: 415 }
+    )
+  }
+
   try {
     const response = await fetch(ANTHROPIC_URL, {
       method: "POST",
