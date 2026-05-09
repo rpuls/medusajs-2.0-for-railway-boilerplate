@@ -10,6 +10,7 @@ import {
   ProductOptionsProvider,
   useProductOptions,
 } from "@modules/products/context/product-options-context"
+import { PrintPlacementProvider } from "@modules/products/context/print-placement-context"
 import { resolveVariantFromOptions } from "@modules/products/lib/variant-options"
 import { HttpTypes } from "@medusajs/types"
 
@@ -85,6 +86,16 @@ const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
   return (
     <>
       <div className="content-container py-6 relative" data-testid="product-container">
+        {/*
+          PrintPlacementProvider is required because ProductActions (rendered
+          inside the variant pickers below) calls usePrintPlacement() at the
+          top level. Beanies don't actually use print placements — the
+          embroidery flow has its own placement picker — but the provider
+          still needs to be in scope so the shared ProductActions component
+          doesn't throw "usePrintPlacement must be used within
+          PrintPlacementProvider".
+        */}
+        <PrintPlacementProvider>
         <ProductOptionsProvider product={product}>
           <div className="grid grid-cols-1 gap-y-10 lg:grid-cols-12 lg:items-start lg:gap-x-8 lg:gap-y-8">
             <aside className="flex flex-col gap-y-6 py-8 small:sticky small:top-48 lg:col-span-4 lg:max-w-none lg:py-0">
@@ -117,6 +128,7 @@ const EmbroideryOnlyProductTemplate: React.FC<EmbroideryOnlyTemplateProps> = ({
             </div>
           </div>
         </ProductOptionsProvider>
+        </PrintPlacementProvider>
       </div>
 
       <div
