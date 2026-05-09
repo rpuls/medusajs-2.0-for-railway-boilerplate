@@ -213,6 +213,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/search-log",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {

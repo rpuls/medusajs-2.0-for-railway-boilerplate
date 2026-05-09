@@ -22,6 +22,11 @@ import { SupplierMixChart } from "../../components/reports/supplier-mix-chart"
 import { DesignsUtilizationChart } from "../../components/reports/designs-utilization-chart"
 import { TopProductsChart } from "../../components/reports/top-products-chart"
 import { InventoryStatusChart } from "../../components/reports/inventory-status-chart"
+import { CohortsChart } from "../../components/reports/cohorts-chart"
+import { NewVsReturningChart } from "../../components/reports/new-vs-returning-chart"
+import { CartConversionChart } from "../../components/reports/cart-conversion-chart"
+import { TimeToPurchaseChart } from "../../components/reports/time-to-purchase-chart"
+import { SiteSearchChart } from "../../components/reports/site-search-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -148,6 +153,18 @@ const ReportsPage = () => {
             toIso={toIso}
             regionId={activeRegionId}
           />
+          <div className="grid grid-cols-1 gap-3 mt-3">
+            <CartConversionChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <TimeToPurchaseChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+          </div>
         </Tabs.Content>
 
         <Tabs.Content value="production">
@@ -173,6 +190,12 @@ const ReportsPage = () => {
 
         <Tabs.Content value="customers">
           <div className="grid grid-cols-1 gap-3">
+            <NewVsReturningChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <CohortsChart regionId={activeRegionId} />
             <CustomizerAdoptionChart
               fromIso={fromIso}
               toIso={toIso}
@@ -209,6 +232,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <SupplierMixChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <SiteSearchChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
