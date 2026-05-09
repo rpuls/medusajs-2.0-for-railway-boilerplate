@@ -52,9 +52,10 @@ const EmbroideryPanelWithVariant: React.FC<{
     <EmbroideryPanel
       variantId={variant?.id ?? null}
       countryCode={countryCode}
-      // Beanies are decorated front, back, or both — no other placements
-      // are realistic on a knit pull-on cap.
-      availablePlacements={["front", "back", "both"]}
+      // Beanies are decorated on a single face — pick front, back, left
+      // side, or right side. No multi-side combos: the customer adds a
+      // second cart line if they want a logo on more than one face.
+      availablePlacements={["front", "back", "left", "right"]}
     />
   )
 }

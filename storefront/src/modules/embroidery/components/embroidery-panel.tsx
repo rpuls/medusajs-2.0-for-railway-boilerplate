@@ -32,12 +32,18 @@ type EmbroideryPanelProps = {
 const PLACEMENT_LABEL: Record<EmbroideryPlacement, string> = {
   front: "Front",
   back: "Back",
+  left: "Left side",
+  right: "Right side",
+  // Legacy — only ever rendered if a stale design is rehydrated. New
+  // picker offerings split this into separate left/right placements.
   both: "Both sides",
 }
 
 const PLACEMENT_HINT: Record<EmbroideryPlacement, string> = {
   front: "Single embroidery on the front.",
   back: "Single embroidery on the back.",
+  left: "Single embroidery on the left side.",
+  right: "Single embroidery on the right side.",
   both: "Same design on front and back — decoration cost doubles, digitizing fee stays the same.",
 }
 

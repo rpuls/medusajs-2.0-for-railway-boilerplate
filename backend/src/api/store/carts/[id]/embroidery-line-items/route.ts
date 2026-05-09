@@ -26,12 +26,17 @@ const embroiderySchema = z.object({
   /** When false, skip the per-design digitizing fee (e.g. reorder of a previously digitized file). */
   include_digitizing: z.boolean().optional().default(true),
   /**
-   * Where on the garment the embroidery sits. "both" doubles the decoration
-   * unit (each garment gets two passes); the digitizing fee stays at 1× —
-   * same digitised file runs on both sides. Defaults to "front" when the
-   * client doesn't supply it (back-compat with single-placement embroidery).
+   * Where on the garment the embroidery sits. Each placement is a single
+   * embroidery pass; the legacy "both" value (front + back) doubles the
+   * decoration unit — kept for back-compat with cart lines created before
+   * the picker was split into separate left/right options. New flows
+   * never send "both". Defaults to "front" when the client doesn't supply
+   * it (back-compat with single-placement embroidery).
    */
-  placement: z.enum(["front", "back", "both"]).optional().default("front"),
+  placement: z
+    .enum(["front", "back", "left", "right", "both"])
+    .optional()
+    .default("front"),
 })
 
 const bodySchema = z.object({

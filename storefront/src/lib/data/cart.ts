@@ -509,7 +509,7 @@ export async function addEmbroideryLineItemToCart(input: {
   /** Defaults to true; set false on reorders so the digitizing fee isn't re-charged. */
   includeDigitizing?: boolean
   /** Where the embroidery sits — "both" doubles the decoration cost. Defaults to "front". */
-  placement?: "front" | "back" | "both"
+  placement?: "front" | "back" | "left" | "right" | "both"
 }) {
   const {
     variantId,
@@ -570,7 +570,7 @@ export async function addEmbroideryLineItemToCartSafe(input: {
   metadata?: Record<string, unknown>
   stitchCount: number
   includeDigitizing?: boolean
-  placement?: "front" | "back" | "both"
+  placement?: "front" | "back" | "left" | "right" | "both"
 }): Promise<AddToCartResult> {
   try {
     await addEmbroideryLineItemToCart(input)

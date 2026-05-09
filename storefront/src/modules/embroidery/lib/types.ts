@@ -80,18 +80,22 @@ export type ArtworkConfig = {
 }
 
 /**
- * Where on the garment the embroidery sits. Beanies offer front, back, or
- * both sides. "both" means the same design appears on both sides — pricing
- * multiplies the decoration unit accordingly while keeping a single
- * digitizing fee. Other embroidery products default to "front".
+ * Where on the garment the embroidery sits. Beanies offer front, back,
+ * left side, or right side — each is a single embroidery pass on one face
+ * of the cap. The legacy "both" value is preserved for back-compat with
+ * any cart lines or saved designs from before the picker was split into
+ * left/right; new flows never produce it.
  */
-export type EmbroideryPlacement = "front" | "back" | "both"
+export type EmbroideryPlacement = "front" | "back" | "left" | "right" | "both"
 
 /**
  * Number of physical embroidery passes per garment for a given placement.
  * Used by the pricing model to multiply the per-unit decoration cost; the
- * digitizing fee stays at 1× because it's a per-design setup (same logo on
- * both sides reuses the digitised file).
+ * digitizing fee stays at 1× because it's a per-design setup (same logo
+ * reuses the digitised file across passes).
+ *
+ * "both" (legacy) means front + back — 2× decoration cost. Every current
+ * placement is a single pass and returns 1.
  */
 export const placementCount = (placement: EmbroideryPlacement): number =>
   placement === "both" ? 2 : 1
