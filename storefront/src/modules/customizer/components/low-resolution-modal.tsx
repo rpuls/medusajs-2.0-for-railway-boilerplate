@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 import {
   DPI_CRITICAL_THRESHOLD,
   DPI_OK_THRESHOLD,
 } from "@modules/customizer/lib/dpi"
+import { trackVectorizationFunnel } from "@lib/analytics"
+import { phCapture } from "@lib/posthog"
 
 type Props = {
   open: boolean
@@ -32,14 +34,51 @@ const LowResolutionModal = ({
   onUploadHigherQuality,
   onAcceptVectorization,
 }: Props) => {
+  const shownRef = useRef(false)
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      shownRef.current = false
+      return
+    }
+    if (!shownRef.current) {
+      // Fire once per open transition — guards against StrictMode double-effects.
+      shownRef.current = true
+      const payload = {
+        worst_dpi: worstDpi,
+        images_below_critical: imagesBelowCritical,
+      }
+      trackVectorizationFunnel("modal_shown", payload)
+      phCapture("vectorization_modal_shown", payload)
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [open, onClose])
+  }, [open, onClose, worstDpi, imagesBelowCritical])
+
+  const fireDismissed = () => {
+    const payload = { worst_dpi: worstDpi }
+    trackVectorizationFunnel("modal_dismissed", payload)
+    phCapture("vectorization_modal_dismissed", payload)
+    onClose()
+  }
+
+  const fireReupload = () => {
+    const payload = { worst_dpi: worstDpi }
+    trackVectorizationFunnel("modal_reupload", payload)
+    phCapture("vectorization_modal_reupload", payload)
+    onUploadHigherQuality()
+    onClose()
+  }
+
+  const fireAccepted = () => {
+    const payload = { worst_dpi: worstDpi }
+    trackVectorizationFunnel("accepted", payload)
+    phCapture("vectorization_accepted", payload)
+    onAcceptVectorization()
+    onClose()
+  }
 
   if (!open) return null
 
@@ -54,7 +93,7 @@ const LowResolutionModal = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="low-res-title"
-      onClick={onClose}
+      onClick={fireDismissed}
       data-testid="low-resolution-modal"
     >
       <div
@@ -64,7 +103,7 @@ const LowResolutionModal = ({
         <button
           type="button"
           aria-label="Close"
-          onClick={onClose}
+          onClick={fireDismissed}
           className="absolute right-4 top-4 text-ui-fg-subtle hover:text-ui-fg-base"
         >
           ×
@@ -97,10 +136,7 @@ const LowResolutionModal = ({
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => {
-              onUploadHigherQuality()
-              onClose()
-            }}
+            onClick={fireReupload}
             className="w-full rounded-lg border border-ui-border-base bg-white px-4 py-3 text-sm font-medium text-ui-fg-base hover:bg-ui-bg-subtle"
           >
             Upload a higher quality file
@@ -111,10 +147,7 @@ const LowResolutionModal = ({
 
           <button
             type="button"
-            onClick={() => {
-              onAcceptVectorization()
-              onClose()
-            }}
+            onClick={fireAccepted}
             className="w-full rounded-lg bg-[var(--brand-primary)] px-4 py-3 text-sm font-medium text-white hover:opacity-90"
           >
             Add vectorization to my order
@@ -127,7 +160,7 @@ const LowResolutionModal = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={fireDismissed}
             className="w-full text-xs text-ui-fg-subtle hover:text-ui-fg-base mt-1"
           >
             I&apos;ll decide later

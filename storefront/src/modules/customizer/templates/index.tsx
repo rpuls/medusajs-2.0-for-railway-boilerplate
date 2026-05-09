@@ -66,6 +66,8 @@ import { sampleImageDominantColor } from "@modules/customizer/lib/sample-image-c
 import { HttpTypes } from "@medusajs/types"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { trackCustomizerFunnel } from "@lib/analytics"
+import { phCapture } from "@lib/posthog"
 import * as fabric from "fabric"
 import { FabricImage } from "fabric"
 
@@ -574,6 +576,8 @@ export default function CustomizerTemplate({
   const [lowResModalOpen, setLowResModalOpen] = useState(false)
   /** Once the customer dismisses the modal we don't keep re-opening it on every scale event. */
   const lowResModalDismissedRef = useRef(false)
+  /** Funnel guard — fire `customizer_design_started` once per page load. */
+  const designStartedFiredRef = useRef(false)
   const [vectorizationRequested, setVectorizationRequested] = useState(false)
   const [isRemovingVectorization, setIsRemovingVectorization] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1650,6 +1654,16 @@ export default function CustomizerTemplate({
     addCanvasObject(imageObject)
   }
 
+  const fireDesignStarted = (source: string) => {
+    if (designStartedFiredRef.current) return
+    designStartedFiredRef.current = true
+    const productId = selectedProduct?.id ?? null
+    const variantId = selectedVariant?.id ?? null
+    const payload = { source, product_id: productId, variant_id: variantId }
+    trackCustomizerFunnel("design_started", payload)
+    phCapture("customizer_design_started", payload)
+  }
+
   const handleUploadFile = async (file: File) => {
     const isAllowedType =
       file.type === "image/png" ||
@@ -1667,6 +1681,7 @@ export default function CustomizerTemplate({
     }
 
     setUploadError(null)
+    fireDesignStarted("upload")
     try {
       if (file.type === "image/svg+xml") {
         const originalPromise = uploadCustomerOriginalUnchanged(file)
@@ -1717,6 +1732,7 @@ export default function CustomizerTemplate({
     }
 
     setUploadError(null)
+    fireDesignStarted("reuse_upload")
     try {
       if (asset.type === "image/svg+xml") {
         const prefix = "data:image/svg+xml;charset=utf-8,"
@@ -1737,6 +1753,7 @@ export default function CustomizerTemplate({
     fontFamily: string
     letterSpacing: number
   }) => {
+    fireDesignStarted("add_text")
     const textObject = new (fabric as any).IText(input.text || "Text", {
       fontFamily: input.fontFamily || "Arial",
       fill: input.color,
@@ -2215,6 +2232,13 @@ export default function CustomizerTemplate({
       }
 
       setStatusMessage(`Saved "${name}" to your designs.`)
+      const savedPayload = {
+        product_id: selectedProduct.id,
+        variant_id: selectedVariant.id,
+        sides_with_decoration: decoratedSidesNow.length,
+      }
+      trackCustomizerFunnel("design_saved", savedPayload)
+      phCapture("customizer_design_saved", savedPayload)
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Failed to save design.")
     } finally {
@@ -2492,6 +2516,19 @@ export default function CustomizerTemplate({
           throw new Error(addResult.error)
         }
       }
+
+      // Funnel signal — design successfully entered the cart. Fires once
+      // per `addCustomizedToCart` invocation regardless of how many size
+      // variants were added in the loop above.
+      const cartedPayload = {
+        product_id: selectedProduct.id,
+        line_count: resolvedQuantities.length,
+        total_quantity: totalQuantity,
+        sides_with_decoration: decoratedSides.length,
+        had_vectorization_request: vectorizationRequested,
+      }
+      trackCustomizerFunnel("design_added_to_cart", cartedPayload)
+      phCapture("customizer_design_added_to_cart", cartedPayload)
 
       // Vectorization service: when the customer accepted the upsell from the
       // low-resolution modal, add the matching service SKU once per cart —

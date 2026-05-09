@@ -145,7 +145,44 @@ const formatRelative = (iso: string) => {
 
 /* ---------- component -------------------------------------------------- */
 
+/**
+ * Read the initial filter state from the URL on first mount so report
+ * deep links — e.g. /app/production?method=screen&stuck=1 from a chart
+ * drill-through — actually filter the page on landing.
+ */
+const readInitialFilters = () => {
+  if (typeof window === "undefined") {
+    return {
+      methods: new Set<DecorationMethod>(ALL_METHODS),
+      supplier: "all" as const,
+      stuckOnly: false,
+      drillStage: null as string | null,
+    }
+  }
+  const params = new URLSearchParams(window.location.search)
+  const rawMethod = params.get("method")
+  let methods = new Set<DecorationMethod>(ALL_METHODS)
+  if (rawMethod) {
+    const parts = rawMethod
+      .split(",")
+      .map((m) => m.trim())
+      .filter((m): m is DecorationMethod =>
+        (ALL_METHODS as readonly string[]).includes(m)
+      )
+    if (parts.length > 0) methods = new Set(parts)
+  }
+  const rawSupplier = params.get("supplier")
+  const supplier: "all" | "ascolour" | "other" =
+    rawSupplier === "ascolour" || rawSupplier === "other"
+      ? rawSupplier
+      : "all"
+  const stuckOnly = params.get("stuck") === "1"
+  const drillStage = params.get("stage")
+  return { methods, supplier, stuckOnly, drillStage }
+}
+
 const ProductionPage = () => {
+  const initial = useMemo(() => readInitialFilters(), [])
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -154,15 +191,17 @@ const ProductionPage = () => {
 
   // Filter state
   const [view, setView] = useState<"list" | "kanban">("list")
-  const [methods, setMethods] = useState<Set<DecorationMethod>>(
-    () => new Set(ALL_METHODS)
+  const [methods, setMethods] = useState<Set<DecorationMethod>>(initial.methods)
+  const [supplier, setSupplier] = useState<"all" | "ascolour" | "other">(
+    initial.supplier
   )
-  const [supplier, setSupplier] = useState<"all" | "ascolour" | "other">("all")
-  const [stuckOnly, setStuckOnly] = useState(false)
+  const [stuckOnly, setStuckOnly] = useState(initial.stuckOnly)
   const [search, setSearch] = useState("")
 
   // Drill-down drawer
-  const [drillStage, setDrillStage] = useState<string | null>(null)
+  const [drillStage, setDrillStage] = useState<string | null>(
+    initial.drillStage
+  )
 
   /* fetch snapshot */
   const fetchSnapshot = useCallback(async () => {

@@ -69,23 +69,12 @@ export const DECORATION_METHOD_LABELS = {
 export type DecorationMethodKey = keyof typeof DECORATION_METHOD_COLORS
 
 /**
- * Per-stage SLA defaults (days). Calibrate these after a week of real data
- * — they're starting points based on a typical SC Prints flow, not
- * empirical observation. A stage with `null` does not have an SLA
- * (delivered orders aren't "stuck", they're done).
+ * Per-stage SLA defaults — re-exported from the backend lib so admin
+ * components can import this file without crossing the routes/services
+ * boundary. Edit values in `backend/src/lib/production-stage.ts`.
  */
-export const STAGE_SLA_DAYS: Record<string, number | null> = {
-  received: 1,
-  art_review: 1,
-  awaiting_approval: 2,
-  approved: 1,
-  blanks_ordered: 5,
-  blanks_arrived: 1,
-  in_production: 3,
-  quality_check: 1,
-  shipped: 7,
-  delivered: null,
-}
+import { STAGE_SLA_DAYS } from "../../../lib/production-stage"
+export { STAGE_SLA_DAYS }
 
 /**
  * Color a "days at stage" badge given the stage and the number of days.
@@ -98,7 +87,7 @@ export const stageHealthBand = (
   stage: string,
   daysAtStage: number
 ): StageHealthBand => {
-  const sla = STAGE_SLA_DAYS[stage]
+  const sla = (STAGE_SLA_DAYS as Record<string, number | null>)[stage]
   if (sla == null) return "neutral"
   if (daysAtStage <= sla) return "ok"
   if (daysAtStage <= sla * 2) return "warning"

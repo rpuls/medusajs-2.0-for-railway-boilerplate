@@ -115,7 +115,12 @@ regionId,
               const widthPct =
                 maxAov > 0 ? Math.max(4, Math.round((r.aov / maxAov) * 100)) : 0
               return (
-                <div key={r.method} className="flex items-center gap-x-3">
+                <a
+                  key={r.method}
+                  href={`/app/production?method=${encodeURIComponent(r.method)}`}
+                  className="flex items-center gap-x-3 hover:bg-ui-bg-subtle rounded px-1 -mx-1"
+                  title={`Filter Production by ${DECORATION_METHOD_LABELS[r.method]}`}
+                >
                   <Text size="small" className="w-32 truncate">
                     {DECORATION_METHOD_LABELS[r.method]}
                   </Text>
@@ -139,7 +144,7 @@ regionId,
                   >
                     {r.orders} {r.orders === 1 ? "order" : "orders"}
                   </Text>
-                </div>
+                </a>
               )
             })}
         </div>

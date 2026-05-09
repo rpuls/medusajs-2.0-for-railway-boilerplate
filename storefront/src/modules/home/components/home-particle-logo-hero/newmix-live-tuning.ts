@@ -87,6 +87,17 @@ export type NewmixLiveTuning = {
    * or in wake-trail state. Ignored when mode is OFF or SNAP. 80-200ms reads as
    * elegant; >300ms can feel laggy. */
   captureColorInvertFadeMs: number
+  /** Probability (0..1) that an interacted particle is *selected* for color
+   * inversion. 0 = none. 1 = all particles invert. 0.33 reads as Newmix-style:
+   * a sparse subset of particles in the wake glow with inverted color while
+   * the rest keep their gradient color. Roll happens once per capture event;
+   * cleared when the particle returns home. */
+  captureColorInvertChance: number
+  /** Additional brightness boost applied to selected (inverted) particles.
+   * Lifts both RGB toward white and alpha so the inverted particles read as
+   * visibly brighter than their non-inverted neighbors. 0 = no boost (only
+   * the inversion). 0.3-0.5 reads as a subtle glow; >0.6 can blow out. */
+  captureColorInvertGlowBoost: number
   friction: number
   springStiffnessMult: number
   homeSpringSuppress: number
@@ -349,6 +360,8 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   wakeAlphaMult: 1.0,
   captureColorInvertMode: 0,
   captureColorInvertFadeMs: 150,
+  captureColorInvertChance: 0.33,
+  captureColorInvertGlowBoost: 0.3,
   /** Resume v2-era values. */
   friction: 0.94,
   springStiffnessMult: 0.55,

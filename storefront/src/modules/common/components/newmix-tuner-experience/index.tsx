@@ -368,6 +368,25 @@ const GROUPS: Group[] = [
         step: 10,
         format: (v) => `${Math.round(v)} ms`,
       },
+      {
+        key: "captureColorInvertChance",
+        label: "Invert chance",
+        description:
+          "Fraction of interacted particles that get the inverted+glowing visual. The rest are still captured/wake-trailed but keep their gradient colour. 0 = none invert; 1 = all invert. 0.33 reads as Newmix-style: a sparse subset glow brightly while most stay normal.",
+        min: 0,
+        max: 1,
+        step: 0.02,
+        format: (v) => `${Math.round(v * 100)}%`,
+      },
+      {
+        key: "captureColorInvertGlowBoost",
+        label: "Invert glow",
+        description:
+          "How much extra brightness the inverted (selected) particles get. Lifts both alpha and RGB toward white in proportion to this value. 0 = invert with no extra glow; 0.3-0.5 = visibly bright; >0.6 can blow out highlights.",
+        min: 0,
+        max: 1,
+        step: 0.02,
+      },
     ],
   },
   {

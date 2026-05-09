@@ -10,6 +10,7 @@ import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
+import { phCapture } from "@lib/posthog"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -158,6 +159,15 @@ const StripePaymentButton = ({
             onPaymentCompleted()
           }
 
+          phCapture("payment_error", {
+            gateway: "stripe",
+            error_code: error.code ?? null,
+            error_type: error.type ?? null,
+            decline_code: (error as any).decline_code ?? null,
+            payment_intent_status: pi?.status ?? null,
+            message: error.message ?? null,
+          })
+
           setErrorMessage(error.message || null)
           return
         }
@@ -226,12 +236,21 @@ const PayPalPaymentButton = ({
       ?.authorize()
       .then((authorization) => {
         if (authorization.status !== "COMPLETED") {
+          phCapture("payment_error", {
+            gateway: "paypal",
+            authorization_status: authorization.status,
+            message: `Authorization not completed: ${authorization.status}`,
+          })
           setErrorMessage(`An error occurred, status: ${authorization.status}`)
           return
         }
         onPaymentCompleted()
       })
-      .catch(() => {
+      .catch((err: any) => {
+        phCapture("payment_error", {
+          gateway: "paypal",
+          message: err?.message ?? "Unknown PayPal error",
+        })
         setErrorMessage(`An unknown error occurred, please try again.`)
         setSubmitting(false)
       })

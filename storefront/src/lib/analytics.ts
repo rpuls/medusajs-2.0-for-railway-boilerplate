@@ -220,6 +220,45 @@ export const trackSearch = (searchTerm: string, resultsCount?: number) => {
   })
 }
 
+/* ---------- vectorization upsell funnel -------------------------- */
+
+export type VectorizationFunnelStep =
+  | "modal_shown"
+  | "modal_dismissed"
+  | "modal_reupload"
+  | "accepted"
+
+/**
+ * Customizer low-DPI modal funnel. Fired alongside the equivalent
+ * PostHog capture (`phCapture(`vectorization_${step}`, ...)`) so both
+ * GA4 funnel reports and PostHog Insights have the same source of truth.
+ */
+export const trackVectorizationFunnel = (
+  step: VectorizationFunnelStep,
+  payload: Record<string, any> = {}
+) => {
+  fire(`vectorization_${step}`, payload)
+}
+
+/* ---------- customizer abandonment funnel ------------------------ */
+
+export type CustomizerFunnelStep =
+  | "design_started"
+  | "design_saved"
+  | "design_added_to_cart"
+
+/**
+ * Customizer flow steps. The fourth step — design_purchased — is
+ * derived server-side from order metadata (lines tagged with
+ * customizerDesign / decorationDesign), so no event is fired for it.
+ */
+export const trackCustomizerFunnel = (
+  step: CustomizerFunnelStep,
+  payload: Record<string, any> = {}
+) => {
+  fire(`customizer_${step}`, payload)
+}
+
 /* ---------- helpers for converting Medusa shapes ------------------ */
 
 type AnyVariant = {
