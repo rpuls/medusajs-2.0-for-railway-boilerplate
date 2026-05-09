@@ -90,6 +90,8 @@ function ParticleField({
   const pointsRef = useRef<THREE.Points>(null)
   const { size, viewport, camera } = useThree()
   const mouseWorld = useRef<{ x: number; y: number } | null>(null)
+  const mousePrev = useRef<{ x: number; y: number; t: number } | null>(null)
+  const mouseVel = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 })
 
   /** Build BufferGeometry + ShaderMaterial once when stipple/count changes. */
   const { geometry, material, state } = useMemo(() => {
@@ -154,7 +156,12 @@ function ParticleField({
       fragmentShader: FRAGMENT_SHADER,
       transparent: true,
       depthWrite: false,
-      blending: THREE.NormalBlending,
+      /** Additive blending — overlapping particles sum their RGB. This is
+       * what gives Newmix's bright/glowing wake: dense regions naturally
+       * read as luminous against the black background, while sparse
+       * regions stay subtle. NormalBlending caps at the most opaque
+       * particle and makes everything look uniformly dim. */
+      blending: THREE.AdditiveBlending,
       uniforms: {
         uPointSize: { value: pointSize },
         uPixelRatio: { value: 1 },
@@ -196,10 +203,24 @@ function ParticleField({
       const pos = camera.position
         .clone()
         .add(dir.multiplyScalar(distance))
+      const now = performance.now()
+      const prev = mousePrev.current
+      if (prev != null) {
+        const dt = Math.max(0.001, (now - prev.t) / 1000)
+        const rawVx = (pos.x - prev.x) / dt
+        const rawVy = (pos.y - prev.y) / dt
+        /** Smooth mouse velocity to avoid sudden jolts. */
+        const k = 0.4
+        mouseVel.current.vx = mouseVel.current.vx * (1 - k) + rawVx * k
+        mouseVel.current.vy = mouseVel.current.vy * (1 - k) + rawVy * k
+      }
+      mousePrev.current = { x: pos.x, y: pos.y, t: now }
       mouseWorld.current = { x: pos.x, y: pos.y }
     }
     const onLeave = () => {
       mouseWorld.current = null
+      mousePrev.current = null
+      mouseVel.current = { vx: 0, vy: 0 }
     }
     const dom = document.querySelector("canvas")
     if (dom == null) return
@@ -211,18 +232,34 @@ function ParticleField({
     }
   }, [camera])
 
-  /** Per-frame physics. Cursor force = soft radial repulsion within
-   * cursorRadius; spring back to home; linear friction. */
+  /** Per-frame physics. Two cursor forces:
+   *  - DIRECTIONAL: particles inside cursorRadius pick up cursor velocity
+   *    (scaled by falloff). This is what creates the wake — particles move
+   *    ALONG the cursor's path, not just away from it.
+   *  - RADIAL: gentle outward push from cursor center so the cursor still
+   *    has a soft "void" right under it.
+   * Plus spring back to home + linear friction. */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
     const { positions, homes, velocities, count } = state
     const mw = mouseWorld.current
+    const mvx = mouseVel.current.vx
+    const mvy = mouseVel.current.vy
+    const mouseSpeed = Math.hypot(mvx, mvy)
     const mx = mw?.x ?? Number.POSITIVE_INFINITY
     const my = mw?.y ?? Number.POSITIVE_INFINITY
     const haveCursor = mw != null
     const radSq = cursorRadius * cursorRadius
     const frictionFrame = Math.max(0, 1 - friction * dt)
     const springFrame = springStiffness * dt
+    /** Cap mouse-velocity contribution so flicks don't fling particles
+     * off-screen. Newmix-style clamp. */
+    const mouseSpeedCap = 1500
+    const mouseSpeedClamped = Math.min(mouseSpeed, mouseSpeedCap)
+    const mvScale =
+      mouseSpeed > 0.001 ? mouseSpeedClamped / mouseSpeed : 0
+    const mvxc = mvx * mvScale
+    const mvyc = mvy * mvScale
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
       const px = positions[i3]!
@@ -234,7 +271,7 @@ function ParticleField({
       vx += (homes[i3]! - px) * springFrame
       vy += (homes[i3 + 1]! - py) * springFrame
 
-      /** Cursor repulsion. */
+      /** Cursor force. */
       if (haveCursor) {
         const dx = px - mx
         const dy = py - my
@@ -242,9 +279,17 @@ function ParticleField({
         if (distSq < radSq && distSq > 0.001) {
           const dist = Math.sqrt(distSq)
           const falloff = 1 - dist / cursorRadius
-          const f = cursorForce * falloff * falloff * dt
-          vx += (dx / dist) * f
-          vy += (dy / dist) * f
+          const ff2 = falloff * falloff
+          /** Directional: push particle along cursor's motion direction.
+           * Strong, scaled by falloff² so it tapers smoothly at the disk
+           * edge. Coefficient is small because mouse velocity is in
+           * world-units/sec which is already large. */
+          vx += mvxc * ff2 * dt * 0.6
+          vy += mvyc * ff2 * dt * 0.6
+          /** Radial: gentle outward push so cursor leaves a soft void. */
+          const radF = cursorForce * ff2 * dt
+          vx += (dx / dist) * radF
+          vy += (dy / dist) * radF
         }
       }
 
@@ -337,11 +382,11 @@ export default function HomeParticleThree({
               width={stipple.width}
               height={stipple.height}
               particleCount={particleCount}
-              cursorRadius={80}
-              cursorForce={400}
-              springStiffness={6}
-              friction={4}
-              pointSize={2}
+              cursorRadius={150}
+              cursorForce={1200}
+              springStiffness={2.5}
+              friction={1.5}
+              pointSize={2.5}
             />
           )}
         </Suspense>
