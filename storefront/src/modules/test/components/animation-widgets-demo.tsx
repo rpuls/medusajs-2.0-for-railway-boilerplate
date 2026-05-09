@@ -99,6 +99,42 @@ import {
   LabTierCTextHighlightMarker,
 } from "./animation-widgets-lab-tier-c-blocks"
 import {
+  LabTierFAnchorTooltip,
+  LabTierFColorMixTheme,
+  LabTierFDialogTransitions,
+  LabTierFFieldSizing,
+  LabTierFOffsetPath,
+  LabTierFPopoverMenu,
+  LabTierFPropertyGradient,
+  LabTierFScopeIsolation,
+  LabTierFSubgrid,
+  LabTierFViewTimeline,
+} from "./animation-widgets-lab-tier-f-blocks"
+import {
+  LabTierGBookFlip,
+  LabTierGCardSwipeStack,
+  LabTierGFallingChips,
+  LabTierGFlipLayoutSwap,
+  LabTierGGarmentColorSweep,
+  LabTierGPriceDigitRoll,
+  LabTierGProductionLineCrawler,
+  LabTierGRopeChain,
+  LabTierGShippingTruckPath,
+  LabTierGStickyStackCards,
+} from "./animation-widgets-lab-tier-g-blocks"
+import {
+  LabTierEAsciiFilter,
+  LabTierEDitherShader,
+  LabTierEHeroTextDistortion,
+  LabTierELensDistortion,
+  LabTierELiquidMetal,
+  LabTierERadialFlow,
+  LabTierERippleShader,
+  LabTierEScrollVelocitySkew,
+  LabTierESmoothScrollBridge,
+  LabTierETwistedWaveCard,
+} from "./animation-widgets-lab-tier-e-blocks"
+import {
   LabTierDAddressCardExpand,
   LabTierDAsSeenCrossfade,
   LabTierDBreadcrumbMorph,
@@ -1685,6 +1721,246 @@ export default function AnimationWidgetsDemo() {
         description="Stable gutter plus anchor scroll margin under a sticky header."
       >
         <LabTierDScrollbarGutterDemo reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-lens"
+        title="WebGL — lens distortion hover"
+        description="Inline GLSL fragment shader bulges a still image around the pointer with a chromatic-aberration ring on the lens edge."
+      >
+        <LabTierELensDistortion reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-ripple"
+        title="WebGL — GSAP-driven ripple shader"
+        description="Single u_progress uniform tweened by GSAP 0→1 drives an expanding distortion ring (Codrops pattern). Click to fire."
+      >
+        <LabTierERippleShader reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-ascii"
+        title="WebGL — real-time ASCII filter"
+        description="Per-cell luminance maps to one of 5 procedural glyphs in the fragment shader; no font atlas, no DOM characters."
+      >
+        <LabTierEAsciiFilter reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-dither"
+        title="WebGL — Bayer dithering"
+        description="4×4 ordered dither over a pixelized still; slider scales the cell size. Two-color brand palette."
+      >
+        <LabTierEDitherShader reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-metal"
+        title="WebGL — liquid metal (SDF metaballs)"
+        description="Raymarched 2D metaball field in a single fragment shader, with chrome streaks and pointer-tracking blob."
+      >
+        <LabTierELiquidMetal reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-twist"
+        title="WebGL — twisted-wave hover card"
+        description="Sine-wave + radial pull distortion crossfade in via u_progress on hover. Awwwards-flavored."
+      >
+        <LabTierETwistedWaveCard reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-text"
+        title="WebGL — headline distortion"
+        description="Text rasterized to a 2D canvas → uploaded as a texture → fragment displacement around the pointer."
+      >
+        <LabTierEHeroTextDistortion reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-flow"
+        title="WebGL — polar value-noise flow"
+        description="Vanilla WebGL noise field in polar coordinates around the cursor — ~50 lines of GLSL, no Three."
+      >
+        <LabTierERadialFlow reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-smooth"
+        title="Smooth-scroll bridge (RAF lerp)"
+        description="The pattern Lenis automates: native scroll feeds a RAF-lerped target; one progress value drives any downstream animation."
+      >
+        <LabTierESmoothScrollBridge reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-e-skew"
+        title="Scroll-velocity skew text"
+        description="dy/dt sampled per scroll event drives a skewY transform with 85%-per-frame decay. Codrops classic; CSS-only."
+      >
+        <LabTierEScrollVelocitySkew reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-falling-chips"
+        title="Falling chips physics"
+        description="Pure RAF AABB-circle physics (no Matter.js). Click to drop chips; gravity, restitution and pairwise impulses run inline."
+      >
+        <LabTierGFallingChips reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-rope"
+        title="Verlet rope chain"
+        description="Pointer-anchored verlet integration with constraint passes — soft-body feel without a physics library."
+      >
+        <LabTierGRopeChain reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-flip"
+        title="FLIP layout swap"
+        description="Manual First-Last-Invert-Play with the WAAPI animate() — works without GSAP Flip and without View Transitions."
+      >
+        <LabTierGFlipLayoutSwap reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-book"
+        title="3D book / page flip"
+        description="CSS perspective + rotateY page turns. Mock SC-Prints catalog; degrades to instant page swap under reduced motion."
+      >
+        <LabTierGBookFlip reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-swipe-stack"
+        title="Swipe-stack cards"
+        description="Tinder-style: drag past threshold to dismiss; rotation and opacity track x via Framer useMotionValue/useTransform."
+      >
+        <LabTierGCardSwipeStack reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-sticky-stack"
+        title="Sticky stacking cards"
+        description="`position: sticky` with progressive top-offsets. Cards stack as you scroll the panel — Apple/Bricks pattern."
+      >
+        <LabTierGStickyStackCards reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-digit-roll"
+        title="Animated price digit roll"
+        description="Per-digit spring translate; pick a price to see the odometer roll. Useful for sale-price reveals on PDPs."
+      >
+        <LabTierGPriceDigitRoll reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-color-sweep"
+        title="Garment color sweep"
+        description="Click a swatch — circular clip-path sweeps the new color from the click point. Direct precursor to a customizer color-pick treatment."
+      >
+        <LabTierGGarmentColorSweep reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-production-line"
+        title="Production-line crawler"
+        description="Reads CUSTOMER_MILESTONES from the canonical production-stage.ts. Crawler dot + spring-filled track; auto-advances under motion."
+      >
+        <LabTierGProductionLineCrawler reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-g-truck"
+        title="Shipping truck on a path"
+        description="SVG getPointAtLength() samples position + tangent so the truck rides any curve. Pairs with the production-line crawler above."
+      >
+        <LabTierGShippingTruckPath reducedMotion={reducedMotion} />
+      </Section>,
+
+      <Section
+        key="tier-f-anchor"
+        title="CSS Anchor Positioning — tooltip"
+        description="Native anchor() + position-try-options auto-flips the tooltip near viewport edges. Replaces JS bounding-box math; falls back to absolute-positioned tip when unsupported."
+      >
+        <LabTierFAnchorTooltip />
+      </Section>,
+
+      <Section
+        key="tier-f-dialog"
+        title="<dialog> + ::backdrop transitions"
+        description="allow-discrete + @starting-style let the native dialog and backdrop fade/translate cleanly on open and close."
+      >
+        <LabTierFDialogTransitions />
+      </Section>,
+
+      <Section
+        key="tier-f-popover"
+        title="Popover API anchored menu"
+        description="popover=&quot;auto&quot; gives free light-dismiss + ESC; anchor positioning tethers to the trigger."
+      >
+        <LabTierFPopoverMenu />
+      </Section>,
+
+      <Section
+        key="tier-f-property"
+        title="@property smooth gradient"
+        description="Registering an &lt;angle&gt; custom property lets gradient-angle interpolate fluidly instead of token-hopping."
+      >
+        <LabTierFPropertyGradient />
+      </Section>,
+
+      <Section
+        key="tier-f-color-mix"
+        title="color-mix() theme transition"
+        description="OKLCH mixing produces perceptually-uniform palette steps; slider drags the brand→white mix."
+      >
+        <LabTierFColorMixTheme />
+      </Section>,
+
+      <Section
+        key="tier-f-view-timeline"
+        title="animation-timeline: view()"
+        description="Each card has its own view-timeline progress range — distinct from the existing scroll() bar."
+      >
+        <LabTierFViewTimeline />
+      </Section>,
+
+      <Section
+        key="tier-f-field-sizing"
+        title="field-sizing: content"
+        description="Native auto-grow textarea — replaces the JS scrollHeight/ResizeObserver hack with one line of CSS."
+      >
+        <LabTierFFieldSizing />
+      </Section>,
+
+      <Section
+        key="tier-f-subgrid"
+        title="Subgrid alignment"
+        description="grid-template-rows: subgrid aligns CTA buttons across cards even when body copy varies in length."
+      >
+        <LabTierFSubgrid />
+      </Section>,
+
+      <Section
+        key="tier-f-scope"
+        title="@scope style isolation"
+        description="A scoped block applies a local theme to everything inside without leaking to siblings — no BEM, no CSS modules."
+      >
+        <LabTierFScopeIsolation />
+      </Section>,
+
+      <Section
+        key="tier-f-offset-path"
+        title="offset-path motion-path"
+        description="Native offset-path animates an element along an SVG curve with auto-rotation. Foundation for fly-to-cart trails."
+      >
+        <LabTierFOffsetPath reducedMotion={reducedMotion} />
       </Section>,
     ],
     [reducedMotion, snowOn, fireworkBurst]
