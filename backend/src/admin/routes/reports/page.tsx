@@ -45,6 +45,7 @@ import { OperationalTiles } from "../../components/reports/operational-tiles"
 import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
 import { CapacityChart } from "../../components/reports/capacity-chart"
 import { AlertsManager } from "../../components/reports/alerts-manager"
+import { BlanksForecastChart } from "../../components/reports/blanks-forecast-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -222,6 +223,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <ReprintRateChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <BlanksForecastChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
