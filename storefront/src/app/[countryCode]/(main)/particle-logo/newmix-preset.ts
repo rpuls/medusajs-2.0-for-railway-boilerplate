@@ -59,7 +59,7 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
    * particles sit close to home and read flow lines without escaping. */
   fieldStrength: 1,
   fieldGridResolution: 48,
-  fieldInjectRadiusBmp: 48,
+  fieldInjectRadiusBmp: 26,
   fieldInjectStrength: 1.0,
   fieldDecayPerSec: 0.45,
   fieldDiffusion: 0.05,
