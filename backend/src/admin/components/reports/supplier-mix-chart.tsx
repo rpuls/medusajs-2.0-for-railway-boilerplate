@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 
 import { ReportCard } from "./report-card"
 import { PALETTE } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 type Supplier = {
   key: "ascolour" | "other"
@@ -132,6 +133,34 @@ export const SupplierMixChart = ({
       caption="AS Colour vs other suppliers — share by orders, revenue, and units. AS Colour-routed orders are flagged via metadata.ascolour_order_id."
       loading={loading}
       error={error}
+      csv={
+        suppliers.length === 0
+          ? undefined
+          : {
+              filenameBase: "supplier-mix",
+              build: () =>
+                buildCsv(
+                  [
+                    "Supplier",
+                    "Orders",
+                    "Revenue",
+                    "Units",
+                    "Order share %",
+                    "Revenue share %",
+                    "Unit share %",
+                  ],
+                  suppliers.map((s) => [
+                    s.label,
+                    s.orders,
+                    s.revenue,
+                    s.units,
+                    (s.order_share * 100).toFixed(1),
+                    (s.revenue_share * 100).toFixed(1),
+                    (s.unit_share * 100).toFixed(1),
+                  ])
+                ),
+            }
+      }
     >
       <div className="flex flex-col gap-y-3">
         <StackedBar

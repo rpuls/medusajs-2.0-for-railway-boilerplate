@@ -11,6 +11,7 @@ import {
 
 import { ReportCard } from "./report-card"
 import { PALETTE } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 const STAGE_LABELS: Record<string, string> = {
   received: "Received",
@@ -91,6 +92,18 @@ export const TimeInStageChart = ({
       caption="Median (slate) and p90 (stone) dwell time per stage, in days. Excludes orders still at the stage. Wide gap between median and p90 means the stage is unreliable, not just slow."
       loading={loading}
       error={error}
+      csv={
+        rows.length === 0
+          ? undefined
+          : {
+              filenameBase: "time-in-stage",
+              build: () =>
+                buildCsv(
+                  ["Stage", "Sample size", "Median (days)", "p90 (days)"],
+                  rows.map((r) => [r.stage, r.samples, r.median, r.p90])
+                ),
+            }
+      }
     >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">

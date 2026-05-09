@@ -7,6 +7,7 @@ import {
   DECORATION_METHOD_LABELS,
   type DecorationMethodKey,
 } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 type Segment = {
   method: DecorationMethodKey
@@ -160,6 +161,24 @@ export const DecorationMixChart = ({
       caption="Revenue and unit-volume share by method. Compare side-by-side: a method that's a small revenue slice but a big unit slice is your low-margin bulk work; the inverse is your premium offering."
       loading={loading}
       error={error}
+      csv={
+        segments.length === 0
+          ? undefined
+          : {
+              filenameBase: "decoration-mix",
+              build: () =>
+                buildCsv(
+                  ["Method", "Revenue", "Revenue share %", "Units", "Unit share %"],
+                  segments.map((s) => [
+                    DECORATION_METHOD_LABELS[s.method],
+                    s.revenue,
+                    (s.revenue_share * 100).toFixed(1),
+                    s.units,
+                    (s.unit_share * 100).toFixed(1),
+                  ])
+                ),
+            }
+      }
     >
       <div className="flex flex-col gap-y-5">
         <StackedBar

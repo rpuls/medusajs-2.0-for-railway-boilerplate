@@ -7,6 +7,7 @@ import {
   DECORATION_METHOD_LABELS,
   type DecorationMethodKey,
 } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 type Row = {
   method: DecorationMethodKey
@@ -81,6 +82,23 @@ export const AovByMethodChart = ({
       caption="Bucketed by the order's primary decoration method (the line item with the highest revenue). Methods with high AOV but low order count are your premium niche; high count low AOV is your bulk."
       loading={loading}
       error={error}
+      csv={
+        rows.length === 0
+          ? undefined
+          : {
+              filenameBase: "aov-by-method",
+              build: () =>
+                buildCsv(
+                  ["Method", "Orders", "Revenue", "AOV"],
+                  rows.map((r) => [
+                    DECORATION_METHOD_LABELS[r.method],
+                    r.orders,
+                    r.revenue,
+                    r.aov,
+                  ])
+                ),
+            }
+      }
     >
       {rows.length === 0 ? (
         <Text size="xsmall" className="text-ui-fg-muted">

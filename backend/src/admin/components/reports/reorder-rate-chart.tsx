@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 
 import { ReportCard } from "./report-card"
 import { PALETTE } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 type Response = {
   from: string
@@ -83,6 +84,30 @@ export const ReorderRateChart = ({
       caption="Repeat-customer rate validates the loyalty signal. Reorder-line share measures the Phase 3 'Re-order from history' feature — high values mean customers find it useful."
       loading={loading}
       error={error}
+      csv={
+        !data
+          ? undefined
+          : {
+              filenameBase: "reorder-rate",
+              build: () => {
+                const summaryRows: any[] = [
+                  ["Metric", "Value"],
+                  ["Total orders", data.summary.total_orders],
+                  ["Distinct customers", data.summary.distinct_customers],
+                  ["Repeat customers", data.summary.repeat_customers],
+                  ["Repeat customer rate %", (data.summary.repeat_customer_rate * 100).toFixed(1)],
+                  ["Avg orders per customer", data.summary.avg_orders_per_customer],
+                  ["Total line items", data.summary.total_line_items],
+                  ["Reorder line items", data.summary.reorder_line_items],
+                  ["Reorder line share %", (data.summary.reorder_line_share * 100).toFixed(1)],
+                  [],
+                  ["Top reordered products", "Count"],
+                  ...data.top_reordered_products.map((p) => [p.title, p.count]),
+                ]
+                return summaryRows.map((r) => r.join(",")).join("\n")
+              },
+            }
+      }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiTile label="Repeat customer rate" value={`${repeatPct}%`} />

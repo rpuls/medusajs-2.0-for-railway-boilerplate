@@ -13,6 +13,7 @@ import {
 
 import { ReportCard } from "./report-card"
 import { PALETTE } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 type Response = {
   from: string
@@ -120,6 +121,23 @@ export const CustomizerAdoptionChart = ({
       caption="Share of orders that include at least one customised line. Trend up = the customizer is paying off; flat or declining = check drop-off."
       loading={loading}
       error={error}
+      csv={
+        !data || data.series.length === 0
+          ? undefined
+          : {
+              filenameBase: "customizer-adoption",
+              build: () =>
+                buildCsv(
+                  ["Week start", "Customised orders", "Blank orders", "Total"],
+                  data.series.map((s) => [
+                    s.week_start,
+                    s.customized,
+                    s.blank,
+                    s.customized + s.blank,
+                  ])
+                ),
+            }
+      }
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <KpiTile

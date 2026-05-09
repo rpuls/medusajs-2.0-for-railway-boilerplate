@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 
 import { ReportCard } from "./report-card"
 import { PALETTE } from "../../lib/reports/palette"
+import { buildCsv } from "../../lib/reports/csv"
 
 type Customer = {
   customer_id: string | null
@@ -106,6 +107,26 @@ export const TopCustomersChart = ({
       caption="Top 20 by revenue in period. The concentration figure (top 10 share) flags revenue fragility — above 60% means losing one or two customers would hurt."
       loading={loading}
       error={error}
+      csv={
+        !data || data.customers.length === 0
+          ? undefined
+          : {
+              filenameBase: "top-customers",
+              build: () =>
+                buildCsv(
+                  ["Rank", "Name", "Email", "Revenue", "Orders", "AOV", "Last order"],
+                  data.customers.map((c, i) => [
+                    i + 1,
+                    c.name,
+                    c.email,
+                    c.revenue,
+                    c.orders,
+                    c.aov,
+                    c.last_order_at,
+                  ])
+                ),
+            }
+      }
     >
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="px-3 py-2 rounded-md bg-ui-bg-subtle/50">

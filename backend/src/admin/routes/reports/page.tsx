@@ -20,6 +20,8 @@ import { AsColourThroughputChart } from "../../components/reports/ascolour-throu
 import { AovByMethodChart } from "../../components/reports/aov-by-method-chart"
 import { SupplierMixChart } from "../../components/reports/supplier-mix-chart"
 import { DesignsUtilizationChart } from "../../components/reports/designs-utilization-chart"
+import { TopProductsChart } from "../../components/reports/top-products-chart"
+import { InventoryStatusChart } from "../../components/reports/inventory-status-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -117,8 +119,10 @@ const ReportsPage = () => {
 
         <Tabs.Content value="catalog">
           <div className="grid grid-cols-1 gap-3">
+            <TopProductsChart fromIso={fromIso} toIso={toIso} />
             <DecorationMixChart fromIso={fromIso} toIso={toIso} />
             <SupplierMixChart fromIso={fromIso} toIso={toIso} />
+            <InventoryStatusChart fromIso={fromIso} toIso={toIso} />
           </div>
         </Tabs.Content>
       </Tabs>
