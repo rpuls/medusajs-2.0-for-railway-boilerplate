@@ -28,6 +28,10 @@ import {
   sampleWordmarkStipple,
   type StipplePoint,
 } from "./sample-wordmark"
+import ThreeTunerPanel, {
+  loadStoredTuning,
+  type ThreeTuning,
+} from "./tuner-panel"
 
 const VERTEX_SHADER = /* glsl */ `
   attribute vec3 aColor;
@@ -68,12 +72,12 @@ type ParticleFieldProps = {
   stipple: StipplePoint[]
   width: number
   height: number
+  /** Snapshot of the count at geometry build time. Changing this rebuilds
+   * the BufferGeometry. Other knobs are live via tuningRef. */
   particleCount: number
-  cursorRadius: number
-  cursorForce: number
-  springStiffness: number
-  friction: number
-  pointSize: number
+  /** Live tuning ref — useFrame reads .current each frame so slider
+   * changes take effect immediately without re-binding closures. */
+  tuningRef: React.MutableRefObject<ThreeTuning>
 }
 
 function ParticleField({
@@ -81,11 +85,7 @@ function ParticleField({
   width,
   height,
   particleCount,
-  cursorRadius,
-  cursorForce,
-  springStiffness,
-  friction,
-  pointSize,
+  tuningRef,
 }: ParticleFieldProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const { size, viewport, camera } = useThree()
@@ -163,7 +163,7 @@ function ParticleField({
        * particle and makes everything look uniformly dim. */
       blending: THREE.AdditiveBlending,
       uniforms: {
-        uPointSize: { value: pointSize },
+        uPointSize: { value: tuningRef.current.pointSize },
         uPixelRatio: { value: 1 },
       },
     })
@@ -178,7 +178,7 @@ function ParticleField({
         count,
       },
     }
-  }, [stipple, particleCount, width, height, pointSize])
+  }, [stipple, particleCount, width, height, tuningRef])
 
   /** Keep uPixelRatio uniform in sync with renderer pixel ratio. */
   useEffect(() => {
@@ -232,34 +232,37 @@ function ParticleField({
     }
   }, [camera])
 
-  /** Per-frame physics. Two cursor forces:
-   *  - DIRECTIONAL: particles inside cursorRadius pick up cursor velocity
-   *    (scaled by falloff). This is what creates the wake — particles move
-   *    ALONG the cursor's path, not just away from it.
-   *  - RADIAL: gentle outward push from cursor center so the cursor still
-   *    has a soft "void" right under it.
-   * Plus spring back to home + linear friction. */
+  /** Per-frame physics. Reads tuning live each frame from tuningRef so
+   * slider changes take effect without re-binding closures. */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
     const { positions, homes, velocities, count } = state
+    const t = tuningRef.current
+    /** Sync point size uniform with current tuning. */
+    if (material.uniforms.uPointSize!.value !== t.pointSize) {
+      material.uniforms.uPointSize!.value = t.pointSize
+    }
     const mw = mouseWorld.current
-    const mvx = mouseVel.current.vx
-    const mvy = mouseVel.current.vy
-    const mouseSpeed = Math.hypot(mvx, mvy)
+    const mvxRaw = mouseVel.current.vx * t.mouseVelocityScale
+    const mvyRaw = mouseVel.current.vy * t.mouseVelocityScale
+    const mouseSpeed = Math.hypot(mvxRaw, mvyRaw)
     const mx = mw?.x ?? Number.POSITIVE_INFINITY
     const my = mw?.y ?? Number.POSITIVE_INFINITY
     const haveCursor = mw != null
+    const cursorRadius = t.cursorRadius
     const radSq = cursorRadius * cursorRadius
-    const frictionFrame = Math.max(0, 1 - friction * dt)
-    const springFrame = springStiffness * dt
-    /** Cap mouse-velocity contribution so flicks don't fling particles
-     * off-screen. Newmix-style clamp. */
+    const frictionFrame = Math.max(0, 1 - t.friction * dt)
+    const springFrame = t.springStiffness * dt
+    /** Cap directional mouse-velocity contribution so flicks don't fling
+     * particles off-screen. */
     const mouseSpeedCap = 1500
     const mouseSpeedClamped = Math.min(mouseSpeed, mouseSpeedCap)
     const mvScale =
       mouseSpeed > 0.001 ? mouseSpeedClamped / mouseSpeed : 0
-    const mvxc = mvx * mvScale
-    const mvyc = mvy * mvScale
+    const mvxc = mvxRaw * mvScale
+    const mvyc = mvyRaw * mvScale
+    const wake = t.wakeStrength
+    const cursorForce = t.cursorForce
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
       const px = positions[i3]!
@@ -280,13 +283,10 @@ function ParticleField({
           const dist = Math.sqrt(distSq)
           const falloff = 1 - dist / cursorRadius
           const ff2 = falloff * falloff
-          /** Directional: push particle along cursor's motion direction.
-           * Strong, scaled by falloff² so it tapers smoothly at the disk
-           * edge. Coefficient is small because mouse velocity is in
-           * world-units/sec which is already large. */
-          vx += mvxc * ff2 * dt * 0.6
-          vy += mvyc * ff2 * dt * 0.6
-          /** Radial: gentle outward push so cursor leaves a soft void. */
+          /** Directional wake: in-disk particles pick up cursor velocity. */
+          vx += mvxc * ff2 * dt * wake
+          vy += mvyc * ff2 * dt * wake
+          /** Radial: outward push so cursor leaves a soft void. */
           const radF = cursorForce * ff2 * dt
           vx += (dx / dist) * radF
           vy += (dy / dist) * radF
@@ -330,12 +330,12 @@ function ParticleField({
 
 type Props = {
   logoSrc?: string
+  /** Initial particle count. Overridable via the tuner panel. */
   particleCount?: number
 }
 
 export default function HomeParticleThree({
   logoSrc = "/branding/sc-prints-logo-transparent.png",
-  particleCount = 140000,
 }: Props) {
   const [stipple, setStipple] = useState<{
     points: StipplePoint[]
@@ -343,6 +343,14 @@ export default function HomeParticleThree({
     height: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** Tuning state. Loaded from localStorage (or defaults). The ref
+   * mirrors state so the per-frame loop reads live values without
+   * triggering a re-bind of the useFrame closure. */
+  const [tuning, setTuning] = useState<ThreeTuning>(() => loadStoredTuning())
+  const tuningRef = useRef<ThreeTuning>(tuning)
+  useEffect(() => {
+    tuningRef.current = tuning
+  }, [tuning])
 
   useEffect(() => {
     let cancelled = false
@@ -381,18 +389,15 @@ export default function HomeParticleThree({
               stipple={stipple.points}
               width={stipple.width}
               height={stipple.height}
-              particleCount={particleCount}
-              cursorRadius={150}
-              cursorForce={1200}
-              springStiffness={2.5}
-              friction={1.5}
-              pointSize={2.5}
+              particleCount={tuning.particleCount}
+              tuningRef={tuningRef}
             />
           )}
         </Suspense>
       </Canvas>
+      <ThreeTunerPanel tuning={tuning} onChange={setTuning} />
       <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-ui-fg-subtle">
-        Three.js Points · {particleCount.toLocaleString()} particles · v1
+        Three.js Points · {tuning.particleCount.toLocaleString()} particles
       </div>
     </div>
   )
