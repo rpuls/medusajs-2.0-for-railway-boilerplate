@@ -260,13 +260,19 @@ function ParticleField({
     geometry.attributes.position!.needsUpdate = true
   })
 
-  /** Auto-fit camera so the wordmark fills ~80% of the viewport. */
+  /** Auto-fit camera so the WHOLE wordmark fits in the viewport with a
+   * small margin. Compute the camera distance needed to fit width AND
+   * height, take the larger so both fit (necessary when the wordmark is
+   * taller than it is wide, e.g. SC PRINTS at 946×1024). */
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera
     if (cam.isPerspectiveCamera == null) return
-    const fitWidth = width / 0.8
+    const fitMargin = 0.85
     const vFov = (cam.fov * Math.PI) / 180
-    const dist = fitWidth / (2 * Math.tan(vFov / 2)) / cam.aspect
+    const tanHalfFov = Math.tan(vFov / 2)
+    const distForHeight = height / fitMargin / (2 * tanHalfFov)
+    const distForWidth = width / fitMargin / (2 * tanHalfFov * cam.aspect)
+    const dist = Math.max(distForHeight, distForWidth)
     cam.position.set(0, 0, dist)
     cam.lookAt(0, 0, 0)
     cam.updateProjectionMatrix()
