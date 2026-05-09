@@ -53,6 +53,32 @@ const bodySchema = z.object({
  * - Note: changing cart line quantity via core update-line-item does not yet recompute SCP `unit_price`.
  */
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  try {
+    return await scpLineItemsPostHandler(req, res)
+  } catch (error) {
+    // The Medusa framework's default error handler swallows non-MedusaError
+    // throws and returns a generic "An unknown error occurred." which makes
+    // production failures impossible to diagnose from the storefront. Wrap
+    // the whole handler so any plain Error preserves its actual message.
+    if (error instanceof MedusaError) {
+      throw error
+    }
+    const detail =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : typeof error === "string"
+        ? error
+        : "no detail"
+    // eslint-disable-next-line no-console
+    console.error("scp-line-items handler failed", error)
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `SCP cart-add failed: ${detail}`
+    )
+  }
+}
+
+async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) {
   const parsedParams = cartParamsSchema.safeParse(req.params ?? {})
   if (!parsedParams.success) {
     throw new MedusaError(

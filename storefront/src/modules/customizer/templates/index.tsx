@@ -2520,7 +2520,21 @@ export default function CustomizerTemplate({
 
       setStatusMessage("Customized items were added to your cart.")
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Could not add customized product.")
+      // Always log the full error to the browser console so the customer
+      // (or whoever is debugging) can see the actual stack/message even
+      // when the surfaced inline message is something generic like
+      // "An unknown error occurred." (which is what the Medusa framework
+      // returns for unhandled errors in route handlers).
+      // eslint-disable-next-line no-console
+      console.error("addCustomizedToCart failed", error)
+      const baseMessage = error instanceof Error ? error.message : "Could not add customized product."
+      // The generic Medusa framework default isn't actionable. Replace
+      // it with a hint pointing to where to look so we can diagnose
+      // failures from the field instead of staring at the generic copy.
+      const friendly = /^an unknown error occurred\.?$/i.test(baseMessage.trim())
+        ? "Add to cart failed on the server (no specific message returned). Open the browser console for details, or check the Railway backend logs around this timestamp."
+        : baseMessage
+      setUploadError(friendly)
     } finally {
       setIsSubmitting(false)
     }

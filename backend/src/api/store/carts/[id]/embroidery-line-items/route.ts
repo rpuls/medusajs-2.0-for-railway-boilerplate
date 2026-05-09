@@ -57,6 +57,31 @@ const bodySchema = z.object({
  * are rejected — they need a manual quote.
  */
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  try {
+    return await embroideryLineItemsPostHandler(req, res)
+  } catch (error) {
+    // Same rationale as the SCP route — preserve the actual error message
+    // instead of letting the framework swallow it as "An unknown error
+    // occurred." Future failures stay diagnosable from the storefront.
+    if (error instanceof MedusaError) {
+      throw error
+    }
+    const detail =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : typeof error === "string"
+        ? error
+        : "no detail"
+    // eslint-disable-next-line no-console
+    console.error("embroidery-line-items handler failed", error)
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      `Embroidery cart-add failed: ${detail}`
+    )
+  }
+}
+
+async function embroideryLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) {
   const parsedParams = cartParamsSchema.safeParse(req.params ?? {})
   if (!parsedParams.success) {
     throw new MedusaError(
