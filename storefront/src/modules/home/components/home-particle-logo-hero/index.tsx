@@ -3160,12 +3160,12 @@ export default function HomeParticleLogoHero({
                   1,
                   Math.ceil(strokeDist / subdivPx)
                 )
-                /** Spread total inject across the steps so accumulated
-                 * energy doesn't scale with cursor speed (a flick at 100
-                 * px/frame would otherwise deposit 16× more than a slow
-                 * drag — the flick already deposits along a longer path,
-                 * which is the only fair amplification). */
-                const perStepStrength = nm.fieldInjectStrength / steps
+                /** Each subdivided sample deposits the FULL strength;
+                 * cursor speed amplifies total energy along the path
+                 * (more samples × full strength). This matches Newmix's
+                 * stirring metaphor — a flick across the wordmark
+                 * deposits more than a slow drag, as expected. */
+                const perStepStrength = nm.fieldInjectStrength
                 for (let s = 1; s <= steps; s++) {
                   const u = s / steps
                   injectVelocity(
