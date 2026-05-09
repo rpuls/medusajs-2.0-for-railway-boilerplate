@@ -32,6 +32,11 @@ import {
   ReorderReminderEmail,
   isReorderReminderData,
 } from './reorder-reminder'
+import {
+  WINBACK,
+  WinbackEmail,
+  isWinbackData,
+} from './winback'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -42,6 +47,7 @@ export const EmailTemplates = {
   ORDER_PRODUCTION_STAGE,
   MONTHLY_DIGEST,
   REORDER_REMINDER,
+  WINBACK,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -120,6 +126,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <ReorderReminderEmail {...data} />
 
+    case EmailTemplates.WINBACK:
+      if (!isWinbackData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.WINBACK}"`
+        )
+      }
+      return <WinbackEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -135,4 +150,5 @@ export {
   OrderProductionStageTemplate,
   MonthlyDigestEmail,
   ReorderReminderEmail,
+  WinbackEmail,
 }
