@@ -41,6 +41,7 @@ import { SavedDesignConversionChart } from "../../components/reports/saved-desig
 import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
 import { EmailChannelRoiChart } from "../../components/reports/email-channel-roi-chart"
 import { AnnotationsManager } from "../../components/reports/annotations-manager"
+import { OperationalTiles } from "../../components/reports/operational-tiles"
 import {
   buildPreset,
   formatDateRange,
@@ -152,6 +153,9 @@ const ReportsPage = () => {
 
       {/* Annotations strip */}
       <AnnotationsManager />
+
+      {/* Operational tiles (storage + Speed Insights link + PostHog link) */}
+      <OperationalTiles />
 
       {/* Tabs */}
       <Tabs defaultValue="sales">
