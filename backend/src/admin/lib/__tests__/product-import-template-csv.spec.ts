@@ -153,4 +153,54 @@ describe("buildProductImportTemplateRows", () => {
     expect(row[idx("Variant Price AUD")]).toBe("7")
     expect(row[idx("Variant Bulk Pricing JSON")]).toContain('"tiers"')
   })
+
+  it("emits Product Supplier from product.metadata.supplier", () => {
+    const products = [
+      {
+        id: "p1",
+        handle: "h",
+        title: "T",
+        subtitle: "",
+        description: "",
+        status: "published",
+        thumbnail: "",
+        weight: "",
+        hs_code: "",
+        origin_country: "",
+        mid_code: "",
+        material: "",
+        shipping_profile_id: "",
+        discountable: true,
+        external_id: "",
+        variants: [
+          {
+            id: "v1",
+            title: "Default",
+            sku: "S",
+            barcode: "",
+            allow_backorder: false,
+            manage_inventory: true,
+            weight: "",
+            hs_code: "",
+            origin_country: "",
+            mid_code: "",
+            material: "",
+            prices: [],
+            options: [],
+            metadata: {},
+          },
+        ],
+        collection: null,
+        type: null,
+        sales_channels: [],
+        tags: [],
+        images: [],
+        options: [],
+        metadata: { supplier: "AS Colour" },
+      },
+    ]
+
+    const row = buildProductImportTemplateRows(products as unknown[])[0]
+    expect(row[idx("Product Supplier")]).toBe("AS Colour")
+  })
 })

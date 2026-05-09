@@ -9,12 +9,18 @@ import {
   detectDncWorkwearCatalog,
   detectFashionBizVariantCatalog,
   detectGoldCatalogFormat,
+  detectHoneybeeCatalog,
+  detectRamoCatalog,
   expandDncWorkwearCatalogToTemplate,
   expandFashionBizCatalogToTemplate,
   expandGoldCatalogToTemplate,
+  expandHoneybeeCatalogToTemplate,
+  expandRamoCatalogToTemplate,
   normalizeSpreadsheetForImport,
   PRODUCT_BATCH_CHUNK_SIZE,
   slugifyCollectionHandle,
+  SPREADSHEET_IMPORT_FORMAT_OPTIONS,
+  type SpreadsheetImportFormat,
 } from "../../lib/spreadsheet-sync-import"
 import {
   applyCategoryIdsToCreates,
@@ -43,6 +49,7 @@ const SpreadsheetSyncPage = () => {
   const [newCollectionTitle, setNewCollectionTitle] = useState("")
   const [newCollectionHandle, setNewCollectionHandle] = useState("")
   const [parseError, setParseError] = useState<string | null>(null)
+  const [importFormat, setImportFormat] = useState<SpreadsheetImportFormat>("auto")
 
   const [syncing, setSyncing] = useState(false)
   const [syncLog, setSyncLog] = useState<string[]>([])
@@ -53,8 +60,11 @@ const SpreadsheetSyncPage = () => {
       return null
     }
     const rawParsed = parseCsv(rawCsvText)
-    return normalizeSpreadsheetForImport(rawParsed, { defaultShippingProfileId })
-  }, [rawCsvText, defaultShippingProfileId])
+    return normalizeSpreadsheetForImport(rawParsed, {
+      defaultShippingProfileId,
+      format: importFormat,
+    })
+  }, [rawCsvText, defaultShippingProfileId, importFormat])
 
   const importHints = normalized?.hints ?? []
 
@@ -65,14 +75,51 @@ const SpreadsheetSyncPage = () => {
     if (normalized.readyParsed) {
       return computeSpreadsheetPreview(normalized.readyParsed)
     }
+    const wantsHoneybee =
+      importFormat === "biz-honeybee" ||
+      (importFormat === "auto" && detectHoneybeeCatalog(normalized.rawParsed))
+    const wantsRamo =
+      importFormat === "ramo" ||
+      (importFormat === "auto" && detectRamoCatalog(normalized.rawParsed))
+    const wantsFashionBiz =
+      !wantsHoneybee &&
+      !wantsRamo &&
+      (importFormat === "fashionbiz" ||
+        (importFormat === "auto" && detectFashionBizVariantCatalog(normalized.rawParsed)))
+    const wantsGold =
+      importFormat === "ascolour-gold" ||
+      (importFormat === "auto" && detectGoldCatalogFormat(normalized.rawParsed))
+    const wantsDnc =
+      importFormat === "dnc-workwear" ||
+      (importFormat === "auto" && detectDncWorkwearCatalog(normalized.rawParsed))
     const needsShippingOnly =
       !defaultShippingProfileId.trim() &&
-      (detectFashionBizVariantCatalog(normalized.rawParsed) ||
-        detectGoldCatalogFormat(normalized.rawParsed) ||
-        detectDncWorkwearCatalog(normalized.rawParsed))
+      (wantsHoneybee || wantsRamo || wantsFashionBiz || wantsGold || wantsDnc)
     /** Wholesale rows are not expanded until shipping id is set — simulate expansion so product/tier counts match reality. */
     if (needsShippingOnly) {
-      if (detectFashionBizVariantCatalog(normalized.rawParsed)) {
+      if (wantsHoneybee) {
+        const expanded = expandHoneybeeCatalogToTemplate(
+          normalized.rawParsed,
+          PREVIEW_ONLY_SHIPPING_PROFILE_ID
+        )
+        const p = computeSpreadsheetPreview(expanded)
+        return {
+          ...p,
+          variantCount: normalized.rawParsed.rows.length,
+        }
+      }
+      if (wantsRamo) {
+        const expanded = expandRamoCatalogToTemplate(
+          normalized.rawParsed,
+          PREVIEW_ONLY_SHIPPING_PROFILE_ID
+        )
+        const p = computeSpreadsheetPreview(expanded)
+        return {
+          ...p,
+          variantCount: normalized.rawParsed.rows.length,
+        }
+      }
+      if (wantsFashionBiz) {
         const expanded = expandFashionBizCatalogToTemplate(
           normalized.rawParsed,
           PREVIEW_ONLY_SHIPPING_PROFILE_ID
@@ -83,7 +130,7 @@ const SpreadsheetSyncPage = () => {
           variantCount: normalized.rawParsed.rows.length,
         }
       }
-      if (detectGoldCatalogFormat(normalized.rawParsed)) {
+      if (wantsGold) {
         const expanded = expandGoldCatalogToTemplate(
           normalized.rawParsed,
           PREVIEW_ONLY_SHIPPING_PROFILE_ID
@@ -94,7 +141,7 @@ const SpreadsheetSyncPage = () => {
           variantCount: normalized.rawParsed.rows.length,
         }
       }
-      if (detectDncWorkwearCatalog(normalized.rawParsed)) {
+      if (wantsDnc) {
         const expanded = expandDncWorkwearCatalogToTemplate(
           normalized.rawParsed,
           PREVIEW_ONLY_SHIPPING_PROFILE_ID
@@ -113,7 +160,7 @@ const SpreadsheetSyncPage = () => {
       }
     }
     return computeSpreadsheetPreview(normalized.rawParsed)
-  }, [normalized, defaultShippingProfileId])
+  }, [normalized, defaultShippingProfileId, importFormat])
 
   const readyParsed = normalized?.readyParsed ?? null
 
@@ -152,6 +199,7 @@ const SpreadsheetSyncPage = () => {
     const rawParsed = parseCsv(rawCsvText)
     const { readyParsed: toSync } = normalizeSpreadsheetForImport(rawParsed, {
       defaultShippingProfileId,
+      format: importFormat,
     })
     if (!toSync) {
       return
@@ -338,14 +386,23 @@ const SpreadsheetSyncPage = () => {
     defaultCollectionId,
     newCollectionTitle,
     newCollectionHandle,
+    importFormat,
   ])
 
   const wholesaleNeedsShipping =
     !!normalized &&
     !defaultShippingProfileId.trim() &&
-    (detectFashionBizVariantCatalog(normalized.rawParsed) ||
-      detectGoldCatalogFormat(normalized.rawParsed) ||
-      detectDncWorkwearCatalog(normalized.rawParsed))
+    ((importFormat === "auto" &&
+      (detectHoneybeeCatalog(normalized.rawParsed) ||
+        detectRamoCatalog(normalized.rawParsed) ||
+        detectFashionBizVariantCatalog(normalized.rawParsed) ||
+        detectGoldCatalogFormat(normalized.rawParsed) ||
+        detectDncWorkwearCatalog(normalized.rawParsed))) ||
+      importFormat === "fashionbiz" ||
+      importFormat === "biz-honeybee" ||
+      importFormat === "ramo" ||
+      importFormat === "ascolour-gold" ||
+      importFormat === "dnc-workwear")
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -393,6 +450,28 @@ const SpreadsheetSyncPage = () => {
               {parseError}
             </Text>
           ) : null}
+        </div>
+
+        <div className="flex flex-col gap-3 px-6 py-4">
+          <Text weight="plus" size="small">
+            Source format
+          </Text>
+          <select
+            value={importFormat}
+            onChange={(e) => setImportFormat(e.target.value as SpreadsheetImportFormat)}
+            className="block w-full max-w-md rounded-md border border-ui-border-base bg-ui-bg-field px-3 py-1.5 text-sm text-ui-fg-base"
+          >
+            {SPREADSHEET_IMPORT_FORMAT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <Text size="small" className="text-ui-fg-muted">
+            Auto-detect handles AS Colour Gold, FashionBiz / Biz / Syzmik variant grids, and DNC
+            Workwear by header signature. Pick a specific format when a new supplier&apos;s CSV
+            doesn&apos;t auto-detect (e.g. DNC variants whose URLs don&apos;t mention dncworkwear).
+          </Text>
         </div>
 
         <div className="flex flex-col gap-3 px-6 py-4">

@@ -308,4 +308,94 @@ describe("spreadsheet-sync-update-import", () => {
       expect(findVariantRowForCsvSku(variants, "5001-LGREY-F-XS")?.id).toBe("v1")
     })
   })
+
+  describe("supplier + dimensions patches", () => {
+    it("patches product dimensions when length/width/height columns are enabled", () => {
+      const r = emptyRow()
+      r["product id"] = "prod_dim"
+      r["product length"] = "30"
+      r["product width"] = "20.5"
+      r["product height"] = "5"
+      r["variant sku"] = "SKU"
+
+      const parsed = parseCsv(buildCsv([r]))
+      const { updates, errors } = buildBatchUpdatesFromParsedCsv(parsed, {
+        enabledCsvKeys: new Set(["product length", "product width", "product height"]),
+      })
+      expect(errors.length).toBe(0)
+      expect(updates[0]).toEqual({
+        id: "prod_dim",
+        length: 30,
+        width: 20.5,
+        height: 5,
+      })
+    })
+
+    it("ignores non-numeric / blank dimension cells", () => {
+      const r = emptyRow()
+      r["product id"] = "prod_dim_bad"
+      r["product length"] = "abc"
+      r["product width"] = ""
+      r["product height"] = "10"
+      r["product title"] = "Keep"
+      r["variant sku"] = "SKU"
+
+      const parsed = parseCsv(buildCsv([r]))
+      const { updates, errors } = buildBatchUpdatesFromParsedCsv(parsed, {
+        enabledCsvKeys: new Set([
+          "product title",
+          "product length",
+          "product width",
+          "product height",
+        ]),
+      })
+      expect(errors.length).toBe(0)
+      expect(updates[0]).toEqual({ id: "prod_dim_bad", title: "Keep", height: 10 })
+    })
+
+    it("patches product.metadata.supplier when product supplier column is enabled", () => {
+      const headers = [...PRODUCT_IMPORT_CSV_HEADERS, "Product Supplier"]
+      const lines = [
+        headers.join(","),
+        // First product: only supplier set
+        [...headers].map((h) => {
+          if (h === "Product Id") return "prod_sup"
+          if (h === "Variant SKU") return "SKU"
+          if (h === "Product Supplier") return "Biz Collection"
+          return ""
+        }).join(","),
+      ]
+      const parsed = parseCsv(lines.join("\n"))
+      const { updates, errors } = buildBatchUpdatesFromParsedCsv(parsed, {
+        enabledCsvKeys: new Set(["product supplier"]),
+      })
+      expect(errors.length).toBe(0)
+      expect(updates[0]).toEqual({
+        id: "prod_sup",
+        metadata: { supplier: "Biz Collection" },
+      })
+    })
+
+    it("computeProductUpdateColumnCandidates surfaces dimension + supplier columns when present", () => {
+      const headers = [...PRODUCT_IMPORT_CSV_HEADERS, "Product Supplier"]
+      const dataRow = headers
+        .map((h) => {
+          if (h === "Product Id") return "prod_can"
+          if (h === "Variant SKU") return "SKU"
+          if (h === "Product Length") return "30"
+          if (h === "Product Width") return "20"
+          if (h === "Product Height") return "5"
+          if (h === "Product Supplier") return "AS Colour"
+          return ""
+        })
+        .join(",")
+      const parsed = parseCsv(`${headers.join(",")}\n${dataRow}`)
+      const cand = computeProductUpdateColumnCandidates(parsed)
+      const keys = new Set(cand.map((c) => c.csvKey))
+      expect(keys.has("product length")).toBe(true)
+      expect(keys.has("product width")).toBe(true)
+      expect(keys.has("product height")).toBe(true)
+      expect(keys.has("product supplier")).toBe(true)
+    })
+  })
 })
