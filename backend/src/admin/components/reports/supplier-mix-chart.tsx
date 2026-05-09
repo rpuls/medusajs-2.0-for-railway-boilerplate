@@ -186,7 +186,12 @@ regionId,
         />
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
           {suppliers.map((s) => (
-            <div key={s.key} className="flex items-center gap-x-1">
+            <a
+              key={s.key}
+              href={`/app/production?supplier=${encodeURIComponent(s.key)}`}
+              className="flex items-center gap-x-1 hover:bg-ui-bg-subtle rounded px-1 -mx-1"
+              title={`Filter Production by ${s.label}`}
+            >
               <span
                 className="inline-block w-2.5 h-2.5 rounded-sm"
                 style={{ background: SUPPLIER_COLORS[s.key] }}
@@ -197,7 +202,7 @@ regionId,
                   {(s.revenue_share * 100).toFixed(1)}% rev
                 </span>
               </Text>
-            </div>
+            </a>
           ))}
         </div>
       </div>

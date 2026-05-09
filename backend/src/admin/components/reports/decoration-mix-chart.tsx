@@ -112,12 +112,15 @@ const StackedBar = ({
                   : `${DECORATION_METHOD_LABELS[s.method]} · ${s.units} units (${(s[shareKey] * 100).toFixed(1)}%)`
               }
             >
-              <div
+              <a
+                href={`/app/production?method=${encodeURIComponent(s.method)}`}
                 style={{
                   background: DECORATION_METHOD_COLORS[s.method],
                   width: `${s[shareKey] * 100}%`,
                   minWidth: "2px",
+                  cursor: "pointer",
                 }}
+                aria-label={`Filter Production by ${DECORATION_METHOD_LABELS[s.method]}`}
               />
             </Tooltip>
           ))
@@ -125,7 +128,12 @@ const StackedBar = ({
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1">
         {segments.map((s) => (
-          <div key={s.method} className="flex items-center gap-x-1">
+          <a
+            key={s.method}
+            href={`/app/production?method=${encodeURIComponent(s.method)}`}
+            className="flex items-center gap-x-1 hover:bg-ui-bg-subtle rounded px-1 -mx-1"
+            title={`Filter Production by ${DECORATION_METHOD_LABELS[s.method]}`}
+          >
             <span
               className="inline-block w-2.5 h-2.5 rounded-sm"
               style={{ background: DECORATION_METHOD_COLORS[s.method] }}
@@ -136,7 +144,7 @@ const StackedBar = ({
                 {(s[shareKey] * 100).toFixed(1)}%
               </span>
             </Text>
-          </div>
+          </a>
         ))}
       </div>
     </div>

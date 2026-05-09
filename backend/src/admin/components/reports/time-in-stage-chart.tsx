@@ -84,10 +84,17 @@ export const TimeInStageChart = ({
 
   const rows = (data?.stages ?? []).map((s) => ({
     stage: STAGE_LABELS[s.stage] ?? s.stage,
+    stage_key: s.stage,
     median: s.median_days,
     p90: s.p90_days,
     samples: s.sample_size,
   }))
+
+  const handleBarClick = (payload: any) => {
+    const stageKey = payload?.stage_key
+    if (typeof stageKey !== "string" || stageKey.length === 0) return
+    window.location.href = `/app/production?stage=${encodeURIComponent(stageKey)}`
+  }
 
   return (
     <ReportCard
@@ -151,12 +158,16 @@ export const TimeInStageChart = ({
               fill={PALETTE.slate700}
               radius={[0, 2, 2, 0]}
               maxBarSize={18}
+              cursor="pointer"
+              onClick={handleBarClick}
             />
             <Bar
               dataKey="p90"
               fill={PALETTE.stone400}
               radius={[0, 2, 2, 0]}
               maxBarSize={18}
+              cursor="pointer"
+              onClick={handleBarClick}
             />
           </BarChart>
         </ResponsiveContainer>
