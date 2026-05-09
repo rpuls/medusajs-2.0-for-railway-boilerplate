@@ -427,6 +427,45 @@ const readFileAsDataUrl = (file: File) =>
     reader.readAsDataURL(file)
   })
 
+/**
+ * Normalise a raster image upload by baking EXIF orientation into the pixel
+ * data. Phone photos (especially iOS) routinely carry orientation metadata
+ * that the browser's HTML <img> rendering applies but Fabric's SVG export
+ * does NOT — Fabric serialises the un-rotated raw bytes, and Sharp on the
+ * backend then renders the un-rotated image into the print PNG / mockup,
+ * producing output that looks mirrored or rotated relative to what the
+ * customer saw on screen.
+ *
+ * This rewrites the upload through a canvas using
+ * `createImageBitmap(blob, { imageOrientation: "from-image" })` which
+ * decodes with EXIF applied, then re-encodes as PNG with no EXIF metadata.
+ * Server-side renders now see exactly what the customer saw.
+ *
+ * Falls back to the original data URL on any failure (very old browsers,
+ * decode errors) so a transient issue never blocks the upload entirely.
+ * SVGs skip this path — they're text, not raster, and have no EXIF.
+ */
+const normalizeRasterDataUrl = async (file: File, fallbackDataUrl: string): Promise<string> => {
+  if (typeof window === "undefined") return fallbackDataUrl
+  if (typeof createImageBitmap !== "function") return fallbackDataUrl
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" })
+    try {
+      const canvas = document.createElement("canvas")
+      canvas.width = bitmap.width
+      canvas.height = bitmap.height
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return fallbackDataUrl
+      ctx.drawImage(bitmap, 0, 0)
+      return canvas.toDataURL("image/png")
+    } finally {
+      bitmap.close?.()
+    }
+  } catch {
+    return fallbackDataUrl
+  }
+}
+
 type SessionUploadAsset = {
   id: string
   name: string
@@ -1646,13 +1685,20 @@ export default function CustomizerTemplate({
         return
       }
 
+      // Archive the original file (with EXIF intact) to MinIO for the
+      // production team's reference, but use an EXIF-normalised copy
+      // for the canvas + print render so what-you-see-is-what-gets-printed.
       const originalPromise = uploadCustomerOriginalUnchanged(file)
-      const dataUrl = await readFileAsDataUrl(file)
+      const rawDataUrl = await readFileAsDataUrl(file)
+      const dataUrl = await normalizeRasterDataUrl(file, rawDataUrl)
       const originalStorageUrl = await originalPromise
       const nextAsset: SessionUploadAsset = {
         id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         name: file.name || "Image",
-        type: file.type,
+        // Normalisation re-encodes to PNG, so the type stored alongside
+        // the canvas-bound data URL must match. The MinIO archive still
+        // has the original MIME (handled by `uploadCustomerOriginalUnchanged`).
+        type: dataUrl.startsWith("data:image/png") ? "image/png" : file.type,
         dataUrl,
         ...(originalStorageUrl ? { originalStorageUrl } : {}),
       }
