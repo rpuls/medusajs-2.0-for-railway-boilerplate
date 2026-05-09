@@ -20,6 +20,26 @@ export type ThreeTuning = {
    * on. This is what produces the contained orbital curl Newmix shows
    * (rather than straight-line flame trails from pure velocity transfer). */
   sideSwirlForce: number
+  /** Wake-history playback duration (ms). When a particle exits the cursor
+   * disk and wins the trailingProbability roll, it enters wake state for
+   * this many ms. While in wake state, position is driven by the cursor's
+   * HISTORICAL position (replayed at wakePace), not by spring/cursor forces.
+   * 0 = disabled. 800-1500ms = visible flowing wake behind cursor path. */
+  trailFollowMs: number
+  /** Probability (0..1) that a particle entering wake-eligible state (was in
+   * cursor disk last frame, not now) actually enters wake state. Lower =
+   * sparser wake (only some particles trail), more keep their normal
+   * spring-back. */
+  trailingProbability: number
+  /** Wake replay pace. 0 = particle locks to cursor's release position
+   * (no path replay). 0.5 = particle traces history at half-speed of real
+   * time, falling visibly behind. 1 = particle stays at current cursor (no
+   * trail). 0.6-0.8 reads as Newmix-style flowing arc. */
+  wakePace: number
+  /** Lateral spread of wake offsets (world units). Each particle's wake
+   * preserves its release-time offset from cursor PLUS a random lateral
+   * offset up to ±this value. Higher = wider, less rope-like wake. */
+  wakeLateralSpread: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
@@ -32,6 +52,10 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   pointSize: 2.5,
   wakeStrength: 0.2,
   sideSwirlForce: 5,
+  trailFollowMs: 1000,
+  trailingProbability: 0.5,
+  wakePace: 0.7,
+  wakeLateralSpread: 8,
 }
 
 type SliderDef = {
@@ -92,6 +116,46 @@ const SLIDERS: SliderDef[] = [
     format: (v) => v.toFixed(1),
     description:
       "Tangential force around cursor — particles on opposite sides of motion vector swirl in opposite directions. THE force that produces the Newmix-style contained curl. 0 = no swirl. 5-10 = strong orbit.",
+  },
+  {
+    key: "trailFollowMs",
+    label: "Trail duration",
+    min: 0,
+    max: 3000,
+    step: 50,
+    format: (v) => (v <= 0 ? "off" : `${(v / 1000).toFixed(2)}s`),
+    description:
+      "How long particles stay in wake-history playback after exiting the cursor disk. While in wake state, particles trace the cursor's HISTORICAL path (rather than springing home). 0 = disabled.",
+  },
+  {
+    key: "trailingProbability",
+    label: "Trailing probability",
+    min: 0,
+    max: 1,
+    step: 0.02,
+    format: (v) => `${Math.round(v * 100)}%`,
+    description:
+      "Fraction of particles exiting the cursor disk that enter wake state. Lower = sparser wake (only some particles trail). Newmix-ish: 0.4-0.7.",
+  },
+  {
+    key: "wakePace",
+    label: "Wake pace",
+    min: 0,
+    max: 1.5,
+    step: 0.02,
+    format: (v) => v.toFixed(2),
+    description:
+      "How fast wake particles replay the cursor's path. 0 = particle locks to release position. 0.7 = traces path at 70% real-time speed (flowing behind cursor). 1 = stays at current cursor (no trail).",
+  },
+  {
+    key: "wakeLateralSpread",
+    label: "Wake lateral spread",
+    min: 0,
+    max: 50,
+    step: 1,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "How wide the wake spreads sideways. 0 = particles trace cursor exactly (rope). 8-20 = soft band. >30 = diffuse cloud.",
   },
   {
     key: "mouseVelocityScale",

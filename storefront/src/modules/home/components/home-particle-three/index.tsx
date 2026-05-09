@@ -92,6 +92,25 @@ function ParticleField({
   const mouseWorld = useRef<{ x: number; y: number } | null>(null)
   const mousePrev = useRef<{ x: number; y: number; t: number } | null>(null)
   const mouseVel = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 })
+  /** Cursor history ring buffer — records cursor world-position samples
+   * over time so wake-state particles can trace the path the cursor drew.
+   * Capacity covers ~3 seconds at typical sample rates. */
+  const cursorHistory = useRef<{
+    x: Float32Array
+    y: Float32Array
+    t: Float64Array
+    cap: number
+    write: number
+    /** Number of valid entries (caps at `cap`). */
+    size: number
+  }>({
+    x: new Float32Array(256),
+    y: new Float32Array(256),
+    t: new Float64Array(256),
+    cap: 256,
+    write: 0,
+    size: 0,
+  })
 
   /** Build BufferGeometry + ShaderMaterial once when stipple/count changes. */
   const { geometry, material, state } = useMemo(() => {
@@ -168,6 +187,20 @@ function ParticleField({
       },
     })
 
+    /** Wake-history state per particle:
+     *  - wakeUntil: wall-clock ms when wake state expires (0 = not in wake)
+     *  - wakeStart: wall-clock ms when wake state began (for path-replay)
+     *  - wakeOffsetX/Y: lateral offset from cursor at release, preserved
+     *    so the wake spreads sideways instead of all particles tracing
+     *    the same line.
+     *  - prevInDisk: 1 if particle was inside cursor disk last frame (for
+     *    detecting the exit edge that triggers the dice roll). */
+    const wakeUntil = new Float64Array(count)
+    const wakeStart = new Float64Array(count)
+    const wakeOffsetX = new Float32Array(count)
+    const wakeOffsetY = new Float32Array(count)
+    const prevInDisk = new Uint8Array(count)
+
     return {
       geometry: geo,
       material: mat,
@@ -176,6 +209,11 @@ function ParticleField({
         homes,
         velocities,
         count,
+        wakeUntil,
+        wakeStart,
+        wakeOffsetX,
+        wakeOffsetY,
+        prevInDisk,
       },
     }
   }, [stipple, particleCount, width, height, tuningRef])
@@ -216,6 +254,13 @@ function ParticleField({
       }
       mousePrev.current = { x: pos.x, y: pos.y, t: now }
       mouseWorld.current = { x: pos.x, y: pos.y }
+      /** Append to the cursor-history ring buffer for wake-history playback. */
+      const hist = cursorHistory.current
+      hist.x[hist.write] = pos.x
+      hist.y[hist.write] = pos.y
+      hist.t[hist.write] = now
+      hist.write = (hist.write + 1) % hist.cap
+      if (hist.size < hist.cap) hist.size++
     }
     const onLeave = () => {
       mouseWorld.current = null
@@ -236,7 +281,18 @@ function ParticleField({
    * slider changes take effect without re-binding closures. */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
-    const { positions, homes, velocities, count } = state
+    const {
+      positions,
+      homes,
+      velocities,
+      count,
+      wakeUntil,
+      wakeStart,
+      wakeOffsetX,
+      wakeOffsetY,
+      prevInDisk,
+    } = state
+    const now = performance.now()
     const t = tuningRef.current
     /** Sync point size uniform with current tuning. */
     if (material.uniforms.uPointSize!.value !== t.pointSize) {
@@ -264,6 +320,45 @@ function ParticleField({
     const wake = t.wakeStrength
     const cursorForce = t.cursorForce
     const sideSwirl = t.sideSwirlForce
+    const trailFollowMs = t.trailFollowMs
+    const trailingProb = t.trailingProbability
+    const wakePace = t.wakePace
+    const wakeLateral = t.wakeLateralSpread
+    /** Sample cursor's historical position at `targetTime` (wall-clock ms).
+     * Linear search backward from newest; returns null if older than buffer
+     * or buffer empty. Buffer is small (256) so linear scan is fine. */
+    const hist = cursorHistory.current
+    const sampleHistory = (
+      targetTime: number
+    ): { x: number; y: number } | null => {
+      if (hist.size === 0) return null
+      const newestIdx =
+        (hist.write - 1 + hist.cap) % hist.cap
+      const newestT = hist.t[newestIdx]!
+      if (targetTime >= newestT) {
+        return { x: hist.x[newestIdx]!, y: hist.y[newestIdx]! }
+      }
+      /** Walk backward through buffer until we find a sample older than targetTime. */
+      for (let step = 1; step < hist.size; step++) {
+        const idx = (newestIdx - step + hist.cap) % hist.cap
+        const sampleT = hist.t[idx]!
+        if (sampleT <= targetTime) {
+          /** Lerp between this and the previous (newer) sample. */
+          const nextIdx = (idx + 1) % hist.cap
+          const nextT = hist.t[nextIdx]!
+          const u =
+            nextT > sampleT
+              ? (targetTime - sampleT) / (nextT - sampleT)
+              : 0
+          const x =
+            hist.x[idx]! + (hist.x[nextIdx]! - hist.x[idx]!) * u
+          const y =
+            hist.y[idx]! + (hist.y[nextIdx]! - hist.y[idx]!) * u
+          return { x, y }
+        }
+      }
+      return null
+    }
     /** Mouse motion direction unit vector + perpendicular. Used for the
      * orbital swirl force: particles on opposite sides of the motion line
      * get opposite-signed tangential force, producing curl. */
@@ -285,45 +380,97 @@ function ParticleField({
       let vx = velocities[i3]!
       let vy = velocities[i3 + 1]!
 
+      /** Compute distSq + inDisk flag (used by both branches). */
+      let inDisk = false
+      let dx = 0
+      let dy = 0
+      let distSq = 0
+      if (haveCursor) {
+        dx = px - mx
+        dy = py - my
+        distSq = dx * dx + dy * dy
+        inDisk = distSq < radSq && distSq > 0.001
+      }
+
+      /** Wake-history playback branch. If this particle is in active wake
+       * state, drive its position toward the cursor's HISTORICAL position
+       * (replayed at wakePace), with a preserved lateral offset so wakes
+       * spread laterally instead of all tracing the same line. */
+      const wu = wakeUntil[i]!
+      const inWake = wu > now && trailFollowMs > 0
+      if (inWake) {
+        const elapsed = now - wakeStart[i]!
+        /** Replay path at pace. wakePace=1 → particle stays at current cursor;
+         * <1 → particle lags behind, tracing older positions. */
+        const targetT = now - elapsed * (1 - wakePace)
+        const sample = sampleHistory(targetT)
+        if (sample != null) {
+          const tx = sample.x + wakeOffsetX[i]!
+          const ty = sample.y + wakeOffsetY[i]!
+          /** Hard set position toward target — wake state overrides physics
+           * so the trail traces cleanly. Small lerp avoids snapping. */
+          const lerp = 0.35
+          positions[i3] = px + (tx - px) * lerp
+          positions[i3 + 1] = py + (ty - py) * lerp
+          velocities[i3] = 0
+          velocities[i3 + 1] = 0
+          prevInDisk[i] = inDisk ? 1 : 0
+          continue
+        }
+        /** History sample missing (target older than buffer) — release. */
+        wakeUntil[i] = 0
+      }
+
       /** Spring back to home. */
       vx += (homes[i3]! - px) * springFrame
       vy += (homes[i3 + 1]! - py) * springFrame
 
       /** Cursor force. */
-      if (haveCursor) {
-        const dx = px - mx
-        const dy = py - my
-        const distSq = dx * dx + dy * dy
-        if (distSq < radSq && distSq > 0.001) {
-          const dist = Math.sqrt(distSq)
-          const falloff = 1 - dist / cursorRadius
-          const ff2 = falloff * falloff
-          /** Directional wake: in-disk particles pick up cursor velocity. */
-          vx += mvxc * ff2 * dt * wake
-          vy += mvyc * ff2 * dt * wake
-          /** Radial: outward push so cursor leaves a soft void. */
-          const radF = cursorForce * ff2 * dt
-          vx += (dx / dist) * radF
-          vy += (dy / dist) * radF
-          /** Side swirl: tangential force perpendicular to particle's
-           * direction from cursor center, signed by which side of the
-           * cursor's motion line the particle is on. THE Newmix curl
-           * force — produces contained orbital swirl rather than
-           * straight-line flame trails. Scales with cursor speed so
-           * stationary cursor doesn't spin particles. */
-          if (haveMotion && sideSwirl > 0) {
-            const ux = dx / dist
-            const uy = dy / dist
-            const ccwX = -uy
-            const ccwY = ux
-            const perp = dx * mrx + dy * mry
-            const vSgn = perp >= 0 ? -1 : 1
-            const swirlF =
-              sideSwirl * ff2 * dt * Math.min(mouseSpeed, 1500)
-            vx += vSgn * ccwX * swirlF
-            vy += vSgn * ccwY * swirlF
-          }
+      if (inDisk) {
+        const dist = Math.sqrt(distSq)
+        const falloff = 1 - dist / cursorRadius
+        const ff2 = falloff * falloff
+        /** Directional wake: in-disk particles pick up cursor velocity. */
+        vx += mvxc * ff2 * dt * wake
+        vy += mvyc * ff2 * dt * wake
+        /** Radial: outward push so cursor leaves a soft void. */
+        const radF = cursorForce * ff2 * dt
+        vx += (dx / dist) * radF
+        vy += (dy / dist) * radF
+        /** Side swirl: tangential force, contained orbital curl. */
+        if (haveMotion && sideSwirl > 0) {
+          const ux = dx / dist
+          const uy = dy / dist
+          const ccwX = -uy
+          const ccwY = ux
+          const perp = dx * mrx + dy * mry
+          const vSgn = perp >= 0 ? -1 : 1
+          const swirlF =
+            sideSwirl * ff2 * dt * Math.min(mouseSpeed, 1500)
+          vx += vSgn * ccwX * swirlF
+          vy += vSgn * ccwY * swirlF
         }
+      }
+
+      /** Wake-state entry: particle WAS in disk last frame, NOT in disk
+       * this frame, and rolled the dice. Capture mouse-relative offset so
+       * the wake replay preserves the particle's release-side. */
+      if (
+        prevInDisk[i] === 1 &&
+        !inDisk &&
+        haveCursor &&
+        trailFollowMs > 0 &&
+        trailingProb > 0 &&
+        Math.random() < trailingProb
+      ) {
+        wakeStart[i] = now
+        wakeUntil[i] = now + trailFollowMs
+        /** Offset = particle's current displacement from cursor + per-particle
+         * lateral noise so the wake spreads sideways. */
+        wakeOffsetX[i] =
+          dx + (Math.random() * 2 - 1) * wakeLateral
+        wakeOffsetY[i] =
+          dy + (Math.random() * 2 - 1) * wakeLateral
       }
 
       /** Friction. */
@@ -334,6 +481,7 @@ function ParticleField({
       velocities[i3 + 1] = vy
       positions[i3] = px + vx * dt * 60
       positions[i3 + 1] = py + vy * dt * 60
+      prevInDisk[i] = inDisk ? 1 : 0
     }
     geometry.attributes.position!.needsUpdate = true
   })
