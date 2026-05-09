@@ -3,6 +3,9 @@ import { ArrowDownTray } from "@medusajs/icons"
 import type { ReactNode } from "react"
 
 import { downloadCsv, timestampedFilename } from "../../lib/reports/csv"
+import { HelpTooltip } from "./help-tooltip"
+import { LastUpdated } from "./last-updated"
+import { SkeletonBars } from "./skeleton-chart"
 
 /**
  * Standard wrapper for every report on the Reports page. Title above,
@@ -12,6 +15,12 @@ import { downloadCsv, timestampedFilename } from "../../lib/reports/csv"
  * Pass `csv` to render a "Download CSV" icon button in the card header.
  * The function is called lazily when clicked — return null/undefined to
  * suppress the download (e.g., no data yet).
+ *
+ * Other optional props:
+ *   - `help`        — text rendered as a `?` tooltip next to the title
+ *   - `loadedAt`    — ms timestamp; renders "Updated 12s ago" in the header
+ *   - `skeleton`    — when `loading`, render skeleton bars instead of "Loading…"
+ *   - `exportPng`   — function called to export the chart as PNG (handler should grab the DOM node itself)
  */
 export const ReportCard = ({
   title,
@@ -21,6 +30,9 @@ export const ReportCard = ({
   children,
   rightAccessory,
   csv,
+  help,
+  loadedAt = null,
+  skeleton = true,
 }: {
   title: string
   caption?: string
@@ -36,6 +48,9 @@ export const ReportCard = ({
       | null
       | undefined
   }
+  help?: string | ReactNode
+  loadedAt?: number | null
+  skeleton?: boolean
 }) => {
   return (
     <Container className="flex flex-col gap-y-3 p-4">
@@ -43,6 +58,7 @@ export const ReportCard = ({
         <div className="flex flex-col gap-y-0.5">
           <Heading level="h2" className="text-base font-semibold">
             {title}
+            {help ? <HelpTooltip text={help} /> : null}
           </Heading>
           {caption ? (
             <Text size="xsmall" className="text-ui-fg-subtle">
@@ -51,6 +67,9 @@ export const ReportCard = ({
           ) : null}
         </div>
         <div className="shrink-0 flex items-center gap-x-2">
+          {loadedAt && !loading && !error ? (
+            <LastUpdated loadedAt={loadedAt} />
+          ) : null}
           {rightAccessory}
           {csv ? (
             <Button
@@ -81,11 +100,15 @@ export const ReportCard = ({
         </Text>
       ) : null}
       {loading && !error ? (
-        <div className="h-48 flex items-center justify-center">
-          <Text size="small" className="text-ui-fg-muted">
-            Loading…
-          </Text>
-        </div>
+        skeleton ? (
+          <SkeletonBars />
+        ) : (
+          <div className="h-48 flex items-center justify-center">
+            <Text size="small" className="text-ui-fg-muted">
+              Loading…
+            </Text>
+          </div>
+        )
       ) : null}
       {!loading && !error ? children : null}
     </Container>
