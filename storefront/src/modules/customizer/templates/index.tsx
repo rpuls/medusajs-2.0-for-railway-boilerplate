@@ -552,6 +552,12 @@ export default function CustomizerTemplate({
    * chosen a size and we shouldn't yank it back when they nudge the box.
    */
   const manualSizeOverridesRef = useRef<Map<string, ScpPrintSizeId>>(new Map())
+  /**
+   * Most-recent upload signature, used to dedupe the iOS Safari double-fire
+   * of `<input type="file">` change events. See the guard inside
+   * `handleUploadFile` for the 1500ms reuse window.
+   */
+  const lastUploadSignatureRef = useRef<{ sig: string; at: number } | null>(null)
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
   const [currentSide, setCurrentSide] = useState<GarmentSide>("front")
@@ -1716,6 +1722,21 @@ export default function CustomizerTemplate({
       setUploadError("File is too large. Maximum size is 8MB.")
       return
     }
+
+    // iOS Safari occasionally fires the file-input `change` event twice
+    // for the same selection — same name, size, and lastModified. Without
+    // a dedupe the customer ends up with two stacked copies of their
+    // artwork on the canvas. Track the most recent upload signature in a
+    // ref and ignore any duplicate that arrives within 1500ms.
+    const sig = `${file.name}|${file.size}|${file.lastModified}`
+    const now = Date.now()
+    const last = lastUploadSignatureRef.current
+    if (last && last.sig === sig && now - last.at < 1500) {
+      // Drop silent — re-firing the same event isn't an error condition
+      // and the customer doesn't need to know about it.
+      return
+    }
+    lastUploadSignatureRef.current = { sig, at: now }
 
     setUploadError(null)
     fireDesignStarted("upload")
@@ -3280,18 +3301,66 @@ export default function CustomizerTemplate({
                   {integratedPdpSlots.variantPickers}
                   <button
                     type="button"
-                    className="w-full rounded-lg bg-ui-button-inverted py-2.5 text-sm font-semibold text-ui-fg-on-inverted hover:bg-ui-button-inverted-hover"
+                    className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[var(--brand-primary,#e11d48)] px-4 py-4 text-base font-bold uppercase tracking-wide text-white shadow-lg shadow-rose-500/30 ring-1 ring-rose-400/40 transition-transform hover:bg-[var(--brand-primary-hover,#be123c)] hover:scale-[1.01] active:scale-[0.99]"
                     onClick={() => {
                       setPdpStep1Done(true)
                       setPdpStep((s) => (s > 1 ? s : 2))
+                      // Smooth scroll first; if the browser ignores it
+                      // (some iOS versions do under specific scroll-snap
+                      // / overflow conditions), fall back to a forced
+                      // jump after a short tick. Belt-and-braces so the
+                      // CTA never feels like it "did nothing" on phone.
                       if (typeof window !== "undefined") {
-                        const target = document.getElementById("product-customizer")
-                        target?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        const scrollToTarget = () => {
+                          const target = document.getElementById("product-customizer")
+                          if (!target) return false
+                          target.scrollIntoView({ behavior: "smooth", block: "start" })
+                          return true
+                        }
+                        const ok = scrollToTarget()
+                        // Force a re-attempt next tick in case the
+                        // smooth-scroll quietly no-op'd. iOS Safari
+                        // sometimes swallows the first call when the
+                        // tap originated inside a momentum scroll.
+                        window.setTimeout(() => {
+                          const target = document.getElementById("product-customizer")
+                          if (target) {
+                            const rect = target.getBoundingClientRect()
+                            // If we're not within ~80px of the top,
+                            // force-scroll. (Smooth scroll has had
+                            // ~300ms to land.)
+                            if (Math.abs(rect.top) > 80) {
+                              window.scrollTo({
+                                top: window.scrollY + rect.top - 16,
+                                behavior: "smooth",
+                              })
+                            }
+                          }
+                          void ok
+                        }, 350)
                       }
                     }}
                   >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                    </svg>
                     Customize this product
+                    <span aria-hidden className="text-lg leading-none">→</span>
                   </button>
+                  <p className="mt-1 text-center text-[11px] text-ui-fg-subtle">
+                    Free design tool · upload artwork or add text
+                  </p>
                 </>
               ) : (
                 <p className="text-xs text-ui-fg-subtle">Selected. Click Change to edit.</p>
