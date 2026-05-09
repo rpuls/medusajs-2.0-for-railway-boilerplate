@@ -65,6 +65,7 @@
     "next": "16.2.6",
     "next-view-transitions": "^0.3.5",
     "pg": "^8.11.3",
+    "posthog-js": "^1.372.10",
     "qs": "^6.14.1",
     "react": "19.0.4",
     "react-country-flag": "^3.0.2",
