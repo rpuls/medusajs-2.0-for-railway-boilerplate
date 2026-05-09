@@ -355,6 +355,11 @@ type ParallaxParticle = {
    * FADE eases over captureColorInvertFadeMs); always eases back toward 0 over the
    * home-return duration once the particle is no longer captured. */
   captureColorMix?: number
+  /** Whether THIS particle won the dice roll on its most recent capture and is
+   * therefore in the inverted+glowing subset. Set on capture, cleared when
+   * captureColorMix returns to 0. Particles that are captured but did NOT win
+   * the roll keep their gradient color throughout. */
+  captureColorInvertSelected?: boolean
   /** Black hole: `performance.now()` deadline for escort-toward-cursor; null if inactive. */
   bhTrailUntilMs: number | null
   /** Viscous coffee wake pool only: unit tangent along stroke at this particle’s trail slot. */
@@ -1664,7 +1669,11 @@ function drawLayer(
    * Newmix effect where moving particles read slightly brighter than
    * resting ones. 0 disables. */
   velocityAlphaBoost = 0,
-  velocityAlphaBoostCap = 0.35
+  velocityAlphaBoostCap = 0.35,
+  /** Brightness boost (0..1) applied to particles selected for color
+   * inversion. Lifts both alpha and RGB toward white in proportion to
+   * captureColorMix * boost so the inverted subset reads as glowing. */
+  captureColorInvertGlowBoost = 0
 ) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   /** Smoothing on so the soft sprite blits scale cleanly when the canvas is at a
@@ -1737,9 +1746,18 @@ function drawLayer(
       const speed = Math.hypot(p.vx, p.vy)
       velBoost = Math.min(velocityAlphaBoostCap, speed * velocityAlphaBoost)
     }
+    /** Capture-invert glow: alpha bump scaled by mix * glowBoost. Only
+     * applies to particles that won the dice roll (captureColorMix > 0). */
+    const invMixForBoost = p.captureColorMix ?? 0
+    const invGlowAlpha = invMixForBoost * captureColorInvertGlowBoost
     const alpha = Math.min(
       PARTICLE_ALPHA_CAP,
-      Math.max(0, ba * ANIMATED_PARTICLE_ALPHA_MULT * op * wakeMul + velBoost)
+      Math.max(
+        0,
+        ba * ANIMATED_PARTICLE_ALPHA_MULT * op * wakeMul +
+          velBoost +
+          invGlowAlpha
+      )
     )
     const hx = Number.isFinite(p.hx) ? p.hx : 0
     const hy = Number.isFinite(p.hy) ? p.hy : 0
@@ -1780,6 +1798,15 @@ function drawLayer(
         r = Math.round(r * (1 - invMix) + (255 - r) * invMix)
         g = Math.round(g * (1 - invMix) + (255 - g) * invMix)
         b = Math.round(b * (1 - invMix) + (255 - b) * invMix)
+        /** RGB glow lift toward white, scaled by mix * boost. Combined with
+         * the alpha bump above, selected particles read as visibly brighter
+         * than their non-inverted neighbors. */
+        const lift = invMix * captureColorInvertGlowBoost * 80
+        if (lift > 0) {
+          r = Math.min(255, Math.round(r + lift))
+          g = Math.min(255, Math.round(g + lift))
+          b = Math.min(255, Math.round(b + lift))
+        }
       }
       ctx.globalAlpha = alpha
       ctx.fillStyle = `rgb(${r},${g},${b})`
@@ -3427,28 +3454,46 @@ export default function HomeParticleLogoHero({
                 p.newmixHomeReturnStartMs = undefined
               }
 
-              /** Capture color invert: drive captureColorMix toward 1 while the
-               * particle is captured or in wake state, back toward 0 otherwise.
-               * Mode 0 = off (no inversion); 1 = snap (instant on capture);
-               * 2 = fade (smooth ramp over captureColorInvertFadeMs). Fade-out
-               * always uses homeReturnMs so the particle heals smoothly. */
+              /** Capture color invert + glow: only a SUBSET of interacted
+               * particles (per captureColorInvertChance) get the invert+glow
+               * effect. Roll dice on first capture (transition mix 0 → >0).
+               * Selected particles drive captureColorMix toward 1 (snap or
+               * fade); non-selected stay at 0. All particles ease back to 0
+               * over homeReturnMs when no longer captured. */
               const colorInvertMode = nm.captureColorInvertMode | 0
               if (colorInvertMode > 0) {
                 const inverted = captured || trailingActive
                 const curMix = p.captureColorMix ?? 0
                 if (inverted) {
-                  if (colorInvertMode === 1) {
-                    p.captureColorMix = 1
-                  } else {
-                    const fadeMs = Math.max(1, nm.captureColorInvertFadeMs)
-                    p.captureColorMix = Math.min(1, curMix + 16 / fadeMs)
+                  /** First-capture dice roll: only when transitioning from
+                   * mix=0 (untouched) into the captured state. Persisted via
+                   * captureColorInvertSelected for the lifetime of capture. */
+                  if (curMix <= 0) {
+                    p.captureColorInvertSelected =
+                      Math.random() < nm.captureColorInvertChance
+                  }
+                  if (p.captureColorInvertSelected === true) {
+                    if (colorInvertMode === 1) {
+                      p.captureColorMix = 1
+                    } else {
+                      const fadeMs = Math.max(
+                        1,
+                        nm.captureColorInvertFadeMs
+                      )
+                      p.captureColorMix = Math.min(1, curMix + 16 / fadeMs)
+                    }
                   }
                 } else if (curMix > 0) {
                   const recoverMs = Math.max(1, nm.homeReturnMs)
-                  p.captureColorMix = Math.max(0, curMix - 16 / recoverMs)
+                  const next = Math.max(0, curMix - 16 / recoverMs)
+                  p.captureColorMix = next
+                  if (next <= 0) {
+                    p.captureColorInvertSelected = false
+                  }
                 }
               } else if ((p.captureColorMix ?? 0) > 0) {
                 p.captureColorMix = 0
+                p.captureColorInvertSelected = false
               }
 
               /** Dual vortex emitters — continuous tangential force, magnitude
@@ -4017,7 +4062,8 @@ export default function HomeParticleLogoHero({
           !newmix,
           wordmarkGradientRef.current,
           newmix && nm != null ? nm.velocityAlphaBoost : 0,
-          newmix && nm != null ? nm.velocityAlphaBoostCap : 0.35
+          newmix && nm != null ? nm.velocityAlphaBoostCap : 0.35,
+          newmix && nm != null ? nm.captureColorInvertGlowBoost : 0
         )
         /** Apply the metaball blur+contrast pass after the particles are
          * rendered. Cached offscreen lives on a ref. */

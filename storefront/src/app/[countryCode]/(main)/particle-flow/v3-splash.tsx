@@ -72,6 +72,8 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
   wakeAlphaMult: 1.2,
   captureColorInvertMode: 1,
   captureColorInvertFadeMs: 150,
+  captureColorInvertChance: 0.33,
+  captureColorInvertGlowBoost: 0.3,
 
   /** ------ Vortex emitters OFF ------
    * Newmix has no orbital capture mechanic. Rings are PATH-shaped, not
