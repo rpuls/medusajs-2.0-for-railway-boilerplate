@@ -83,6 +83,16 @@ regionId,
     <ReportCard
       title="Top products"
       caption="Top 20 SKUs in period — toggle units vs revenue. A product that's high on revenue but low on units is your premium piece; the opposite is your bulk SKU."
+      help={{
+        title: "Top products",
+        body: "The 20 best-selling SKUs in the window — toggle whether to rank by units sold or revenue. Each angle tells a different story.",
+        bullets: [
+          "Sort by revenue: shows your dollars-earners. High revenue + low units = premium pieces; protect their margin.",
+          "Sort by units: shows your volume drivers. High units + lower revenue = your bulk SKUs; scale efficiency, not price.",
+          "A SKU that's missing from one list but top of the other usually deserves repositioning — it's not selling on the angle the storefront is leading with.",
+          "Rolls up by parent product (not variant); to see variant-level patterns use the variant velocity report.",
+        ],
+      }}
       loading={loading}
       error={error}
       rightAccessory={

@@ -95,7 +95,16 @@ export const OrderEditFrequencyChart = ({
     <ReportCard
       title="Order edit frequency"
       caption="Process-maturity proxy. Average stage transitions per order — more than the canonical 9 means excessive revisions / rollbacks. Trending up = onboarding new customers without clear briefs; trending down = your storefront is getting clearer."
-      help="Counts production_stage_history transitions where the *exit* timestamp falls in window. Rollbacks are transitions to a stage with a lower index in the canonical stage list (i.e. backwards). Top 20 by transition count are listed for staff review."
+      help={{
+        title: "Order edit frequency",
+        body: "A process-maturity proxy: how often each order moves between production stages. The canonical happy-path is 9 forward transitions. Anything above that means revisions or rollbacks are eating staff time.",
+        bullets: [
+          "Trending up over weeks = you're onboarding customers without clear briefs at intake — fix the order form, not the production process.",
+          "Trending down = the storefront / customizer is getting clearer; brief quality is improving.",
+          "Top 20 high-edit orders are listed below for one-by-one review — usually 1–2 reveal a process gap (artwork approval, sizing flip-flop) you can systematise.",
+          "Counts production_stage_history transitions whose exit timestamp falls in window. Rollbacks = a transition to an earlier stage in the canonical list.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

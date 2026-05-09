@@ -85,6 +85,16 @@ export const ReturnsChart = ({
     <ReportCard
       title="Returns by variant + reason"
       caption="Variant-level return rates surface sizing-chart bugs (e.g. one size returning 5× more than others) and supplier defects. Reason-code histogram tells you whether to fix sizing, packaging, or fulfillment."
+      help={{
+        title: "Returns by variant + reason",
+        body: "Two angles on the same data: which specific variants come back the most, and what reason customers give. Variant-level surfaces the cause; reason-codes surface the type of fix.",
+        bullets: [
+          "One size of a SKU returning 5× more than its sibling sizes = sizing-chart bug. Update the chart, the spec sheet, and the fit notes.",
+          "One supplier or fabric returning across many SKUs = supplier defect. Pull a sample for QC and chase a credit.",
+          "'Not as pictured' reason codes are a mockup-quality signal — invest in better PDP photography, not in process changes.",
+          "Empty card means no returns processed in Medusa for the window; if you process returns outside Medusa, this report won't see them.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

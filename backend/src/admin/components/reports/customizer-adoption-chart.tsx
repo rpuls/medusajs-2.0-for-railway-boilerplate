@@ -122,6 +122,15 @@ regionId,
     <ReportCard
       title="Customizer adoption"
       caption="Share of orders that include at least one customised line. Trend up = the customizer is paying off; flat or declining = check drop-off."
+      help={{
+        title: "Customizer adoption",
+        body: "Of every order placed in the window, what share contains at least one line built in the customizer (vs a plain catalogue product). The customizer is your main differentiator — adoption is the leading indicator of its health.",
+        bullets: [
+          "Rising adoption = the customizer is paying off; promote it further on the homepage and PDPs.",
+          "Flat or declining adoption while traffic grows = customers are landing but not engaging the customizer. Check the funnel chart below for where they drop off.",
+          "An order counts as customised if any line carries metadata.type = 'fabric_customizer' (the marker the cart-add helper writes).",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

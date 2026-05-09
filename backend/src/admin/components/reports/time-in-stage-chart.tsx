@@ -100,6 +100,16 @@ export const TimeInStageChart = ({
     <ReportCard
       title="Time in stage"
       caption="Median (slate) and p90 (stone) dwell time per stage, in days. Excludes orders still at the stage. Wide gap between median and p90 means the stage is unreliable, not just slow."
+      help={{
+        title: "Time in stage",
+        body: "Two numbers per stage: the median dwell (typical case, slate bar) and the p90 dwell (the slowest 10%, stone bar). Looking at both together separates 'slow but predictable' from 'unreliable'.",
+        bullets: [
+          "Small median + large p90 = the stage is mostly fast but has occasional bad days. Find out what triggers the long tail.",
+          "Large median + small p90 = the stage is just slow. SLA is probably wrong or staffing too thin.",
+          "Click a stage row to jump to /app/production filtered to that stage — useful for unblocking specific orders.",
+          "Excludes orders still sitting at the stage (no exit timestamp yet). Counts only completed transitions in window.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

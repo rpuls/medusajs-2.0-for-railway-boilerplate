@@ -83,6 +83,15 @@ regionId,
     <ReportCard
       title="Average order value by decoration method"
       caption="Bucketed by the order's primary decoration method (the line item with the highest revenue). Methods with high AOV but low order count are your premium niche; high count low AOV is your bulk."
+      help={{
+        title: "Average order value by decoration method",
+        body: "Each order is bucketed under one decoration method — the one driving the largest line on that order — and the average order value computed per bucket. Tells you which method is your premium niche vs your volume play.",
+        bullets: [
+          "High AOV + low order count = a premium niche (e.g. embroidery on bespoke jackets). Protect the margin; don't try to scale it cheap.",
+          "Low AOV + high count = bulk lane (e.g. screen-print team kits). This is where small per-unit savings compound — focus efficiency efforts here.",
+          "If two methods have similar AOV and similar volumes, you're missing positioning — one of them should be a premium 'flagship' option in your storefront copy.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

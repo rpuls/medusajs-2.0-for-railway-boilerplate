@@ -108,6 +108,15 @@ regionId,
     <ReportCard
       title="Top customers"
       caption="Top 20 by revenue in period. The concentration figure (top 10 share) flags revenue fragility — above 60% means losing one or two customers would hurt."
+      help={{
+        title: "Top customers",
+        body: "The 20 customers who contributed the most revenue in the window, plus a 'top-10 concentration' figure that tells you how much of total revenue those few accounts represent.",
+        bullets: [
+          "Top-10 share >60% (red) = revenue fragility. Losing one or two customers would meaningfully hurt the month. Diversify acquisition before scaling spend.",
+          "Top-10 share 30–60% (amber) = healthy concentration; you have a power-law revenue distribution but enough breadth to absorb a defection.",
+          "Use the list as a personal-outreach roster: a quick thank-you, an early-access offer, or a check-in call lands disproportionately well with these customers.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

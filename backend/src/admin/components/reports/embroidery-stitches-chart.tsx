@@ -96,7 +96,15 @@ export const EmbroideryStitchesChart = ({
     <ReportCard
       title="Embroidery stitch-count distribution"
       caption="How embroidery revenue splits across stitch tiers. Pricing decisions trace back to where customer demand actually lives."
-      help="Stitch counts read from line.metadata.decorationDesign.stitchCount, set by the embroidery decoration pricing path on add-to-cart. Revenue per 1k stitches is the variable-cost benchmark — higher tier dollars-per-1k usually means higher margin."
+      help={{
+        title: "Embroidery stitch-count distribution",
+        body: "How your embroidery revenue splits across stitch-count tiers. Tells you whether your customers are buying simple logos, dense-fill artwork, or a mix — and which tier earns the best dollars per stitch.",
+        bullets: [
+          "Revenue per 1k stitches is the variable-cost benchmark. Higher tiers usually return more dollars per 1k stitches = higher margin.",
+          "If most demand sits in the cheapest tier, your pricing copy may be discouraging upsell to denser designs. Consider repositioning the price ladder.",
+          "Stitch counts read from line.metadata.decorationDesign.stitchCount, set by the embroidery pricing path on add-to-cart.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

@@ -105,7 +105,15 @@ export const PaymentMixChart = ({
     <ReportCard
       title="Payment mix + gateway fees"
       caption="Stripe vs PayPal vs other — share of orders, revenue, and effective fee %. Surfaces when international cards drag your effective Stripe rate above headline."
-      help="Effective fee = observed fees + estimated fees / revenue. Estimates use STRIPE_HEADLINE_FEE_PCT (default 1.7% + $0.30) and PAYPAL_HEADLINE_FEE_PCT (default 2.6%) — override with env vars to match your negotiated rates. Observed fees count is shown so you can tell estimates from real data."
+      help={{
+        title: "Payment mix + gateway fees",
+        body: "Share of orders and revenue split by payment gateway, with the effective fee percentage each gateway is actually costing you. Surfaces when international card mix drags your real Stripe rate above the headline rate.",
+        bullets: [
+          "Effective fee = (observed fees + estimated fees) ÷ revenue. Observed fees count is shown so you can tell which orders' fees are real vs estimated.",
+          "Estimates use STRIPE_HEADLINE_FEE_PCT (default 1.7% + $0.30) and PAYPAL_HEADLINE_FEE_PCT (default 2.6%). Override via env vars to match your negotiated rates.",
+          "If Stripe's effective rate sits >0.5% above headline, you're seeing a meaningful share of premium / international cards — worth pricing into freight or surcharging.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

@@ -171,6 +171,15 @@ export const InventoryStatusChart = (_props: {
     <ReportCard
       title="Inventory status"
       caption="Out-of-stock and low-stock variants across all locations. Updates on demand — independent of the date range above since stock is a current-state signal."
+      help={{
+        title: "Inventory status",
+        body: "Variants in or near out-of-stock right now, across every location. Doesn't respect the date range filter at the top of the page — stock is a current-state signal, not a window-of-time one.",
+        bullets: [
+          "Tweak the 'Low-stock under' threshold to match your reorder cycle. Set it to whatever quantity gives you enough lead time to restock.",
+          "Variants out across all locations are sale-blocking — fix those first.",
+          "If a variant is showing 0 here but you know there's stock, the location-↔-variant link probably hasn't been synced. Run the AS Colour inventory sync or check Settings → Locations.",
+        ],
+      }}
       loading={loading}
       error={error}
       rightAccessory={

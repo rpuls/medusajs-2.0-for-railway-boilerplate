@@ -119,7 +119,15 @@ export const RefundRateChart = ({
     <ReportCard
       title="Refund rate"
       caption="% of orders with any refund (full or partial), trended weekly. Decoration-method breakdown surfaces which technique drives the most refunds."
-      help="Reads order.refunds directly — works with or without an RMA workflow. The dollar refund rate is the dollars-refunded share of revenue and is often more meaningful than the count rate (a few high-value refunds can dwarf many small ones)."
+      help={{
+        title: "Refund rate",
+        body: "Share of orders with any refund (full or partial), trended weekly. Reads order.refunds directly so it works with or without an RMA workflow. The dollar refund rate is usually more meaningful than the count rate — a handful of big refunds can dwarf dozens of small ones.",
+        bullets: [
+          "Spike that aligns with one decoration method (e.g. DTF) → a process drift on that line; check operator notes for that week.",
+          "Sustained creep across all methods → likely an artwork-quality issue at intake; review the vectorisation funnel.",
+          "Refunds processed in Stripe directly (without writing back to Medusa) won't appear here — the report only sees what Medusa knows.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

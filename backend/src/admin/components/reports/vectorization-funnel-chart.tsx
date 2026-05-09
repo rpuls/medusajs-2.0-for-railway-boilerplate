@@ -86,6 +86,16 @@ export const VectorizationFunnelChart = ({
     <ReportCard
       title="Vectorization upsell funnel"
       caption="Low-DPI modal → Accept → Purchase. Drop-off between Shown and Accepted is a price/copy signal; drop-off between Accepted and Purchased is a checkout-friction signal. GA4 events take 24-48h to first appear after deploy."
+      help={{
+        title: "Vectorization upsell funnel",
+        body: "When a customer uploads low-DPI artwork the customizer shows a modal offering paid vectorisation. This funnel tracks Shown → Accepted → Purchased so you can tell whether the modal is converting.",
+        bullets: [
+          "Big drop Shown → Accepted = price or copy problem. Try a different price point or rewrite the modal headline to focus on quality risk, not the upsell.",
+          "Big drop Accepted → Purchased = checkout-friction. Customer agreed in the modal but bailed at checkout — usually because the line item wasn't where they expected it.",
+          "Bridge for both: cleaner copy on what 'low DPI' actually means in practice often lifts both stages.",
+          "Empty for ~48h after a fresh deploy while the GA4 events accumulate.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

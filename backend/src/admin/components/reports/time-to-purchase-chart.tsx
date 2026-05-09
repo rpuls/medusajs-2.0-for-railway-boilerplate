@@ -124,6 +124,15 @@ export const TimeToPurchaseChart = ({
     <ReportCard
       title="Time to purchase"
       caption="How long signup-to-first-order takes (left) and how long first-to-second-order takes (right). Use these to size your email drip cadence and retargeting-ad windows."
+      help={{
+        title: "Time to purchase",
+        body: "Two distributions: how long new customers wait between signing up and placing their first order, and how long existing customers wait between order #1 and order #2. Use the median bucket to size your email/ads cadence.",
+        bullets: [
+          "If most first orders happen <7 days after signup → you're acquiring intent-driven customers; lean on the welcome email and skip the long nurture.",
+          "If first → second clusters around 30–60 days → schedule a reorder-reminder series at that mark.",
+          "A bimodal repeat-purchase shape (one cluster early, one late) usually means two customer segments — staff/team kits cycle differently from one-off custom buyers.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

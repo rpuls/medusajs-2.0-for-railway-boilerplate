@@ -118,7 +118,16 @@ export const CohortLtvChart = ({
     <ReportCard
       title="Cohort LTV curve"
       caption="Cumulative average revenue per customer, per acquisition cohort. Newer cohorts on top — if their early-month curves climb faster than older ones, your customer quality is improving."
-      help="A cohort = customers whose first order fell in that month. The line shows their cumulative revenue per head, indexed to their acquisition month (M0). Compare M3-M6 across cohorts to see whether quality is trending up."
+      help={{
+        title: "Cohort LTV curve",
+        body: "Each line is one cohort (customers acquired in a given month), tracking their cumulative average revenue per head over time since acquisition. Newer cohorts sit on top so you can see whether they're climbing faster than older ones.",
+        bullets: [
+          "Newer cohort climbing faster than an older one through M3–M6 = customer quality is improving (acquisition is bringing in better-fit buyers).",
+          "Newer cohorts plateauing earlier than older ones = customer quality is dropping; the channels you're scaling now are noisier than the ones that built older cohorts.",
+          "M0 is the cohort's acquisition month — by definition every cohort starts at the same first-order revenue. The interesting story is in M1 onwards.",
+          "Cohorts are bucketed by month-of-first-order; a customer never appears in two cohorts.",
+        ],
+      }}
       loading={loading}
       error={error}
       loadedAt={loadedAt}

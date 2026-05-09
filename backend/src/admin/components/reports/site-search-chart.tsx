@@ -96,6 +96,15 @@ export const SiteSearchChart = ({
     <ReportCard
       title="Internal site search"
       caption="What customers type into the search bar. Zero-result queries are gold for merchandising — they tell you what people want that you don't surface (or don't stock)."
+      help={{
+        title: "Internal site search",
+        body: "Every query typed into the storefront search bar in the window. The two columns to read first are zero-result queries (customers asking for something you don't have or can't surface) and high-volume queries (proven demand).",
+        bullets: [
+          "Zero-result queries are gold: each one is a customer who couldn't find what they wanted. Decide per query — add the product, fix the indexing, or add a synonym so they land on the right thing.",
+          "High-volume queries that *do* return results but have low click-through usually mean the result page is poor. Check ranking and PDP-thumbnail quality.",
+          "If a particular product name shows up frequently in search but is also on a homepage tile, your nav is failing — customers shouldn't need to search for what's on screen.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

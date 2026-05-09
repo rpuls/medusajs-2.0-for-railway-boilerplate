@@ -96,6 +96,15 @@ export const DiscountProfitabilityChart = ({
     <ReportCard
       title="Discount profitability"
       caption="Net margin per promotion code, after subtracting discount and cost-of-goods. Orange margins are unprofitable codes — kill or restrict to specific products."
+      help={{
+        title: "Discount profitability",
+        body: "Net margin per promotion code — gross revenue minus the discount given minus cost-of-goods. Tells you which codes are pulling weight versus which are giving margin away.",
+        bullets: [
+          "Negative net margin (red) = the code is costing you money on every redemption — kill it or restrict to a higher-margin collection.",
+          "High uses + small positive margin = a 'volume' code; fine if it's pulling new customers, dangerous if existing customers are hitting it on every order.",
+          "Cost-of-goods comes from the variant's cost field — report needs that populated to compute margins. Codes still appear with revenue/discount even when COGS is missing.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

@@ -98,6 +98,15 @@ export const EmailChannelRoiChart = ({
     <ReportCard
       title="Email channel ROI"
       caption="GA4 sessions + revenue from email traffic, broken down by campaign UTM. Tells you which transactional / marketing emails actually earn vs which burn list goodwill. Reorder reminders + winbacks are the highest-leverage rows once they accumulate."
+      help={{
+        title: "Email channel ROI",
+        body: "Revenue and sessions attributed to email traffic, grouped by campaign UTM. Tells you which campaigns earn back the time and goodwill they spend on the list — and which are net negative.",
+        bullets: [
+          "Reorder reminders and win-back emails are usually the highest revenue-per-send rows once they've been running long enough to accumulate; lean into those before launching new broadcasts.",
+          "A high-session, low-revenue row is usually a content email — fine for retention, not for direct ROI tracking.",
+          "If a campaign is missing here, the email links probably lack utm_source=email&utm_campaign=... — fix the template once and the data flows in.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

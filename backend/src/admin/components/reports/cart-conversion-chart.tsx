@@ -116,6 +116,15 @@ export const CartConversionChart = ({
     <ReportCard
       title="Cart-to-order conversion"
       caption="Bottom slice of the funnel from Medusa data alone — what % of carts created in the window became orders. Pre-cart drop-off (sessions, PDP views) needs Tier C event tracking."
+      help={{
+        title: "Cart-to-order conversion",
+        body: "The narrowest part of the conversion funnel: of every cart customers built in the window, how many actually became paid orders. Pre-cart steps (page views, add-to-cart) live in PDP conversion or the GA4 funnel chart.",
+        bullets: [
+          "Healthy stores see 35–55% — anything below 25% usually means checkout friction (shipping shock, payment failure, login wall).",
+          "If the median abandoned cart is bigger than the median completed cart, customers are getting cost shock at the shipping step — review thresholds and copy.",
+          "Active carts (not yet abandoned, not yet checked out) are excluded from both rates — they'll resolve in the next window.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

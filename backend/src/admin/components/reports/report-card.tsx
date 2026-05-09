@@ -3,7 +3,7 @@ import { ArrowDownTray } from "@medusajs/icons"
 import type { ReactNode } from "react"
 
 import { downloadCsv, timestampedFilename } from "../../lib/reports/csv"
-import { HelpTooltip } from "./help-tooltip"
+import { HelpTooltip, type HelpContent } from "./help-tooltip"
 import { LastUpdated } from "./last-updated"
 import { SkeletonBars } from "./skeleton-chart"
 
@@ -48,7 +48,7 @@ export const ReportCard = ({
       | null
       | undefined
   }
-  help?: string | ReactNode
+  help?: HelpContent
   loadedAt?: number | null
   skeleton?: boolean
 }) => {

@@ -2,6 +2,7 @@ import { Container, Heading, Text } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "./help-tooltip"
 import { LastUpdated } from "./last-updated"
 
 type Job = {
@@ -55,8 +56,20 @@ export const CronJobsCard = () => {
   return (
     <Container className="flex flex-col gap-y-2 p-4">
       <div className="flex items-center justify-between">
-        <Heading level="h2" className="text-base font-semibold">
+        <Heading level="h2" className="text-base font-semibold flex items-center">
           Scheduled jobs
+          <HelpTooltip
+            text={{
+              title: "Scheduled jobs",
+              body: "The cron registry — every background task scheduled to run on its own. Reads src/jobs/ at request-time and shows the next-fire estimate based on the cron schedule string.",
+              bullets: [
+                "Use this to catch silent failures: if a digest didn't arrive last month, this is the first place to look.",
+                "Next-fire times are computed locally from the cron schedule, not pulled from job-history (Railway doesn't expose run history). Treat them as estimates.",
+                "If a job is missing here, the cron decorator probably wasn't registered correctly — check the job file's exports.",
+                "All times in UTC. The crontab on each line shows the schedule in standard cron syntax.",
+              ],
+            }}
+          />
         </Heading>
         <LastUpdated loadedAt={loadedAt} />
       </div>

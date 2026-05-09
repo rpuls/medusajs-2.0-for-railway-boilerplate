@@ -125,6 +125,16 @@ export const RfmChart = ({
     <ReportCard
       title="RFM segments"
       caption="Customers bucketed by Recency / Frequency / Monetary value. Each segment is a marketing audience — Champions get rewards, At Risk get win-back, Lost get cheap reactivation only."
+      help={{
+        title: "RFM segments",
+        body: "Every customer is scored on three axes — how recently they ordered, how often they order, and how much they spend — and bucketed into a named segment. Each segment is a different marketing audience.",
+        bullets: [
+          "Champions = recent, frequent, high spend. Worth a personal thank-you, early access, loyalty perk.",
+          "At Risk = used to buy often but haven't lately. Send a personalised win-back; offer a discount only if it doesn't trigger.",
+          "Lost = haven't ordered in a long time and were never high-value. Cheap, batched reactivation only — don't burn margin on them.",
+          "Recency = days since last order. Frequency = order count to date. Monetary = lifetime revenue.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

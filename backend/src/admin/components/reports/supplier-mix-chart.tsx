@@ -134,6 +134,15 @@ regionId,
     <ReportCard
       title="Garment supplier mix"
       caption="AS Colour vs other suppliers — share by orders, revenue, and units. AS Colour-routed orders are flagged via metadata.ascolour_order_id."
+      help={{
+        title: "Garment supplier mix",
+        body: "How dependent the business is on each blanks supplier. Three angles — orders, revenue, units — because each one tells a different story about supplier risk.",
+        bullets: [
+          "AS Colour share >80% on every angle = single-supplier concentration risk. A delivery problem at AS Colour becomes a business problem.",
+          "Use this in tandem with AS Colour throughput (Production tab) — if their lead times slip while they're 90% of your sourcing, plan a dual-supplier strategy.",
+          "AS Colour-routed orders are identified by the metadata.ascolour_order_id stamp; orders without that mark are bucketed as 'Other supplier'.",
+        ],
+      }}
       loading={loading}
       error={error}
       csv={

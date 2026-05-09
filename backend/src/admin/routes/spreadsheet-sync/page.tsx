@@ -1,6 +1,8 @@
 import { Button, Container, Heading, Input, Text } from "@medusajs/ui"
 import { useCallback, useMemo, useState } from "react"
 
+import { HelpTooltip } from "../../components/reports/help-tooltip"
+
 import {
   applyDefaultCollectionIdToParsedCsv,
   buildBatchCreatesFromParsedCsv,
@@ -407,7 +409,20 @@ const SpreadsheetSyncPage = () => {
   return (
     <div className="flex flex-col gap-6 p-8">
       <div>
-        <Heading level="h1">Spreadsheet sync (new products)</Heading>
+        <Heading level="h1" className="flex items-center">
+          Spreadsheet sync (new products)
+          <HelpTooltip
+            text={{
+              title: "Spreadsheet sync (new products)",
+              body: "Create new products in bulk from a supplier or template CSV. Strictly create-only — this tab never updates existing products by handle or id. Use 'Update existing' for that.",
+              bullets: [
+                "Workflow: upload → review the source-format detection → set defaults (shipping profile, collection) → preview counts → Confirm sync.",
+                "Sync runs in chunks of 50 products via the Medusa product batch API. The result log shows per-chunk progress.",
+                "Duplicate handles will fail the create — Medusa won't allow two products with the same handle. Re-import after deleting the duplicates if needed.",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-muted mt-1">
           <strong>Creates new products only</strong> via <code className="text-xs">sdk.admin.product.batch</code>{" "}
           (<code className="text-xs">create</code>). Existing rows are not upserted by <code className="text-xs">
@@ -431,8 +446,19 @@ const SpreadsheetSyncPage = () => {
 
       <Container className="divide-y p-0">
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             1. Upload CSV
+            <HelpTooltip
+              text={{
+                title: "Upload CSV",
+                body: "Pick the supplier or template CSV that holds the products to import. Auto-detection runs on the header row, so you don't need to convert formats by hand for the supported sources.",
+                bullets: [
+                  "Supported out of the box: AS Colour Gold, FashionBiz / Biz / Syzmik variant grids, DNC Workwear, Ramo, Honeybee, and the Medusa export-products template.",
+                  "If auto-detection misses, switch the 'Source format' field below to the right one — usually a quirk where supplier image URLs don't include the supplier name.",
+                  "Only CSV is supported (not XLSX or TSV). Open Excel files in Excel/Sheets and 'Export as CSV' first.",
+                ],
+              }}
+            />
           </Text>
           <input
             type="file"
@@ -453,8 +479,19 @@ const SpreadsheetSyncPage = () => {
         </div>
 
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             Source format
+            <HelpTooltip
+              text={{
+                title: "Source format",
+                body: "Tell the importer how to read the CSV. 'Auto' (the default) sniffs the header row against known supplier signatures — works for most cases.",
+                bullets: [
+                  "Auto detects: AS Colour Gold (STYLECODE/PRODUCT_NAME), FashionBiz/Biz/Syzmik variant grids, DNC Workwear (ProductCode/Description), Ramo, Honeybee.",
+                  "Pick a specific format when auto fails — usually because the CSV's image URLs were rewritten and don't include the supplier name.",
+                  "Each format has its own variant-grid rules; using the wrong one will explode rows incorrectly. Verify the preview counts before confirming.",
+                ],
+              }}
+            />
           </Text>
           <select
             value={importFormat}
@@ -475,8 +512,19 @@ const SpreadsheetSyncPage = () => {
         </div>
 
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             Default shipping profile id
+            <HelpTooltip
+              text={{
+                title: "Default shipping profile id",
+                body: "Wholesale supplier CSVs (AS Colour, FashionBiz, etc.) usually omit the Medusa shipping-profile column — Medusa needs one or the create call fails. Paste a profile id here to use as the default for every row that doesn't carry its own.",
+                bullets: [
+                  "Get the id from Settings → Locations & shipping → Shipping profiles. The id starts with 'sp_'.",
+                  "Don't paste a sales-channel id (those start with 'sc_') — the form warns you if you do, but it's worth catching before you sync.",
+                  "Required for wholesale CSVs; Medusa template CSVs already include the column and don't need this.",
+                ],
+              }}
+            />
           </Text>
           <Input
             placeholder="e.g. sp_01..."
@@ -498,8 +546,20 @@ const SpreadsheetSyncPage = () => {
         </div>
 
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             Collection (optional)
+            <HelpTooltip
+              text={{
+                title: "Collection",
+                body: "Optionally assign every imported product to a Medusa collection. Choose one of two paths: paste an existing collection id, or fill in the new-collection title to have one created during the sync.",
+                bullets: [
+                  "Existing id: copy from Products → Collections. Used as the default for any row that leaves Product Collection Id empty.",
+                  "New title: a fresh collection is created first, then every imported product is assigned to it. The 'existing id' field is ignored when this is set.",
+                  "Handle is auto-derived from the title if you leave it empty (e.g. 'Summer Tees' → 'summer-tees').",
+                  "Collections are useful for storefront filtering; if you skip this you can always re-assign products later.",
+                ],
+              }}
+            />
           </Text>
           <Input
             placeholder="Existing collection id (e.g. pcol_01...)"
@@ -535,8 +595,19 @@ const SpreadsheetSyncPage = () => {
         </div>
 
         <div className="flex flex-col gap-3 px-6 py-4">
-          <Text weight="plus" size="small">
+          <Text weight="plus" size="small" className="flex items-center">
             2. Preview
+            <HelpTooltip
+              text={{
+                title: "Preview",
+                body: "A dry-run summary of what the sync will create — distinct products, total variant rows, and any tier-pricing rules detected. Always check this before confirming, especially for unfamiliar supplier formats.",
+                bullets: [
+                  "Products = distinct handles. Variant rows = the expanded grid (size × colour × etc.). Tier pricing = AUD price-bracket rules.",
+                  "Validation errors block the Confirm sync button. Read each error line by line; the importer is conservative on purpose.",
+                  "If the counts look wrong (way too many or way too few products), the source format is probably mis-detected — switch the dropdown above and re-upload.",
+                ],
+              }}
+            />
           </Text>
           {!rawCsvText ? (
             <Text size="small" className="text-ui-fg-muted">

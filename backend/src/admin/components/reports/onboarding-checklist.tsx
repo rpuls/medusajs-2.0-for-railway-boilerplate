@@ -3,6 +3,7 @@ import { CheckCircleSolid, CircleDottedLine } from "@medusajs/icons"
 import { useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "./help-tooltip"
 
 /**
  * Self-service onboarding checklist for new admin users. Polls a few
@@ -189,8 +190,20 @@ export const OnboardingChecklist = () => {
     <Container className="flex flex-col gap-y-2 p-4">
       <div className="flex items-start justify-between">
         <div>
-          <Heading level="h2" className="text-base font-semibold">
+          <Heading level="h2" className="text-base font-semibold flex items-center">
             Setup checklist · {doneCount}/{totalCount}
+            <HelpTooltip
+              text={{
+                title: "Setup checklist",
+                body: "A short list of quick wins to make the Reports + automation stack actually pay off. Auto-hides once everything's green so it doesn't sit there forever.",
+                bullets: [
+                  "Each item polls an existing config endpoint to detect whether it's already set up — no manual ticking needed.",
+                  "Items typically include: GA4 wired up, GSC site URL set, monthly digest recipients configured, threshold alerts created, vectorization variant set.",
+                  "Dismiss state is local (per-browser localStorage), so each admin user sees their own progress.",
+                  "Once dismissed it stays gone — there's no built-in way to re-open it. If you need to bring it back, clear the 'sc:onboarding_dismissed' key in browser storage.",
+                ],
+              }}
+            />
           </Heading>
           <Text size="xsmall" className="text-ui-fg-subtle">
             Quick wins to get the most out of the Reports + automation
