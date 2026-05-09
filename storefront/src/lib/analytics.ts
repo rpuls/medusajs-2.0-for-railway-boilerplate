@@ -259,6 +259,29 @@ export const trackCustomizerFunnel = (
   fire(`customizer_${step}`, payload)
 }
 
+/**
+ * Throttled "customizer action" pulse — every Fabric.js mutation
+ * (object added, moved, scaled, deleted, text edited, side switched,
+ * etc.) calls this. Used to compute iteration depth: median + p90
+ * actions per design + time-from-start-to-first-cart-add.
+ *
+ * Throttled internally to once per 250ms so dragging an object 60 times
+ * a second doesn't flood GA4. Action types are coarse on purpose — the
+ * report doesn't care about the difference between a move and a scale,
+ * just total fiddle volume.
+ */
+let _lastActionAt = 0
+export const trackCustomizerAction = (
+  action: string,
+  payload: Record<string, any> = {}
+) => {
+  if (!isClient()) return
+  const now = Date.now()
+  if (now - _lastActionAt < 250) return
+  _lastActionAt = now
+  fire("customizer_action_taken", { action, ...payload })
+}
+
 /* ---------- helpers for converting Medusa shapes ------------------ */
 
 type AnyVariant = {

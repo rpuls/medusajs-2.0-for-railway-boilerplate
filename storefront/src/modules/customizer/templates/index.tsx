@@ -66,7 +66,7 @@ import { sampleImageDominantColor } from "@modules/customizer/lib/sample-image-c
 import { HttpTypes } from "@medusajs/types"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { trackCustomizerFunnel } from "@lib/analytics"
+import { trackCustomizerAction, trackCustomizerFunnel } from "@lib/analytics"
 import { phCapture } from "@lib/posthog"
 import * as fabric from "fabric"
 import { FabricImage } from "fabric"
@@ -1361,6 +1361,9 @@ export default function CustomizerTemplate({
     if (suppressFabricPersistenceRef.current) {
       return
     }
+    // Throttled inside the helper so this is safe to call on every
+    // mutation. Tracks customizer iteration depth.
+    trackCustomizerAction("layout_change", { side: currentSideRef.current })
     const canvas = fabricCanvasRef.current
     if (!canvas) {
       return

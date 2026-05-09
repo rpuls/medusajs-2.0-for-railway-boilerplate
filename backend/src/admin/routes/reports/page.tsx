@@ -46,6 +46,18 @@ import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
 import { CapacityChart } from "../../components/reports/capacity-chart"
 import { AlertsManager } from "../../components/reports/alerts-manager"
 import { BlanksForecastChart } from "../../components/reports/blanks-forecast-chart"
+import { CohortLtvChart } from "../../components/reports/cohort-ltv-chart"
+import { RefundRateChart } from "../../components/reports/refund-rate-chart"
+import { FirstOrderAffinityChart } from "../../components/reports/first-order-affinity-chart"
+import { GeoHeatmapChart } from "../../components/reports/geo-heatmap-chart"
+import { OrderTimeHeatmapChart } from "../../components/reports/order-time-heatmap-chart"
+import { VariantVelocityChart } from "../../components/reports/variant-velocity-chart"
+import { PdpConversionChart } from "../../components/reports/pdp-conversion-chart"
+import { GscCtrTrendChart } from "../../components/reports/gsc-ctr-trend-chart"
+import { PaymentMixChart } from "../../components/reports/payment-mix-chart"
+import { OrderEditFrequencyChart } from "../../components/reports/order-edit-frequency-chart"
+import { EmbroideryStitchesChart } from "../../components/reports/embroidery-stitches-chart"
+import { CustomizerIterationChart } from "../../components/reports/customizer-iteration-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -198,6 +210,41 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <RefundRateChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <FirstOrderAffinityChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <GeoHeatmapChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <OrderTimeHeatmapChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <PdpConversionChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <PaymentMixChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <OrderEditFrequencyChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
           </div>
         </Tabs.Content>
 
@@ -206,6 +253,7 @@ const ReportsPage = () => {
           <div className="mt-3 grid grid-cols-1 gap-3">
             <AovBySourceChart fromIso={fromIso} toIso={toIso} />
             <EmailChannelRoiChart fromIso={fromIso} toIso={toIso} />
+            <GscCtrTrendChart fromIso={fromIso} toIso={toIso} />
             <FunnelChart fromIso={fromIso} toIso={toIso} />
           </div>
         </Tabs.Content>
@@ -228,6 +276,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <BlanksForecastChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <EmbroideryStitchesChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
@@ -268,6 +321,11 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <CohortLtvChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <ChurnQueueChart />
             <NewVsReturningChart
               fromIso={fromIso}
@@ -285,6 +343,7 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <CustomizerIterationChart fromIso={fromIso} toIso={toIso} />
             <ReorderRateChart
               fromIso={fromIso}
               toIso={toIso}
@@ -336,6 +395,11 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <AgingInventoryChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <VariantVelocityChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
