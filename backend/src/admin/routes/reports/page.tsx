@@ -28,6 +28,7 @@ import { CartConversionChart } from "../../components/reports/cart-conversion-ch
 import { TimeToPurchaseChart } from "../../components/reports/time-to-purchase-chart"
 import { SiteSearchChart } from "../../components/reports/site-search-chart"
 import { AcquisitionTab } from "../../components/reports/acquisition-tab"
+import { FunnelChart } from "../../components/reports/funnel-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -171,6 +172,9 @@ const ReportsPage = () => {
 
         <Tabs.Content value="acquisition">
           <AcquisitionTab fromIso={fromIso} toIso={toIso} />
+          <div className="mt-3">
+            <FunnelChart fromIso={fromIso} toIso={toIso} />
+          </div>
         </Tabs.Content>
 
         <Tabs.Content value="production">

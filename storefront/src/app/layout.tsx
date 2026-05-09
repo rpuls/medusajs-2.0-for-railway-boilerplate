@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from "next/font/google"
 import "styles/globals.css"
 import { ViewTransitions } from "next-view-transitions"
 import ConditionalCursorDot from "@modules/layout/components/conditional-cursor-dot"
+import { Ga4Script } from "@modules/common/components/ga4-script"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
@@ -106,9 +107,10 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <ViewTransitions>
       <html lang="en" data-mode="light" className="scroll-smooth">
-        <body 
+        <body
           className={`${plusJakartaSans.className} antialiased selection:bg-[#FF2E63] selection:text-[#EEEEEE]`}
         >
+          <Ga4Script />
           <ConditionalCursorDot />
           <script
             type="application/ld+json"
