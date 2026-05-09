@@ -36,6 +36,7 @@ import { AgingInventoryChart } from "../../components/reports/aging-inventory-ch
 import { VectorizationFunnelChart } from "../../components/reports/vectorization-funnel-chart"
 import { DiscountProfitabilityChart } from "../../components/reports/discount-profitability-chart"
 import { ReturnsChart } from "../../components/reports/returns-chart"
+import { CustomizerFunnelChart } from "../../components/reports/customizer-funnel-chart"
 import {
   buildPreset,
   formatDateRange,
@@ -240,6 +241,11 @@ const ReportsPage = () => {
             />
             <CohortsChart regionId={activeRegionId} />
             <CustomizerAdoptionChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <CustomizerFunnelChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}

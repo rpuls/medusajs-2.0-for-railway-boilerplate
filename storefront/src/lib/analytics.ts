@@ -240,6 +240,25 @@ export const trackVectorizationFunnel = (
   fire(`vectorization_${step}`, payload)
 }
 
+/* ---------- customizer abandonment funnel ------------------------ */
+
+export type CustomizerFunnelStep =
+  | "design_started"
+  | "design_saved"
+  | "design_added_to_cart"
+
+/**
+ * Customizer flow steps. The fourth step — design_purchased — is
+ * derived server-side from order metadata (lines tagged with
+ * customizerDesign / decorationDesign), so no event is fired for it.
+ */
+export const trackCustomizerFunnel = (
+  step: CustomizerFunnelStep,
+  payload: Record<string, any> = {}
+) => {
+  fire(`customizer_${step}`, payload)
+}
+
 /* ---------- helpers for converting Medusa shapes ------------------ */
 
 type AnyVariant = {
