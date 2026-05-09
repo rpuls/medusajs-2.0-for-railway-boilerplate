@@ -53,9 +53,12 @@ export function clearVelocityField(field: VelocityField): void {
   field.vy.fill(0)
 }
 
-/** Inject velocity into the grid around a cursor position. Uses a Gaussian-ish
- * radial falloff so the inject blob is soft (no hard ring artifacts). The cursor
- * velocity (vx, vy) is added — not assigned — so repeated strokes accumulate. */
+/** Inject velocity into the grid around a cursor position. Uses a 1/r donut
+ * falloff (matching Newmix's bundle): the weight peaks at `dist ≈ 4` and decays
+ * outward as `radiusBmp / dist`, with the centre saturated to avoid singularity.
+ * This shape produces the sharp inner-ring void Newmix is known for; a Gaussian
+ * (peaks at centre) just darkens a soft blob. The cursor velocity (vx, vy) is
+ * added — not assigned — so repeated strokes accumulate. */
 export function injectVelocity(
   field: VelocityField,
   cx: number,
@@ -72,22 +75,22 @@ export function injectVelocity(
   const cyCell = cy / field.cellH
   const ci = Math.floor(cxCell)
   const cj = Math.floor(cyCell)
-  const rSqInv = 1 / (radiusBmp * radiusBmp)
+  const rSq = radiusBmp * radiusBmp
   for (let dj = -rCells; dj <= rCells; dj++) {
     const j = cj + dj
     if (j < 0 || j >= field.rows) continue
     for (let di = -rCells; di <= rCells; di++) {
       const i = ci + di
       if (i < 0 || i >= field.cols) continue
-      /** Distance from cursor in bitmap units (cell centre to cursor). */
       const cellCx = (i + 0.5) * field.cellW
       const cellCy = (j + 0.5) * field.cellH
       const dx = cellCx - cx
       const dy = cellCy - cy
       const distSq = dx * dx + dy * dy
-      if (distSq > radiusBmp * radiusBmp) continue
-      /** Gaussian-ish falloff: exp(-3 * normalisedDistSq). */
-      const w = Math.exp(-3 * distSq * rSqInv) * strength
+      if (distSq > rSq) continue
+      const dist = Math.sqrt(distSq)
+      const limited = dist < 4 ? 4 : dist
+      const w = (radiusBmp / limited) * strength
       const idx = j * field.cols + i
       field.vx[idx] += vx * w
       field.vy[idx] += vy * w

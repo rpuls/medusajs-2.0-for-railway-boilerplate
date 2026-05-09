@@ -165,6 +165,21 @@ export const ASCOLOUR_WORKSHOP_EMAIL = process.env.ASCOLOUR_WORKSHOP_EMAIL
 export const ASCOLOUR_WORKSHOP_PHONE = process.env.ASCOLOUR_WORKSHOP_PHONE
 
 /**
+ * Google Search Console + Google Analytics 4 (read-only).
+ *
+ * `GOOGLE_SERVICE_ACCOUNT_JSON` is the full JSON key for a service account that has
+ * been granted "Restricted" access in the GSC property and "Viewer" access in the GA4
+ * property. Paste the JSON unmodified — newlines in env vars are fine on Railway.
+ *
+ * All three are intentionally NOT wrapped in assertValue() — the rest of the app
+ * must boot without SEO config so dev environments aren't blocked. Job + routes
+ * detect missing config at call time and log a warning.
+ */
+export const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+export const GSC_SITE_URL = process.env.GSC_SITE_URL
+export const GA4_PROPERTY_ID = process.env.GA4_PROPERTY_ID
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

@@ -1,4 +1,3 @@
-import { defineRouteConfig } from "@medusajs/admin-sdk"
 import {
   Button,
   Checkbox,
@@ -511,9 +510,8 @@ const ProductBulkDeletePage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Product bulk delete",
-  rank: 96,
-})
+// `defineRouteConfig` removed — this page is now embedded as a tab
+// inside the consolidated `/app/product-data` route. Direct URL still
+// works for deep links / bookmarks, just no sidebar entry.
 
 export default ProductBulkDeletePage

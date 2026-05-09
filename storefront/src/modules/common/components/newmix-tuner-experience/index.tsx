@@ -566,6 +566,24 @@ const GROUPS: Group[] = [
         format: (v) =>
           v <= 0 ? "off" : `${Math.round(v)} px/frame`,
       },
+      {
+        key: "velocityAlphaBoost",
+        label: "Motion glow",
+        description:
+          "Render-time alpha boost on moving particles — speeds up = brighter pixel. Reproduces the Newmix effect where the cursor's wake reads slightly luminous against the resting wordmark. 0 = disabled. 0.03-0.08 = subtle. >0.15 = obvious glow trail.",
+        min: 0,
+        max: 0.3,
+        step: 0.005,
+      },
+      {
+        key: "velocityAlphaBoostCap",
+        label: "Motion glow cap",
+        description:
+          "Maximum extra alpha that motion glow can add to a particle. Caps how bright a fast-moving particle can get so it doesn't blow out to fully opaque.",
+        min: 0,
+        max: 1,
+        step: 0.05,
+      },
     ],
   },
   {

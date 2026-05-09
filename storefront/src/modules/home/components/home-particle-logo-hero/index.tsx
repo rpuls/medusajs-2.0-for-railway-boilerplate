@@ -774,40 +774,32 @@ function applyNewmixCaptureImpulse(
     }
   }
   const finalScale = motionScale * speedCouplingMult * paddleMult * massMult
-  /** Newmix-style cursor-pushes-field path: instead of writing the impulse to
-   * the particle's own velocity, deposit it into the velocity-field cell at
-   * the particle's current position. Particles then read the field bilinearly
-   * later in the loop, so the cursor's effect persists across frames in the
-   * field rather than being lost the moment the cursor moves on. */
-  if (
-    fieldForInjection != null &&
-    t.fieldDrivenCursor > 0.5 &&
-    t.fieldStrength > 0
-  ) {
-    /** Reuse `injectVelocity` semantics by writing directly to one cell —
-     * tighter than a Gaussian splat because we're already at the particle's
-     * exact position. The field's diffusion pass then spreads it. */
-    const ci = Math.max(
-      0,
-      Math.min(
-        fieldForInjection.cols - 1,
-        Math.floor(p.x / fieldForInjection.cellW)
-      )
-    )
-    const cj = Math.max(
-      0,
-      Math.min(
-        fieldForInjection.rows - 1,
-        Math.floor(p.y / fieldForInjection.cellH)
-      )
-    )
-    const cellIdx = cj * fieldForInjection.cols + ci
-    fieldForInjection.vx[cellIdx]! += ax * finalScale
-    fieldForInjection.vy[cellIdx]! += ay * finalScale
-  } else {
-    p.vx += ax * finalScale
-    p.vy += ay * finalScale
+  /** Two interaction modes:
+   *
+   * 1. **Field-driven cursor (Newmix style).** When `fieldDrivenCursor` is on,
+   *    the velocity field is the SINGLE source of cursor influence: the
+   *    per-frame `injectVelocity()` call splats cursor velocity into cells
+   *    around the cursor with a 1/r-style falloff, particles read the field
+   *    bilinearly later in the loop, pressure projection holds the curl
+   *    shape. There is NO per-particle cursor impulse — that would deposit
+   *    a second, fragmented force into individual cells and fight pressure
+   *    projection, which empirically smears rings into a diffuse halo.
+   *    So we skip both the field deposit and the particle deposit here.
+   *
+   * 2. **Direct cursor push (legacy).** When `fieldDrivenCursor` is off, the
+   *    cursor's swirl/push profile (sideSwirl + frontPush + backInward, etc.)
+   *    is applied directly to particle velocity. Used by older modes.
+   *
+   * `fieldForInjection` is only forwarded to keep the call site shape stable;
+   * we no longer write to it (kept as a parameter so future changes can
+   * re-enable the per-particle deposit if needed). */
+  void fieldForInjection
+  if (t.fieldDrivenCursor > 0.5 && t.fieldStrength > 0) {
+    /** Skip — bulk inject is the sole cursor → field path. */
+    return
   }
+  p.vx += ax * finalScale
+  p.vy += ay * finalScale
 }
 
 /**
@@ -1660,7 +1652,13 @@ function drawLayer(
   useDualPass = true,
   /** Optional linear gradient overlay applied to the rendered particle pixels via
    * `globalCompositeOperation = 'source-in'`. `angleDeg` follows CSS convention. */
-  wordmarkGradient: { angleDeg: number; stops: string[] } | null = null
+  wordmarkGradient: { angleDeg: number; stops: string[] } | null = null,
+  /** Per-particle alpha boost proportional to particle speed
+   * (`hypot(vx, vy) * boost`, clamped to `boostCap`). Reproduces the
+   * Newmix effect where moving particles read slightly brighter than
+   * resting ones. 0 disables. */
+  velocityAlphaBoost = 0,
+  velocityAlphaBoostCap = 0.35
 ) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   /** Smoothing on so the soft sprite blits scale cleanly when the canvas is at a
@@ -1719,14 +1717,23 @@ function drawLayer(
     }
   }
 
+  const velBoostOn = velocityAlphaBoost > 0
   const drawOne = (p: ParallaxParticle) => {
     const ba = Number.isFinite(p.baseAlpha) ? p.baseAlpha : PARTICLE_BASE_ALPHA
     const op = Number.isFinite(p.entranceOpacity) ? p.entranceOpacity : 1
     /** Trailing particles render at a lower alpha so the wake reads as ghostly. */
     const wakeMul = p.bhTrailUntilMs != null ? wakeAlphaMult : 1
+    /** Velocity-based luminosity bump — moving particles read slightly
+     * brighter than resting ones, reproducing the Newmix effect where the
+     * cursor's wake is illuminated. Boost = speed * coefficient, capped. */
+    let velBoost = 0
+    if (velBoostOn) {
+      const speed = Math.hypot(p.vx, p.vy)
+      velBoost = Math.min(velocityAlphaBoostCap, speed * velocityAlphaBoost)
+    }
     const alpha = Math.min(
       PARTICLE_ALPHA_CAP,
-      Math.max(0, ba * ANIMATED_PARTICLE_ALPHA_MULT * op * wakeMul)
+      Math.max(0, ba * ANIMATED_PARTICLE_ALPHA_MULT * op * wakeMul + velBoost)
     )
     const hx = Number.isFinite(p.hx) ? p.hx : 0
     const hy = Number.isFinite(p.hy) ? p.hy : 0
@@ -3153,12 +3160,12 @@ export default function HomeParticleLogoHero({
                   1,
                   Math.ceil(strokeDist / subdivPx)
                 )
-                /** Spread total inject across the steps so accumulated
-                 * energy doesn't scale with cursor speed (a flick at 100
-                 * px/frame would otherwise deposit 16× more than a slow
-                 * drag — the flick already deposits along a longer path,
-                 * which is the only fair amplification). */
-                const perStepStrength = nm.fieldInjectStrength / steps
+                /** Each subdivided sample deposits the FULL strength;
+                 * cursor speed amplifies total energy along the path
+                 * (more samples × full strength). This matches Newmix's
+                 * stirring metaphor — a flick across the wordmark
+                 * deposits more than a slow drag, as expected. */
+                const perStepStrength = nm.fieldInjectStrength
                 for (let s = 1; s <= steps; s++) {
                   const u = s / steps
                   injectVelocity(
@@ -3945,7 +3952,9 @@ export default function HomeParticleLogoHero({
           newmix && nm != null ? nm.wakeAlphaMult : 1,
           /** Newmix mode uses crisp single-pass rendering; other modes keep the dual-pass bloom. */
           !newmix,
-          wordmarkGradientRef.current
+          wordmarkGradientRef.current,
+          newmix && nm != null ? nm.velocityAlphaBoost : 0,
+          newmix && nm != null ? nm.velocityAlphaBoostCap : 0.35
         )
         /** Apply the metaball blur+contrast pass after the particles are
          * rendered. Cached offscreen lives on a ref. */

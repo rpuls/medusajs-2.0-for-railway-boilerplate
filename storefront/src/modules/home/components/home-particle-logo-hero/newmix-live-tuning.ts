@@ -261,6 +261,16 @@ export type NewmixLiveTuning = {
    * Newmix uses 6px. 0 = no subdivision (only inject at endpoint). */
   fieldStrokeSubdivisionPx: number
 
+  /** Render-time alpha boost on particles with non-trivial velocity.
+   * `boost = min(velocityAlphaBoostCap, hypot(vx, vy) * velocityAlphaBoost)`
+   * is added to the particle's alpha at draw time. Reproduces the Newmix
+   * effect where particles in motion read slightly brighter than resting
+   * particles, making the cursor's wake feel illuminated. 0 = disabled. */
+  velocityAlphaBoost: number
+  /** Maximum additional alpha contributed by `velocityAlphaBoost`. Caps the
+   * effect so a fast-moving particle can't blow out to fully opaque. */
+  velocityAlphaBoostCap: number
+
   /** Hard ceiling on per-particle velocity (bitmap px / frame). After every
    * velocity update, if `hypot(vx, vy) > limit`, the velocity is rescaled to
    * the limit. Newmix uses 30 px/frame — without this, a hot velocity field
@@ -371,6 +381,10 @@ export const NEWMIX_LIVE_TUNING_DEFAULTS = Object.freeze<NewmixLiveTuning>({
   /** Crema layer — disabled by default. */
   foamFraction: 0.0,
   foamForceMultiplier: 1.6,
+  /** Render-time alpha boost on moving particles — disabled by default.
+   * Recommended starting point: amount 0.05, cap 0.35 (subtle but visible). */
+  velocityAlphaBoost: 0.0,
+  velocityAlphaBoostCap: 0.35,
   /** Hard particle velocity clamp — Newmix uses 30 px/frame. */
   particleSpeedLimit: 30,
   /** Asymmetric paddling — disabled by default. */
