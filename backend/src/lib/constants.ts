@@ -145,6 +145,14 @@ export const MONTHLY_DIGEST_RECIPIENTS = process.env.MONTHLY_DIGEST_RECIPIENTS
  */
 export const ADMIN_PUBLIC_URL = process.env.ADMIN_PUBLIC_URL
 
+/**
+ * Reorder reminder cron is opt-in. Set to "true" only after dry-running
+ * the candidate list to confirm the cadence model produces sensible
+ * matches against real data — the cron writes to customers' inboxes.
+ */
+export const REORDER_REMINDERS_ENABLED =
+  String(process.env.REORDER_REMINDERS_ENABLED).toLowerCase() === "true"
+
 /** If set, GET /key-exchange requires header x-medusa-key-exchange-secret (same value). */
 export const KEY_EXCHANGE_SECRET = process.env.KEY_EXCHANGE_SECRET
 

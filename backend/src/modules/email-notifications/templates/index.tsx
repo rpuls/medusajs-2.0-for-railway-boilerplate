@@ -27,6 +27,11 @@ import {
   MonthlyDigestEmail,
   isMonthlyDigestData,
 } from './monthly-digest'
+import {
+  REORDER_REMINDER,
+  ReorderReminderEmail,
+  isReorderReminderData,
+} from './reorder-reminder'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -36,6 +41,7 @@ export const EmailTemplates = {
   CART_REMINDER,
   ORDER_PRODUCTION_STAGE,
   MONTHLY_DIGEST,
+  REORDER_REMINDER,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -105,6 +111,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <MonthlyDigestEmail {...data} />
 
+    case EmailTemplates.REORDER_REMINDER:
+      if (!isReorderReminderData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.REORDER_REMINDER}"`
+        )
+      }
+      return <ReorderReminderEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -119,4 +134,5 @@ export {
   OrderShippedTemplate,
   OrderProductionStageTemplate,
   MonthlyDigestEmail,
+  ReorderReminderEmail,
 }
