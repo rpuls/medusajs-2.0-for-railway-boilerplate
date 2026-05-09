@@ -132,6 +132,19 @@ export const SUPPORT_REPLY_TO_EMAIL =
  */
 export const NEWSLETTER_NOTIFICATION_EMAIL = process.env.NEWSLETTER_NOTIFICATION_EMAIL
 
+/**
+ * Comma-separated list of inboxes that receive the monthly Reports digest
+ * (1st of every month). Unset = digest is generated but not sent — useful
+ * in dev. Required to be a verified Resend domain in production.
+ */
+export const MONTHLY_DIGEST_RECIPIENTS = process.env.MONTHLY_DIGEST_RECIPIENTS
+
+/**
+ * Used to build the "Open the full Reports page →" link in the digest email.
+ * Falls back to BACKEND_URL.
+ */
+export const ADMIN_PUBLIC_URL = process.env.ADMIN_PUBLIC_URL
+
 /** If set, GET /key-exchange requires header x-medusa-key-exchange-secret (same value). */
 export const KEY_EXCHANGE_SECRET = process.env.KEY_EXCHANGE_SECRET
 
