@@ -73,9 +73,16 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const periodMs = to.getTime() - from.getTime()
   const priorTo = new Date(from)
   const priorFrom = new Date(from.getTime() - periodMs)
+  // Year-on-year window: same window 365 days earlier. Used for the
+  // overlay line on the time-series chart so the operator can see
+  // "this Tuesday vs Tuesday last year" rather than just rolling 30d.
+  const yoyShiftMs = 365 * 86_400_000
+  const yoyFrom = new Date(from.getTime() - yoyShiftMs)
+  const yoyTo = new Date(to.getTime() - yoyShiftMs)
 
   const inPeriod: any[] = []
   const inPriorPeriod: any[] = []
+  const inYoyPeriod: any[] = []
   for (const o of orders) {
     if (!matchesRegion(o, regionFilter)) continue
     if (o?.status === "canceled") {
@@ -83,6 +90,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
     if (inRange(o?.created_at, from, to)) inPeriod.push(o)
     else if (inRange(o?.created_at, priorFrom, priorTo)) inPriorPeriod.push(o)
+    if (inRange(o?.created_at, yoyFrom, yoyTo)) inYoyPeriod.push(o)
   }
 
   const aggregate = (rows: any[]) => {
@@ -111,17 +119,42 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const dayCount = Math.ceil(periodMs / 86_400_000) + 1
   const granularity: "day" | "week" = dayCount <= 60 ? "day" : "week"
 
-  type SeriesPoint = { bucket: string; orders: number; revenue: number }
+  type SeriesPoint = {
+    bucket: string
+    orders: number
+    revenue: number
+    yoy_orders: number
+    yoy_revenue: number
+  }
   let series: SeriesPoint[] = []
   if (granularity === "week") {
     const { buckets, findBucket } = buildWeekBuckets(from, to)
-    series = buckets.map((b) => ({ bucket: b.label, orders: 0, revenue: 0 }))
+    series = buckets.map((b) => ({
+      bucket: b.label,
+      orders: 0,
+      revenue: 0,
+      yoy_orders: 0,
+      yoy_revenue: 0,
+    }))
     for (const o of inPeriod) {
       if (o.status === "canceled") continue
       const idx = findBucket(o.created_at)
       if (idx >= 0 && idx < series.length) {
         series[idx].orders += 1
         series[idx].revenue += Number(o.total ?? 0)
+      }
+    }
+    // YoY: shift each YoY order's created_at forward by 365 days so it
+    // falls in the current-period buckets, then bucket as normal.
+    for (const o of inYoyPeriod) {
+      if (o.status === "canceled") continue
+      const ms = Date.parse(o?.created_at ?? "")
+      if (!Number.isFinite(ms)) continue
+      const shiftedIso = new Date(ms + yoyShiftMs).toISOString()
+      const idx = findBucket(shiftedIso)
+      if (idx >= 0 && idx < series.length) {
+        series[idx].yoy_orders += 1
+        series[idx].yoy_revenue += Number(o.total ?? 0)
       }
     }
   } else {
@@ -134,20 +167,35 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       const label = new Date(t).toISOString().slice(0, 10)
       days.push({ start: t, label })
     }
-    const findDailyBucket = (iso: string): number => {
-      const t = Date.parse(iso)
-      if (!Number.isFinite(t)) return -1
-      const offsetDays = Math.floor((t - days[0].start) / 86_400_000)
+    const findDailyBucket = (ms: number): number => {
+      if (!Number.isFinite(ms)) return -1
+      const offsetDays = Math.floor((ms - days[0].start) / 86_400_000)
       if (offsetDays < 0 || offsetDays >= days.length) return -1
       return offsetDays
     }
-    series = days.map((d) => ({ bucket: d.label, orders: 0, revenue: 0 }))
+    series = days.map((d) => ({
+      bucket: d.label,
+      orders: 0,
+      revenue: 0,
+      yoy_orders: 0,
+      yoy_revenue: 0,
+    }))
     for (const o of inPeriod) {
       if (o.status === "canceled") continue
-      const idx = findDailyBucket(o.created_at)
+      const idx = findDailyBucket(Date.parse(o.created_at ?? ""))
       if (idx >= 0 && idx < series.length) {
         series[idx].orders += 1
         series[idx].revenue += Number(o.total ?? 0)
+      }
+    }
+    for (const o of inYoyPeriod) {
+      if (o.status === "canceled") continue
+      const ms = Date.parse(o?.created_at ?? "")
+      if (!Number.isFinite(ms)) continue
+      const idx = findDailyBucket(ms + yoyShiftMs)
+      if (idx >= 0 && idx < series.length) {
+        series[idx].yoy_orders += 1
+        series[idx].yoy_revenue += Number(o.total ?? 0)
       }
     }
   }
@@ -155,6 +203,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   series = series.map((p) => ({
     ...p,
     revenue: Math.round(p.revenue * 100) / 100,
+    yoy_revenue: Math.round(p.yoy_revenue * 100) / 100,
   }))
 
   // Top regions by revenue.

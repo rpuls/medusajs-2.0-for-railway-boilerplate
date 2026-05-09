@@ -40,6 +40,7 @@ import { CustomizerFunnelChart } from "../../components/reports/customizer-funne
 import { SavedDesignConversionChart } from "../../components/reports/saved-design-conversion-chart"
 import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
 import { EmailChannelRoiChart } from "../../components/reports/email-channel-roi-chart"
+import { AnnotationsManager } from "../../components/reports/annotations-manager"
 import {
   buildPreset,
   formatDateRange,
@@ -148,6 +149,9 @@ const ReportsPage = () => {
             : ""}
         </Text>
       </Container>
+
+      {/* Annotations strip */}
+      <AnnotationsManager />
 
       {/* Tabs */}
       <Tabs defaultValue="sales">
