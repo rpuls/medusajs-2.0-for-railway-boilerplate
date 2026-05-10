@@ -10,6 +10,7 @@ import {
   SHIPSTATION_API_KEY,
   SHIPSTATION_WEBHOOK_SECRET,
 } from "../../../lib/constants"
+import { getPostHog } from "../../../lib/posthog"
 import { ShipStationClient } from "../../../modules/shipstation/client"
 import type { Label, Shipment } from "../../../modules/shipstation/types"
 
@@ -445,6 +446,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
       return
     }
+  }
+
+  if (handledShippedEvent && newParcels.length) {
+    getPostHog()?.capture({
+      distinctId: `order_${orderId}`,
+      event: "shipstation shipment shipped",
+      properties: {
+        order_id: orderId,
+        fulfillment_id: fulfillment.id,
+        parcel_count: newParcels.length,
+        carrier_code: newParcels[0]?.carrier_code ?? null,
+        service_code: newParcels[0]?.service_code ?? null,
+      },
+    })
   }
 
   res.status(200).json({

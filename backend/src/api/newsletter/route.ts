@@ -10,6 +10,7 @@ import {
 } from "../../lib/constants"
 import { isValidEmail } from "../../lib/email-validation"
 import { parseNotificationEmailList } from "../../lib/notification-recipients"
+import { getPostHog } from "../../lib/posthog"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -153,6 +154,16 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       console.error("Failed to send newsletter subscription notification", error)
     }
   }
+
+  getPostHog()?.capture({
+    distinctId: email,
+    event: "newsletter subscribed",
+    properties: {
+      subscription_id: subscriptionId,
+      source_origin: sourceOrigin ?? null,
+      $set: { email },
+    },
+  })
 
   return res.status(200).json({
     success: true,

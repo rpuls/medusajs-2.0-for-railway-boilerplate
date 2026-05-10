@@ -16,6 +16,7 @@ import {
   RemoteJoinerGraphLike,
   resolveGarmentUnitAmountMajor,
 } from "../../../../../lib/scp-resolve-garment-unit-price"
+import { getPostHog } from "../../../../../lib/posthog"
 
 const cartParamsSchema = z.object({ id: z.string().min(1) })
 
@@ -245,6 +246,23 @@ async function embroideryLineItemsPostHandler(req: MedusaRequest, res: MedusaRes
       `Embroidery cart-add ran but did not append the line (variant ${variantId}, qty ${quantity}, unit_price ${finalUnitPriceMajor}).`
     )
   }
+
+  const distinctId = (req as any).auth_context?.actor_id ?? `cart_${cartId}`
+  getPostHog()?.capture({
+    distinctId,
+    event: "embroidery line item added",
+    properties: {
+      cart_id: cartId,
+      variant_id: variantId,
+      quantity,
+      unit_price_major: finalUnitPriceMajor,
+      stitch_count: embroidery.stitch_count,
+      placement: embroidery.placement,
+      tier_index: tierIndex,
+      tier_label: tierLabel,
+      include_digitizing: embroidery.include_digitizing,
+    },
+  })
 
   res.status(201).json({
     line_item_id: matchingItem.id,

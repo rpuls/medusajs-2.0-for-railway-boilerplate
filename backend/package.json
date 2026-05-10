@@ -59,6 +59,7 @@
     "medusajs-launch-utils": "0.0.19",
     "minio": "^8.0.7",
     "pg": "^8.20.0",
+    "posthog-node": "^5.0.0",
     "recharts": "3.8.1",
     "resend": "6.12.3",
     "sharp": "^0.34.4",

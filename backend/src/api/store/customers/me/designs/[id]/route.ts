@@ -7,6 +7,7 @@ import { z } from "zod"
 
 import { DESIGNS_MODULE } from "../../../../../../modules/designs"
 import type DesignsModuleService from "../../../../../../modules/designs/service"
+import { getPostHog } from "../../../../../../lib/posthog"
 
 const paramsSchema = z.object({ id: z.string().min(1) })
 
@@ -93,6 +94,15 @@ export async function DELETE(
   const { design, designsService } = await loadOwnedDesign(req, params.id, customerId)
 
   await designsService.deleteDesigns(design.id)
+
+  getPostHog()?.capture({
+    distinctId: customerId,
+    event: "design deleted",
+    properties: {
+      design_id: design.id,
+      design_name: design.name ?? null,
+    },
+  })
 
   res.json({ id: design.id, deleted: true })
 }

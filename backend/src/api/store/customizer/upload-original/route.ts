@@ -3,6 +3,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 import { z } from "zod"
 
 import { uploadCustomerOriginalFile } from "../../../../services/customizer-render/upload-original-storage"
+import { getPostHog } from "../../../../lib/posthog"
 
 const bodySchema = z.object({
   fileName: z.string().min(1).max(255),
@@ -39,6 +40,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       "File storage is not configured (MinIO / S3 env missing). Customer originals cannot be archived."
     )
   }
+  const distinctId = (req as any).auth_context?.actor_id ?? "anonymous"
+  getPostHog()?.capture({
+    distinctId,
+    event: "original file uploaded",
+    properties: {
+      file_name: parsed.data.fileName,
+      mime_type: parsed.data.mimeType,
+      bytes: buffer.length,
+    },
+  })
+
   return res.status(200).json({
     success: true,
     url,

@@ -5,6 +5,7 @@ import { Pool } from "pg"
 import { ulid } from "ulid"
 
 import { CONTACT_NOTIFICATION_EMAIL, DATABASE_URL, SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
+import { getPostHog } from "../../lib/posthog"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -192,6 +193,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       console.error("Failed to send cart reminder notification", error)
     }
   }
+
+  getPostHog()?.capture({
+    distinctId: email,
+    event: "abandoned cart captured",
+    properties: {
+      cart_id: cartId,
+      item_count: itemCount,
+      cart_total: cartTotal,
+      currency_code: currencyCode ?? null,
+      country_code: countryCode ?? null,
+      notify_customer: notifyCustomer,
+      $set: { email },
+    },
+  })
 
   return res.status(200).json({
     success: true,

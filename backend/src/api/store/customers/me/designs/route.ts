@@ -7,6 +7,7 @@ import { z } from "zod"
 
 import { DESIGNS_MODULE } from "../../../../../modules/designs"
 import type DesignsModuleService from "../../../../../modules/designs/service"
+import { getPostHog } from "../../../../../lib/posthog"
 
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -72,6 +73,17 @@ export async function POST(
       customizer_metadata: body.customizer_metadata,
     },
   ])
+
+  getPostHog()?.capture({
+    distinctId: customerId,
+    event: "design saved",
+    properties: {
+      design_id: created.id,
+      design_name: body.name,
+      base_product_id: body.base_product_id ?? null,
+      base_variant_id: body.base_variant_id ?? null,
+    },
+  })
 
   res.status(201).json({ design: created })
 }

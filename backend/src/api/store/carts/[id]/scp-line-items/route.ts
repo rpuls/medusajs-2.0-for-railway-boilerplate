@@ -21,6 +21,7 @@ import {
   RemoteJoinerGraphLike,
   resolveGarmentUnitAmountMajor,
 } from "../../../../../lib/scp-resolve-garment-unit-price"
+import { getPostHog } from "../../../../../lib/posthog"
 
 const cartParamsSchema = z.object({
   id: z.string().min(1),
@@ -281,6 +282,22 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
   // assertion above (line appended for `variantId`, count went up) is enough
   // to rule out a silent no-op; storefront-side display issues are caught by
   // the `assertLineItemsLookHealthy` guard in `storefront/src/lib/data/cart.ts`.
+
+  const distinctId = (req as any).auth_context?.actor_id ?? `cart_${cartId}`
+  getPostHog()?.capture({
+    distinctId,
+    event: "scp line item added",
+    properties: {
+      cart_id: cartId,
+      variant_id: variantId,
+      quantity,
+      unit_price_major: unitPriceMajor,
+      print_size_id: printSizeId,
+      tier_index: tierIndex,
+      quantity_tier_label: SCP_BLANK_ALIGNED_QUANTITY_TIERS[tierIndex]?.label ?? null,
+      decorated_sides: decoratedSides.length,
+    },
+  })
 
   return res.status(200).json({
     ok: true,

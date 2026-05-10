@@ -14,6 +14,7 @@ import {
   type ProductionStageHistoryEntry,
   isProductionStage,
 } from "../../../../../lib/production-stage"
+import { getPostHog } from "../../../../../lib/posthog"
 
 const paramsSchema = z.object({ id: z.string().min(1) })
 
@@ -159,6 +160,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         }`
       )
   }
+
+  const adminId = changedBy ?? "admin"
+  getPostHog()?.capture({
+    distinctId: adminId,
+    event: "production stage changed",
+    properties: {
+      order_id: order.id,
+      from_stage: fromStage,
+      to_stage: toStage,
+      changed_at: changedAt,
+      has_note: !!(body.note?.length),
+    },
+  })
 
   return res.json({
     ok: true,

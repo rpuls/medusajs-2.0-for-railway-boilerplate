@@ -13,6 +13,7 @@ import {
   SUPPORT_REPLY_TO_EMAIL,
 } from "../lib/constants"
 import { parseNotificationEmailList } from "../lib/notification-recipients"
+import { getPostHog } from "../lib/posthog"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 
 export default async function orderPlacedHandler({
@@ -36,6 +37,33 @@ export default async function orderPlacedHandler({
     )
     return
   }
+
+  // Identify the customer and track the order placement
+  const distinctId = (order as any).customer_id ?? order.email ?? data.id
+  const posthog = getPostHog()
+  if (posthog && order.email) {
+    posthog.identify({
+      distinctId,
+      properties: {
+        email: order.email,
+        $set: { email: order.email },
+        $set_once: { first_order_id: data.id },
+      },
+    })
+  }
+  posthog?.capture({
+    distinctId,
+    event: "order placed",
+    properties: {
+      order_id: data.id,
+      display_id: (order as any).display_id ?? null,
+      item_count: (order.items ?? []).length,
+      currency_code: order.currency_code ?? null,
+      total: (order as any).summary?.current_order_total ?? null,
+      email: order.email ?? null,
+      country_code: shippingAddress.country_code ?? null,
+    },
+  })
 
   const displayId = (order as { display_id?: string | number }).display_id ?? data.id
   const replyToSupport = SUPPORT_REPLY_TO_EMAIL

@@ -5,6 +5,7 @@ import { Pool } from "pg"
 import { ulid } from "ulid"
 import { CONTACT_NOTIFICATION_EMAIL, DATABASE_URL } from "../../lib/constants"
 import { isValidEmail } from "../../lib/email-validation"
+import { getPostHog } from "../../lib/posthog"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -202,6 +203,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   console.log("Contact submission received", { submissionId, email, subject })
+
+  getPostHog()?.capture({
+    distinctId: email,
+    event: "contact form submitted",
+    properties: {
+      submission_id: submissionId,
+      subject: subject ?? null,
+      source_origin: sourceOrigin ?? null,
+      $set: { email },
+    },
+  })
 
   return res.status(200).json({
     success: true,

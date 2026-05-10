@@ -169,7 +169,12 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
       >
         <div style={{ textAlign: "center" }}>
           <p style={{ fontSize: "1.8rem", fontWeight: "400", margin: 0, lineHeight: 1.2 }}>
-            Daniel Mudie Cunningham
+            <Link
+              href={`/${countryCode}/dan`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              Daniel Mudie Cunningham
+            </Link>
           </p>
           <p style={{ fontSize: "1.1rem", fontWeight: "400", margin: "0.3rem 0 0" }}>
             Curation, Creation, Criticism
