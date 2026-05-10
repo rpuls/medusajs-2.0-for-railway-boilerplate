@@ -26,6 +26,8 @@ import {
   type DecorationMethodKey,
 } from "../../lib/reports/palette"
 
+import { CalendarView } from "./components/calendar-view"
+
 /* ---------- types mirrored from /admin/reports/production-snapshot ------- */
 
 type DecorationMethod = DecorationMethodKey
@@ -45,6 +47,7 @@ type SnapshotOrder = {
   is_stuck: boolean
   stage_changed_at: string | null
   sent_to_ascolour: boolean
+  production_due_date: string | null
 }
 
 type SnapshotStage = {
@@ -190,7 +193,13 @@ const ProductionPage = () => {
   const [autoRefresh, setAutoRefresh] = useState(false)
 
   // Filter state
-  const [view, setView] = useState<"list" | "kanban">("list")
+  const [view, setView] = useState<"list" | "kanban" | "calendar">(() => {
+    try {
+      const v = localStorage.getItem("prod_view")
+      if (v === "list" || v === "kanban" || v === "calendar") return v
+    } catch {}
+    return "list"
+  })
   const [methods, setMethods] = useState<Set<DecorationMethod>>(initial.methods)
   const [supplier, setSupplier] = useState<"all" | "ascolour" | "other">(
     initial.supplier
@@ -344,7 +353,11 @@ const ProductionPage = () => {
             <Label className="text-xs text-ui-fg-subtle">View</Label>
             <Select
               value={view}
-              onValueChange={(v) => setView(v as typeof view)}
+              onValueChange={(v) => {
+                const next = v as "list" | "kanban" | "calendar"
+                setView(next)
+                try { localStorage.setItem("prod_view", next) } catch {}
+              }}
             >
               <Select.Trigger>
                 <Select.Value />
@@ -352,6 +365,7 @@ const ProductionPage = () => {
               <Select.Content>
                 <Select.Item value="list">Stage list</Select.Item>
                 <Select.Item value="kanban">Kanban</Select.Item>
+                <Select.Item value="calendar">Calendar</Select.Item>
               </Select.Content>
             </Select>
           </div>
@@ -450,6 +464,10 @@ const ProductionPage = () => {
 
       {snapshot && view === "kanban" ? (
         <KanbanView stages={filteredStages} />
+      ) : null}
+
+      {snapshot && view === "calendar" ? (
+        <CalendarView stages={filteredStages} />
       ) : null}
 
       {/* Drill-down drawer */}

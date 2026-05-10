@@ -171,6 +171,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     is_stuck: boolean
     stage_changed_at: string | null
     sent_to_ascolour: boolean
+    production_due_date: string | null
   }
 
   const stageBuckets: Record<ProductionStage, OrderSummary[]> = Object.fromEntries(
@@ -241,6 +242,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       is_stuck: isStuck,
       stage_changed_at: stageChangedAt,
       sent_to_ascolour: sentToAscolour,
+      production_due_date:
+        typeof meta.production_due_date === "string"
+          ? (meta.production_due_date as string)
+          : null,
     })
   }
 
@@ -316,6 +321,7 @@ export type ProductionSnapshotResponse = {
       is_stuck: boolean
       stage_changed_at: string | null
       sent_to_ascolour: boolean
+      production_due_date: string | null
     }>
   }>
 }
