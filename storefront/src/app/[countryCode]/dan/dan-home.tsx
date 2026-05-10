@@ -72,7 +72,14 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
   const bioParagraphs = [
     <>
       Dr Daniel Mudie Cunningham is an artist, curator, writer and educator, and the Director of{" "}
-      <span style={{ textDecoration: "underline" }}>Wollongong Art Gallery.</span>
+      <Link
+        href="https://www.wollongongartgallery.au/"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ textDecoration: "underline" }}
+      >
+        Wollongong Art Gallery.
+      </Link>
     </>,
     <>
       As a respected arts leader and curator he has held roles at institutions including Carriageworks,

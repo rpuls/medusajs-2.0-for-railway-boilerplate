@@ -198,12 +198,13 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
           alt="Daniel Mudie Cunningham, Proud Mary, 2022 — Port Kembla"
           style={{ width: "100%", display: "block", objectFit: "cover" }}
         />
-        {/* Curtain overlay wipes away left-to-right */}
+        {/* Curtain overlay wipes away left-to-right (clip away pink from the right when revealed) */}
         <motion.div
           style={{ position: "absolute", inset: 0, background: "#f9c8d4", transformOrigin: "right" }}
           initial={false}
           animate={{
-            clipPath: heroInView || reduced ? "inset(0 0% 0 0)" : "inset(0 100% 0 0)",
+            clipPath:
+              heroInView || reduced ? "inset(0 100% 0 0)" : "inset(0 0% 0 0)",
           }}
           transition={reduced ? { duration: 0 } : { duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
         />
