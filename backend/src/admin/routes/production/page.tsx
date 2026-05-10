@@ -27,6 +27,7 @@ import {
 } from "../../lib/reports/palette"
 
 import { CalendarView } from "./components/calendar-view"
+import { BookmarkBar } from "./components/bookmark-bar"
 
 /* ---------- types mirrored from /admin/reports/production-snapshot ------- */
 
@@ -289,6 +290,39 @@ const ProductionPage = () => {
     [filteredStages, drillStage]
   )
 
+  /* bookmark serialization */
+  const currentBookmarkQuery = useMemo(() => {
+    const p = new URLSearchParams()
+    const isAllMethods =
+      methods.size === ALL_METHODS.length && ALL_METHODS.every((m) => methods.has(m))
+    if (!isAllMethods) p.set("method", Array.from(methods).join(","))
+    if (supplier !== "all") p.set("supplier", supplier)
+    if (stuckOnly) p.set("stuck", "1")
+    return p.toString()
+  }, [methods, supplier, stuckOnly])
+
+  const applyBookmark = useCallback(
+    (query: string) => {
+      const p = new URLSearchParams(query)
+      const rawMethod = p.get("method")
+      if (rawMethod) {
+        const parts = rawMethod
+          .split(",")
+          .map((m) => m.trim())
+          .filter((m): m is DecorationMethod =>
+            (ALL_METHODS as readonly string[]).includes(m)
+          )
+        setMethods(parts.length > 0 ? new Set(parts) : new Set(ALL_METHODS))
+      } else {
+        setMethods(new Set(ALL_METHODS))
+      }
+      const s = p.get("supplier")
+      setSupplier(s === "ascolour" || s === "other" ? s : "all")
+      setStuckOnly(p.get("stuck") === "1")
+    },
+    []
+  )
+
   /* ------------------------------------------------------------------- */
   return (
     <div className="flex flex-col gap-y-4">
@@ -437,6 +471,13 @@ const ProductionPage = () => {
           })}
         </div>
       </Container>
+
+      {/* Saved filter bookmarks */}
+      <BookmarkBar
+        target="production"
+        currentQuery={currentBookmarkQuery}
+        onApply={applyBookmark}
+      />
 
       {/* Body — error / loading / content */}
       {error ? (
