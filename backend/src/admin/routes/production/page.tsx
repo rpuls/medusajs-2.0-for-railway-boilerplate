@@ -31,7 +31,7 @@ import { BookmarkBar } from "./components/bookmark-bar"
 import {
   PRODUCTION_STAGES,
   PRODUCTION_STAGE_LABEL,
-} from "../../lib/production-stage"
+} from "../../../lib/production-stage"
 
 /* ---------- types mirrored from /admin/reports/production-snapshot ------- */
 
