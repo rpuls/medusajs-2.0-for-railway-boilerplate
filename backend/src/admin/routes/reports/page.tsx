@@ -40,6 +40,8 @@ import { StaffThroughputChart } from "../../components/reports/staff-throughput-
 import { SupplierLeadTimeChart } from "../../components/reports/supplier-lead-time-chart"
 import { FlowTimeChart } from "../../components/reports/flow-time-chart"
 import { StageDwellHeatmapChart } from "../../components/reports/stage-dwell-heatmap-chart"
+import { OnTimeDeliveryChart } from "../../components/reports/on-time-delivery-chart"
+import { ApprovalTurnaroundChart } from "../../components/reports/approval-turnaround-chart"
 import { CustomizerFunnelChart } from "../../components/reports/customizer-funnel-chart"
 import { SavedDesignConversionChart } from "../../components/reports/saved-design-conversion-chart"
 import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
@@ -293,7 +295,17 @@ const ReportsPage = () => {
               toIso={toIso}
               regionId={activeRegionId}
             />
+            <OnTimeDeliveryChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
             <SlaBreachChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <ApprovalTurnaroundChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
