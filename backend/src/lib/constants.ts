@@ -217,6 +217,33 @@ export const GA4_PROPERTY_ID = process.env.GA4_PROPERTY_ID
 export const SEO_IMPERSONATION_USER = process.env.SEO_IMPERSONATION_USER
 
 /**
+ * PostHog — read access for the operational tile.
+ *
+ * Two different keys are used:
+ *
+ *  - `POSTHOG_API_KEY` (already set, read by lib/posthog.ts): the **Project**
+ *    API key. Used by the SDK to *send* events (pageviews, identifies, etc).
+ *    It can't read insights.
+ *
+ *  - `POSTHOG_PERSONAL_API_KEY`: a **Personal** API key (Settings → Personal
+ *    API keys in PostHog). Required to *read* via PostHog's HTTP API. Treat
+ *    as a secret — it has the same permissions as your user account.
+ *
+ * `POSTHOG_PROJECT_ID` is the numeric project ID (visible in the URL when
+ * you're in a project, e.g. `app.posthog.com/project/12345/...`).
+ *
+ * `POSTHOG_HOST` defaults to `https://us.i.posthog.com` if unset; set it to
+ * `https://eu.i.posthog.com` for EU cloud or your self-hosted URL. Trailing
+ * slash is fine.
+ *
+ * All three are optional — when unset, the PostHog tile falls back to a
+ * static deep-link instead of live data.
+ */
+export const POSTHOG_HOST = process.env.POSTHOG_HOST
+export const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY
+export const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'
