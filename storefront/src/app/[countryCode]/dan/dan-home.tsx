@@ -12,17 +12,45 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
   return (
     <div className="dan-content" style={{ position: "relative", minHeight: "100vh" }}>
 
-      {/* DMC particle animation — top of page */}
-      <HomeParticleLogoHero
-        presentation="embedded"
-        interactionMode="newmix"
-        animatedParticleCap={55000}
-        logoSrc="/branding/dmc-logo-1.png"
-        inkPolarity="bright"
-        sectionAriaLabel="DMC particle logo"
-        newmixLiveTuning={V3_TUNING}
-        wordmarkGradient={WORDMARK_GRADIENT}
-      />
+      {/* DMC particle animation with photo-reveal behind it */}
+      <div style={{ position: "relative" }}>
+        {/* Proud Mary photo — sits below the particle canvas */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/dan/proud-mary-hero.webp"
+          alt=""
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+          }}
+        />
+        {/* Dark veil — dims photo at rest; mouse-displaced particles reveal image through it */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.72)",
+            pointerEvents: "none",
+          }}
+        />
+        <HomeParticleLogoHero
+          presentation="embedded"
+          interactionMode="newmix"
+          animatedParticleCap={55000}
+          logoSrc="/branding/dmc-logo-1.png"
+          inkPolarity="bright"
+          sectionAriaLabel="DMC particle logo"
+          newmixLiveTuning={V3_TUNING}
+          wordmarkGradient={WORDMARK_GRADIENT}
+          bgClassName=""
+        />
+      </div>
 
       {/* Header + image section — sits below the animation, fills the viewport */}
       <div
