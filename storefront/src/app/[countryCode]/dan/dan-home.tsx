@@ -2,19 +2,107 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { motion, useReducedMotion } from "framer-motion"
 
 import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-hero"
 import { V3_TUNING, WORDMARK_GRADIENT } from "../(main)/particle-flow/v3-splash"
 
+/** Per-word clip-up reveal — words slide in from below their own baseline. */
+function SplitTextReveal({
+  text,
+  style,
+  delayBase = 0,
+  reduced,
+}: {
+  text: string
+  style: React.CSSProperties
+  delayBase?: number
+  reduced: boolean
+}) {
+  const words = text.split(" ")
+  return (
+    <p style={{ ...style, display: "flex", flexWrap: "wrap", gap: "0 0.3em", margin: style.margin ?? 0 }}>
+      {words.map((word, i) => (
+        <span key={i} style={{ display: "inline-block", overflow: "hidden", lineHeight: style.lineHeight ?? 1.1 }}>
+          <motion.span
+            style={{ display: "inline-block" }}
+            initial={{ y: reduced ? 0 : "105%" }}
+            animate={{ y: 0 }}
+            transition={reduced ? { duration: 0 } : { duration: 0.55, delay: delayBase + i * 0.055, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {word}
+          </motion.span>
+        </span>
+      ))}
+    </p>
+  )
+}
+
+/** Nav link with underline that draws on hover/focus. */
+function DrawLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      style={{ textDecoration: "none", color: "#1a1a1a", fontWeight: "700", fontSize: "1rem", position: "relative" }}
+      className="group"
+    >
+      {children}
+      <span
+        style={{
+          position: "absolute",
+          bottom: -2,
+          left: 0,
+          height: 1,
+          width: "100%",
+          background: "#1a1a1a",
+          transformOrigin: "left",
+          transform: "scaleX(0)",
+          transition: "transform 0.28s ease-out",
+        }}
+        className="group-hover:scale-x-100 group-focus-visible:scale-x-100"
+      />
+    </Link>
+  )
+}
+
 export default function DanHome({ countryCode }: { countryCode: string }) {
   const [aboutOpen, setAboutOpen] = useState(false)
+  const reduced = useReducedMotion() ?? false
+
+  const bioParagraphs = [
+    <>
+      Dr Daniel Mudie Cunningham is an artist, curator, writer and educator, and the Director of{" "}
+      <span style={{ textDecoration: "underline" }}>Wollongong Art Gallery.</span>
+    </>,
+    <>
+      As a respected arts leader and curator he has held roles at institutions including Carriageworks,
+      Performance Space, Artbank, Cementa, Hazelhurst Arts Centre; and teaching roles at the National Art
+      School and Western Sydney University.
+    </>,
+    <>
+      His artistic work spans video, photography, performance and text, tracing how memory, grief and
+      identity are shaped through the technologies of popular culture and art history. His approach to
+      curation and education extends his artistic concerns, using archives and storytelling to connect
+      people, histories and ideas.
+    </>,
+    <>
+      Across three decades, his practice has approached the archive as both subject and medium — a living
+      record where personal and collective histories converge. His acclaimed work <em>Funeral Songs</em> is
+      a defining example of this distillation.
+    </>,
+    <>
+      His work has been widely exhibited and collected by institutions including the Art Gallery of Western
+      Australia, the National Film and Sound Archive, Artbank, the City of Sydney, Murray Art Museum
+      Albury, Campbelltown Arts Centre, and the Museum of Old and New Art (MONA), which is currently
+      presenting his ongoing video series <em>Proud Mary</em>.
+    </>,
+  ]
 
   return (
     <div className="dan-content" style={{ position: "relative", minHeight: "100vh" }}>
 
       {/* DMC particle animation with photo-reveal behind it */}
       <div style={{ position: "relative" }}>
-        {/* Proud Mary photo — sits below the particle canvas */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/dan/proud-mary-hero.webp"
@@ -29,7 +117,6 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
             objectPosition: "center",
           }}
         />
-        {/* Dark veil — dims photo at rest; mouse-displaced particles reveal image through it */}
         <div
           aria-hidden
           style={{
@@ -52,7 +139,7 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
         />
       </div>
 
-      {/* Header + image section — sits below the animation, fills the viewport */}
+      {/* Header + image section */}
       <div
         style={{
           height: "100vh",
@@ -61,7 +148,7 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
           overflow: "hidden",
         }}
       >
-        {/* Header */}
+        {/* Header — split-text reveal on mount */}
         <header
           className="dan-header"
           style={{
@@ -74,25 +161,18 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
           }}
         >
           <div style={{ textAlign: "center" }}>
-            <p
-              style={{
-                fontSize: "clamp(1.8rem, 3.5vw, 3.5rem)",
-                fontWeight: "400",
-                margin: 0,
-                lineHeight: 1.1,
-              }}
-            >
-              Daniel Mudie Cunningham
-            </p>
-            <p
-              style={{
-                fontSize: "clamp(1.4rem, 2.8vw, 2.8rem)",
-                fontWeight: "400",
-                margin: "0.2rem 0 0",
-              }}
-            >
-              Curation, Creation, Criticism
-            </p>
+            <SplitTextReveal
+              text="Daniel Mudie Cunningham"
+              style={{ fontSize: "clamp(1.8rem, 3.5vw, 3.5rem)", fontWeight: "400", lineHeight: 1.1 }}
+              delayBase={0.1}
+              reduced={reduced}
+            />
+            <SplitTextReveal
+              text="Curation, Creation, Criticism"
+              style={{ fontSize: "clamp(1.4rem, 2.8vw, 2.8rem)", fontWeight: "400", lineHeight: 1.2, margin: "0.2rem 0 0" }}
+              delayBase={0.35}
+              reduced={reduced}
+            />
           </div>
 
           <nav
@@ -117,44 +197,46 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
                   fontWeight: "700",
                   color: "#1a1a1a",
                   padding: 0,
+                  position: "relative",
                 }}
+                className="group"
               >
                 About
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: -2,
+                    left: 0,
+                    height: 1,
+                    width: "100%",
+                    background: "#1a1a1a",
+                    transformOrigin: "left",
+                    transform: "scaleX(0)",
+                    transition: "transform 0.28s ease-out",
+                  }}
+                  className="group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                />
               </button>
             )}
-            <Link
-              href={`/${countryCode}/dan/creation/proud-mary`}
-              style={{
-                textDecoration: "none",
-                color: "#1a1a1a",
-                fontWeight: "700",
-                fontSize: "1rem",
-              }}
-            >
-              Works
-            </Link>
+            <DrawLink href={`/${countryCode}/dan/creation/proud-mary`}>Works</DrawLink>
           </nav>
         </header>
 
         {/* Image + About panel */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* Jukebox image — full width when about closed, left half when open */}
+          {/* Jukebox image — Ken Burns slow pan/zoom */}
           <div style={{ flex: 1, overflow: "hidden", transition: "flex 0.5s ease" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <motion.img
+              // eslint-disable-next-line @next/next/no-img-element
               src="/dan/fs4-2000x1300-crop-1-q90.png"
               alt="Funeral Songs — jukebox installation"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center",
-                display: "block",
-              }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }}
+              animate={reduced ? {} : { scale: [1, 1.06], x: ["0%", "-3%"] }}
+              transition={reduced ? {} : { duration: 22, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
             />
           </div>
 
-          {/* About panel — slides in from right */}
+          {/* About panel — slides in from right; bio words blur in */}
           <div
             style={{
               width: aboutOpen ? "50%" : "0",
@@ -204,42 +286,25 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
               </h2>
 
               <div style={{ fontSize: "1rem", lineHeight: 1.75, maxWidth: "520px" }}>
-                <p style={{ marginTop: 0 }}>
-                  Dr Daniel Mudie Cunningham is an artist, curator, writer and
-                  educator, and the Director of{" "}
-                  <span style={{ textDecoration: "underline" }}>
-                    Wollongong Art Gallery.
-                  </span>
-                </p>
-                <p>
-                  As a respected arts leader and curator he has held roles at
-                  institutions including Carriageworks, Performance Space,
-                  Artbank, Cementa, Hazelhurst Arts Centre; and teaching roles
-                  at the National Art School and Western Sydney University.
-                </p>
-                <p>
-                  His artistic work spans video, photography, performance and
-                  text, tracing how memory, grief and identity are shaped
-                  through the technologies of popular culture and art history.
-                  His approach to curation and education extends his artistic
-                  concerns, using archives and storytelling to connect people,
-                  histories and ideas.
-                </p>
-                <p>
-                  Across three decades, his practice has approached the archive
-                  as both subject and medium — a living record where personal
-                  and collective histories converge. His acclaimed work{" "}
-                  <em>Funeral Songs</em> is a defining example of this
-                  distillation.
-                </p>
-                <p>
-                  His work has been widely exhibited and collected by
-                  institutions including the Art Gallery of Western Australia,
-                  the National Film and Sound Archive, Artbank, the City of
-                  Sydney, Murray Art Museum Albury, Campbelltown Arts Centre,
-                  and the Museum of Old and New Art (MONA), which is currently
-                  presenting his ongoing video series <em>Proud Mary</em>.
-                </p>
+                {bioParagraphs.map((para, i) => (
+                  <motion.p
+                    key={i}
+                    style={{ marginTop: i === 0 ? 0 : undefined }}
+                    initial={{ opacity: 0, filter: "blur(8px)" }}
+                    animate={
+                      aboutOpen
+                        ? { opacity: 1, filter: "blur(0px)" }
+                        : { opacity: 0, filter: "blur(8px)" }
+                    }
+                    transition={
+                      reduced
+                        ? { duration: 0 }
+                        : { duration: 0.5, delay: aboutOpen ? 0.3 + i * 0.08 : 0, ease: "easeOut" }
+                    }
+                  >
+                    {para}
+                  </motion.p>
+                ))}
               </div>
             </div>
           </div>

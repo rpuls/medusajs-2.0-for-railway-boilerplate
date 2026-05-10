@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
+import { useInView } from "react-intersection-observer"
 
 const slides = [
   {
@@ -55,8 +57,102 @@ const groupExhibitions = [
 
 const collections = ["Museum of Old and New Art"]
 
+/** Per-word clip-up reveal from below. */
+function SplitTextReveal({
+  text,
+  tag: Tag = "h1",
+  style,
+  reduced,
+}: {
+  text: string
+  tag?: "h1" | "h2" | "p"
+  style: React.CSSProperties
+  reduced: boolean
+}) {
+  const { ref, inView } = useInView({ threshold: 0.3, triggerOnce: true })
+  const words = text.split(" ")
+  return (
+    <Tag ref={ref} style={{ ...style, display: "flex", flexWrap: "wrap", gap: "0 0.3em" }}>
+      {words.map((word, i) => (
+        <span key={i} style={{ display: "inline-block", overflow: "hidden", lineHeight: style.lineHeight ?? 1.2 }}>
+          <motion.span
+            style={{ display: "inline-block" }}
+            initial={{ y: reduced ? 0 : "105%" }}
+            animate={{ y: inView || reduced ? 0 : "105%" }}
+            transition={reduced ? { duration: 0 } : { duration: 0.55, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {word}
+          </motion.span>
+        </span>
+      ))}
+    </Tag>
+  )
+}
+
+/** Staggered fade-up list. */
+function StaggerList({
+  items,
+  reduced,
+}: {
+  items: { title: string; venue: string }[]
+  reduced: boolean
+}) {
+  const { ref, inView } = useInView({ threshold: 0.2, triggerOnce: true })
+  return (
+    <div ref={ref}>
+      {items.map((ex, i) => (
+        <motion.p
+          key={i}
+          style={{ margin: "0.2rem 0" }}
+          initial={{ opacity: reduced ? 1 : 0, y: reduced ? 0 : 10 }}
+          animate={{ opacity: inView || reduced ? 1 : 0, y: inView || reduced ? 0 : 10 }}
+          transition={reduced ? { duration: 0 } : { duration: 0.35, delay: i * 0.06, ease: "easeOut" }}
+        >
+          {ex.title ? (
+            <>
+              <em>{ex.title}</em>, {ex.venue}
+            </>
+          ) : (
+            ex.venue
+          )}
+        </motion.p>
+      ))}
+    </div>
+  )
+}
+
+/** Thin line that sweeps in width from left. */
+function DividerSweep({ reduced }: { reduced: boolean }) {
+  const { ref, inView } = useInView({ threshold: 0.4, triggerOnce: true })
+  return (
+    <div ref={ref} style={{ padding: "0.5rem 0" }}>
+      <motion.div
+        style={{ height: 1, background: "rgba(26,26,26,0.25)", borderRadius: 9999 }}
+        initial={{ width: reduced ? "100%" : "0%" }}
+        animate={{ width: inView || reduced ? "100%" : "0%" }}
+        transition={reduced ? { duration: 0 } : { duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
+      />
+    </div>
+  )
+}
+
 export default function ProudMaryPage({ countryCode }: { countryCode: string }) {
   const [slide, setSlide] = useState(0)
+  const [dir, setDir] = useState(1)
+  const reduced = useReducedMotion() ?? false
+
+  const { ref: heroRef, inView: heroInView } = useInView({ threshold: 0.25, triggerOnce: true })
+
+  const goTo = (next: number) => {
+    setDir(next > slide ? 1 : -1)
+    setSlide(next)
+  }
+
+  const variants = {
+    enter: (d: number) => ({ x: reduced ? 0 : d * 40, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (d: number) => ({ x: reduced ? 0 : d * -40, opacity: 0 }),
+  }
 
   return (
     <div className="dan-content" style={{ minHeight: "100vh" }}>
@@ -84,27 +180,32 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
         </nav>
       </header>
 
-      {/* Work title */}
+      {/* Work title — split-text reveal */}
       <div style={{ padding: "0.5rem 2.5rem 2rem" }}>
-        <h1
-          style={{
-            fontSize: "clamp(1.5rem, 3.5vw, 2.5rem)",
-            fontWeight: "400",
-            margin: 0,
-            lineHeight: 1.2,
-          }}
-        >
-          Proud Mary, 2007, 2012, 2017, 2022, ongoing
-        </h1>
+        <SplitTextReveal
+          text="Proud Mary, 2007, 2012, 2017, 2022, ongoing"
+          tag="h1"
+          style={{ fontSize: "clamp(1.5rem, 3.5vw, 2.5rem)", fontWeight: "400", margin: 0, lineHeight: 1.2 }}
+          reduced={reduced}
+        />
       </div>
 
-      {/* Hero image */}
-      <div style={{ width: "100%", lineHeight: 0 }}>
+      {/* Hero image — curtain wipe reveal */}
+      <div ref={heroRef} style={{ width: "100%", lineHeight: 0, position: "relative", overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/dan/proud-mary-hero.webp"
           alt="Daniel Mudie Cunningham, Proud Mary, 2022 — Port Kembla"
           style={{ width: "100%", display: "block", objectFit: "cover" }}
+        />
+        {/* Curtain overlay wipes away left-to-right */}
+        <motion.div
+          style={{ position: "absolute", inset: 0, background: "#f9c8d4", transformOrigin: "right" }}
+          initial={false}
+          animate={{
+            clipPath: heroInView || reduced ? "inset(0 0% 0 0)" : "inset(0 100% 0 0)",
+          }}
+          transition={reduced ? { duration: 0 } : { duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
         />
       </div>
       <p
@@ -118,6 +219,11 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
       >
         Daniel Mudie Cunningham, Proud Mary, 2023
       </p>
+
+      {/* Divider sweep */}
+      <div style={{ padding: "0 2.5rem" }}>
+        <DividerSweep reduced={reduced} />
+      </div>
 
       {/* Two-column content */}
       <div
@@ -171,39 +277,19 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
           </div>
         </div>
 
-        {/* Right: exhibitions */}
+        {/* Right: exhibitions — staggered reveal */}
         <div style={{ fontSize: "0.95rem", lineHeight: 1.75 }}>
           <div style={{ marginBottom: "1.75rem" }}>
             <p style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", color: "#333" }}>
               Solo exhibitions:
             </p>
-            {soloExhibitions.map((ex, i) => (
-              <p key={i} style={{ margin: "0.2rem 0" }}>
-                {ex.title ? (
-                  <>
-                    <em>{ex.title}</em>, {ex.venue}
-                  </>
-                ) : (
-                  ex.venue
-                )}
-              </p>
-            ))}
+            <StaggerList items={soloExhibitions} reduced={reduced} />
           </div>
           <div style={{ marginBottom: "1.75rem" }}>
             <p style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", color: "#333" }}>
               Group exhibitions:
             </p>
-            {groupExhibitions.map((ex, i) => (
-              <p key={i} style={{ margin: "0.2rem 0" }}>
-                {ex.title ? (
-                  <>
-                    <em>{ex.title}</em>, {ex.venue}
-                  </>
-                ) : (
-                  ex.venue
-                )}
-              </p>
-            ))}
+            <StaggerList items={groupExhibitions} reduced={reduced} />
           </div>
           <div>
             <p style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", color: "#333" }}>
@@ -230,7 +316,7 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
         >
           {/* Prev arrow */}
           <button
-            onClick={() => setSlide((s) => (s - 1 + slides.length) % slides.length)}
+            onClick={() => goTo((slide - 1 + slides.length) % slides.length)}
             style={{
               flexShrink: 0,
               background: "none",
@@ -247,52 +333,64 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
             ←
           </button>
 
-          {/* Slide */}
-          <div style={{ flex: 1 }}>
-            {slides[slide].type === "video" ? (
-              <div
-                style={{
-                  position: "relative",
-                  paddingBottom: "56.25%",
-                  height: 0,
-                  overflow: "hidden",
-                  backgroundColor: "#111",
-                }}
+          {/* Slide — AnimatePresence fade + slight x shift */}
+          <div style={{ flex: 1, position: "relative" }}>
+            <AnimatePresence mode="wait" custom={dir}>
+              <motion.div
+                key={slide}
+                custom={dir}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={reduced ? { duration: 0 } : { duration: 0.35, ease: "easeInOut" }}
               >
-                <iframe
-                  title="Proud Mary — Daniel Mudie Cunningham"
-                  src="https://player.vimeo.com/video/776456784?h=de0f8d1013"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    border: 0,
-                  }}
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={(slides[slide] as { src: string }).src}
-                alt={(slides[slide] as { alt: string }).alt}
-                style={{
-                  width: "100%",
-                  aspectRatio: "16/9",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
-            )}
+                {slides[slide].type === "video" ? (
+                  <div
+                    style={{
+                      position: "relative",
+                      paddingBottom: "56.25%",
+                      height: 0,
+                      overflow: "hidden",
+                      backgroundColor: "#111",
+                    }}
+                  >
+                    <iframe
+                      title="Proud Mary — Daniel Mudie Cunningham"
+                      src="https://player.vimeo.com/video/776456784?h=de0f8d1013"
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        border: 0,
+                      }}
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={(slides[slide] as { src: string }).src}
+                    alt={(slides[slide] as { alt: string }).alt}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "16/9",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Next arrow */}
           <button
-            onClick={() => setSlide((s) => (s + 1) % slides.length)}
+            onClick={() => goTo((slide + 1) % slides.length)}
             style={{
               flexShrink: 0,
               background: "none",
@@ -335,7 +433,7 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
           {slides.map((_, i) => (
             <button
               key={i}
-              onClick={() => setSlide(i)}
+              onClick={() => goTo(i)}
               aria-label={`Go to slide ${i + 1}`}
               style={{
                 width: "8px",
