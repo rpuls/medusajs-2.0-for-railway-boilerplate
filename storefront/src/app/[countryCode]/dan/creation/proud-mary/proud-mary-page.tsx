@@ -101,7 +101,7 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
       <div style={{ width: "100%", lineHeight: 0 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/dan/proud-mary-hero.jpg"
+          src="/dan/proud-mary-hero.webp"
           alt="Daniel Mudie Cunningham, Proud Mary, 2022 — Port Kembla"
           style={{ width: "100%", display: "block", objectFit: "cover" }}
         />

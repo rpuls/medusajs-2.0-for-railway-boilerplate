@@ -84,7 +84,7 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/dan/jukebox.jpg"
+              src="/dan/fs4-2000x1300-crop-1-q90.png"
               alt="Funeral Songs — jukebox installation"
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
