@@ -126,6 +126,13 @@ const StripePaymentButton = ({
       return
     }
 
+    phCapture("payment_initiated", {
+      gateway: "stripe",
+      cart_id: cart.id,
+      value: Number(cart.total ?? 0),
+      currency: (cart.currency_code ?? "AUD").toUpperCase(),
+    })
+
     await stripe
       .confirmCardPayment(session?.data.client_secret as string, {
         payment_method: {

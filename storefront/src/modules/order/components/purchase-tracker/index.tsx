@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { HttpTypes } from "@medusajs/types"
 
 import { lineItemToItem, trackPurchase } from "@lib/analytics"
+import { phCapture } from "@lib/posthog"
 
 /**
  * Fires the GA4 `purchase` event exactly once per (transaction_id,
@@ -25,6 +26,12 @@ export const PurchaseTracker = ({ order }: { order: HttpTypes.StoreOrder }) => {
       tax: Number((order as any).tax_total ?? 0) || undefined,
       shipping: Number((order as any).shipping_total ?? 0) || undefined,
       items,
+    })
+    phCapture("order_completed", {
+      order_id: order.display_id ? String(order.display_id) : order.id,
+      value: Number(order.total ?? 0),
+      currency: (order.currency_code ?? "AUD").toUpperCase(),
+      item_count: (order.items ?? []).length,
     })
   }, [order])
   return null

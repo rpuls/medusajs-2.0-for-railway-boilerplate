@@ -66,3 +66,28 @@ export const phCapturePageView = (url?: string) => {
     // intentional silent
   }
 }
+
+/**
+ * posthog.init can finish slightly after the first route-change effect runs.
+ * Retrying avoids missing the initial $pageview (PostHog onboarding / session replay verify).
+ */
+export const phCapturePageViewWhenReady = (
+  url: string,
+  opts?: { maxAttempts?: number; intervalMs?: number }
+) => {
+  if (!isClient() || !url) return
+  const maxAttempts = opts?.maxAttempts ?? 50
+  const intervalMs = opts?.intervalMs ?? 50
+  let attempts = 0
+  const tick = () => {
+    if (isReady()) {
+      phCapturePageView(url)
+      return
+    }
+    attempts += 1
+    if (attempts < maxAttempts) {
+      window.setTimeout(tick, intervalMs)
+    }
+  }
+  tick()
+}

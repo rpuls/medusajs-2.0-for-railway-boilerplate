@@ -9,6 +9,7 @@ import {
   AsColourCreateOrderItem,
   AsColourCreateOrderRequest,
 } from "../../../../../modules/ascolour/types"
+import { getPostHog } from "../../../../../lib/posthog"
 
 const paramsSchema = z.object({ id: z.string().min(1) })
 
@@ -119,6 +120,22 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         ascolour_status: ascolourOrder.status ?? "Pending",
         ascolour_sent_at: new Date().toISOString(),
         ascolour_last_error: null,
+      },
+    })
+    const adminId =
+      (req as any).auth_context?.actor_id ??
+      (req as any).auth_context?.app_metadata?.user_id ??
+      "admin"
+    getPostHog()?.capture({
+      distinctId: adminId,
+      event: "order sent to ascolour",
+      properties: {
+        order_id: order.id,
+        ascolour_order_id: ascolourOrder.id,
+        ascolour_status: ascolourOrder.status ?? "Pending",
+        item_count: items.length,
+        shipping_method: shippingMethod,
+        reference,
       },
     })
     return res.json({

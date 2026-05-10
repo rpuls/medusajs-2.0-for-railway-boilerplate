@@ -1,6 +1,9 @@
+"use client"
+
 import { HttpTypes } from "@medusajs/types"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { phCapture } from "@lib/posthog"
 import LineItemMockupPreview from "@modules/customizer/components/line-item-mockup-preview"
 import {
   getCustomizerMetadata,
@@ -182,6 +185,10 @@ const ReorderActions = ({ order }: Props) => {
                     href={productHref}
                     className="inline-flex items-center justify-center rounded-md border border-ui-border-base bg-white px-4 py-2 text-sm font-medium text-ui-fg-base hover:bg-ui-bg-subtle"
                     data-testid="reorder-garment-link"
+                    onClick={() => phCapture("reorder_garment_clicked", {
+                      order_id: order.id,
+                      product_handle: group.productHandle ?? undefined,
+                    })}
                   >
                     Re-order garment
                   </LocalizedClientLink>
@@ -190,6 +197,11 @@ const ReorderActions = ({ order }: Props) => {
                   href={reorderHref}
                   className="inline-flex items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
                   data-testid="reorder-design-link"
+                  onClick={() => phCapture("reorder_design_clicked", {
+                    order_id: order.id,
+                    product_title: group.productTitle,
+                    total_qty: group.totalQty,
+                  })}
                 >
                   Re-order design
                 </LocalizedClientLink>

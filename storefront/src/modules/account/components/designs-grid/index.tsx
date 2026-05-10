@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { deleteMyDesign, renameMyDesign, type SavedDesign } from "@lib/data/designs"
+import { phCapture } from "@lib/posthog"
 
 type Props = {
   designs: SavedDesign[]
@@ -58,6 +59,7 @@ const DesignsGrid = ({ designs }: Props) => {
       setError(res.error)
       return
     }
+    phCapture("design_deleted", { design_id: id })
     startTransition(() => router.refresh())
   }
 
@@ -81,6 +83,7 @@ const DesignsGrid = ({ designs }: Props) => {
       setError(res.error)
       return
     }
+    phCapture("design_renamed", { design_id: id })
     startTransition(() => router.refresh())
   }
 

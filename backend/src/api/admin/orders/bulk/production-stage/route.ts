@@ -15,6 +15,7 @@ import {
   type ProductionStageChangedEvent,
   type ProductionStageHistoryEntry,
 } from "../../../../../lib/production-stage"
+import { getPostHog } from "../../../../../lib/posthog"
 
 /**
  * POST /admin/orders/bulk/production-stage
@@ -183,11 +184,31 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     })
   }
 
+  const changedCount = results.filter((r) => r.changed).length
+  const skippedCount = results.filter((r) => !r.changed && !r.error).length
+  const failedCount = results.filter((r) => Boolean(r.error)).length
+
+  if (changedCount > 0) {
+    const adminId = changedBy ?? "admin"
+    getPostHog()?.capture({
+      distinctId: adminId,
+      event: "bulk production stage changed",
+      properties: {
+        to_stage: toStage,
+        requested: body.order_ids.length,
+        changed: changedCount,
+        skipped: skippedCount,
+        failed: failedCount,
+        has_note: Boolean(note),
+      },
+    })
+  }
+
   return res.json({
     requested: body.order_ids.length,
-    changed: results.filter((r) => r.changed).length,
-    skipped: results.filter((r) => !r.changed && !r.error).length,
-    failed: results.filter((r) => Boolean(r.error)).length,
+    changed: changedCount,
+    skipped: skippedCount,
+    failed: failedCount,
     results,
   })
 }

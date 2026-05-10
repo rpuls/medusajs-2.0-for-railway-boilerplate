@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { z } from "zod"
 
 import { SEARCH_LOG_MODULE } from "../../../modules/search-log"
+import { getPostHog } from "../../../lib/posthog"
 
 /**
  * POST /store/search-events
@@ -50,5 +51,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   } catch (err: any) {
     logger.warn?.(`[search-events] log failed: ${err?.message ?? err}`)
   }
+
+  const distinctId = parsed.data.customer_id ?? "anonymous"
+  getPostHog()?.capture({
+    distinctId,
+    event: "site searched",
+    properties: {
+      query: parsed.data.query.trim(),
+      results_count: parsed.data.results_count,
+      country_code: parsed.data.country_code ?? null,
+    },
+  })
+
   res.status(204).end()
 }

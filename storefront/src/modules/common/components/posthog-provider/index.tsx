@@ -5,7 +5,7 @@ import { PostHogProvider as PHProvider } from "posthog-js/react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { Suspense, useEffect } from "react"
 
-import { phCapturePageView } from "@lib/posthog"
+import { phCapturePageViewWhenReady } from "@lib/posthog"
 
 /**
  * Bootstraps posthog-js once on the client, wraps children in the
@@ -72,7 +72,7 @@ const PageViewTracker = () => {
       (searchParams && searchParams.toString()
         ? `?${searchParams.toString()}`
         : "")
-    phCapturePageView(url)
+    phCapturePageViewWhenReady(url)
   }, [pathname, searchParams])
 
   return null

@@ -82,6 +82,17 @@ export async function POST(
     },
   ])
 
+  getPostHog()?.capture({
+    distinctId: customerId,
+    event: "design updated",
+    properties: {
+      design_id: design.id,
+      updated_name: body.name !== undefined,
+      updated_thumbnail: body.thumbnail_url !== undefined,
+      updated_metadata: body.customizer_metadata !== undefined,
+    },
+  })
+
   res.json({ design: updated })
 }
 
