@@ -1,6 +1,6 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
-import { Badge, Button, Container, Heading, Text, Textarea } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Text, Textarea } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
@@ -14,11 +14,13 @@ import {
 } from "../../lib/production-stage"
 
 const adminPath = (orderId: string) => `/admin/orders/${orderId}/production-stage`
+const dueDatePath = (orderId: string) => `/admin/orders/${orderId}/production-due-date`
 
 type StatusPayload = {
   production_stage: ProductionStage | null
   production_stage_changed_at: string | null
   production_stage_history: ProductionStageHistoryEntry[]
+  production_due_date?: string | null
 }
 
 const formatDate = (iso: string | null | undefined): string => {
@@ -51,6 +53,11 @@ const OrderProductionStageWidget = ({ data }: DetailWidgetProps<AdminOrder>) => 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Due date editing
+  const [dueDate, setDueDate] = useState<string>("")
+  const [savingDue, setSavingDue] = useState(false)
+  const [dueError, setDueError] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     if (!orderId) return
     setLoading(true)
@@ -67,6 +74,9 @@ const OrderProductionStageWidget = ({ data }: DetailWidgetProps<AdminOrder>) => 
       setStatus(body)
       if (body.production_stage) {
         setPendingStage(body.production_stage)
+      }
+      if (body.production_due_date) {
+        setDueDate(body.production_due_date.slice(0, 10))
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load production stage")
@@ -111,6 +121,25 @@ const OrderProductionStageWidget = ({ data }: DetailWidgetProps<AdminOrder>) => 
       setSaving(false)
     }
   }, [orderId, pendingStage, note])
+
+  const saveDueDate = useCallback(async () => {
+    if (!orderId) return
+    setSavingDue(true)
+    setDueError(null)
+    try {
+      const res = await fetch(dueDatePath(orderId), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ due_date: dueDate || null }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    } catch (e) {
+      setDueError(e instanceof Error ? e.message : "Failed to save due date")
+    } finally {
+      setSavingDue(false)
+    }
+  }, [orderId, dueDate])
 
   const currentStage = status?.production_stage ?? initialStage
   const willEmail = STAGES_THAT_EMAIL.has(pendingStage) && pendingStage !== currentStage
@@ -191,6 +220,64 @@ const OrderProductionStageWidget = ({ data }: DetailWidgetProps<AdminOrder>) => 
         </div>
       </div>
 
+      {/* Production due date */}
+      <div className="px-6 py-4 flex flex-col gap-y-2">
+        <Text size="small" weight="plus">
+          Production due date
+        </Text>
+        <div className="flex items-center gap-x-2">
+          <Input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            disabled={savingDue}
+            className="w-44"
+          />
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={saveDueDate}
+            disabled={savingDue}
+          >
+            {savingDue ? "Saving…" : "Save"}
+          </Button>
+          {dueDate ? (
+            <Button
+              size="small"
+              variant="transparent"
+              onClick={async () => {
+                if (!orderId) return
+                setDueDate("")
+                setSavingDue(true)
+                setDueError(null)
+                try {
+                  const res = await fetch(dueDatePath(orderId), {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ due_date: null }),
+                  })
+                  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                } catch (e) {
+                  setDueError(e instanceof Error ? e.message : "Failed to clear due date")
+                } finally {
+                  setSavingDue(false)
+                }
+              }}
+              disabled={savingDue}
+            >
+              Clear
+            </Button>
+          ) : null}
+        </div>
+        {dueError ? (
+          <Text size="xsmall" className="text-ui-fg-error">{dueError}</Text>
+        ) : null}
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          Sets the target completion date. Also draggable on the Production calendar view.
+        </Text>
+      </div>
+
       <div className="px-6 py-4">
         <Text size="small" weight="plus" className="mb-2">
           History
@@ -210,6 +297,11 @@ const OrderProductionStageWidget = ({ data }: DetailWidgetProps<AdminOrder>) => 
                     {formatDate(entry.changed_at)}
                   </Text>
                 </div>
+                {entry.changed_by ? (
+                  <Text size="xsmall" className="text-ui-fg-muted mt-0.5">
+                    by {entry.changed_by}
+                  </Text>
+                ) : null}
                 {entry.note ? (
                   <Text size="xsmall" className="text-ui-fg-subtle mt-1">
                     {entry.note}

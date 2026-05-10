@@ -67,6 +67,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     production_stage_changed_at:
       (meta as ProductionStageMetaShape).production_stage_changed_at ?? null,
     production_stage_history: readHistory(meta),
+    production_due_date:
+      typeof meta.production_due_date === "string" ? meta.production_due_date : null,
   })
 }
 
