@@ -68,31 +68,37 @@ export type ThreeTuning = {
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   particleCount: 140000,
   cursorRadius: 80,
-  /** Gentle void. With spring=10, equilibrium displacement at cursor
-   * centre is ~12 world-units — barely shifts the wordmark. */
-  cursorForce: 180,
+  /** Stronger push: equilibrium at ~28 world-units with spring=6
+   * (400*(1-d/80)² = 6*d → d≈28). Particles reach outside letter
+   * strokes so they're visible in the wake trail. */
+  cursorForce: 400,
   mouseVelocityScale: 0.3,
-  /** Strong spring: displaced particles back home in ~12 frames (0.2s). */
-  springStiffness: 10,
-  /** Strong friction: velocity dies quickly, no overshoot. */
-  friction: 7,
+  /** Softer spring: particles settle slower, wake trail lingers
+   * visibly outside the wordmark strokes before drifting home. */
+  springStiffness: 6,
+  /** Moderate friction: velocity dies but not instantly — particles
+   * travel further from home before the wake capture fires. */
+  friction: 4,
   pointSize: 2.5,
   /** Subtle directional drag along cursor direction. */
   wakeStrength: 0.15,
-  /** Swirl is dt*60 normalised. 3 units/frame — spring wins at d>18,
-   * so swirl-only displacement is bounded to ~18 world-units. */
-  sideSwirlForce: 3,
-  trailFollowMs: 1400,
+  /** Stronger swirl: 6 units/frame at ff2=1 → ~28-unit orbit radius
+   * with spring=6, forming visible two-lobe structure. */
+  sideSwirlForce: 6,
+  trailFollowMs: 1500,
   /** More wake particles → brighter, denser bilateral trail. */
-  trailingProbability: 0.6,
+  trailingProbability: 0.65,
   wakePace: 0.6,
-  /** Wide spread so the two-lobe structure reads clearly. */
+  /** Kept for UI; no longer used in wake-entry code (position-capture
+   * approach doesn't need lateral spread — particles freeze at their
+   * actual displaced positions). */
   wakeLateralSpread: 25,
-  /** Push dt*60 normalised. 3 units/frame bilateral. */
-  lateralPushForce: 3,
-  /** Vortex *15 normalised. ~3.8 units/frame at ff2=1, speedFactor=1.
-   * Gentle spiralling lobes behind cursor at slow speed. */
-  vortexStrength: 15,
+  /** Stronger bilateral push: 8 units/frame pushes particles well
+   * outside strokes on both sides of cursor motion. */
+  lateralPushForce: 8,
+  /** Stronger vortex: clearer counter-rotating lobe pair behind cursor
+   * at slow speed. */
+  vortexStrength: 20,
   vortexBehindOffset: 30,
   vortexLateralOffset: 55,
   vortexRadius: 60,

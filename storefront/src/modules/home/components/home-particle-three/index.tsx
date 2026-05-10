@@ -92,25 +92,6 @@ function ParticleField({
   const mouseWorld = useRef<{ x: number; y: number } | null>(null)
   const mousePrev = useRef<{ x: number; y: number; t: number } | null>(null)
   const mouseVel = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 })
-  /** Cursor history ring buffer — records cursor world-position samples
-   * over time so wake-state particles can trace the path the cursor drew.
-   * Capacity covers ~3 seconds at typical sample rates. */
-  const cursorHistory = useRef<{
-    x: Float32Array
-    y: Float32Array
-    t: Float64Array
-    cap: number
-    write: number
-    /** Number of valid entries (caps at `cap`). */
-    size: number
-  }>({
-    x: new Float32Array(256),
-    y: new Float32Array(256),
-    t: new Float64Array(256),
-    cap: 256,
-    write: 0,
-    size: 0,
-  })
 
   /** Build BufferGeometry + ShaderMaterial once when stipple/count changes. */
   const { geometry, material, state } = useMemo(() => {
@@ -187,18 +168,22 @@ function ParticleField({
       },
     })
 
-    /** Wake-history state per particle:
+    /** Wake-capture state per particle:
      *  - wakeUntil: wall-clock ms when wake state expires (0 = not in wake)
-     *  - wakeStart: wall-clock ms when wake state began (for path-replay)
-     *  - wakeOffsetX/Y: lateral offset from cursor at release, preserved
-     *    so the wake spreads sideways instead of all particles tracing
-     *    the same line.
+     *  - wakeCapturedX/Y: world-position at the moment the particle exited
+     *    the cursor disk and entered wake state. The particle is linearly
+     *    interpolated from this position back to home over trailFollowMs.
      *  - prevInDisk: 1 if particle was inside cursor disk last frame (for
      *    detecting the exit edge that triggers the dice roll). */
     const wakeUntil = new Float64Array(count)
-    const wakeStart = new Float64Array(count)
-    const wakeOffsetX = new Float32Array(count)
-    const wakeOffsetY = new Float32Array(count)
+    /** wakeCapturedX/Y: world-position of the particle at the moment it
+     * exited the cursor disk and entered wake state. During wake, the
+     * particle is linearly interpolated from this captured position back
+     * to its home position. This is the correct mechanism for the Newmix
+     * "wake trail" visual: particles get pushed OUTSIDE the wordmark by
+     * in-disk forces, freeze there, then gradually drift home. */
+    const wakeCapturedX = new Float32Array(count)
+    const wakeCapturedY = new Float32Array(count)
     const prevInDisk = new Uint8Array(count)
 
     return {
@@ -210,9 +195,8 @@ function ParticleField({
         velocities,
         count,
         wakeUntil,
-        wakeStart,
-        wakeOffsetX,
-        wakeOffsetY,
+        wakeCapturedX,
+        wakeCapturedY,
         prevInDisk,
       },
     }
@@ -254,13 +238,6 @@ function ParticleField({
       }
       mousePrev.current = { x: pos.x, y: pos.y, t: now }
       mouseWorld.current = { x: pos.x, y: pos.y }
-      /** Append to the cursor-history ring buffer for wake-history playback. */
-      const hist = cursorHistory.current
-      hist.x[hist.write] = pos.x
-      hist.y[hist.write] = pos.y
-      hist.t[hist.write] = now
-      hist.write = (hist.write + 1) % hist.cap
-      if (hist.size < hist.cap) hist.size++
     }
     const onLeave = () => {
       mouseWorld.current = null
@@ -287,9 +264,8 @@ function ParticleField({
       velocities,
       count,
       wakeUntil,
-      wakeStart,
-      wakeOffsetX,
-      wakeOffsetY,
+      wakeCapturedX,
+      wakeCapturedY,
       prevInDisk,
     } = state
     const now = performance.now()
@@ -322,8 +298,6 @@ function ParticleField({
     const sideSwirl = t.sideSwirlForce
     const trailFollowMs = t.trailFollowMs
     const trailingProb = t.trailingProbability
-    const wakePace = t.wakePace
-    const wakeLateral = t.wakeLateralSpread
     const lateralPush = t.lateralPushForce
     const vortexStr = t.vortexStrength
     const vortexBehind = t.vortexBehindOffset
@@ -365,41 +339,6 @@ function ParticleField({
       /** Slow speed → strong vortex; fast speed → fades to streaks. */
       vortexSpeedFactor = 1 / (1 + mouseSpeed / vortexHalf)
     }
-    /** Sample cursor's historical position at `targetTime` (wall-clock ms).
-     * Linear search backward from newest; returns null if older than buffer
-     * or buffer empty. Buffer is small (256) so linear scan is fine. */
-    const hist = cursorHistory.current
-    const sampleHistory = (
-      targetTime: number
-    ): { x: number; y: number } | null => {
-      if (hist.size === 0) return null
-      const newestIdx =
-        (hist.write - 1 + hist.cap) % hist.cap
-      const newestT = hist.t[newestIdx]!
-      if (targetTime >= newestT) {
-        return { x: hist.x[newestIdx]!, y: hist.y[newestIdx]! }
-      }
-      /** Walk backward through buffer until we find a sample older than targetTime. */
-      for (let step = 1; step < hist.size; step++) {
-        const idx = (newestIdx - step + hist.cap) % hist.cap
-        const sampleT = hist.t[idx]!
-        if (sampleT <= targetTime) {
-          /** Lerp between this and the previous (newer) sample. */
-          const nextIdx = (idx + 1) % hist.cap
-          const nextT = hist.t[nextIdx]!
-          const u =
-            nextT > sampleT
-              ? (targetTime - sampleT) / (nextT - sampleT)
-              : 0
-          const x =
-            hist.x[idx]! + (hist.x[nextIdx]! - hist.x[idx]!) * u
-          const y =
-            hist.y[idx]! + (hist.y[nextIdx]! - hist.y[idx]!) * u
-          return { x, y }
-        }
-      }
-      return null
-    }
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
       const px = positions[i3]!
@@ -419,42 +358,42 @@ function ParticleField({
         inDisk = distSq < radSq && distSq > 0.001
       }
 
-      /** Wake-history playback branch. If this particle is in active wake
-       * state, drive its position toward the cursor's HISTORICAL position
-       * (replayed at wakePace), with a preserved lateral offset so wakes
-       * spread bilaterally instead of all tracing the same line.
-       * Re-capture: if the cursor re-enters the disk while in wake, drop
-       * wake state immediately and let cursor forces take over — matches
-       * Newmix's "cursor captures particles again on second pass". */
+      /** Wake: position-capture trail.
+       *
+       * When a particle exits the cursor disk it is FROZEN at its displaced
+       * position (captured below) and then LINEARLY DRIFTED back to its home
+       * position over trailFollowMs milliseconds. This is the correct
+       * mechanism for the Newmix "wake trail" visual:
+       *
+       *   1. In-disk forces (radial + bilateral + swirl) push each particle
+       *      20-40 world-units outside its letter stroke.
+       *   2. On disk exit, we freeze the particle there and zero velocity so
+       *      it doesn't overshoot or bounce.
+       *   3. Over trailFollowMs, the particle drifts from captured position
+       *      back to home — visible as two glowing lobes trailing the cursor.
+       *
+       * Re-capture: cursor sweeping back over a wake particle pulls it out
+       * again (same "stir coffee twice" behaviour as Newmix). */
       const wu = wakeUntil[i]!
       const inWake = wu > now && trailFollowMs > 0
-      if (inWake) {
-        /** Re-capture: cursor passed over this particle again. */
-        if (inDisk) {
-          wakeUntil[i] = 0
-          /** Fall through to normal cursor-force handling below. */
-        } else {
-          const elapsed = now - wakeStart[i]!
-          /** Replay path at pace. wakePace=1 → particle stays at current cursor;
-           * <1 → particle lags behind, tracing older positions. */
-          const targetT = now - elapsed * (1 - wakePace)
-          const sample = sampleHistory(targetT)
-          if (sample != null) {
-            const tx = sample.x + wakeOffsetX[i]!
-            const ty = sample.y + wakeOffsetY[i]!
-            /** Smooth lerp toward target — small value = fluid trail,
-             * large value = snappy follow. 0.15 reads as flowing liquid. */
-            const lerp = 0.18
-            positions[i3] = px + (tx - px) * lerp
-            positions[i3 + 1] = py + (ty - py) * lerp
-            velocities[i3] = 0
-            velocities[i3 + 1] = 0
-            prevInDisk[i] = 0
-            continue
-          }
-          /** History sample missing (target older than buffer) — release. */
-          wakeUntil[i] = 0
-        }
+      if (inWake && !inDisk) {
+        /** t goes from 1.0 (wake entry) to 0.0 (home). */
+        const t = Math.max(0, (wu - now) / trailFollowMs)
+        const cx = wakeCapturedX[i]!
+        const cy = wakeCapturedY[i]!
+        const hx = homes[i3]!
+        const hy = homes[i3 + 1]!
+        positions[i3]     = hx + (cx - hx) * t
+        positions[i3 + 1] = hy + (cy - hy) * t
+        velocities[i3]     = 0
+        velocities[i3 + 1] = 0
+        prevInDisk[i] = 0
+        continue
+      }
+      /** If in wake AND cursor re-entered the disk: cancel wake, fall through
+       * to normal cursor forces — particle gets captured again. */
+      if (inWake && inDisk) {
+        wakeUntil[i] = 0
       }
 
       /** Spring back to home. */
@@ -542,11 +481,13 @@ function ParticleField({
       }
 
       /** Wake-state entry: particle WAS in disk last frame, NOT in disk
-       * this frame, and rolled the dice. Capture mouse-relative offset so
-       * the wake replay preserves the particle's release-side.
-       * Lateral spread is projected onto the perpendicular-to-motion axis
-       * so the two-lobe bilateral structure is preserved as particles
-       * trace the historical cursor path. */
+       * this frame, and rolled the dice.
+       *
+       * Position-capture approach: we freeze the particle at its CURRENT
+       * (displaced) world-position, then let the wake playback block above
+       * linearly drift it back to home. Velocity is zeroed so the particle
+       * doesn't overshoot — without this, accumulated in-disk velocity
+       * launches particles hundreds of units off-screen. */
       if (
         prevInDisk[i] === 1 &&
         !inDisk &&
@@ -555,19 +496,11 @@ function ParticleField({
         trailingProb > 0 &&
         Math.random() < trailingProb
       ) {
-        wakeStart[i] = now
+        wakeCapturedX[i] = px
+        wakeCapturedY[i] = py
         wakeUntil[i] = now + trailFollowMs
-        /** Project release-position onto perpendicular axis for spread.
-         * When moving: noiseAmt along mrx/mry keeps lobes separated.
-         * When still (no motion): pure random spread. */
-        const noiseAmt = (Math.random() * 2 - 1) * wakeLateral
-        if (haveMotion) {
-          wakeOffsetX[i] = dx + noiseAmt * mrx
-          wakeOffsetY[i] = dy + noiseAmt * mry
-        } else {
-          wakeOffsetX[i] = dx + noiseAmt
-          wakeOffsetY[i] = dy + (Math.random() * 2 - 1) * wakeLateral
-        }
+        vx = 0
+        vy = 0
       }
 
       /** Friction. */
