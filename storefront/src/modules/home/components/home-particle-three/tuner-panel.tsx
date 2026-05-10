@@ -67,35 +67,37 @@ export type ThreeTuning = {
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   particleCount: 140000,
-  cursorRadius: 90,
-  /** Reduced — gentle void under cursor, not explosive repulsion. */
-  cursorForce: 220,
-  mouseVelocityScale: 0.4,
-  /** Stronger spring = faster recovery, wordmark stays mostly intact. */
-  springStiffness: 7,
-  /** Stronger friction = particles don't sail far after force stops. */
-  friction: 5,
+  cursorRadius: 80,
+  /** Gentle void. With spring=10, equilibrium displacement at cursor
+   * centre is ~12 world-units — barely shifts the wordmark. */
+  cursorForce: 180,
+  mouseVelocityScale: 0.3,
+  /** Strong spring: displaced particles back home in ~12 frames (0.2s). */
+  springStiffness: 10,
+  /** Strong friction: velocity dies quickly, no overshoot. */
+  friction: 7,
   pointSize: 2.5,
-  /** More directional drag so cursor path is visibly traced. */
-  wakeStrength: 0.3,
-  /** Swirl formula is now dt*60 normalised (not * mouseSpeed).
-   * 12 ≈ 12 units/frame of tangential push at ff2=1, 60fps. */
-  sideSwirlForce: 12,
-  trailFollowMs: 1200,
-  trailingProbability: 0.55,
-  wakePace: 0.65,
-  wakeLateralSpread: 20,
-  /** Push formula is now dt*60 normalised.
-   * 10 ≈ 10 units/frame perpendicular push at ff2=1, 60fps. */
-  lateralPushForce: 10,
-  /** Vortex formula is now *30 normalised (was *100).
-   * 28 ≈ 14 units/frame tangential at ff2=1, vortexSpeedFactor=1, 60fps. */
-  vortexStrength: 28,
+  /** Subtle directional drag along cursor direction. */
+  wakeStrength: 0.15,
+  /** Swirl is dt*60 normalised. 3 units/frame — spring wins at d>18,
+   * so swirl-only displacement is bounded to ~18 world-units. */
+  sideSwirlForce: 3,
+  trailFollowMs: 1400,
+  /** More wake particles → brighter, denser bilateral trail. */
+  trailingProbability: 0.6,
+  wakePace: 0.6,
+  /** Wide spread so the two-lobe structure reads clearly. */
+  wakeLateralSpread: 25,
+  /** Push dt*60 normalised. 3 units/frame bilateral. */
+  lateralPushForce: 3,
+  /** Vortex *15 normalised. ~3.8 units/frame at ff2=1, speedFactor=1.
+   * Gentle spiralling lobes behind cursor at slow speed. */
+  vortexStrength: 15,
   vortexBehindOffset: 30,
   vortexLateralOffset: 55,
   vortexRadius: 60,
-  /** Fade threshold: full-strength below ~300 u/s, halved at 400. */
-  vortexSpeedHalfLife: 400,
+  /** Vortices clear below 200 u/s, mostly gone by 400. */
+  vortexSpeedHalfLife: 300,
 }
 
 type SliderDef = {

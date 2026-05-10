@@ -5,34 +5,34 @@ import { useState } from "react"
 
 const slides = [
   {
-    type: "image" as const,
-    caption: "Daniel Mudie Cunningham, Proud Mary, 2007",
-    bg: "#d8d0c8",
-    label: "Proud Mary, 2007 — performance still",
-  },
-  {
-    type: "image" as const,
-    caption: "Daniel Mudie Cunningham, Proud Mary, 2012",
-    bg: "#c8c8c8",
-    label: "Proud Mary, 2012 — underground carpark, Sydney",
-  },
-  {
-    type: "image" as const,
-    caption: "Daniel Mudie Cunningham, Proud Mary, 2017",
-    bg: "#d4c0b8",
-    label: "Proud Mary, 2017 — New Norfolk, Tasmania",
-  },
-  {
-    type: "image" as const,
-    caption: "Daniel Mudie Cunningham, Proud Mary, 2022",
-    bg: "#b8c8d4",
-    label: "Proud Mary, 2022 — Port Kembla, New South Wales",
-  },
-  {
     type: "video" as const,
     caption: "Daniel Mudie Cunningham, Proud Mary, 2007, 2012, 2017, 2022",
     bg: "#111",
     label: "Proud Mary — four-channel composite",
+  },
+  {
+    type: "image" as const,
+    src: "/dan/pm-2007.webp",
+    caption: "Daniel Mudie Cunningham, Proud Mary, 2007",
+    alt: "Proud Mary, 2007 — performance still",
+  },
+  {
+    type: "image" as const,
+    src: "/dan/pm-2012.webp",
+    caption: "Daniel Mudie Cunningham, Proud Mary, 2012",
+    alt: "Proud Mary, 2012 — underground carpark, Sydney",
+  },
+  {
+    type: "image" as const,
+    src: "/dan/pm-2017.webp",
+    caption: "Daniel Mudie Cunningham, Proud Mary, 2017",
+    alt: "Proud Mary, 2017 — New Norfolk, Tasmania",
+  },
+  {
+    type: "image" as const,
+    src: "/dan/pm-2022.webp",
+    caption: "Daniel Mudie Cunningham, Proud Mary, 2022",
+    alt: "Proud Mary, 2022 — Port Kembla, New South Wales",
   },
 ]
 
@@ -252,59 +252,41 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
             {slides[slide].type === "video" ? (
               <div
                 style={{
-                  width: "100%",
-                  aspectRatio: "16/9",
-                  backgroundColor: slides[slide].bg,
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gridTemplateRows: "1fr 1fr",
-                  gap: "2px",
+                  position: "relative",
+                  paddingBottom: "56.25%",
+                  height: 0,
                   overflow: "hidden",
+                  backgroundColor: "#111",
                 }}
               >
-                {["2007", "2012", "2017", "2022"].map((year) => (
-                  <div
-                    key={year}
-                    style={{
-                      backgroundColor: "#222",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: "rgba(255,255,255,0.4)",
-                        fontSize: "0.85rem",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      {year}
-                    </span>
-                  </div>
-                ))}
+                <iframe
+                  title="Proud Mary — Daniel Mudie Cunningham"
+                  src="https://player.vimeo.com/video/776456784?h=de0f8d1013"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    border: 0,
+                  }}
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+                  allowFullScreen
+                />
               </div>
             ) : (
-              <div
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={(slides[slide] as { src: string }).src}
+                alt={(slides[slide] as { alt: string }).alt}
                 style={{
                   width: "100%",
                   aspectRatio: "16/9",
-                  backgroundColor: slides[slide].bg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  objectFit: "cover",
+                  display: "block",
                 }}
-              >
-                <span
-                  style={{
-                    color: "rgba(80,60,60,0.5)",
-                    fontSize: "0.95rem",
-                    fontStyle: "italic",
-                  }}
-                >
-                  {slides[slide].label}
-                </span>
-              </div>
+              />
             )}
           </div>
 
@@ -367,34 +349,6 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
               }}
             />
           ))}
-        </div>
-
-        {/* Vimeo embed */}
-        <div style={{ marginTop: "3rem" }}>
-          <div
-            style={{
-              position: "relative",
-              paddingBottom: "56.25%",
-              height: 0,
-              overflow: "hidden",
-            }}
-          >
-            <iframe
-              title="Proud Mary — Daniel Mudie Cunningham"
-              src="https://player.vimeo.com/video/776456784?h=de0f8d1013"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                border: 0,
-              }}
-              referrerPolicy="strict-origin-when-cross-origin"
-              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
-              allowFullScreen
-            />
-          </div>
         </div>
 
         {/* Back link */}
