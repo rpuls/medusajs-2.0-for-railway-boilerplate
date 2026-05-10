@@ -17,6 +17,12 @@ function buildClient() {
     // (not a raw JWT) because BetaAnalyticsDataClient calls newer methods on
     // the auth client (e.g. `getUniverseDomain`) that the legacy JWT class
     // from googleapis doesn't expose. GoogleAuth wraps the JWT and adds them.
+    //
+    // `fallback: "rest"` forces the client over HTTPS+JSON instead of gRPC.
+    // Without it, the gRPC metadata layer chokes on the auth headers shape
+    // returned by GoogleAuth+subject (`headers.forEach is not a function`).
+    // REST transport sidesteps that entirely with no functional difference
+    // for our read-only summary queries.
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: key.client_email,
@@ -25,7 +31,10 @@ function buildClient() {
       scopes: [SCOPE],
       clientOptions: { subject },
     })
-    return new BetaAnalyticsDataClient({ auth: auth as any })
+    return new BetaAnalyticsDataClient({
+      auth: auth as any,
+      fallback: "rest",
+    })
   }
 
   return new BetaAnalyticsDataClient({

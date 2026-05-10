@@ -28,6 +28,7 @@ import {
 
 import { CalendarView } from "./components/calendar-view"
 import { BookmarkBar } from "./components/bookmark-bar"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import {
   PRODUCTION_STAGES,
   PRODUCTION_STAGE_LABEL,
@@ -334,7 +335,22 @@ const ProductionPage = () => {
       <Container className="flex flex-col gap-y-3">
         <div className="flex items-start justify-between flex-wrap gap-y-2">
           <div className="flex flex-col gap-y-1">
-            <Heading level="h1">Production</Heading>
+            <Heading level="h1" className="flex items-center">
+              Production
+              <HelpTooltip
+                text={{
+                  title: "Production",
+                  body: "What's on the floor right now, grouped by where each order is stuck. Built for the morning standup: open the page, scan stuck-longest, drill in. Auto-refresh keeps it live without manual reloading.",
+                  bullets: [
+                    "Three views: Stage list (compact rows by stage), Kanban (drag between columns), Calendar (deliveries grouped by day).",
+                    "Filters compose: supplier + decoration method + search + stuck-only all narrow the same snapshot.",
+                    "“Stuck only” = orders that haven't moved within the SLA for their current stage. Use it to triage before standup.",
+                    "Click any stage header to open a drawer with all orders in that stage; click an individual order to jump to its admin detail.",
+                    "Print tomorrow → printable cheat sheet of orders shipping in the next 48h. Hand it to the floor.",
+                  ],
+                }}
+              />
+            </Heading>
             <Text size="small" className="text-ui-fg-subtle">
               Live snapshot of orders by production stage. Built for the
               morning standup — sorted by stuck-longest first, click any
@@ -385,6 +401,24 @@ const ProductionPage = () => {
 
       {/* Filter bar */}
       <Container className="flex flex-col gap-y-3">
+        <div className="flex items-center">
+          <Text size="small" className="font-medium">
+            Filters
+          </Text>
+          <HelpTooltip
+            text={{
+              title: "Filter bar",
+              body: "Filters compose with AND — every active filter narrows the same snapshot at once. Selections persist in the URL so you can share a focused view by copying the address bar.",
+              bullets: [
+                "View: Stage list = compact rows; Kanban = drag-and-drop columns (advances stage on drop); Calendar = orders grouped by their target ship date.",
+                "Garment supplier: split AS Colour vs everything else when chasing a single supplier's stock issue.",
+                "Search: matches order # (numeric, no #) or customer email/name; case-insensitive substring.",
+                "Stuck only: keeps just orders that have exceeded their stage SLA. Use this every morning to triage.",
+                "Decoration method chips: click to multi-select. Hidden methods are filtered out of every view.",
+              ],
+            }}
+          />
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
           {/* View toggle */}
           <div className="lg:col-span-2 flex flex-col gap-y-1">
@@ -477,11 +511,30 @@ const ProductionPage = () => {
       </Container>
 
       {/* Saved filter bookmarks */}
-      <BookmarkBar
-        target="production"
-        currentQuery={currentBookmarkQuery}
-        onApply={applyBookmark}
-      />
+      <Container className="flex flex-col gap-y-2 py-2">
+        <div className="flex items-center px-1">
+          <Text size="small" className="font-medium">
+            Saved views
+          </Text>
+          <HelpTooltip
+            text={{
+              title: "Saved views",
+              body: "Bookmark the filter combinations you re-apply every day. One click jumps the filters back to that exact state — supplier, methods, search, stuck toggle, and view type all remembered.",
+              bullets: [
+                "Set the filters first, then click “Save view” and label it (e.g. \"Stuck embroidery\", \"Today's screenprint\").",
+                "Bookmarks are scoped to this Production page; the same primitive is used elsewhere (Reports, etc.) but each page has its own list.",
+                "Click a bookmark chip to apply it; hover for the underlying query string; trash icon to remove.",
+                "Useful for staff who own a particular workflow — bookmark “my queue” so they land on it every morning.",
+              ],
+            }}
+          />
+        </div>
+        <BookmarkBar
+          target="production"
+          currentQuery={currentBookmarkQuery}
+          onApply={applyBookmark}
+        />
+      </Container>
 
       {/* Body — error / loading / content */}
       {error ? (
