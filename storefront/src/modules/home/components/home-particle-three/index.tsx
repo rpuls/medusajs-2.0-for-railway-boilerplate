@@ -519,9 +519,8 @@ function ParticleField({
           /** CCW tangent at point (dlx, dly): (-dly, dlx) / dlDist. */
           const tlx = -dly / dlDist
           const tly = dlx / dlDist
-          /** Multiplier 30 puts vortex on same dt*60-normalised scale as
-           * swirl/push forces; vortexSpeedFactor fades it at high speed. */
-          const lF = vortexStr * lFf2 * dt * vortexSpeedFactor * 30
+          /** Multiplier 15 keeps vortex proportional to swirl/push forces. */
+          const lF = vortexStr * lFf2 * dt * vortexSpeedFactor * 15
           vx += tlx * lF
           vy += tly * lF
         }
@@ -536,7 +535,7 @@ function ParticleField({
           /** CW tangent at point (drx, dry): (dry, -drx) / drDist. */
           const trx = dry / drDist
           const try_ = -drx / drDist
-          const rF = vortexStr * rFf2 * dt * vortexSpeedFactor * 30
+          const rF = vortexStr * rFf2 * dt * vortexSpeedFactor * 15
           vx += trx * rF
           vy += try_ * rF
         }
