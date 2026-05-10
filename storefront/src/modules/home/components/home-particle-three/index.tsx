@@ -88,7 +88,7 @@ function ParticleField({
   tuningRef,
 }: ParticleFieldProps) {
   const pointsRef = useRef<THREE.Points>(null)
-  const { size, viewport, camera } = useThree()
+  const { size, camera } = useThree()
   const mouseWorld = useRef<{ x: number; y: number } | null>(null)
   const mousePrev = useRef<{ x: number; y: number; t: number } | null>(null)
   const mouseVel = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 })
@@ -98,7 +98,6 @@ function ParticleField({
     const count = Math.min(particleCount, stipple.length)
     const positions = new Float32Array(count * 3)
     const homes = new Float32Array(count * 3)
-    const velocities = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
 
     /** Center the wordmark. World units: [-w/2, +w/2]. Y is flipped from
@@ -129,9 +128,6 @@ function ParticleField({
       homes[i3 + 0] = wx
       homes[i3 + 1] = wy
       homes[i3 + 2] = 0
-      velocities[i3 + 0] = 0
-      velocities[i3 + 1] = 0
-      velocities[i3 + 2] = 0
 
       /** Color from horizontal gradient projection across wordmark. */
       const t = sp.u
@@ -168,37 +164,10 @@ function ParticleField({
       },
     })
 
-    /** Wake-capture state per particle:
-     *  - wakeUntil: wall-clock ms when wake state expires (0 = not in wake)
-     *  - wakeCapturedX/Y: world-position at the moment the particle exited
-     *    the cursor disk and entered wake state. The particle is linearly
-     *    interpolated from this position back to home over trailFollowMs.
-     *  - prevInDisk: 1 if particle was inside cursor disk last frame (for
-     *    detecting the exit edge that triggers the dice roll). */
-    const wakeUntil = new Float64Array(count)
-    /** wakeCapturedX/Y: world-position of the particle at the moment it
-     * exited the cursor disk and entered wake state. During wake, the
-     * particle is linearly interpolated from this captured position back
-     * to its home position. This is the correct mechanism for the Newmix
-     * "wake trail" visual: particles get pushed OUTSIDE the wordmark by
-     * in-disk forces, freeze there, then gradually drift home. */
-    const wakeCapturedX = new Float32Array(count)
-    const wakeCapturedY = new Float32Array(count)
-    const prevInDisk = new Uint8Array(count)
-
     return {
       geometry: geo,
       material: mat,
-      state: {
-        positions,
-        homes,
-        velocities,
-        count,
-        wakeUntil,
-        wakeCapturedX,
-        wakeCapturedY,
-        prevInDisk,
-      },
+      state: { positions, homes, count },
     }
   }, [stipple, particleCount, width, height, tuningRef])
 
@@ -254,264 +223,116 @@ function ParticleField({
     }
   }, [camera])
 
-  /** Per-frame physics. Reads tuning live each frame from tuningRef so
-   * slider changes take effect without re-binding closures. */
+  /** Per-frame physics — position interpolation, no velocity accumulation.
+   *
+   * Model: each particle has a "target" position computed from cursor
+   * proximity. Position is exponentially blended toward the target each
+   * frame. This is fundamentally overdamped — no bounce is possible.
+   *
+   *   IN DISK:  target = home + radial_offset + trail_offset
+   *     • radial_offset: pushes HOME outward from cursor centre, creating
+   *       the soft void. Magnitude = cursorDisplacement × falloff².
+   *     • trail_offset: pushes HOME BACKWARD (opposite cursor motion),
+   *       scaled by cursor speed. Particles BEHIND cursor get both offsets
+   *       in the same direction → strong rearward displacement = the comet
+   *       tail. Particles AHEAD get partially cancelling offsets → barely
+   *       disturbed until the cursor reaches them.
+   *     • Blend rate: inBlend × dt (fast, ~5 frames to reach target).
+   *
+   *   OUT OF DISK: target = home.
+   *     • Blend rate: outBlend × dt (slow, ~1 s to return = visible wake).
+   *
+   * This is the "spoon stirring liquid" model: particles are smoothly
+   * dragged aside as the cursor passes, then drift back into their strokes
+   * like viscous fluid refilling a path. */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
-    const {
-      positions,
-      homes,
-      velocities,
-      count,
-      wakeUntil,
-      wakeCapturedX,
-      wakeCapturedY,
-      prevInDisk,
-    } = state
-    const now = performance.now()
-    const t = tuningRef.current
-    /** Sync point size uniform with current tuning. */
-    if (material.uniforms.uPointSize!.value !== t.pointSize) {
-      material.uniforms.uPointSize!.value = t.pointSize
+    const { positions, homes, count } = state
+    const nm = tuningRef.current
+    if (material.uniforms.uPointSize!.value !== nm.pointSize) {
+      material.uniforms.uPointSize!.value = nm.pointSize
     }
+
     const mw = mouseWorld.current
-    const mvxRaw = mouseVel.current.vx * t.mouseVelocityScale
-    const mvyRaw = mouseVel.current.vy * t.mouseVelocityScale
-    const mouseSpeed = Math.hypot(mvxRaw, mvyRaw)
-    const mx = mw?.x ?? Number.POSITIVE_INFINITY
-    const my = mw?.y ?? Number.POSITIVE_INFINITY
+    const rawVx = mouseVel.current.vx
+    const rawVy = mouseVel.current.vy
+    const mouseSpeed = Math.hypot(rawVx, rawVy)
+    const mx = mw?.x ?? 0
+    const my = mw?.y ?? 0
     const haveCursor = mw != null
-    const cursorRadius = t.cursorRadius
+    const cursorRadius = nm.cursorRadius
     const radSq = cursorRadius * cursorRadius
-    const frictionFrame = Math.max(0, 1 - t.friction * dt)
-    const springFrame = t.springStiffness * dt
-    /** Cap directional mouse-velocity contribution so flicks don't fling
-     * particles off-screen. */
-    const mouseSpeedCap = 1500
-    const mouseSpeedClamped = Math.min(mouseSpeed, mouseSpeedCap)
-    const mvScale =
-      mouseSpeed > 0.001 ? mouseSpeedClamped / mouseSpeed : 0
-    const mvxc = mvxRaw * mvScale
-    const mvyc = mvyRaw * mvScale
-    const wake = t.wakeStrength
-    const cursorForce = t.cursorForce
-    const sideSwirl = t.sideSwirlForce
-    const trailFollowMs = t.trailFollowMs
-    const trailingProb = t.trailingProbability
-    const lateralPush = t.lateralPushForce
-    const vortexStr = t.vortexStrength
-    const vortexBehind = t.vortexBehindOffset
-    const vortexSep = t.vortexLateralOffset
-    const vortexRad = t.vortexRadius
-    const vortexHalf = t.vortexSpeedHalfLife
-    const vortexRadSq = vortexRad * vortexRad
-    /** Mouse motion direction unit vector + perpendicular (right of motion).
-     * MUST be computed before the vortex block that reads haveMotion/mfx/mfy.
-     * Used for: orbital swirl force, bilateral lateral push, vortex placement,
-     * and wake-offset projection. */
+
+    /** Cursor motion unit vector (forward direction). */
     const haveMotion = mouseSpeed > 0.001
     let mfx = 0
     let mfy = 0
-    let mrx = 0
-    let mry = 0
     if (haveMotion) {
-      mfx = mvxRaw / mouseSpeed
-      mfy = mvyRaw / mouseSpeed
-      /** Perpendicular (rightward) = rotate forward 90° CCW. */
-      mrx = -mfy
-      mry = mfx
+      mfx = rawVx / mouseSpeed
+      mfy = rawVy / mouseSpeed
     }
-    /** Karman vortex pair: two counter-rotating centers BEHIND cursor.
-     * Strength fades smoothly with cursor speed (1 / (1 + speed/halfLife))
-     * so vortices read clearly at slow motion and fade to streaks at high
-     * speed — exactly the "disappears as cursor speeds up" Newmix behavior.
-     * NOTE: this block REQUIRES haveMotion/mfx/mfy/mrx/mry computed above. */
-    let vortexLX = 0
-    let vortexLY = 0
-    let vortexRX = 0
-    let vortexRY = 0
-    let vortexSpeedFactor = 0
-    if (haveCursor && haveMotion && vortexStr > 0) {
-      vortexLX = mx - mfx * vortexBehind - mrx * (vortexSep * 0.5)
-      vortexLY = my - mfy * vortexBehind - mry * (vortexSep * 0.5)
-      vortexRX = mx - mfx * vortexBehind + mrx * (vortexSep * 0.5)
-      vortexRY = my - mfy * vortexBehind + mry * (vortexSep * 0.5)
-      /** Slow speed → strong vortex; fast speed → fades to streaks. */
-      vortexSpeedFactor = 1 / (1 + mouseSpeed / vortexHalf)
-    }
+
+    /** Speed factor: how much of the trail displacement to apply.
+     * Saturates at trailSpeedCap so fast gestures don't over-stretch. */
+    const speedFactor = haveMotion
+      ? Math.min(mouseSpeed / nm.trailSpeedCap, 1)
+      : 0
+
+    const inAlpha  = Math.min(1.0, nm.inBlend  * dt)
+    const outAlpha = Math.min(1.0, nm.outBlend * dt)
+
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
-      const px = positions[i3]!
-      const py = positions[i3 + 1]!
-      let vx = velocities[i3]!
-      let vy = velocities[i3 + 1]!
+      const hx = homes[i3]!
+      const hy = homes[i3 + 1]!
+      let px = positions[i3]!
+      let py = positions[i3 + 1]!
 
-      /** Compute distSq + inDisk flag (used by both branches). */
+      let targetX = hx
+      let targetY = hy
       let inDisk = false
-      let dx = 0
-      let dy = 0
-      let distSq = 0
+
       if (haveCursor) {
-        dx = px - mx
-        dy = py - my
-        distSq = dx * dx + dy * dy
-        inDisk = distSq < radSq && distSq > 0.001
-      }
+        /** dx/dy: vector from cursor centre to this particle's HOME.
+         * Using home (not current position) ensures the target is always
+         * anchored to home — particles can't drift off to infinity. */
+        const dx = hx - mx
+        const dy = hy - my
+        const distSq = dx * dx + dy * dy
 
-      /** Wake: position-capture trail.
-       *
-       * When a particle exits the cursor disk it is FROZEN at its displaced
-       * position (captured below) and then LINEARLY DRIFTED back to its home
-       * position over trailFollowMs milliseconds. This is the correct
-       * mechanism for the Newmix "wake trail" visual:
-       *
-       *   1. In-disk forces (radial + bilateral + swirl) push each particle
-       *      20-40 world-units outside its letter stroke.
-       *   2. On disk exit, we freeze the particle there and zero velocity so
-       *      it doesn't overshoot or bounce.
-       *   3. Over trailFollowMs, the particle drifts from captured position
-       *      back to home — visible as two glowing lobes trailing the cursor.
-       *
-       * Re-capture: cursor sweeping back over a wake particle pulls it out
-       * again (same "stir coffee twice" behaviour as Newmix). */
-      const wu = wakeUntil[i]!
-      const inWake = wu > now && trailFollowMs > 0
-      if (inWake && !inDisk) {
-        /** t goes from 1.0 (wake entry) to 0.0 (home). */
-        const t = Math.max(0, (wu - now) / trailFollowMs)
-        const cx = wakeCapturedX[i]!
-        const cy = wakeCapturedY[i]!
-        const hx = homes[i3]!
-        const hy = homes[i3 + 1]!
-        positions[i3]     = hx + (cx - hx) * t
-        positions[i3 + 1] = hy + (cy - hy) * t
-        velocities[i3]     = 0
-        velocities[i3 + 1] = 0
-        prevInDisk[i] = 0
-        continue
-      }
-      /** If in wake AND cursor re-entered the disk: cancel wake, fall through
-       * to normal cursor forces — particle gets captured again. */
-      if (inWake && inDisk) {
-        wakeUntil[i] = 0
-      }
+        if (distSq < radSq && distSq > 0.001) {
+          inDisk = true
+          const dist = Math.sqrt(distSq)
+          const norm = 1 - dist / cursorRadius   // 1 at centre, 0 at rim
+          const falloff = norm * norm             // smooth quadratic
 
-      /** Spring back to home. */
-      vx += (homes[i3]! - px) * springFrame
-      vy += (homes[i3 + 1]! - py) * springFrame
+          /** Radial component: push home outward from cursor centre. */
+          const radAmt = nm.cursorDisplacement * falloff
+          targetX = hx + (dx / dist) * radAmt
+          targetY = hy + (dy / dist) * radAmt
 
-      /** Cursor force. */
-      if (inDisk) {
-        const dist = Math.sqrt(distSq)
-        const falloff = 1 - dist / cursorRadius
-        const ff2 = falloff * falloff
-        /** Directional wake: in-disk particles pick up cursor velocity. */
-        vx += mvxc * ff2 * dt * wake
-        vy += mvyc * ff2 * dt * wake
-        /** Radial: outward push so cursor leaves a soft void. */
-        const radF = cursorForce * ff2 * dt
-        vx += (dx / dist) * radF
-        vy += (dy / dist) * radF
-        /** Side swirl: tangential force, contained orbital curl.
-         * Fixed magnitude (NOT scaled by mouseSpeed) so the spring can
-         * contain it and particles stay near the wordmark. At fast cursor
-         * speed the wake/radial forces dominate; at slow speed this swirl
-         * produces the Newmix-style contained two-lobe orbit. */
-        if (haveMotion && sideSwirl > 0) {
-          const ux = dx / dist
-          const uy = dy / dist
-          const ccwX = -uy
-          const ccwY = ux
-          const perp = dx * mrx + dy * mry
-          const vSgn = perp >= 0 ? -1 : 1
-          /** dt*60 normalises to ~1 unit/frame per unit of sideSwirl at 60fps. */
-          const swirlF = sideSwirl * ff2 * dt * 60
-          vx += vSgn * ccwX * swirlF
-          vy += vSgn * ccwY * swirlF
-        }
-        /** Bilateral lateral push: particles in cursor disk get pushed
-         * AWAY from the motion line (perpendicular to motion), with sign
-         * by which side they're on. Creates the two-lobe wake split.
-         * Fixed magnitude so spring naturally limits how far particles stray. */
-        if (haveMotion && lateralPush > 0) {
-          const perp = dx * mrx + dy * mry
-          const sgn = perp >= 0 ? 1 : -1
-          const pushF = lateralPush * ff2 * dt * 60
-          vx += sgn * mrx * pushF
-          vy += sgn * mry * pushF
+          /** Trail component: push home backward (−motion direction).
+           * Particles BEHIND cursor get this in the same direction as
+           * the radial push → strong rearward displacement (wake).
+           * Particles AHEAD get opposing radial/trail forces → slight
+           * net displacement, no violent bow-wave. */
+          if (nm.trailDisplacement > 0 && haveMotion) {
+            const trailAmt = nm.trailDisplacement * falloff * speedFactor
+            targetX -= mfx * trailAmt
+            targetY -= mfy * trailAmt
+          }
         }
       }
 
-      /** Karman vortex pair (BEHIND cursor): each particle within
-       * vortexRadius of either vortex center receives a CCW (left) or
-       * CW (right) tangential force, scaled by the speed-fade factor.
-       * This is what makes Newmix's signature two-lobe spiral pattern. */
-      if (vortexSpeedFactor > 0.001) {
-        /** Left vortex (CCW around vortexL). */
-        const dlx = px - vortexLX
-        const dly = py - vortexLY
-        const dlSq = dlx * dlx + dly * dly
-        if (dlSq < vortexRadSq && dlSq > 0.001) {
-          const dlDist = Math.sqrt(dlSq)
-          const lFall = 1 - dlDist / vortexRad
-          const lFf2 = lFall * lFall
-          /** CCW tangent at point (dlx, dly): (-dly, dlx) / dlDist. */
-          const tlx = -dly / dlDist
-          const tly = dlx / dlDist
-          /** Multiplier 15 keeps vortex proportional to swirl/push forces. */
-          const lF = vortexStr * lFf2 * dt * vortexSpeedFactor * 15
-          vx += tlx * lF
-          vy += tly * lF
-        }
-        /** Right vortex (CW around vortexR). */
-        const drx = px - vortexRX
-        const dry = py - vortexRY
-        const drSq = drx * drx + dry * dry
-        if (drSq < vortexRadSq && drSq > 0.001) {
-          const drDist = Math.sqrt(drSq)
-          const rFall = 1 - drDist / vortexRad
-          const rFf2 = rFall * rFall
-          /** CW tangent at point (drx, dry): (dry, -drx) / drDist. */
-          const trx = dry / drDist
-          const try_ = -drx / drDist
-          const rF = vortexStr * rFf2 * dt * vortexSpeedFactor * 15
-          vx += trx * rF
-          vy += try_ * rF
-        }
-      }
+      /** Exponential blend toward target. inAlpha for in-disk (fast snap
+       * toward target so the wake forms cleanly as the cursor passes);
+       * outAlpha for out-of-disk (slow drift home = visible tail). */
+      const alpha = inDisk ? inAlpha : outAlpha
+      px += (targetX - px) * alpha
+      py += (targetY - py) * alpha
 
-      /** Wake-state entry: particle WAS in disk last frame, NOT in disk
-       * this frame, and rolled the dice.
-       *
-       * Position-capture approach: we freeze the particle at its CURRENT
-       * (displaced) world-position, then let the wake playback block above
-       * linearly drift it back to home. Velocity is zeroed so the particle
-       * doesn't overshoot — without this, accumulated in-disk velocity
-       * launches particles hundreds of units off-screen. */
-      if (
-        prevInDisk[i] === 1 &&
-        !inDisk &&
-        haveCursor &&
-        trailFollowMs > 0 &&
-        trailingProb > 0 &&
-        Math.random() < trailingProb
-      ) {
-        wakeCapturedX[i] = px
-        wakeCapturedY[i] = py
-        wakeUntil[i] = now + trailFollowMs
-        vx = 0
-        vy = 0
-      }
-
-      /** Friction. */
-      vx *= frictionFrame
-      vy *= frictionFrame
-
-      velocities[i3] = vx
-      velocities[i3 + 1] = vy
-      positions[i3] = px + vx * dt * 60
-      positions[i3 + 1] = py + vy * dt * 60
-      prevInDisk[i] = inDisk ? 1 : 0
+      positions[i3]     = px
+      positions[i3 + 1] = py
     }
     geometry.attributes.position!.needsUpdate = true
   })
