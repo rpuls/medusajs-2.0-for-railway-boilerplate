@@ -90,6 +90,7 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | Full JSON key for a service account with read access to GSC + GA4. Powers the `/app/seo-analytics` admin page. | none — page shows "empty" state |
 | `GSC_SITE_URL` | GSC property URL (exact form from Search Console, e.g. `https://sc-prints.com.au/` or `sc-domain:sc-prints.com.au`). | none |
 | `GA4_PROPERTY_ID` | Numeric GA4 property ID (not the measurement ID). | none |
+| `SEO_IMPERSONATION_USER` | Optional. Workspace user to impersonate via Domain-Wide Delegation (e.g. `info@scprints.com.au`). Use when Google's IAM rejects adding the SA directly to GSC/GA4. Requires DWD enabled on the SA in GCP and the SA's Client ID authorized in admin.google.com → Security → API Controls → Domain-wide Delegation with scopes `webmasters.readonly` + `analytics.readonly`. When set, the SA inherits the impersonated user's permissions and no direct grant is needed on either property. | unset — SA authenticates as itself |
 
 All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 

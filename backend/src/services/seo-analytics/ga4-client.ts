@@ -1,12 +1,30 @@
 import { BetaAnalyticsDataClient } from "@google-analytics/data"
+import { google } from "googleapis"
 
-import { getServiceAccountKey } from "./google-auth"
+import { getImpersonationSubject, getServiceAccountKey } from "./google-auth"
 import type { Ga4ByDay, Ga4PageRow, Ga4Summary } from "./types"
 
+const SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
 const TOP_PAGE_LIMIT = 25
 
 function buildClient() {
   const key = getServiceAccountKey()
+  const subject = getImpersonationSubject()
+
+  if (subject) {
+    // Domain-Wide Delegation: act as a Workspace user that already has GA4
+    // access. See backend/src/lib/constants.ts for setup. We have to construct
+    // a JWT explicitly because BetaAnalyticsDataClient's `credentials` option
+    // doesn't support `subject` directly.
+    const jwt = new google.auth.JWT({
+      email: key.client_email,
+      key: key.private_key,
+      scopes: [SCOPE],
+      subject,
+    })
+    return new BetaAnalyticsDataClient({ auth: jwt as any })
+  }
+
   return new BetaAnalyticsDataClient({
     credentials: {
       client_email: key.client_email,

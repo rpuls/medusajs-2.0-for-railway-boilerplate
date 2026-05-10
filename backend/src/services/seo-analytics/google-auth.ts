@@ -1,4 +1,7 @@
-import { GOOGLE_SERVICE_ACCOUNT_JSON } from "../../lib/constants"
+import {
+  GOOGLE_SERVICE_ACCOUNT_JSON,
+  SEO_IMPERSONATION_USER,
+} from "../../lib/constants"
 
 type ServiceAccountKey = {
   client_email: string
@@ -48,4 +51,16 @@ export function getServiceAccountKey(): ServiceAccountKey {
 
 export function isSeoConfigured(): boolean {
   return Boolean(GOOGLE_SERVICE_ACCOUNT_JSON)
+}
+
+/**
+ * Returns the Workspace user email to impersonate via Domain-Wide Delegation,
+ * or undefined when DWD isn't configured. When defined, the GSC + GA4 clients
+ * authenticate as this user instead of as the service account itself —
+ * sidestepping the need to add the SA to GSC/GA4 user lists when Google's IAM
+ * rejects external service account emails.
+ */
+export function getImpersonationSubject(): string | undefined {
+  const trimmed = SEO_IMPERSONATION_USER?.trim()
+  return trimmed && trimmed.length > 0 ? trimmed : undefined
 }

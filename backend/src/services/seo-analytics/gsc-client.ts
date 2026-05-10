@@ -1,6 +1,6 @@
 import { google } from "googleapis"
 
-import { getServiceAccountKey } from "./google-auth"
+import { getImpersonationSubject, getServiceAccountKey } from "./google-auth"
 import type { GscRow, GscSummary } from "./types"
 
 const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
@@ -18,10 +18,15 @@ function todayIso(): string {
 
 function buildClient() {
   const key = getServiceAccountKey()
+  const subject = getImpersonationSubject()
   const jwt = new google.auth.JWT({
     email: key.client_email,
     key: key.private_key,
     scopes: [SCOPE],
+    // When set, the SA acts as this Workspace user via Domain-Wide Delegation
+    // (see backend/src/lib/constants.ts for setup). When undefined, the SA
+    // authenticates as itself and must hold direct GSC permission.
+    subject,
   })
   return google.searchconsole({ version: "v1", auth: jwt })
 }
