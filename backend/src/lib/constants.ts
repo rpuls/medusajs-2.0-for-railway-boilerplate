@@ -188,17 +188,33 @@ export const ASCOLOUR_WORKSHOP_PHONE = process.env.ASCOLOUR_WORKSHOP_PHONE
 /**
  * Google Search Console + Google Analytics 4 (read-only).
  *
- * `GOOGLE_SERVICE_ACCOUNT_JSON` is the full JSON key for a service account that has
- * been granted "Restricted" access in the GSC property and "Viewer" access in the GA4
- * property. Paste the JSON unmodified — newlines in env vars are fine on Railway.
+ * `GOOGLE_SERVICE_ACCOUNT_JSON` is the full JSON key for a service account.
  *
- * All three are intentionally NOT wrapped in assertValue() — the rest of the app
- * must boot without SEO config so dev environments aren't blocked. Job + routes
- * detect missing config at call time and log a warning.
+ * Two access patterns are supported, both read-only:
+ *
+ *  1. **Direct grant** (default): the service account is added as a Restricted
+ *     user in GSC and a Viewer in GA4, and authenticates as itself. Simple but
+ *     blocked when Google's IAM rejects external service account emails (a
+ *     common Workspace org constraint).
+ *
+ *  2. **Domain-Wide Delegation (DWD)**: set `SEO_IMPERSONATION_USER` to a
+ *     Workspace user that already has access (e.g. info@scprints.com.au, who is
+ *     the GSC Owner and GA4 admin). The SA must have DWD enabled in GCP and
+ *     its Client ID must be authorized in admin.google.com → Security → API
+ *     Controls → Domain-wide Delegation with these scopes:
+ *       - https://www.googleapis.com/auth/webmasters.readonly
+ *       - https://www.googleapis.com/auth/analytics.readonly
+ *     With DWD configured, no IAM grant on the GSC/GA4 properties is required;
+ *     the SA inherits the impersonated user's permissions.
+ *
+ * All four are intentionally NOT wrapped in assertValue() — the rest of the
+ * app must boot without SEO config so dev environments aren't blocked. Job +
+ * routes detect missing config at call time and log a warning.
  */
 export const GOOGLE_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
 export const GSC_SITE_URL = process.env.GSC_SITE_URL
 export const GA4_PROPERTY_ID = process.env.GA4_PROPERTY_ID
+export const SEO_IMPERSONATION_USER = process.env.SEO_IMPERSONATION_USER
 
 /**
  * 4. SYSTEM MODES
