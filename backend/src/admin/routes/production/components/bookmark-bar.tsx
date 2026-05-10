@@ -1,6 +1,6 @@
 import { Button, Input, Text, Tooltip } from "@medusajs/ui"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bookmarkss, Plus } from "@medusajs/icons"
+import { Bookmarks, Plus } from "@medusajs/icons"
 
 import { PALETTE } from "../../../lib/reports/palette"
 

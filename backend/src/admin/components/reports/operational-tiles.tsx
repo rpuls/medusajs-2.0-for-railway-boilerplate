@@ -14,6 +14,18 @@ type StorageResponse = {
   error?: string
 }
 
+type PostHogResponse = {
+  configured: boolean
+  pageviews: number
+  sessions: number
+  topPath: string | null
+  topPathViews: number
+  windowDays: number
+  error?: string
+}
+
+const formatCount = (n: number): string => n.toLocaleString("en-AU")
+
 const formatBytes = (n: number): string => {
   if (n < 1024) return `${n} B`
   if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`
@@ -41,6 +53,8 @@ const SPEED_INSIGHTS_URL =
 export const OperationalTiles = () => {
   const [storage, setStorage] = useState<StorageResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const [posthog, setPosthog] = useState<PostHogResponse | null>(null)
+  const [posthogLoading, setPosthogLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -53,6 +67,23 @@ export const OperationalTiles = () => {
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setPosthogLoading(true)
+    fetch(`/admin/reports/posthog-stats`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { configured: false }))
+      .then((j) => {
+        if (!cancelled) setPosthog(j as PostHogResponse)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPosthogLoading(false)
       })
     return () => {
       cancelled = true
@@ -151,13 +182,53 @@ export const OperationalTiles = () => {
         {/* PostHog */}
         <div className="px-3 py-2 rounded-md bg-ui-bg-subtle/50">
           <Text size="xsmall" className="text-ui-fg-subtle">
-            Session replays + funnel insights (PostHog)
+            Storefront traffic (PostHog · last{" "}
+            {posthog?.windowDays ?? 7} days)
           </Text>
-          <Text size="small" className="text-ui-fg-muted">
-            Open posthog.com → SC Prints project → Replays / Insights for
-            session-level analysis. Wired to fire pageviews + identifies
-            already.
-          </Text>
+          {!posthog?.configured ? (
+            <Text size="small" className="text-ui-fg-muted">
+              Set POSTHOG_PERSONAL_API_KEY + POSTHOG_PROJECT_ID to show live
+              numbers here. Without them, the tile stays as a deep-link only.
+            </Text>
+          ) : posthogLoading ? (
+            <Text size="small" className="text-ui-fg-muted">
+              Loading…
+            </Text>
+          ) : posthog.error ? (
+            <>
+              <Text className="text-2xl font-semibold tabular-nums">
+                {formatCount(posthog.pageviews)}
+              </Text>
+              <Text size="xsmall" className="text-ui-fg-muted">
+                pageviews · {formatCount(posthog.sessions)} sessions
+              </Text>
+              <Text
+                size="xsmall"
+                className="mt-1"
+                style={{ color: PALETTE.amber600 }}
+              >
+                Query error: {posthog.error.slice(0, 140)}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text className="text-2xl font-semibold tabular-nums">
+                {formatCount(posthog.pageviews)}
+              </Text>
+              <Text size="xsmall" className="text-ui-fg-muted">
+                pageviews · {formatCount(posthog.sessions)} sessions
+              </Text>
+              {posthog.topPath ? (
+                <Text size="xsmall" className="text-ui-fg-muted mt-1">
+                  Top page:{" "}
+                  <span style={{ color: PALETTE.slate700 }}>
+                    {posthog.topPath}
+                  </span>{" "}
+                  ({formatCount(posthog.topPathViews)})
+                </Text>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </Container>
