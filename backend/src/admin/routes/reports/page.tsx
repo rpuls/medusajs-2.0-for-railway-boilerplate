@@ -36,6 +36,10 @@ import { AgingInventoryChart } from "../../components/reports/aging-inventory-ch
 import { VectorizationFunnelChart } from "../../components/reports/vectorization-funnel-chart"
 import { DiscountProfitabilityChart } from "../../components/reports/discount-profitability-chart"
 import { ReturnsChart } from "../../components/reports/returns-chart"
+import { StaffThroughputChart } from "../../components/reports/staff-throughput-chart"
+import { SupplierLeadTimeChart } from "../../components/reports/supplier-lead-time-chart"
+import { FlowTimeChart } from "../../components/reports/flow-time-chart"
+import { StageDwellHeatmapChart } from "../../components/reports/stage-dwell-heatmap-chart"
 import { CustomizerFunnelChart } from "../../components/reports/customizer-funnel-chart"
 import { SavedDesignConversionChart } from "../../components/reports/saved-design-conversion-chart"
 import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
@@ -331,6 +335,26 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
             <ReturnsChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <StaffThroughputChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <SupplierLeadTimeChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <FlowTimeChart
+              fromIso={fromIso}
+              toIso={toIso}
+              regionId={activeRegionId}
+            />
+            <StageDwellHeatmapChart
               fromIso={fromIso}
               toIso={toIso}
               regionId={activeRegionId}
