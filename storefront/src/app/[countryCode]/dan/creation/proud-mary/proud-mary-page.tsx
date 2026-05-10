@@ -59,9 +59,10 @@ export default function ProudMaryPage({ countryCode }: { countryCode: string }) 
   const [slide, setSlide] = useState(0)
 
   return (
-    <div style={{ minHeight: "100vh" }}>
+    <div className="dan-content" style={{ minHeight: "100vh" }}>
       {/* Header */}
       <header
+        className="dan-header"
         style={{
           padding: "2rem 2.5rem",
           display: "flex",

@@ -4,43 +4,80 @@ import Link from "next/link"
 import { useState } from "react"
 
 export default function DanHome({ countryCode }: { countryCode: string }) {
-  const [aboutOpen, setAboutOpen] = useState(true)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh" }}>
+    <div
+      className="dan-content"
+      style={{
+        position: "relative",
+        height: "100vh",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Header */}
       <header
+        className="dan-header"
         style={{
-          position: "relative",
-          zIndex: 10,
-          padding: "2rem 2.5rem",
+          flexShrink: 0,
+          padding: "1.5rem 2.5rem",
           display: "flex",
           justifyContent: "center",
           alignItems: "flex-start",
+          position: "relative",
         }}
       >
         <div style={{ textAlign: "center" }}>
           <p
             style={{
-              fontSize: "2rem",
+              fontSize: "clamp(1.8rem, 3.5vw, 3.5rem)",
               fontWeight: "400",
               margin: 0,
-              lineHeight: 1.2,
+              lineHeight: 1.1,
             }}
           >
             Daniel Mudie Cunningham
           </p>
           <p
             style={{
-              fontSize: "1.2rem",
+              fontSize: "clamp(1.4rem, 2.8vw, 2.8rem)",
               fontWeight: "400",
-              margin: "0.3rem 0 0",
+              margin: "0.2rem 0 0",
             }}
           >
             Curation, Creation, Criticism
           </p>
         </div>
-        <nav style={{ position: "absolute", right: "2.5rem", top: "2rem" }}>
+
+        <nav
+          style={{
+            position: "absolute",
+            right: "2.5rem",
+            top: "1.75rem",
+            display: "flex",
+            gap: "1.5rem",
+            alignItems: "center",
+          }}
+        >
+          {!aboutOpen && (
+            <button
+              onClick={() => setAboutOpen(true)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "1rem",
+                fontFamily: "inherit",
+                fontWeight: "700",
+                color: "#1a1a1a",
+                padding: 0,
+              }}
+            >
+              About
+            </button>
+          )}
           <Link
             href={`/${countryCode}/dan/creation/proud-mary`}
             style={{
@@ -55,43 +92,25 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
         </nav>
       </header>
 
-      {/* Body */}
-      <div
-        style={{
-          display: "flex",
-          minHeight: "calc(100vh - 110px)",
-          position: "relative",
-        }}
-      >
-        {/* Left: circular hero image */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "2rem",
-            transition: "flex 0.5s ease",
-          }}
-        >
-          <div
+      {/* Image + About panel */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* Image — fills full width when about closed, left half when open */}
+        <div style={{ flex: 1, overflow: "hidden", transition: "flex 0.5s ease" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dan/fs4-2000x1300-crop-1-q90.png"
+            alt="Funeral Songs — jukebox installation"
             style={{
-              width: "min(420px, 75%)",
-              aspectRatio: "1",
-              borderRadius: "50%",
-              overflow: "hidden",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              display: "block",
             }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/dan/fs4-2000x1300-crop-1-q90.png"
-              alt="Funeral Songs — jukebox installation"
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-          </div>
+          />
         </div>
 
-        {/* Right: About panel (slides in from right) */}
+        {/* About panel — slides in from right */}
         <div
           style={{
             width: aboutOpen ? "50%" : "0",
@@ -99,15 +118,15 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
             transition: "width 0.5s ease",
             backgroundColor: "#f0ece4",
             flexShrink: 0,
-            position: "relative",
           }}
         >
-          {/* Inner div keeps width stable so text doesn't reflow during animation */}
           <div
             style={{
               width: "50vw",
+              height: "100%",
               padding: "2rem 3rem",
               position: "relative",
+              overflowY: "auto",
             }}
           >
             <button
@@ -140,13 +159,7 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
               About
             </h2>
 
-            <div
-              style={{
-                fontSize: "1rem",
-                lineHeight: 1.75,
-                maxWidth: "520px",
-              }}
-            >
+            <div style={{ fontSize: "1rem", lineHeight: 1.75, maxWidth: "520px" }}>
               <p style={{ marginTop: 0 }}>
                 Dr Daniel Mudie Cunningham is an artist, curator, writer and
                 educator, and the Director of{" "}
@@ -176,39 +189,17 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
                 distillation.
               </p>
               <p>
-                His work has been widely exhibited and collected by
-                institutions including the Art Gallery of Western Australia,
-                the National Film and Sound Archive, Artbank, the City of
-                Sydney, Murray Art Museum Albury, Campbelltown Arts Centre,
-                and the Museum of Old and New Art (MONA), which is currently
-                presenting his ongoing video series <em>Proud Mary</em>.
+                His work has been widely exhibited and collected by institutions
+                including the Art Gallery of Western Australia, the National
+                Film and Sound Archive, Artbank, the City of Sydney, Murray Art
+                Museum Albury, Campbelltown Arts Centre, and the Museum of Old
+                and New Art (MONA), which is currently presenting his ongoing
+                video series <em>Proud Mary</em>.
               </p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Floating "About" button when panel is closed */}
-      {!aboutOpen && (
-        <button
-          onClick={() => setAboutOpen(true)}
-          style={{
-            position: "fixed",
-            bottom: "2rem",
-            right: "2rem",
-            background: "none",
-            border: "1px solid #1a1a1a",
-            cursor: "pointer",
-            fontSize: "0.9rem",
-            fontFamily: "inherit",
-            padding: "0.5rem 1.25rem",
-            color: "#1a1a1a",
-            backgroundColor: "#f9c8d4",
-          }}
-        >
-          About
-        </button>
-      )}
     </div>
   )
 }
