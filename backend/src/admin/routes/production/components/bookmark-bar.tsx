@@ -13,7 +13,7 @@ type SavedBookmarks = {
 
 type ValidTarget = "orders" | "production" | "reports" | "customers"
 
-export const BookmarksBar = ({
+export const BookmarkBar = ({
   target,
   currentQuery,
   onApply,
