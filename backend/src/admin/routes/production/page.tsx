@@ -28,6 +28,10 @@ import {
 
 import { CalendarView } from "./components/calendar-view"
 import { BookmarkBar } from "./components/bookmark-bar"
+import {
+  PRODUCTION_STAGES,
+  PRODUCTION_STAGE_LABEL,
+} from "../../lib/production-stage"
 
 /* ---------- types mirrored from /admin/reports/production-snapshot ------- */
 
@@ -500,11 +504,15 @@ const ProductionPage = () => {
         <StageListView
           stages={filteredStages}
           onStageClick={(stage) => setDrillStage(stage)}
+          onAdvanced={() => setRefreshNonce((n) => n + 1)}
         />
       ) : null}
 
       {snapshot && view === "kanban" ? (
-        <KanbanView stages={filteredStages} />
+        <KanbanView
+          stages={filteredStages}
+          onAdvanced={() => setRefreshNonce((n) => n + 1)}
+        />
       ) : null}
 
       {snapshot && view === "calendar" ? (
@@ -533,7 +541,7 @@ const ProductionPage = () => {
             {drillStageData ? (
               <div className="flex flex-col gap-y-2">
                 {drillStageData.orders.map((o) => (
-                  <OrderRow key={o.id} order={o} stage={drillStageData.stage} />
+                  <OrderRow key={o.id} order={o} stage={drillStageData.stage} onAdvanced={() => setRefreshNonce((n) => n + 1)} />
                 ))}
                 {drillStageData.truncated ? (
                   <Text size="xsmall" className="text-ui-fg-muted pt-2">
@@ -555,14 +563,16 @@ const ProductionPage = () => {
 const StageListView = ({
   stages,
   onStageClick,
+  onAdvanced,
 }: {
   stages: SnapshotStage[]
   onStageClick: (stage: string) => void
+  onAdvanced: () => void
 }) => {
   return (
     <div className="flex flex-col gap-y-3">
       {stages.map((s) => (
-        <StageSection key={s.stage} stage={s} onHeaderClick={onStageClick} />
+        <StageSection key={s.stage} stage={s} onHeaderClick={onStageClick} onAdvanced={onAdvanced} />
       ))}
     </div>
   )
@@ -571,9 +581,11 @@ const StageListView = ({
 const StageSection = ({
   stage,
   onHeaderClick,
+  onAdvanced,
 }: {
   stage: SnapshotStage
   onHeaderClick: (stage: string) => void
+  onAdvanced: () => void
 }) => {
   const [expanded, setExpanded] = useState<boolean>(stage.stuck_count > 0)
   const empty = stage.count === 0
@@ -632,7 +644,7 @@ const StageSection = ({
       {expanded && stage.count > 0 ? (
         <div className="flex flex-col gap-y-1 px-4 pb-4">
           {stage.orders.slice(0, 5).map((o) => (
-            <OrderRow key={o.id} order={o} stage={stage.stage} />
+            <OrderRow key={o.id} order={o} stage={stage.stage} onAdvanced={onAdvanced} />
           ))}
           {stage.count > 5 ? (
             <Button
@@ -650,7 +662,7 @@ const StageSection = ({
   )
 }
 
-const KanbanView = ({ stages }: { stages: SnapshotStage[] }) => {
+const KanbanView = ({ stages, onAdvanced }: { stages: SnapshotStage[]; onAdvanced: () => void }) => {
   // Map 10 stages → 5 lanes
   const stageMap = new Map(stages.map((s) => [s.stage, s]))
   return (
@@ -688,7 +700,7 @@ const KanbanView = ({ stages }: { stages: SnapshotStage[] }) => {
             </div>
             <div className="flex flex-col gap-y-2 p-2 overflow-auto max-h-[600px]">
               {orders.slice(0, 30).map((o) => (
-                <KanbanCard key={o.id} order={o} stage={o._stage} />
+                <KanbanCard key={o.id} order={o} stage={o._stage} onAdvanced={onAdvanced} />
               ))}
               {orders.length === 0 ? (
                 <Text size="xsmall" className="text-ui-fg-muted px-1">
@@ -714,12 +726,40 @@ const KanbanView = ({ stages }: { stages: SnapshotStage[] }) => {
 const OrderRow = ({
   order,
   stage,
+  onAdvanced,
 }: {
   order: SnapshotOrder
   stage: string
+  onAdvanced?: () => void
 }) => {
   const band = stageHealthBand(stage, order.days_at_stage)
   const bandColor = STAGE_HEALTH_COLORS[band]
+  const [advancing, setAdvancing] = useState(false)
+
+  const stageIdx = PRODUCTION_STAGES.indexOf(stage as any)
+  const nextStage = stageIdx >= 0 && stageIdx < PRODUCTION_STAGES.length - 1
+    ? PRODUCTION_STAGES[stageIdx + 1]
+    : null
+
+  const advance = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!nextStage || advancing) return
+    setAdvancing(true)
+    try {
+      await fetch(`/admin/orders/${order.id}/production-stage`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: nextStage }),
+      })
+      onAdvanced?.()
+    } catch {
+      // non-fatal — let the user retry
+    } finally {
+      setAdvancing(false)
+    }
+  }
 
   return (
     <a
@@ -779,6 +819,18 @@ const OrderRow = ({
           <StatusBadge color="blue">AC</StatusBadge>
         </Tooltip>
       ) : null}
+      {nextStage ? (
+        <Tooltip content={`Advance to: ${PRODUCTION_STAGE_LABEL[nextStage]}`}>
+          <button
+            type="button"
+            onClick={advance}
+            disabled={advancing}
+            className="shrink-0 inline-flex items-center px-2 py-1 rounded text-xs border border-ui-border-base hover:bg-ui-bg-base-pressed transition disabled:opacity-40"
+          >
+            {advancing ? "…" : "→"}
+          </button>
+        </Tooltip>
+      ) : null}
     </a>
   )
 }
@@ -786,12 +838,41 @@ const OrderRow = ({
 const KanbanCard = ({
   order,
   stage,
+  onAdvanced,
 }: {
   order: SnapshotOrder
   stage: string
+  onAdvanced?: () => void
 }) => {
   const band = stageHealthBand(stage, order.days_at_stage)
   const bandColor = STAGE_HEALTH_COLORS[band]
+  const [advancing, setAdvancing] = useState(false)
+
+  const stageIdx = PRODUCTION_STAGES.indexOf(stage as any)
+  const nextStage = stageIdx >= 0 && stageIdx < PRODUCTION_STAGES.length - 1
+    ? PRODUCTION_STAGES[stageIdx + 1]
+    : null
+
+  const advance = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!nextStage || advancing) return
+    setAdvancing(true)
+    try {
+      await fetch(`/admin/orders/${order.id}/production-stage`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: nextStage }),
+      })
+      onAdvanced?.()
+    } catch {
+      // non-fatal
+    } finally {
+      setAdvancing(false)
+    }
+  }
+
   return (
     <a
       href={`/app/orders/${order.id}`}
@@ -801,13 +882,27 @@ const KanbanCard = ({
         <Text size="small" className="font-mono">
           #{order.display_id ?? order.id.slice(-6)}
         </Text>
-        <Text
-          size="xsmall"
-          className="tabular-nums"
-          style={{ color: bandColor }}
-        >
-          {order.days_at_stage}d
-        </Text>
+        <div className="flex items-center gap-x-1">
+          <Text
+            size="xsmall"
+            className="tabular-nums"
+            style={{ color: bandColor }}
+          >
+            {order.days_at_stage}d
+          </Text>
+          {nextStage ? (
+            <Tooltip content={`→ ${PRODUCTION_STAGE_LABEL[nextStage]}`}>
+              <button
+                type="button"
+                onClick={advance}
+                disabled={advancing}
+                className="text-[10px] px-1 py-0.5 rounded border border-ui-border-base hover:bg-ui-bg-subtle transition disabled:opacity-40"
+              >
+                {advancing ? "…" : "→"}
+              </button>
+            </Tooltip>
+          ) : null}
+        </div>
       </div>
       <Text size="xsmall" className="truncate">
         {order.customer}
