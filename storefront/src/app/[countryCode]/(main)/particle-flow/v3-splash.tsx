@@ -51,7 +51,7 @@ export const V3_TUNING: Partial<NewmixLiveTuning> = {
    * historical path for trailFollowMs at wakePace. This is the actual
    * Newmix "stir the coffee" mechanism; the field provides flow context
    * but the wake is what makes particles physically follow the cursor. */
-  trailFollowMs: 1000,
+  trailFollowMs: 5000,
   wakePace: 0.7,
   wakePaceJitter: 0.25,
   wakeLateralSpreadBmp: 6,
