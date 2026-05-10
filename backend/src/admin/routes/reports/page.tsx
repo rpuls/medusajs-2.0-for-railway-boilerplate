@@ -146,8 +146,10 @@ const ReportsPage = () => {
       {/* Today widget — heartbeat KPIs vs same weekday last week */}
       <TodayWidget />
 
-      {/* Filter bar */}
-      <Container className="flex flex-wrap items-end gap-3">
+      {/* Filter bar — sticks to the top while scrolling so the active range/region
+          is always one glance away no matter how far down the page you've scrolled.
+          z-30 keeps it above the report card content + sparklines, below modals. */}
+      <Container className="flex flex-wrap items-end gap-3 sticky top-0 z-30 shadow-sm bg-ui-bg-base">
         <div className="flex flex-col gap-y-1 min-w-[180px]">
           <Label className="text-xs text-ui-fg-subtle">Date range</Label>
           <Select

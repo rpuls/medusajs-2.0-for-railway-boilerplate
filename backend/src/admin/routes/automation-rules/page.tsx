@@ -17,6 +17,7 @@ import { ArrowPath, Trash, PencilSquare, Plus } from "@medusajs/icons"
 import { useCallback, useEffect, useState } from "react"
 
 import { PALETTE } from "../../lib/reports/palette"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 
 /* ---------- types --------------------------------------------------------- */
 
@@ -832,7 +833,22 @@ const AutomationRulesPage = () => {
       {/* Header */}
       <Container className="flex items-start justify-between">
         <div>
-          <Heading level="h1">Automation Rules</Heading>
+          <Heading level="h1" className="flex items-center">
+            Automation Rules
+            <HelpTooltip
+              text={{
+                title: "Automation Rules",
+                body: "Tiny no-code automations that watch for an event on the backend and run one or more actions when conditions match. Use them to automate the repetitive stuff that doesn't justify a full feature — labelling orders, posting internal notes, nudging customers, advancing production stages.",
+                bullets: [
+                  "Triggers fire in real time from the backend event bus — no cron, no polling, no admin tab needed open.",
+                  "Conditions are AND-joined: every condition must match for the rule to fire. Leave conditions empty to fire on every trigger event.",
+                  "Actions run sequentially in the order you list them. A failed action logs but doesn't block the next one.",
+                  "Disabled rules stay listed but skip evaluation — handy for staging a rule before flipping it on.",
+                  "Last fired / fire count update live so you can confirm a new rule actually matched.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle mt-1">
             Rules fire automatically when their trigger event occurs and all conditions
             match. Evaluated in real time — no cron required.
