@@ -13,16 +13,19 @@ function buildClient() {
 
   if (subject) {
     // Domain-Wide Delegation: act as a Workspace user that already has GA4
-    // access. See backend/src/lib/constants.ts for setup. We have to construct
-    // a JWT explicitly because BetaAnalyticsDataClient's `credentials` option
-    // doesn't support `subject` directly.
-    const jwt = new google.auth.JWT({
-      email: key.client_email,
-      key: key.private_key,
+    // access. See backend/src/lib/constants.ts for setup. We pass GoogleAuth
+    // (not a raw JWT) because BetaAnalyticsDataClient calls newer methods on
+    // the auth client (e.g. `getUniverseDomain`) that the legacy JWT class
+    // from googleapis doesn't expose. GoogleAuth wraps the JWT and adds them.
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: key.client_email,
+        private_key: key.private_key,
+      },
       scopes: [SCOPE],
-      subject,
+      clientOptions: { subject },
     })
-    return new BetaAnalyticsDataClient({ auth: jwt as any })
+    return new BetaAnalyticsDataClient({ auth: auth as any })
   }
 
   return new BetaAnalyticsDataClient({
