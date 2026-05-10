@@ -4,100 +4,51 @@ import { useCallback, useEffect, useState } from "react"
 
 export type ThreeTuning = {
   particleCount: number
+  /** World-space radius of cursor influence disk. */
   cursorRadius: number
-  cursorForce: number
-  mouseVelocityScale: number
-  springStiffness: number
-  friction: number
+  /** Max radial displacement at cursor centre (world units).
+   * Pushes each particle's HOME outward from the cursor, creating the
+   * soft void. Combined with trailDisplacement for rear particles. */
+  cursorDisplacement: number
+  /** Max backward trail displacement at cursor centre (world units).
+   * Applied in the direction OPPOSITE to cursor motion. Particles behind
+   * the cursor get this ADDED to their radial offset → strong rearward
+   * displacement = comet-tail wake. Particles ahead get opposing offsets
+   * → barely disturbed until the cursor reaches them.
+   * Scales linearly with cursor speed up to trailSpeedCap. */
+  trailDisplacement: number
+  /** Cursor speed (world units/sec) at which trail displacement saturates.
+   * Stirring slowly → gentle trail. Sweeping fast → full trail. */
+  trailSpeedCap: number
+  /** Position-blend rate toward target when in cursor disk.
+   * alpha = inBlend × dt. At 60fps (dt≈0.016): inBlend=12 → alpha≈0.2
+   * → particle reaches ~67% of target in 5 frames. Higher = snappier. */
+  inBlend: number
+  /** Position-blend rate toward home when outside disk.
+   * alpha = outBlend × dt. At 60fps: outBlend=1.8 → alpha≈0.03 →
+   * particle decays to 40% of displacement after ~0.5s = visible trail.
+   * Lower = longer tail. */
+  outBlend: number
   pointSize: number
-  /** Wake-velocity contribution: how much of cursor velocity gets baked
-   * into in-disk particles each frame. 0 = no wake, just radial; 1 =
-   * particle picks up nearly full mouse velocity. */
-  wakeStrength: number
-  /** Tangential side-swirl force. Particles in the cursor disk receive a
-   * force PERPENDICULAR to their direction from cursor center, with the
-   * sign flipped based on which side of the cursor's motion line they're
-   * on. This is what produces the contained orbital curl Newmix shows
-   * (rather than straight-line flame trails from pure velocity transfer). */
-  sideSwirlForce: number
-  /** Wake-history playback duration (ms). When a particle exits the cursor
-   * disk and wins the trailingProbability roll, it enters wake state for
-   * this many ms. While in wake state, position is driven by the cursor's
-   * HISTORICAL position (replayed at wakePace), not by spring/cursor forces.
-   * 0 = disabled. 800-1500ms = visible flowing wake behind cursor path. */
-  trailFollowMs: number
-  /** Probability (0..1) that a particle entering wake-eligible state (was in
-   * cursor disk last frame, not now) actually enters wake state. Lower =
-   * sparser wake (only some particles trail), more keep their normal
-   * spring-back. */
-  trailingProbability: number
-  /** Wake replay pace. 0 = particle locks to cursor's release position
-   * (no path replay). 0.5 = particle traces history at half-speed of real
-   * time, falling visibly behind. 1 = particle stays at current cursor (no
-   * trail). 0.6-0.8 reads as Newmix-style flowing arc. */
-  wakePace: number
-  /** Lateral spread of wake offsets (world units). Each particle's wake
-   * preserves its release-time offset from cursor PLUS a random lateral
-   * offset up to ±this value. Higher = wider, less rope-like wake. */
-  wakeLateralSpread: number
-  /** Bilateral lateral push — particles in the cursor disk get pushed
-   * PERPENDICULAR to the cursor's motion direction (away from the motion
-   * line), with sign by side. Creates the two-lobe wake split that
-   * Newmix shows: particles flow around the cursor on both sides
-   * instead of just being repelled radially. */
-  lateralPushForce: number
-  /** Karman vortex pair: two counter-rotating vortex centers BEHIND the
-   * cursor (one on the left, one on the right). Particles within
-   * vortexRadius of either center receive a tangential force around it.
-   * This is the "two spinning lobes" Newmix shows in slow-motion. */
-  vortexStrength: number
-  /** Distance behind cursor (world units) where the Karman vortex pair
-   * sits, measured along the negative motion direction. */
-  vortexBehindOffset: number
-  /** Lateral separation between the two vortex centers (world units).
-   * They sit at ±this/2 offset perpendicular to motion. */
-  vortexLateralOffset: number
-  /** Radius of each vortex's influence zone. */
-  vortexRadius: number
-  /** Cursor speed at which vortex strength halves. Makes vortices clear
-   * at slow/moderate speed, fade smoothly to streaks at high speed —
-   * exactly the "disappears as cursor speeds up" Newmix behavior. */
-  vortexSpeedHalfLife: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   particleCount: 140000,
-  cursorRadius: 80,
-  /** Gentle void. With spring=10, equilibrium displacement at cursor
-   * centre is ~12 world-units — barely shifts the wordmark. */
-  cursorForce: 180,
-  mouseVelocityScale: 0.3,
-  /** Strong spring: displaced particles back home in ~12 frames (0.2s). */
-  springStiffness: 10,
-  /** Strong friction: velocity dies quickly, no overshoot. */
-  friction: 7,
+  cursorRadius: 90,
+  /** Radial push — creates a clean void under cursor.
+   * ~20 world-units at cursor centre. */
+  cursorDisplacement: 20,
+  /** Backward trail — particles behind cursor get 20+35=55 units of
+   * rearward displacement at cursor centre and full speed. Clearly
+   * visible outside letter strokes (~10 units wide). */
+  trailDisplacement: 35,
+  /** Trail saturates at 300 u/s. Slow stir = subtle; fast sweep = full. */
+  trailSpeedCap: 300,
+  /** inBlend=12 → alpha≈0.2/frame → reaches target in ~5 frames (0.08s). */
+  inBlend: 12,
+  /** outBlend=1.8 → alpha≈0.03/frame → trail visible for ~1–1.5 s. */
+  outBlend: 1.8,
   pointSize: 2.5,
-  /** Subtle directional drag along cursor direction. */
-  wakeStrength: 0.15,
-  /** Swirl is dt*60 normalised. 3 units/frame — spring wins at d>18,
-   * so swirl-only displacement is bounded to ~18 world-units. */
-  sideSwirlForce: 3,
-  trailFollowMs: 1400,
-  /** More wake particles → brighter, denser bilateral trail. */
-  trailingProbability: 0.6,
-  wakePace: 0.6,
-  /** Wide spread so the two-lobe structure reads clearly. */
-  wakeLateralSpread: 25,
-  /** Push dt*60 normalised. 3 units/frame bilateral. */
-  lateralPushForce: 3,
-  /** Vortex *15 normalised. ~3.8 units/frame at ff2=1, speedFactor=1.
-   * Gentle spiralling lobes behind cursor at slow speed. */
-  vortexStrength: 15,
-  vortexBehindOffset: 30,
-  vortexLateralOffset: 55,
-  vortexRadius: 60,
-  /** Vortices clear below 200 u/s, mostly gone by 400. */
-  vortexSpeedHalfLife: 300,
 }
 
 type SliderDef = {
@@ -119,175 +70,67 @@ const SLIDERS: SliderDef[] = [
     step: 1000,
     format: (v) => `${(v / 1000).toFixed(0)}k`,
     description:
-      "Total particles sampled from the wordmark. Newmix uses ~140k. Changing rebuilds the buffer geometry.",
+      "Total particles sampled from the wordmark. ~140k is Newmix density. Changing this rebuilds the buffer.",
   },
   {
     key: "cursorRadius",
     label: "Cursor radius",
     min: 30,
-    max: 400,
+    max: 300,
     step: 5,
     format: (v) => `${v.toFixed(0)} px`,
-    description: "World-space radius of the cursor's influence disk.",
+    description:
+      "World-space radius of the cursor influence disk. Larger = more particles disturbed per stroke.",
   },
   {
-    key: "cursorForce",
+    key: "cursorDisplacement",
     label: "Radial push",
     min: 0,
-    max: 4000,
-    step: 50,
-    description:
-      "Outward radial force from cursor center. Creates the soft void under the cursor.",
-  },
-  {
-    key: "wakeStrength",
-    label: "Wake strength",
-    min: 0,
-    max: 2,
-    step: 0.05,
-    format: (v) => v.toFixed(2),
-    description:
-      "How much of the cursor's velocity is transferred to in-disk particles. The directional wake force (linear).",
-  },
-  {
-    key: "sideSwirlForce",
-    label: "Side swirl",
-    min: 0,
-    max: 20,
-    step: 0.1,
-    format: (v) => v.toFixed(1),
-    description:
-      "Tangential force around cursor — particles on opposite sides of motion vector swirl in opposite directions. THE force that produces the Newmix-style contained curl. 0 = no swirl. 5-10 = strong orbit.",
-  },
-  {
-    key: "trailFollowMs",
-    label: "Trail duration",
-    min: 0,
-    max: 3000,
-    step: 50,
-    format: (v) => (v <= 0 ? "off" : `${(v / 1000).toFixed(2)}s`),
-    description:
-      "How long particles stay in wake-history playback after exiting the cursor disk. While in wake state, particles trace the cursor's HISTORICAL path (rather than springing home). 0 = disabled.",
-  },
-  {
-    key: "trailingProbability",
-    label: "Trailing probability",
-    min: 0,
-    max: 1,
-    step: 0.02,
-    format: (v) => `${Math.round(v * 100)}%`,
-    description:
-      "Fraction of particles exiting the cursor disk that enter wake state. Lower = sparser wake (only some particles trail). Newmix-ish: 0.4-0.7.",
-  },
-  {
-    key: "wakePace",
-    label: "Wake pace",
-    min: 0,
-    max: 1.5,
-    step: 0.02,
-    format: (v) => v.toFixed(2),
-    description:
-      "How fast wake particles replay the cursor's path. 0 = particle locks to release position. 0.7 = traces path at 70% real-time speed (flowing behind cursor). 1 = stays at current cursor (no trail).",
-  },
-  {
-    key: "wakeLateralSpread",
-    label: "Wake lateral spread",
-    min: 0,
-    max: 50,
+    max: 80,
     step: 1,
     format: (v) => `${v.toFixed(0)} px`,
     description:
-      "How wide the wake spreads sideways. 0 = particles trace cursor exactly (rope). 8-20 = soft band. >30 = diffuse cloud.",
+      "Max outward displacement at cursor centre. Creates the soft void. 15-25 = subtle. 40+ = obvious hole.",
   },
   {
-    key: "lateralPushForce",
-    label: "Lateral push",
+    key: "trailDisplacement",
+    label: "Trail depth",
     min: 0,
-    max: 30,
-    step: 0.2,
-    format: (v) => v.toFixed(1),
+    max: 120,
+    step: 1,
+    format: (v) => `${v.toFixed(0)} px`,
     description:
-      "Sideways push perpendicular to cursor's motion. Particles get pushed AWAY from the motion line, signed by side. Creates the bilateral two-lobe wake split.",
+      "Max backward displacement (opposite cursor motion) at full speed. Particles behind cursor get this + radial → the comet tail. 0 = symmetric void only.",
   },
   {
-    key: "vortexStrength",
-    label: "Vortex strength",
-    min: 0,
-    max: 40,
+    key: "trailSpeedCap",
+    label: "Trail speed cap",
+    min: 50,
+    max: 1000,
+    step: 10,
+    format: (v) => `${v.toFixed(0)} u/s`,
+    description:
+      "Cursor speed at which trail displacement saturates. Lower = trail appears even at slow motion. Higher = only fast sweeps create a trail.",
+  },
+  {
+    key: "inBlend",
+    label: "Entry blend",
+    min: 1,
+    max: 60,
     step: 0.5,
     format: (v) => v.toFixed(1),
     description:
-      "Strength of the Karman counter-rotating vortex pair behind the cursor. THE force that produces the visible two-lobe spiral Newmix shows in slow motion. 0 = off. 10-20 = clear vortices.",
+      "How fast particles blend toward their target when the cursor is over them. Higher = snappier displacement. inBlend/60 = fraction moved per frame at 60fps.",
   },
   {
-    key: "vortexBehindOffset",
-    label: "Vortex behind offset",
-    min: 0,
-    max: 200,
-    step: 2,
-    format: (v) => `${v.toFixed(0)} px`,
-    description:
-      "Distance behind cursor where the vortex pair sits (along negative motion direction). Larger = trail forms further back.",
-  },
-  {
-    key: "vortexLateralOffset",
-    label: "Vortex separation",
-    min: 0,
-    max: 200,
-    step: 2,
-    format: (v) => `${v.toFixed(0)} px`,
-    description:
-      "Lateral spacing between the two vortex centers. Larger = wider bilateral wake.",
-  },
-  {
-    key: "vortexRadius",
-    label: "Vortex radius",
-    min: 10,
-    max: 150,
-    step: 2,
-    format: (v) => `${v.toFixed(0)} px`,
-    description:
-      "Radius of each vortex's influence zone. Particles outside don't feel the swirl.",
-  },
-  {
-    key: "vortexSpeedHalfLife",
-    label: "Vortex speed fade",
-    min: 100,
-    max: 3000,
-    step: 50,
-    format: (v) => `${v.toFixed(0)} u/s`,
-    description:
-      "Cursor speed (world-units/sec) at which vortex strength halves. Lower = vortices fade faster as cursor speeds up. Newmix-ish: 400-800.",
-  },
-  {
-    key: "mouseVelocityScale",
-    label: "Mouse vel scale",
-    min: 0,
-    max: 2,
-    step: 0.05,
-    format: (v) => v.toFixed(2),
-    description:
-      "Multiplier on raw mouse velocity before clamping. Higher = larger wake from same cursor speed.",
-  },
-  {
-    key: "springStiffness",
-    label: "Spring stiffness",
-    min: 0,
+    key: "outBlend",
+    label: "Return blend",
+    min: 0.2,
     max: 10,
     step: 0.1,
     format: (v) => v.toFixed(1),
     description:
-      "Force pulling each particle back to its home position. Higher = faster recovery.",
-  },
-  {
-    key: "friction",
-    label: "Friction",
-    min: 0,
-    max: 10,
-    step: 0.1,
-    format: (v) => v.toFixed(1),
-    description:
-      "Linear damping on particle velocity. Higher = wake dies faster.",
+      "How fast particles drift back to home when cursor has passed. Lower = longer visible trail. 1.8 = ~1s trail. 5 = ~0.3s.",
   },
   {
     key: "pointSize",
@@ -300,7 +143,7 @@ const SLIDERS: SliderDef[] = [
   },
 ]
 
-const LS_KEY = "particle-threejs-tuning-v1"
+const LS_KEY = "particle-threejs-tuning-v2"
 
 export function loadStoredTuning(): ThreeTuning {
   if (typeof window === "undefined") return THREE_TUNING_DEFAULTS
@@ -331,7 +174,6 @@ type Props = {
 export default function ThreeTunerPanel({ tuning, onChange }: Props) {
   const [open, setOpen] = useState(true)
 
-  /** Persist tuning to localStorage whenever it changes. */
   useEffect(() => {
     saveStoredTuning(tuning)
   }, [tuning])
@@ -383,9 +225,7 @@ export default function ThreeTunerPanel({ tuning, onChange }: Props) {
               <label key={def.key} className="block">
                 <div className="mb-0.5 flex items-baseline justify-between gap-2">
                   <span className="text-white/80">{def.label}</span>
-                  <span className="font-mono text-white/50">
-                    {formatted}
-                  </span>
+                  <span className="font-mono text-white/50">{formatted}</span>
                 </div>
                 <input
                   type="range"
