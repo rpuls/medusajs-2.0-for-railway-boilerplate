@@ -87,7 +87,7 @@ const FAQ_SECTIONS: FaqSection[] = [
       {
         question: "What file formats do you accept?",
         answer:
-          "Vector files are preferred (AI, EPS, PDF). We can also review high-resolution PNG/JPG files if they are supplied at print size.",
+          "Vector files are preferred (AI, EPS, PDF, SVG). We can also review high-resolution PNG/JPG files if they are supplied at print size (300 dpi or higher).",
       },
       {
         question: "Will I receive a mockup before production?",

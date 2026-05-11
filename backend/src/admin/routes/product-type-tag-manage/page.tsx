@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   Container,
   Heading,
   Text,
@@ -21,7 +22,10 @@ const ProductTypeTagManagePage = () => {
   const [tags, setTags] = useState<ProductTag[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set())
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -42,64 +46,88 @@ const ProductTypeTagManagePage = () => {
     }
   }, [])
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  useEffect(() => { void load() }, [load])
 
-  const onDeleteType = async (type: ProductType) => {
+  const toggleType = (id: string) =>
+    setSelectedTypes((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+
+  const toggleTag = (id: string) =>
+    setSelectedTags((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+
+  const toggleAllTypes = () =>
+    setSelectedTypes(selectedTypes.size === types.length ? new Set() : new Set(types.map((t) => t.id)))
+
+  const toggleAllTags = () =>
+    setSelectedTags(selectedTags.size === tags.length ? new Set() : new Set(tags.map((t) => t.id)))
+
+  const onBulkDeleteTypes = async () => {
+    const toDelete = types.filter((t) => selectedTypes.has(t.id))
     const confirmed = await prompt({
       variant: "danger",
-      title: `Delete product type "${type.value}"`,
-      description:
-        "This permanently removes the type from your store. It will be unassigned from every product that currently uses it. This cannot be undone.",
+      title: `Delete ${toDelete.length} product ${toDelete.length === 1 ? "type" : "types"}`,
+      description: `This permanently removes ${toDelete.length === 1 ? `"${toDelete[0].value}"` : `${toDelete.length} types`} from your store. They will be unassigned from every product that uses them. This cannot be undone.`,
       verificationText: "DELETE",
       verificationInstruction: "Type DELETE to confirm.",
-      confirmText: "Delete type",
+      confirmText: `Delete ${toDelete.length} ${toDelete.length === 1 ? "type" : "types"}`,
       cancelText: "Cancel",
     })
     if (!confirmed) return
-    setBusyId(type.id)
-    try {
-      await sdk.admin.productType.delete(type.id)
-      toast.success(`Deleted product type "${type.value}"`)
-      setTypes((prev) => prev.filter((t) => t.id !== type.id))
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to delete product type")
-    } finally {
-      setBusyId(null)
+    setBusy(true)
+    const deletedIds = new Set<string>()
+    let failed = 0
+    for (const type of toDelete) {
+      try {
+        await sdk.admin.productType.delete(type.id)
+        deletedIds.add(type.id)
+      } catch {
+        failed++
+      }
     }
+    if (deletedIds.size > 0) {
+      setTypes((prev) => prev.filter((t) => !deletedIds.has(t.id)))
+      setSelectedTypes((prev) => { const s = new Set(prev); deletedIds.forEach((id) => s.delete(id)); return s })
+      toast.success(`Deleted ${deletedIds.size} product ${deletedIds.size === 1 ? "type" : "types"}`)
+    }
+    if (failed > 0) toast.error(`${failed} ${failed === 1 ? "type" : "types"} could not be deleted`)
+    setBusy(false)
   }
 
-  const onDeleteTag = async (tag: ProductTag) => {
+  const onBulkDeleteTags = async () => {
+    const toDelete = tags.filter((t) => selectedTags.has(t.id))
     const confirmed = await prompt({
       variant: "danger",
-      title: `Delete product tag "${tag.value}"`,
-      description:
-        "This permanently removes the tag from your store. It will be unassigned from every product that currently uses it. This cannot be undone.",
+      title: `Delete ${toDelete.length} product ${toDelete.length === 1 ? "tag" : "tags"}`,
+      description: `This permanently removes ${toDelete.length === 1 ? `"${toDelete[0].value}"` : `${toDelete.length} tags`} from your store. They will be unassigned from every product that uses them. This cannot be undone.`,
       verificationText: "DELETE",
       verificationInstruction: "Type DELETE to confirm.",
-      confirmText: "Delete tag",
+      confirmText: `Delete ${toDelete.length} ${toDelete.length === 1 ? "tag" : "tags"}`,
       cancelText: "Cancel",
     })
     if (!confirmed) return
-    setBusyId(tag.id)
-    try {
-      await sdk.admin.productTag.delete(tag.id)
-      toast.success(`Deleted product tag "${tag.value}"`)
-      setTags((prev) => prev.filter((t) => t.id !== tag.id))
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to delete product tag")
-    } finally {
-      setBusyId(null)
+    setBusy(true)
+    const deletedIds = new Set<string>()
+    let failed = 0
+    for (const tag of toDelete) {
+      try {
+        await sdk.admin.productTag.delete(tag.id)
+        deletedIds.add(tag.id)
+      } catch {
+        failed++
+      }
     }
+    if (deletedIds.size > 0) {
+      setTags((prev) => prev.filter((t) => !deletedIds.has(t.id)))
+      setSelectedTags((prev) => { const s = new Set(prev); deletedIds.forEach((id) => s.delete(id)); return s })
+      toast.success(`Deleted ${deletedIds.size} product ${deletedIds.size === 1 ? "tag" : "tags"}`)
+    }
+    if (failed > 0) toast.error(`${failed} ${failed === 1 ? "tag" : "tags"} could not be deleted`)
+    setBusy(false)
   }
 
   if (loading) {
     return (
       <Container>
-        <Text size="small" className="text-ui-fg-subtle px-6 py-4">
-          Loading…
-        </Text>
+        <Text size="small" className="text-ui-fg-subtle px-6 py-4">Loading…</Text>
       </Container>
     )
   }
@@ -107,9 +135,7 @@ const ProductTypeTagManagePage = () => {
   if (loadError) {
     return (
       <Container>
-        <Text size="small" className="text-ui-tag-red-icon px-6 py-4">
-          {loadError}
-        </Text>
+        <Text size="small" className="text-ui-tag-red-icon px-6 py-4">{loadError}</Text>
       </Container>
     )
   }
@@ -137,28 +163,40 @@ const ProductTypeTagManagePage = () => {
           </div>
 
           {types.length === 0 ? (
-            <Text size="small" className="text-ui-fg-subtle">
-              No product types found.
-            </Text>
+            <Text size="small" className="text-ui-fg-subtle">No product types found.</Text>
           ) : (
-            <div className="flex flex-col divide-y divide-ui-border-base">
-              {types.map((type) => (
-                <div
-                  key={type.id}
-                  className="flex items-center justify-between py-2.5"
-                >
-                  <Text size="small">{type.value}</Text>
-                  <Button
-                    variant="danger"
-                    size="small"
-                    disabled={busyId === type.id}
-                    onClick={() => onDeleteType(type)}
-                  >
-                    {busyId === type.id ? "Deleting…" : "Delete"}
+            <>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={selectedTypes.size === types.length && types.length > 0}
+                    onCheckedChange={toggleAllTypes}
+                  />
+                  <Text size="small" className="text-ui-fg-subtle">
+                    {selectedTypes.size > 0 ? `${selectedTypes.size} selected` : "Select all"}
+                  </Text>
+                </label>
+                {selectedTypes.size > 0 && (
+                  <Button variant="danger" size="small" disabled={busy} onClick={onBulkDeleteTypes}>
+                    {busy ? "Deleting…" : `Delete ${selectedTypes.size} selected`}
                   </Button>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+              <div className="flex flex-col divide-y divide-ui-border-base">
+                {types.map((type) => (
+                  <label
+                    key={type.id}
+                    className="flex items-center gap-x-3 py-2.5 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedTypes.has(type.id)}
+                      onCheckedChange={() => toggleType(type.id)}
+                    />
+                    <Text size="small">{type.value}</Text>
+                  </label>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </Container>
@@ -184,28 +222,40 @@ const ProductTypeTagManagePage = () => {
           </div>
 
           {tags.length === 0 ? (
-            <Text size="small" className="text-ui-fg-subtle">
-              No product tags found.
-            </Text>
+            <Text size="small" className="text-ui-fg-subtle">No product tags found.</Text>
           ) : (
-            <div className="flex flex-col divide-y divide-ui-border-base">
-              {tags.map((tag) => (
-                <div
-                  key={tag.id}
-                  className="flex items-center justify-between py-2.5"
-                >
-                  <Text size="small">{tag.value}</Text>
-                  <Button
-                    variant="danger"
-                    size="small"
-                    disabled={busyId === tag.id}
-                    onClick={() => onDeleteTag(tag)}
-                  >
-                    {busyId === tag.id ? "Deleting…" : "Delete"}
+            <>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={selectedTags.size === tags.length && tags.length > 0}
+                    onCheckedChange={toggleAllTags}
+                  />
+                  <Text size="small" className="text-ui-fg-subtle">
+                    {selectedTags.size > 0 ? `${selectedTags.size} selected` : "Select all"}
+                  </Text>
+                </label>
+                {selectedTags.size > 0 && (
+                  <Button variant="danger" size="small" disabled={busy} onClick={onBulkDeleteTags}>
+                    {busy ? "Deleting…" : `Delete ${selectedTags.size} selected`}
                   </Button>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+              <div className="flex flex-col divide-y divide-ui-border-base">
+                {tags.map((tag) => (
+                  <label
+                    key={tag.id}
+                    className="flex items-center gap-x-3 py-2.5 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedTags.has(tag.id)}
+                      onCheckedChange={() => toggleTag(tag.id)}
+                    />
+                    <Text size="small">{tag.value}</Text>
+                  </label>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </Container>

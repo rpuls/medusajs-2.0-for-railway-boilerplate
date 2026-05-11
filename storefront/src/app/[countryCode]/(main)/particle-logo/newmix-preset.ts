@@ -25,7 +25,7 @@ import type { NewmixLiveTuning } from "@modules/home/components/home-particle-lo
 export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   /** Cursor disk — keep moderate so the impulse profile (sideSwirl, frontPush)
    * is meaningful, but its OUTPUT is rerouted into the field via `fieldDrivenCursor`. */
-  radius: 50,
+  radius: 75,
   velSmoothing: 0.45,
   sideSwirlForce: 8,
   frontPush: 4,
@@ -36,22 +36,22 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
    * captures particles (carried at inDiskCarryFactor of mouse velocity),
    * exit yields wake-trail state for trailingProbability of them, which
    * trace cursor's historical path at wakePace for trailFollowMs. */
-  trailFollowMs: 1000,
-  wakePace: 0.7,
-  wakePaceJitter: 0.25,
-  wakeLateralSpreadBmp: 6,
+  trailFollowMs: 2500,
+  wakePace: 0.52,
+  wakePaceJitter: 0.40,
+  wakeLateralSpreadBmp: 14,
   wakeReleaseStaggerMs: 200,
-  wakeBandSpreadBmp: 5,
-  wakeAlongStretchBmp: 5,
-  wakeDiffusionBmp: 0,
-  wakeTimeOffsetMs: 600,
+  wakeBandSpreadBmp: 14,
+  wakeAlongStretchBmp: 22,
+  wakeDiffusionBmp: 3,
+  wakeTimeOffsetMs: 1400,
   releaseVelocityKeep: 0,
-  exitVelocityBoostBmp: 4,
-  leadingEdgePullForce: 0.4,
-  trailingProbability: 0.3,
+  exitVelocityBoostBmp: 10,
+  leadingEdgePullForce: 1.8,
+  trailingProbability: 0.65,
   inDiskCarryFactor: 0.85,
   wakeBandTaperPower: 1.0,
-  coreEjectionForce: 5,
+  coreEjectionForce: 8,
   coreEjectionRadiusFrac: 0.15,
   wakeAlphaMult: 1.2,
   captureColorInvertMode: 1,
@@ -83,7 +83,7 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   particleSpeedLimit: 30,
   springStiffnessMult: 0.9,
   homeSpringSuppress: 0.85,
-  homeReturnMs: 800,
+  homeReturnMs: 1400,
   homeReturnCurveBmp: 30,
   homeReturnDurationJitter: 0.4,
   homeReturnDiffusionBmp: 0,
@@ -99,7 +99,9 @@ export const NEWMIX_PRESET: Partial<NewmixLiveTuning> = {
   /** Off by default — Crema, Curl, Flocking, Boundary, Metaball, Coupling.
    * The user can layer them on top via the tuner panel; the preset is the
    * minimal Newmix-style baseline. */
-  curlNoiseAmplitude: 0,
+  curlNoiseAmplitude: 0.35,
+  curlNoiseScale: 0.009,
+  curlNoiseEvolutionHz: 0.22,
   cursorForceSpeedCoupling: 0,
   boundaryRadiusFrac: 0,
   flockingStrength: 0,

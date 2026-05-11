@@ -223,28 +223,19 @@ function ParticleField({
     }
   }, [camera])
 
-  /** Per-frame physics — position interpolation, no velocity accumulation.
+  /** Per-frame physics — carry model.
    *
-   * Model: each particle has a "target" position computed from cursor
-   * proximity. Position is exponentially blended toward the target each
-   * frame. This is fundamentally overdamped — no bounce is possible.
+   * IN DISK:  target = lerp(home, cursor, carryStrength × falloff²)
+   *   Particles are pulled toward the cursor position. Because the blend
+   *   rate (inBlend × dt) is finite, a fast-moving cursor outruns the
+   *   particles — they lag behind, naturally forming a comet tail without
+   *   any explicit trail offset. The void zone (cursorDisplacement) keeps
+   *   a clean empty hole at the cursor tip.
    *
-   *   IN DISK:  target = home + radial_offset + trail_offset
-   *     • radial_offset: pushes HOME outward from cursor centre, creating
-   *       the soft void. Magnitude = cursorDisplacement × falloff².
-   *     • trail_offset: pushes HOME BACKWARD (opposite cursor motion),
-   *       scaled by cursor speed. Particles BEHIND cursor get both offsets
-   *       in the same direction → strong rearward displacement = the comet
-   *       tail. Particles AHEAD get partially cancelling offsets → barely
-   *       disturbed until the cursor reaches them.
-   *     • Blend rate: inBlend × dt (fast, ~5 frames to reach target).
-   *
-   *   OUT OF DISK: target = home.
-   *     • Blend rate: outBlend × dt (slow, ~1 s to return = visible wake).
-   *
-   * This is the "spoon stirring liquid" model: particles are smoothly
-   * dragged aside as the cursor passes, then drift back into their strokes
-   * like viscous fluid refilling a path. */
+   * OUT OF DISK: target = home.
+   *   Slow outBlend × dt means the displaced particles take 2–3 s to drift
+   *   home, leaving a long visible tail after the cursor passes.
+   */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
     const { positions, homes, count } = state
@@ -254,29 +245,12 @@ function ParticleField({
     }
 
     const mw = mouseWorld.current
-    const rawVx = mouseVel.current.vx
-    const rawVy = mouseVel.current.vy
-    const mouseSpeed = Math.hypot(rawVx, rawVy)
     const mx = mw?.x ?? 0
     const my = mw?.y ?? 0
     const haveCursor = mw != null
     const cursorRadius = nm.cursorRadius
     const radSq = cursorRadius * cursorRadius
-
-    /** Cursor motion unit vector (forward direction). */
-    const haveMotion = mouseSpeed > 0.001
-    let mfx = 0
-    let mfy = 0
-    if (haveMotion) {
-      mfx = rawVx / mouseSpeed
-      mfy = rawVy / mouseSpeed
-    }
-
-    /** Speed factor: how much of the trail displacement to apply.
-     * Saturates at trailSpeedCap so fast gestures don't over-stretch. */
-    const speedFactor = haveMotion
-      ? Math.min(mouseSpeed / nm.trailSpeedCap, 1)
-      : 0
+    const voidR = nm.cursorDisplacement
 
     const inAlpha  = Math.min(1.0, nm.inBlend  * dt)
     const outAlpha = Math.min(1.0, nm.outBlend * dt)
@@ -293,40 +267,36 @@ function ParticleField({
       let inDisk = false
 
       if (haveCursor) {
-        /** dx/dy: vector from cursor centre to this particle's HOME.
-         * Using home (not current position) ensures the target is always
-         * anchored to home — particles can't drift off to infinity. */
         const dx = hx - mx
         const dy = hy - my
         const distSq = dx * dx + dy * dy
 
-        if (distSq < radSq && distSq > 0.001) {
+        if (distSq < radSq) {
           inDisk = true
-          const dist = Math.sqrt(distSq)
-          const norm = 1 - dist / cursorRadius   // 1 at centre, 0 at rim
-          const falloff = norm * norm             // smooth quadratic
+          const dist = Math.sqrt(Math.max(distSq, 0.001))
+          const norm = 1 - dist / cursorRadius
+          const falloff = norm * norm
 
-          /** Radial component: push home outward from cursor centre. */
-          const radAmt = nm.cursorDisplacement * falloff
-          targetX = hx + (dx / dist) * radAmt
-          targetY = hy + (dy / dist) * radAmt
+          /** Pull home toward cursor: target = lerp(home, cursor, carry). */
+          const carry = nm.carryStrength * falloff
+          targetX = hx + (mx - hx) * carry
+          targetY = hy + (my - hy) * carry
 
-          /** Trail component: push home backward (−motion direction).
-           * Particles BEHIND cursor get this in the same direction as
-           * the radial push → strong rearward displacement (wake).
-           * Particles AHEAD get opposing radial/trail forces → slight
-           * net displacement, no violent bow-wave. */
-          if (nm.trailDisplacement > 0 && haveMotion) {
-            const trailAmt = nm.trailDisplacement * falloff * speedFactor
-            targetX -= mfx * trailAmt
-            targetY -= mfy * trailAmt
+          /** Void: if target has landed closer to cursor than voidR, push
+           * it back out so the cursor centre stays visibly empty. */
+          if (voidR > 0) {
+            const tdx = targetX - mx
+            const tdy = targetY - my
+            const td = Math.hypot(tdx, tdy)
+            if (td < voidR && td > 0.001) {
+              const s = voidR / td
+              targetX = mx + tdx * s
+              targetY = my + tdy * s
+            }
           }
         }
       }
 
-      /** Exponential blend toward target. inAlpha for in-disk (fast snap
-       * toward target so the wake forms cleanly as the cursor passes);
-       * outAlpha for out-of-disk (slow drift home = visible tail). */
       const alpha = inDisk ? inAlpha : outAlpha
       px += (targetX - px) * alpha
       py += (targetY - py) * alpha

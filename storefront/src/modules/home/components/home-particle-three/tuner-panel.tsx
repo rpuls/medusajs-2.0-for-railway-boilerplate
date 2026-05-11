@@ -6,27 +6,27 @@ export type ThreeTuning = {
   particleCount: number
   /** World-space radius of cursor influence disk. */
   cursorRadius: number
-  /** Max radial displacement at cursor centre (world units).
-   * Pushes each particle's HOME outward from the cursor, creating the
-   * soft void. Combined with trailDisplacement for rear particles. */
+  /** Dead-zone radius around cursor centre (world units). Particles whose
+   * carry target would land closer than this are pushed back to this
+   * distance, keeping a clean void under the cursor tip. */
   cursorDisplacement: number
-  /** Max backward trail displacement at cursor centre (world units).
-   * Applied in the direction OPPOSITE to cursor motion. Particles behind
-   * the cursor get this ADDED to their radial offset → strong rearward
-   * displacement = comet-tail wake. Particles ahead get opposing offsets
-   * → barely disturbed until the cursor reaches them.
-   * Scales linearly with cursor speed up to trailSpeedCap. */
+  /** How strongly particles are pulled toward the cursor when inside the
+   * disk (0 = no pull, 1 = target snaps to cursor). The inBlend lag then
+   * creates the natural comet-tail: particles can't keep up with a fast
+   * cursor and trail behind it. Higher = deeper carry, bigger tail. */
+  carryStrength: number
+  /** @deprecated kept for localStorage backwards-compat, not used in physics. */
   trailDisplacement: number
-  /** Cursor speed (world units/sec) at which trail displacement saturates.
-   * Stirring slowly → gentle trail. Sweeping fast → full trail. */
+  /** Cursor speed (world units/sec) at which carry effect saturates.
+   * Low values mean even slow movement creates a visible tail. */
   trailSpeedCap: number
   /** Position-blend rate toward target when in cursor disk.
-   * alpha = inBlend × dt. At 60fps (dt≈0.016): inBlend=12 → alpha≈0.2
-   * → particle reaches ~67% of target in 5 frames. Higher = snappier. */
+   * alpha = inBlend × dt. At 60fps (dt≈0.016): inBlend=8 → alpha≈0.13
+   * → particle chases cursor but lags behind at speed, creating the tail. */
   inBlend: number
   /** Position-blend rate toward home when outside disk.
-   * alpha = outBlend × dt. At 60fps: outBlend=1.8 → alpha≈0.03 →
-   * particle decays to 40% of displacement after ~0.5s = visible trail.
+   * alpha = outBlend × dt. At 60fps: outBlend=0.5 → alpha≈0.008 →
+   * particle takes ~2–3 s to drift home = long visible comet tail.
    * Lower = longer tail. */
   outBlend: number
   pointSize: number
@@ -34,20 +34,18 @@ export type ThreeTuning = {
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   particleCount: 140000,
-  cursorRadius: 90,
-  /** Radial push — creates a clean void under cursor.
-   * ~20 world-units at cursor centre. */
+  cursorRadius: 98,
+  /** Void zone at cursor tip — keeps a clean hole at the very centre. */
   cursorDisplacement: 20,
-  /** Backward trail — particles behind cursor get 20+35=55 units of
-   * rearward displacement at cursor centre and full speed. Clearly
-   * visible outside letter strokes (~10 units wide). */
+  /** Carry strength — how far toward cursor particles are pulled (0–1).
+   * 0.75 = targets sit 75% of the way from home to cursor at full falloff. */
+  carryStrength: 0.75,
   trailDisplacement: 35,
-  /** Trail saturates at 300 u/s. Slow stir = subtle; fast sweep = full. */
   trailSpeedCap: 300,
-  /** inBlend=12 → alpha≈0.2/frame → reaches target in ~5 frames (0.08s). */
-  inBlend: 12,
-  /** outBlend=1.8 → alpha≈0.03/frame → trail visible for ~1–1.5 s. */
-  outBlend: 1.8,
+  /** inBlend=8 → alpha≈0.13/frame → particles chase cursor with natural lag. */
+  inBlend: 8,
+  /** outBlend=0.5 → alpha≈0.008/frame → ~2–3 s visible comet tail. */
+  outBlend: 0.5,
   pointSize: 2.5,
 }
 
@@ -84,33 +82,23 @@ const SLIDERS: SliderDef[] = [
   },
   {
     key: "cursorDisplacement",
-    label: "Radial push",
+    label: "Void radius",
     min: 0,
-    max: 80,
+    max: 60,
     step: 1,
     format: (v) => `${v.toFixed(0)} px`,
     description:
-      "Max outward displacement at cursor centre. Creates the soft void. 15-25 = subtle. 40+ = obvious hole.",
+      "Dead-zone radius at cursor tip. Particles pulled closer than this are pushed back to this distance, keeping a clean empty hole under the cursor.",
   },
   {
-    key: "trailDisplacement",
-    label: "Trail depth",
+    key: "carryStrength",
+    label: "Carry strength",
     min: 0,
-    max: 120,
-    step: 1,
-    format: (v) => `${v.toFixed(0)} px`,
+    max: 1,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
     description:
-      "Max backward displacement (opposite cursor motion) at full speed. Particles behind cursor get this + radial → the comet tail. 0 = symmetric void only.",
-  },
-  {
-    key: "trailSpeedCap",
-    label: "Trail speed cap",
-    min: 50,
-    max: 1000,
-    step: 10,
-    format: (v) => `${v.toFixed(0)} u/s`,
-    description:
-      "Cursor speed at which trail displacement saturates. Lower = trail appears even at slow motion. Higher = only fast sweeps create a trail.",
+      "How strongly particles are pulled toward the cursor (0 = no pull, 1 = snap to cursor). The entry-blend lag then creates the comet tail — particles can't keep up with a fast cursor and trail behind it.",
   },
   {
     key: "inBlend",
@@ -120,17 +108,17 @@ const SLIDERS: SliderDef[] = [
     step: 0.5,
     format: (v) => v.toFixed(1),
     description:
-      "How fast particles blend toward their target when the cursor is over them. Higher = snappier displacement. inBlend/60 = fraction moved per frame at 60fps.",
+      "How fast particles chase the cursor target each frame. Lower = slower chase = longer in-motion tail. inBlend/60 ≈ fraction moved per frame at 60fps.",
   },
   {
     key: "outBlend",
     label: "Return blend",
-    min: 0.2,
+    min: 0.1,
     max: 10,
     step: 0.1,
     format: (v) => v.toFixed(1),
     description:
-      "How fast particles drift back to home when cursor has passed. Lower = longer visible trail. 1.8 = ~1s trail. 5 = ~0.3s.",
+      "How fast particles drift back to home after cursor leaves. Lower = longer visible tail. 0.5 = ~2–3s tail. 1.8 = ~1s. 5 = ~0.3s.",
   },
   {
     key: "pointSize",
@@ -143,7 +131,7 @@ const SLIDERS: SliderDef[] = [
   },
 ]
 
-const LS_KEY = "particle-threejs-tuning-v2"
+const LS_KEY = "particle-threejs-tuning-v3"
 
 export function loadStoredTuning(): ThreeTuning {
   if (typeof window === "undefined") return THREE_TUNING_DEFAULTS
