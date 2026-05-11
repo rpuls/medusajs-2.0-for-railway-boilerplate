@@ -3,22 +3,27 @@
 /**
  * Three.js Points-mesh particle hero.
  *
- * Path B from the Newmix tuning audit: same wordmark stipple + same
- * cursor-driven physics philosophy as the Canvas 2D version, but rendering
- * via WebGL Points + a custom shader. This unlocks ~140k+ particles at
- * 60fps where Canvas 2D's per-particle fillRect tops out around 60-80k.
+ * Renders the SC Prints wordmark as a 140k-point cloud and reacts to the
+ * cursor with two layered behaviours:
  *
- * v1 scope (this file):
- *   - Sample wordmark alpha → home positions
- *   - Per-particle attributes (position, home, color)
- *   - Cursor world-position via raycaster, soft radial repulsion
- *   - Hooke spring back to home + linear friction
- *   - Custom shader: round soft dots, color from wordmark gradient
+ *   1. CARRY MODEL (in-disk) — particles inside the cursor radius lerp
+ *      toward a per-particle target that's `carryStrength × falloff²` of
+ *      the way from home to the cursor. The blend rate produces the
+ *      comet head: particles bunch around the cursor and lag behind it.
  *
- * Follow-up (next commits):
- *   - Field-driven cursor (Stam fluid: inject + advect + diffuse + project)
- *   - Wake-history playback
- *   - Probabilistic capture-color invert + glow
+ *   2. CURSOR-HISTORY WAKE — every frame the smooth cursor world position
+ *      is appended to a ring buffer `{x, y, t}`. When a particle exits
+ *      the disk, with probability `trailingProbability` it enters wake-
+ *      playback: it reads the cursor-history buffer at a per-particle
+ *      playhead time (offset by stagger, jittered by pace, scaled by
+ *      `wakePace`) and renders along the historical path with along-
+ *      tangent stretch and perpendicular band offset. This is what
+ *      produces the visible comet TAIL — the geometry follows the
+ *      cursor's past positions, not just its current location.
+ *
+ * This mirrors the design used by the Canvas-2D newmix engine in
+ * `home-particle-logo-hero/index.tsx`, ported as the minimum-viable
+ * subset (no curl noise, no diffusion wobble, no Bezier home-return).
  */
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
@@ -58,7 +63,6 @@ const FRAGMENT_SHADER = /* glsl */ `
 `
 
 const WORDMARK_GRADIENT_STOPS: [number, number, number][] = [
-  // Spectrum-ish gradient that matches the Canvas 2D version's default
   [255, 64, 64],
   [255, 165, 0],
   [255, 230, 0],
@@ -68,15 +72,43 @@ const WORDMARK_GRADIENT_STOPS: [number, number, number][] = [
   [220, 80, 200],
 ]
 
+type CursorSample = { x: number; y: number; t: number }
+
+/**
+ * Linear-interpolated sample from the cursor history at `targetTime`
+ * (wall-clock ms). Returns the head if past the latest sample, the tail
+ * if before the oldest, and null only if the buffer is empty. Uses
+ * binary search to find the segment in O(log n).
+ */
+function lookupCursorHistoryAtTime(
+  history: CursorSample[],
+  targetTime: number
+): { x: number; y: number } | null {
+  const n = history.length
+  if (n === 0) return null
+  const head = history[n - 1]!
+  if (targetTime >= head.t) return { x: head.x, y: head.y }
+  const tail = history[0]!
+  if (targetTime <= tail.t) return { x: tail.x, y: tail.y }
+  let lo = 0
+  let hi = n - 1
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >>> 1
+    if (history[mid]!.t <= targetTime) lo = mid
+    else hi = mid
+  }
+  const a = history[lo]!
+  const b = history[hi]!
+  const span = b.t - a.t
+  const u = span > 1e-6 ? (targetTime - a.t) / span : 0
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u }
+}
+
 type ParticleFieldProps = {
   stipple: StipplePoint[]
   width: number
   height: number
-  /** Snapshot of the count at geometry build time. Changing this rebuilds
-   * the BufferGeometry. Other knobs are live via tuningRef. */
   particleCount: number
-  /** Live tuning ref — useFrame reads .current each frame so slider
-   * changes take effect immediately without re-binding closures. */
   tuningRef: React.MutableRefObject<ThreeTuning>
 }
 
@@ -90,24 +122,28 @@ function ParticleField({
   const pointsRef = useRef<THREE.Points>(null)
   const { size, camera } = useThree()
   const mouseWorld = useRef<{ x: number; y: number } | null>(null)
-  const mousePrev = useRef<{ x: number; y: number; t: number } | null>(null)
-  const mouseVel = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 })
+  /** Smoothed cursor position. Each onMove samples are smoothed
+   * exponentially toward this ref so the history buffer doesn't carry
+   * noisy raw pointer jitter. */
+  const smoothedCursor = useRef<{ x: number; y: number } | null>(null)
+  /** Ring buffer of recent cursor positions with timestamps. Particles
+   * read this when they're in the trailing state to follow the cursor's
+   * historical path. Trimmed every frame in useFrame. */
+  const cursorHistory = useRef<CursorSample[]>([])
 
-  /** Build BufferGeometry + ShaderMaterial once when stipple/count changes. */
+  /** Build BufferGeometry + ShaderMaterial + per-particle state arrays
+   * once when stipple/count changes. */
   const { geometry, material, state } = useMemo(() => {
     const count = Math.min(particleCount, stipple.length)
     const positions = new Float32Array(count * 3)
     const homes = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
 
-    /** Center the wordmark. World units: [-w/2, +w/2]. Y is flipped from
-     * canvas-space (canvas y goes down, world y goes up). */
     const halfW = width / 2
     const halfH = height / 2
 
-    /** Shuffle the stipple indices so we sample evenly across the wordmark
-     * even at low particle counts (otherwise a sequential walk fills the
-     * top of the image first). Fisher-Yates. */
+    /** Shuffle stipple indices so a low particleCount still samples
+     * evenly across the wordmark. Fisher-Yates. */
     const indices = new Uint32Array(stipple.length)
     for (let i = 0; i < stipple.length; i++) indices[i] = i
     for (let i = indices.length - 1; i > 0; i--) {
@@ -116,6 +152,10 @@ function ParticleField({
       indices[i] = indices[j]!
       indices[j] = t
     }
+
+    /** Per-particle deterministic hash. Seeded from quantised home (x,y)
+     * so each particle gets stable wake-jitter parameters across frames. */
+    const trailHash = new Uint32Array(count)
 
     for (let i = 0; i < count; i++) {
       const sp = stipple[indices[i]!]!
@@ -128,8 +168,9 @@ function ParticleField({
       homes[i3 + 0] = wx
       homes[i3 + 1] = wy
       homes[i3 + 2] = 0
+      trailHash[i] =
+        (((wx | 0) * 2654435761) ^ ((wy | 0) * 1597334677)) >>> 0
 
-      /** Color from horizontal gradient projection across wordmark. */
       const t = sp.u
       const segCount = WORDMARK_GRADIENT_STOPS.length - 1
       const segPos = t * segCount
@@ -143,7 +184,13 @@ function ParticleField({
       colors[i3 + 2] = (c1[2] + (c2[2] - c1[2]) * localT) / 255
     }
 
-    const velocities = new Float32Array(count * 3)
+    /** Per-particle trailing state.
+     *   trailUntil[i]  — wall-clock ms; 0 = not trailing
+     *   releaseTime[i] — wall-clock ms when this particle entered trail
+     *   wasInDisk[i]   — 1 if particle was in disk last frame (edge detect) */
+    const trailUntil = new Float32Array(count)
+    const releaseTime = new Float32Array(count)
+    const wasInDisk = new Uint8Array(count)
 
     const geo = new THREE.BufferGeometry()
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3))
@@ -154,11 +201,6 @@ function ParticleField({
       fragmentShader: FRAGMENT_SHADER,
       transparent: true,
       depthWrite: false,
-      /** Additive blending — overlapping particles sum their RGB. This is
-       * what gives Newmix's bright/glowing wake: dense regions naturally
-       * read as luminous against the black background, while sparse
-       * regions stay subtle. NormalBlending caps at the most opaque
-       * particle and makes everything look uniformly dim. */
       blending: THREE.AdditiveBlending,
       uniforms: {
         uPointSize: { value: tuningRef.current.pointSize },
@@ -169,17 +211,25 @@ function ParticleField({
     return {
       geometry: geo,
       material: mat,
-      state: { positions, homes, velocities, count },
+      state: {
+        positions,
+        homes,
+        trailHash,
+        trailUntil,
+        releaseTime,
+        wasInDisk,
+        count,
+      },
     }
   }, [stipple, particleCount, width, height, tuningRef])
 
-  /** Keep uPixelRatio uniform in sync with renderer pixel ratio. */
   useEffect(() => {
     material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
   }, [material])
 
-  /** Track cursor in world space. R3F gives us NDC mouse via state.mouse;
-   * we project onto z=0 plane (where particles live). */
+  /** Cursor tracking: project NDC mouse onto z=0, smooth exponentially,
+   * append to history buffer. History trimming happens in useFrame so
+   * this handler stays light. */
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       const rect = (e.target as HTMLElement)?.getBoundingClientRect?.()
@@ -196,24 +246,23 @@ function ParticleField({
       const pos = camera.position
         .clone()
         .add(dir.multiplyScalar(distance))
-      const now = performance.now()
-      const prev = mousePrev.current
-      if (prev != null) {
-        const dt = Math.max(0.001, (now - prev.t) / 1000)
-        const rawVx = (pos.x - prev.x) / dt
-        const rawVy = (pos.y - prev.y) / dt
-        /** Smooth mouse velocity to avoid sudden jolts. */
-        const k = 0.4
-        mouseVel.current.vx = mouseVel.current.vx * (1 - k) + rawVx * k
-        mouseVel.current.vy = mouseVel.current.vy * (1 - k) + rawVy * k
-      }
-      mousePrev.current = { x: pos.x, y: pos.y, t: now }
       mouseWorld.current = { x: pos.x, y: pos.y }
+
+      const sm = smoothedCursor.current
+      const SMOOTH_K = 0.35
+      if (sm == null) {
+        smoothedCursor.current = { x: pos.x, y: pos.y }
+      } else {
+        sm.x += (pos.x - sm.x) * SMOOTH_K
+        sm.y += (pos.y - sm.y) * SMOOTH_K
+      }
+      const cur = smoothedCursor.current
+      const now = performance.now()
+      cursorHistory.current.push({ x: cur.x, y: cur.y, t: now })
     }
     const onLeave = () => {
       mouseWorld.current = null
-      mousePrev.current = null
-      mouseVel.current = { vx: 0, vy: 0 }
+      smoothedCursor.current = null
     }
     const dom = document.querySelector("canvas")
     if (dom == null) return
@@ -225,27 +274,29 @@ function ParticleField({
     }
   }, [camera])
 
-  /** Per-frame physics — carry model + velocity layer.
-   *
-   * CARRY MODEL (existing):
-   *   IN DISK:  target = lerp(home, cursor, carryStrength × falloff²)
-   *   OUT OF DISK: target = home
-   *   Particle lerps toward target at inBlend/outBlend rate.
-   *
-   * VELOCITY LAYER (new):
-   *   When the cursor moves through the disk, two forces inject velocity:
-   *   - Flow: cursor velocity is injected into nearby particles → wake
-   *     that streams behind the cursor in its direction of travel.
-   *   - Vortex: tangential force around cursor center → rolling swirl.
-   *   Velocity decays exponentially (velocityDamping) over 0.5–3 seconds.
-   */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
-    const { positions, homes, velocities, count } = state
+    const {
+      positions,
+      homes,
+      trailHash,
+      trailUntil,
+      releaseTime,
+      wasInDisk,
+      count,
+    } = state
     const nm = tuningRef.current
     if (material.uniforms.uPointSize!.value !== nm.pointSize) {
       material.uniforms.uPointSize!.value = nm.pointSize
     }
+
+    const nowTick = performance.now()
+
+    /** Trim cursor history each frame to (trailFollowMs + wakeTimeOffsetMs
+     * + 500ms slack). Buffer length is bounded by sampling rate × window. */
+    const histCutoff = nowTick - (nm.trailFollowMs + nm.wakeTimeOffsetMs + 500)
+    const hist = cursorHistory.current
+    while (hist.length > 0 && hist[0]!.t < histCutoff) hist.shift()
 
     const mw = mouseWorld.current
     const mx = mw?.x ?? 0
@@ -255,13 +306,17 @@ function ParticleField({
     const radSq = cursorRadius * cursorRadius
     const voidR = nm.cursorDisplacement
 
-    const inAlpha  = Math.min(1.0, nm.inBlend  * dt)
+    const inAlpha = Math.min(1.0, nm.inBlend * dt)
     const outAlpha = Math.min(1.0, nm.outBlend * dt)
 
-    const mvx = mouseVel.current.vx
-    const mvy = mouseVel.current.vy
-    const cursorSpeed = Math.hypot(mvx, mvy)
-    const decayFactor = Math.exp(-nm.velocityDamping * dt)
+    const trailFollowMs = nm.trailFollowMs
+    const wakePace = nm.wakePace
+    const wakePaceJitter = nm.wakePaceJitter
+    const wakeTimeOffsetMs = nm.wakeTimeOffsetMs
+    const wakeAlongStretchBmp = nm.wakeAlongStretchBmp
+    const wakeBandSpreadBmp = nm.wakeBandSpreadBmp
+    const wakeReleaseStaggerMs = nm.wakeReleaseStaggerMs
+    const trailingProbability = nm.trailingProbability
 
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
@@ -269,24 +324,96 @@ function ParticleField({
       const hy = homes[i3 + 1]!
       let px = positions[i3]!
       let py = positions[i3 + 1]!
-      let vx = velocities[i3]!
-      let vy = velocities[i3 + 1]!
 
+      const tUntil = trailUntil[i]!
+      const trailing = tUntil > 0 && nowTick < tUntil
+
+      if (trailing) {
+        /** WAKE PLAYBACK — particle is driven by cursor history. */
+        const h = trailHash[i]!
+        const rand01 = (h & 0xffffff) / 0xffffff
+        const rand2 = (((h >>> 8) * 2246822519) >>> 0 & 0xffffff) / 0xffffff
+        const rand3 = (((h >>> 16) * 374761393) >>> 0 & 0xffffff) / 0xffffff
+        const rand4 = (((h >>> 4) * 3266489917) >>> 0 & 0xffffff) / 0xffffff
+
+        const release = releaseTime[i]!
+        const stagger = rand3 * wakeReleaseStaggerMs
+        const elapsed = nowTick - release - stagger
+
+        if (elapsed > 0) {
+          const paceFactor = 1 + (rand01 * 2 - 1) * wakePaceJitter
+          const particlePace = Math.max(0.05, wakePace * paceFactor)
+          const timeOffset = rand4 * rand4 * wakeTimeOffsetMs
+          const playheadT =
+            release + stagger + elapsed * particlePace - timeOffset
+
+          const sample = lookupCursorHistoryAtTime(hist, playheadT)
+          if (sample != null) {
+            let tanX = 1
+            let tanY = 0
+            let perpX = 0
+            let perpY = 0
+            const lookAhead = lookupCursorHistoryAtTime(hist, playheadT + 50)
+            if (lookAhead != null) {
+              const tdx = lookAhead.x - sample.x
+              const tdy = lookAhead.y - sample.y
+              const tlen = Math.hypot(tdx, tdy)
+              if (tlen > 1e-3) {
+                tanX = tdx / tlen
+                tanY = tdy / tlen
+                perpX = -tanY
+                perpY = tanX
+              }
+            }
+
+            const wakeTotalMs = Math.max(1, trailFollowMs - stagger)
+            const u = Math.max(0, Math.min(1, elapsed / wakeTotalMs))
+            /** Quadratic taper — band collapses toward the trail end so
+             * the ribbon reads as a teardrop (wide at cursor, thin at tail). */
+            const taper = (1 - u) * (1 - u)
+
+            const swirlSide = rand2 < 0.5 ? -1 : 1
+            const isCore = rand2 < 0.3
+            const magnitudeMul = isCore
+              ? 0.15 + rand2 * 0.5
+              : 0.7 + rand2 * 0.6
+
+            const bandAmp =
+              wakeBandSpreadBmp * swirlSide * magnitudeMul * taper
+            const stretchSign = rand01 * 2 - 1
+            const stretchAmp = wakeAlongStretchBmp * stretchSign
+
+            px = sample.x + tanX * stretchAmp + perpX * bandAmp
+            py = sample.y + tanY * stretchAmp + perpY * bandAmp
+          }
+          /** If sample is null (history empty), particle holds last position. */
+        }
+        /** Else: pre-stagger — particle holds release position. */
+
+        positions[i3] = px
+        positions[i3 + 1] = py
+        /** While trailing, suppress disk detection so we don't immediately
+         * re-trail when the trail-band particle wanders back through. */
+        wasInDisk[i] = 0
+        continue
+      } else if (tUntil > 0) {
+        /** Trail just ended — clear the flag so next disk visit can re-arm. */
+        trailUntil[i] = 0
+      }
+
+      /** CARRY MODEL (in-disk pull + void clamp) + edge-detected release. */
       let targetX = hx
       let targetY = hy
       let inDisk = false
       let falloff = 0
-      let distFromCursor = 0
 
       if (haveCursor) {
         const dx = hx - mx
         const dy = hy - my
         const distSq = dx * dx + dy * dy
-
         if (distSq < radSq) {
           inDisk = true
           const dist = Math.sqrt(Math.max(distSq, 0.001))
-          distFromCursor = dist
           const norm = 1 - dist / cursorRadius
           falloff = norm * norm
 
@@ -311,36 +438,28 @@ function ParticleField({
       px += (targetX - px) * alpha
       py += (targetY - py) * alpha
 
-      if (haveCursor && inDisk && distFromCursor > 0.001) {
-        vx += mvx * nm.flowStrength * falloff * dt
-        vy += mvy * nm.flowStrength * falloff * dt
-
-        const rdx = (hx - mx) / distFromCursor
-        const rdy = (hy - my) / distFromCursor
-        const tx = -rdy
-        const ty =  rdx
-        vx += tx * nm.vortexStrength * cursorSpeed * falloff * dt
-        vy += ty * nm.vortexStrength * cursorSpeed * falloff * dt
+      /** Edge detect: particle just exited the disk. Roll dice to release
+       * into wake-playback. Use the per-particle hash + time bucket so the
+       * roll is deterministic-ish but varies across exits. */
+      if (haveCursor && wasInDisk[i] === 1 && !inDisk) {
+        const h = trailHash[i]!
+        const rollHash =
+          (h ^ ((Math.floor(nowTick * 0.013) | 0) * 2654435761)) >>> 0
+        const roll = (rollHash & 0xffffff) / 0xffffff
+        if (roll < trailingProbability) {
+          trailUntil[i] = nowTick + trailFollowMs
+          releaseTime[i] = nowTick
+        }
       }
+      wasInDisk[i] = inDisk ? 1 : 0
 
-      vx *= decayFactor
-      vy *= decayFactor
-
-      px += vx
-      py += vy
-
-      velocities[i3]     = vx
-      velocities[i3 + 1] = vy
-      positions[i3]      = px
-      positions[i3 + 1]  = py
+      positions[i3] = px
+      positions[i3 + 1] = py
     }
     geometry.attributes.position!.needsUpdate = true
   })
 
-  /** Auto-fit camera so the WHOLE wordmark fits in the viewport with a
-   * small margin. Compute the camera distance needed to fit width AND
-   * height, take the larger so both fit (necessary when the wordmark is
-   * taller than it is wide, e.g. SC PRINTS at 946×1024). */
+  /** Auto-fit camera so the whole wordmark fits both axes. */
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera
     if (cam.isPerspectiveCamera == null) return
@@ -362,7 +481,6 @@ function ParticleField({
 
 type Props = {
   logoSrc?: string
-  /** Initial particle count. Overridable via the tuner panel. */
   particleCount?: number
 }
 
@@ -375,9 +493,6 @@ export default function HomeParticleThree({
     height: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  /** Tuning state. Loaded from localStorage (or defaults). The ref
-   * mirrors state so the per-frame loop reads live values without
-   * triggering a re-bind of the useFrame closure. */
   const [tuning, setTuning] = useState<ThreeTuning>(() => loadStoredTuning())
   const tuningRef = useRef<ThreeTuning>(tuning)
   useEffect(() => {

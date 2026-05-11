@@ -15,10 +15,9 @@ export type ThreeTuning = {
    * creates the natural comet-tail: particles can't keep up with a fast
    * cursor and trail behind it. Higher = deeper carry, bigger tail. */
   carryStrength: number
-  /** @deprecated kept for localStorage backwards-compat, not used in physics. */
+  /** @deprecated retained for back-compat in stored payloads. */
   trailDisplacement: number
-  /** Cursor speed (world units/sec) at which carry effect saturates.
-   * Low values mean even slow movement creates a visible tail. */
+  /** @deprecated retained for back-compat in stored payloads. */
   trailSpeedCap: number
   /** Position-blend rate toward target when in cursor disk.
    * alpha = inBlend × dt. At 60fps (dt≈0.016): inBlend=8 → alpha≈0.13
@@ -30,14 +29,30 @@ export type ThreeTuning = {
    * Lower = longer tail. */
   outBlend: number
   pointSize: number
-  /** Fraction of cursor velocity injected as particle velocity per frame.
-   * Creates flow/wake that streams behind the cursor direction. 0 = none. */
-  flowStrength: number
-  /** Tangential spin force around cursor center as it moves. 0 = none. */
-  vortexStrength: number
-  /** Exponential velocity decay rate per second.
-   * vel *= exp(-velocityDamping * dt). Higher = shorter wake tail. */
-  velocityDamping: number
+  /** Fraction of particles that enter the wake-playback state when they
+   * exit the cursor disk. The rest simply lerp home. 0 = no trail. */
+  trailingProbability: number
+  /** How long (ms) each released particle traces the cursor path before
+   * its wake ends and it springs home. */
+  trailFollowMs: number
+  /** Playback speed of the cursor-history playhead. < 1 = particle lags
+   * behind cursor (longer trail), > 1 = catches up. */
+  wakePace: number
+  /** ± fraction of per-particle pace jitter — spreads particles along the
+   * path so the trail reads as a band rather than a single bead. */
+  wakePaceJitter: number
+  /** Max per-particle backward time-offset (ms). Biased toward the front
+   * of the wake so most particles hug the cursor with a thinning tail. */
+  wakeTimeOffsetMs: number
+  /** Signed along-tangent offset amplitude (world units). Spreads
+   * particles along the cursor heading axis (lengthwise). */
+  wakeAlongStretchBmp: number
+  /** Perpendicular band offset amplitude (world units). Lateral spread
+   * forming the ribbon's width. */
+  wakeBandSpreadBmp: number
+  /** Per-particle release stagger (ms). Particles hold their release
+   * position until their stagger expires — staggers playback start. */
+  wakeReleaseStaggerMs: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
@@ -55,9 +70,14 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   /** outBlend=0.5 → alpha≈0.008/frame → ~2–3 s visible comet tail. */
   outBlend: 0.5,
   pointSize: 2.5,
-  flowStrength: 1.2,
-  vortexStrength: 0.06,
-  velocityDamping: 1.4,
+  trailingProbability: 0.65,
+  trailFollowMs: 2500,
+  wakePace: 0.52,
+  wakePaceJitter: 0.4,
+  wakeTimeOffsetMs: 1400,
+  wakeAlongStretchBmp: 22,
+  wakeBandSpreadBmp: 14,
+  wakeReleaseStaggerMs: 350,
 }
 
 type SliderDef = {
@@ -109,7 +129,7 @@ const SLIDERS: SliderDef[] = [
     step: 0.01,
     format: (v) => v.toFixed(2),
     description:
-      "How strongly particles are pulled toward the cursor (0 = no pull, 1 = snap to cursor). The entry-blend lag then creates the comet tail — particles can't keep up with a fast cursor and trail behind it.",
+      "How strongly particles are pulled toward the cursor (0 = no pull, 1 = snap to cursor). Combined with entry-blend, this creates the comet head.",
   },
   {
     key: "inBlend",
@@ -119,7 +139,7 @@ const SLIDERS: SliderDef[] = [
     step: 0.5,
     format: (v) => v.toFixed(1),
     description:
-      "How fast particles chase the cursor target each frame. Lower = slower chase = longer in-motion tail. inBlend/60 ≈ fraction moved per frame at 60fps.",
+      "How fast particles chase the cursor target each frame. Lower = slower chase = longer in-motion lag.",
   },
   {
     key: "outBlend",
@@ -129,37 +149,87 @@ const SLIDERS: SliderDef[] = [
     step: 0.1,
     format: (v) => v.toFixed(1),
     description:
-      "How fast particles drift back to home after cursor leaves. Lower = longer visible tail. 0.5 = ~2–3s tail. 1.8 = ~1s. 5 = ~0.3s.",
+      "How fast non-trailing particles drift home after cursor leaves. Lower = slower settle.",
   },
   {
-    key: "flowStrength",
-    label: "Flow strength",
+    key: "trailingProbability",
+    label: "Trail probability",
     min: 0,
-    max: 5,
-    step: 0.05,
+    max: 1,
+    step: 0.01,
     format: (v) => v.toFixed(2),
     description:
-      "How much cursor velocity is injected into nearby particles. Creates a wake that streams in the cursor's direction of travel.",
+      "Fraction of exiting particles that enter the wake-playback state. 0 = no trail. ~0.65 reads as a dense ribbon without dragging every particle.",
   },
   {
-    key: "vortexStrength",
-    label: "Vortex swirl",
-    min: 0,
-    max: 0.3,
-    step: 0.005,
-    format: (v) => v.toFixed(3),
+    key: "trailFollowMs",
+    label: "Trail follow",
+    min: 200,
+    max: 6000,
+    step: 50,
+    format: (v) => `${(v / 1000).toFixed(2)} s`,
     description:
-      "Tangential spin force around the cursor. Creates a rolling vortex swirl as the cursor passes.",
+      "How long each released particle traces the cursor path before its wake ends and it springs home.",
   },
   {
-    key: "velocityDamping",
-    label: "Wake decay",
+    key: "wakePace",
+    label: "Wake pace",
     min: 0.1,
-    max: 8,
-    step: 0.1,
-    format: (v) => v.toFixed(1),
+    max: 1.5,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
     description:
-      "How fast the wake velocity fades. Higher = shorter-lived trail. 1.4 ≈ 0.7s half-life. 0.5 ≈ 1.4s half-life.",
+      "Playback speed of the cursor-history playhead. <1 = particle lags behind cursor (longer visible trail); >1 = catches up.",
+  },
+  {
+    key: "wakePaceJitter",
+    label: "Pace jitter",
+    min: 0,
+    max: 0.9,
+    step: 0.01,
+    format: (v) => v.toFixed(2),
+    description:
+      "± fraction of per-particle pace variance — spreads particles along the path so the trail reads as a band rather than a bead.",
+  },
+  {
+    key: "wakeTimeOffsetMs",
+    label: "Time offset",
+    min: 0,
+    max: 3000,
+    step: 50,
+    format: (v) => `${(v / 1000).toFixed(2)} s`,
+    description:
+      "Max per-particle backward time-offset. Biased toward the front of the wake, so most particles hug the cursor with a thinning tail.",
+  },
+  {
+    key: "wakeAlongStretchBmp",
+    label: "Along-stretch",
+    min: 0,
+    max: 60,
+    step: 1,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "Signed offset along the cursor heading. Spreads particles lengthwise so the trail reads as a long ribbon, not a tight clump.",
+  },
+  {
+    key: "wakeBandSpreadBmp",
+    label: "Band spread",
+    min: 0,
+    max: 40,
+    step: 1,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "Perpendicular spread from the path. Lateral width of the ribbon; tapers toward the tail.",
+  },
+  {
+    key: "wakeReleaseStaggerMs",
+    label: "Release stagger",
+    min: 0,
+    max: 1500,
+    step: 25,
+    format: (v) => `${v.toFixed(0)} ms`,
+    description:
+      "Particle-by-particle delay before playback starts after release. Staggered staggers produce the comet-tail growth from the cursor outward.",
   },
   {
     key: "pointSize",
@@ -172,7 +242,7 @@ const SLIDERS: SliderDef[] = [
   },
 ]
 
-const LS_KEY = "particle-threejs-tuning-v4"
+const LS_KEY = "particle-threejs-tuning-v5"
 
 export function loadStoredTuning(): ThreeTuning {
   if (typeof window === "undefined") return THREE_TUNING_DEFAULTS
@@ -241,7 +311,7 @@ export default function ThreeTunerPanel({ tuning, onChange }: Props) {
         </div>
       </div>
       {open ? (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex max-h-[80vh] flex-col gap-2.5 overflow-y-auto pr-1">
           {SLIDERS.map((def) => {
             const v = tuning[def.key]
             const formatted =
