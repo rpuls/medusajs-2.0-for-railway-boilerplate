@@ -4,6 +4,7 @@ import { CogSixTooth } from "@medusajs/icons"
 
 import { HelpTooltip } from "../../components/reports/help-tooltip"
 import ProductBulkDeletePage from "../product-bulk-delete/page"
+import ProductTypeTagManagePage from "../product-type-tag-manage/page"
 import SpreadsheetSyncPage from "../spreadsheet-sync/page"
 import SpreadsheetSyncUpdatePage from "../spreadsheet-sync-update/page"
 
@@ -36,6 +37,7 @@ const ProductDataPage = () => {
                 "Import new products: from a supplier CSV (DNC, FashionBiz, AS Colour, etc.). Creates products that don't exist yet — never use to tweak existing ones.",
                 "Update existing: patches columns on already-imported products. Matches by SKU; only patches the columns you tick.",
                 "Bulk delete: permanently removes products in batches. No undo. Use only for trimming retired ranges.",
+                "Types & tags: delete unused or duplicate product types and tags from the store.",
                 "Result logs are scoped to your last action — they clear when you start a new sync or pick a new file.",
               ],
             }}
@@ -54,6 +56,7 @@ const ProductDataPage = () => {
             <Tabs.Trigger value="import-new">Import new products</Tabs.Trigger>
             <Tabs.Trigger value="update-existing">Update existing</Tabs.Trigger>
             <Tabs.Trigger value="bulk-delete">Bulk delete</Tabs.Trigger>
+            <Tabs.Trigger value="types-tags">Types &amp; tags</Tabs.Trigger>
           </Tabs.List>
         </Container>
 
@@ -94,6 +97,17 @@ const ProductDataPage = () => {
             </Text>
           </Container>
           <ProductBulkDeletePage />
+        </Tabs.Content>
+
+        <Tabs.Content value="types-tags" className="flex flex-col gap-y-3">
+          <Container>
+            <Text size="small" className="text-ui-fg-subtle">
+              View and permanently delete product types and tags from your
+              store. Deleting a type or tag unassigns it from every product
+              that uses it — this cannot be undone.
+            </Text>
+          </Container>
+          <ProductTypeTagManagePage />
         </Tabs.Content>
       </Tabs>
     </div>
