@@ -718,12 +718,19 @@ export async function setShippingMethod({
 }
 
 export async function initiatePaymentSession(
-  cart: HttpTypes.StoreCart,
+  _cartOrId: HttpTypes.StoreCart | string | null | undefined,
   data: {
     provider_id: string
     context?: Record<string, unknown>
   }
 ) {
+  // Refetch the cart server-side rather than relying on the caller to send it.
+  // The customizer ships heavy line-item metadata, and serializing the full cart
+  // as a server-action argument can exceed Next.js's 1 MB body limit.
+  const cart = await retrieveCart()
+  if (!cart) {
+    throw new Error("No cart found")
+  }
   return sdk.store.payment
     .initiatePaymentSession(cart, data, {}, await getAuthHeaders())
     .then((resp) => {

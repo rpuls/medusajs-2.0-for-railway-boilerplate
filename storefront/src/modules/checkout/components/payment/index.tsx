@@ -90,7 +90,7 @@ const Payment = ({
       // already calls `revalidateTag("cart", "max")`, so `router.push` will pick
       // up the new payment session on its own.
       if (needsPaymentInit) {
-        await initiatePaymentSession(cart, {
+        await initiatePaymentSession(cart.id, {
           provider_id: selectedPaymentMethod,
         })
       }

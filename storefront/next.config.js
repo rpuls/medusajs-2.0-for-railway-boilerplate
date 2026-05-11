@@ -19,6 +19,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  experimental: {
+    // Carts with many customized line items (each carrying CustomizerMetadata —
+    // side layouts, print artifacts, etc.) easily exceed the 1 MB default when
+    // serialized as a server-action argument. Raise the limit so cart-shaped
+    // payloads don't 413. The proper fix is to pass IDs instead of objects
+    // (see initiatePaymentSession in lib/data/cart.ts); this is belt-and-braces.
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   images: {
     /** Set NEXT_PUBLIC_UNOPTIMIZED_IMAGES=true to skip the image optimizer (debug / broken remote hosts). Default: optimized WebP/AVIF + sizing via `/_next/image`. */
     unoptimized: process.env.NEXT_PUBLIC_UNOPTIMIZED_IMAGES === "true",
