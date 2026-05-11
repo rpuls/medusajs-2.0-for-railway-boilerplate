@@ -89,7 +89,12 @@ export const CURATED_PRESETS: Preset[] = [
     id: "cursor-history-current",
     name: "3. Cursor-history wake (current)",
     note: "Current build. Ports newmix's history-playback model. Visible band trailing the cursor's past path; trailingProbability controls density.",
-    tuning: { ...THREE_TUNING_DEFAULTS },
+    // Empty Partial — applyPreset() spreads THREE_TUNING_DEFAULTS at call
+    // time. Spreading defaults *here* (at module top level) would TDZ-crash
+    // because tuner-panel.tsx imports from this file and the circular
+    // evaluation reaches presets.ts before tuner-panel.tsx initialises
+    // its exported defaults. Reference defaults inside function bodies only.
+    tuning: {},
   },
   {
     id: "newmix-reference",
