@@ -411,6 +411,13 @@ type ParallaxParticle = {
    * motion direction (the natural "spoon-trail" elongation). */
   newmixVortexAxisX?: number
   newmixVortexAxisY?: number
+  /** Per-particle RGB sampled once from `wordmarkImageSrc` at the particle's HOME
+   * position (bitmap space, cover-fit). When present, takes precedence over
+   * `wordmarkGradient` in the render path — the wordmark becomes a stipple of the
+   * source image and "shatters" as particles are displaced. */
+  imgR?: number
+  imgG?: number
+  imgB?: number
 }
 
 type LogoInteractBounds = {
@@ -1776,23 +1783,38 @@ function drawLayer(
     if (!Number.isFinite(yBmp)) {
       yBmp = py
     }
-    if (gradStops != null) {
-      /** Per-particle gradient colour. Project particle's HOME onto axis so the
-       * colour is fixed to the wordmark and travels with the particle when displaced. */
-      const proj = p.hx * gradDx + p.hy * gradDy
-      let t = (proj - gradMin) / gradSpan
-      if (t < 0) t = 0
-      else if (t > 1) t = 1
-      const segCount = gradStops.length - 1
-      const segPos = t * segCount
-      let segIdx = Math.floor(segPos)
-      if (segIdx >= segCount) segIdx = segCount - 1
-      const localT = segPos - segIdx
-      const c1 = gradStops[segIdx]!
-      const c2 = gradStops[segIdx + 1]!
-      let r = Math.round(c1[0]! + (c2[0]! - c1[0]!) * localT)
-      let g = Math.round(c1[1]! + (c2[1]! - c1[1]!) * localT)
-      let b = Math.round(c1[2]! + (c2[2]! - c1[2]!) * localT)
+    /** Per-particle image RGB takes precedence over the gradient. The colour
+     * is baked at build time from the source photo at the particle's HOME,
+     * so it travels with the particle when displaced — the image visibly
+     * "shatters" through the wordmark. */
+    const hasImgColor =
+      p.imgR != null && p.imgG != null && p.imgB != null
+    if (hasImgColor || gradStops != null) {
+      let r: number
+      let g: number
+      let b: number
+      if (hasImgColor) {
+        r = p.imgR as number
+        g = p.imgG as number
+        b = p.imgB as number
+      } else {
+        /** Per-particle gradient colour. Project particle's HOME onto axis so the
+         * colour is fixed to the wordmark and travels with the particle when displaced. */
+        const proj = p.hx * gradDx + p.hy * gradDy
+        let t = (proj - gradMin) / gradSpan
+        if (t < 0) t = 0
+        else if (t > 1) t = 1
+        const segCount = gradStops!.length - 1
+        const segPos = t * segCount
+        let segIdx = Math.floor(segPos)
+        if (segIdx >= segCount) segIdx = segCount - 1
+        const localT = segPos - segIdx
+        const c1 = gradStops![segIdx]!
+        const c2 = gradStops![segIdx + 1]!
+        r = Math.round(c1[0]! + (c2[0]! - c1[0]!) * localT)
+        g = Math.round(c1[1]! + (c2[1]! - c1[1]!) * localT)
+        b = Math.round(c1[2]! + (c2[2]! - c1[2]!) * localT)
+      }
       const invMix = p.captureColorMix
       if (invMix != null && invMix > 0) {
         r = Math.round(r * (1 - invMix) + (255 - r) * invMix)
@@ -1969,6 +1991,20 @@ type Props = {
    */
   wordmarkGradient?: { angleDeg: number; stops: string[] } | null
   /**
+   * Optional photographic source whose pixels become per-particle colours.
+   * Loaded once, cover-fit into the particle bitmap, and sampled at each
+   * particle's HOME position. The wordmark then reads as a stipple of the
+   * image and "shatters" when particles are displaced. Takes precedence over
+   * `wordmarkGradient` when both are set. Re-samples on resize.
+   */
+  wordmarkImageSrc?: string | null
+  /**
+   * Brightness multiplier applied to sampled image pixels (1 = unchanged).
+   * The dual-pass / sprite render path adds visual lift on top of the raw
+   * pixel; if the source photo reads too dark, push this above 1.
+   */
+  wordmarkImageBrightness?: number
+  /**
    * Override the animated particle's draw size (bitmap px). When set, takes
    * priority over the presentation-mode default (1 px embedded / 5 px fullscreen).
    * Useful for live-tuning UIs that expose particle size as a slider.
@@ -1989,6 +2025,8 @@ export default function HomeParticleLogoHero({
   inkPolarity = "auto",
   bgClassName = "bg-black",
   wordmarkGradient = null,
+  wordmarkImageSrc = null,
+  wordmarkImageBrightness = 1,
   particleDrawSize = null,
 }: Props) {
   const presentationRef = useRef(presentation)
@@ -1997,6 +2035,12 @@ export default function HomeParticleLogoHero({
   interactionModeRef.current = interactionMode
   const wordmarkGradientRef = useRef(wordmarkGradient)
   wordmarkGradientRef.current = wordmarkGradient
+  /** Loaded HTMLImageElement for the optional photographic colour source. Set
+   * asynchronously by the loader effect below; consumed in `build()` to sample
+   * per-particle RGB. */
+  const wordmarkImageRef = useRef<HTMLImageElement | null>(null)
+  const wordmarkImageBrightnessRef = useRef(wordmarkImageBrightness)
+  wordmarkImageBrightnessRef.current = wordmarkImageBrightness
   const wakeTrailRef = useRef<Array<{ x: number; y: number }>>([])
   const viscousCoffeeTrailRef = useRef<Array<{ x: number; y: number }>>([])
   const viscousCoffeeErodeAccRef = useRef(0)
@@ -2149,6 +2193,12 @@ export default function HomeParticleLogoHero({
   const logoTiltCurrentRef = useRef({ rx: 0, ry: 0 })
   const logoTiltLayerRef = useRef<HTMLDivElement | null>(null)
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null)
+  /** Loaded photographic colour source (for `wordmarkImageSrc`). Triggers a
+   * rebuild when set so particles re-sample. `null` when none requested or
+   * still loading. */
+  const [wordmarkImgState, setWordmarkImg] = useState<HTMLImageElement | null>(
+    null
+  )
   const [loadFailed, setLoadFailed] = useState(false)
   /** Hide static fallback `<img>` once canvases have sampled the logo and spawned particles. */
   const [logoRasterReady, setLogoRasterReady] = useState(false)
@@ -2215,6 +2265,46 @@ export default function HomeParticleLogoHero({
       img.onerror = null
     }
   }, [logoSrc])
+
+  /** Loader for the optional photographic colour source. Mirrors `logoSrc`:
+   * async decode, then a state-set to trigger `build()` so particles re-sample. */
+  useEffect(() => {
+    if (!wordmarkImageSrc) {
+      wordmarkImageRef.current = null
+      setWordmarkImg(null)
+      return
+    }
+    const img = new window.Image()
+    img.crossOrigin = "anonymous"
+    img.decoding = "async"
+    let cancelled = false
+    img.onload = () => {
+      void img
+        .decode()
+        .catch(() => {
+          /* decode optional; onload already fired */
+        })
+        .finally(() => {
+          if (cancelled) return
+          wordmarkImageRef.current = img
+          requestAnimationFrame(() => {
+            if (!cancelled) setWordmarkImg(img)
+          })
+        })
+    }
+    img.onerror = () => {
+      if (!cancelled) {
+        wordmarkImageRef.current = null
+        setWordmarkImg(null)
+      }
+    }
+    img.src = wordmarkImageSrc
+    return () => {
+      cancelled = true
+      img.onload = null
+      img.onerror = null
+    }
+  }, [wordmarkImageSrc])
 
   const build = useCallback(() => {
     const c0 = canvasORef.current
@@ -2471,6 +2561,77 @@ export default function HomeParticleLogoHero({
       return
     }
     canvasCCtxRef.current = ctx2
+    /** Sample the optional photographic colour source once per build. Draws it
+     * cover-fit into a W×H offscreen, reads pixels, then assigns each particle
+     * its sampled RGB at its HOME position. Particles outside the source's
+     * cover-fit area get the nearest edge pixel; the clamp also catches
+     * particles with floating-point HOMEs that round to an out-of-range index. */
+    {
+      const wmImg = wordmarkImageRef.current
+      if (wmImg != null && wmImg.naturalWidth > 0 && wmImg.naturalHeight > 0) {
+        const off = document.createElement("canvas")
+        off.width = W
+        off.height = H
+        const offCtx = off.getContext("2d", { alpha: false, willReadFrequently: true })
+        if (offCtx != null) {
+          /** Cover-fit math: scale the source so it fully covers W×H, centered.
+           * Crop on the longer axis. Mirrors CSS `object-fit: cover`. */
+          const inw = wmImg.naturalWidth
+          const inh = wmImg.naturalHeight
+          const sFit = Math.max(W / inw, H / inh)
+          const dwSrc = inw * sFit
+          const dhSrc = inh * sFit
+          const dxSrc = (W - dwSrc) / 2
+          const dySrc = (H - dhSrc) / 2
+          offCtx.fillStyle = "#000"
+          offCtx.fillRect(0, 0, W, H)
+          offCtx.drawImage(wmImg, dxSrc, dySrc, dwSrc, dhSrc)
+          let imageData: ImageData | null = null
+          try {
+            imageData = offCtx.getImageData(0, 0, W, H)
+          } catch (e) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn(
+                "[HomeParticleLogoHero] wordmark image getImageData failed:",
+                e
+              )
+            }
+          }
+          if (imageData != null) {
+            const px = imageData.data
+            const bMul = Math.max(
+              0,
+              Number.isFinite(wordmarkImageBrightnessRef.current)
+                ? wordmarkImageBrightnessRef.current
+                : 1
+            )
+            for (const p of particles) {
+              let ix = Math.round(p.hx)
+              let iy = Math.round(p.hy)
+              if (ix < 0) ix = 0
+              else if (ix > W - 1) ix = W - 1
+              if (iy < 0) iy = 0
+              else if (iy > H - 1) iy = H - 1
+              const o = (iy * W + ix) * 4
+              const r = px[o]! * bMul
+              const g = px[o + 1]! * bMul
+              const b = px[o + 2]! * bMul
+              p.imgR = r > 255 ? 255 : r
+              p.imgG = g > 255 ? 255 : g
+              p.imgB = b > 255 ? 255 : b
+            }
+          }
+        }
+      } else {
+        /** No source (or it was removed): strip any stale samples so the
+         * fallback (gradient / sprite) takes over again. */
+        for (const p of particles) {
+          p.imgR = undefined
+          p.imgG = undefined
+          p.imgB = undefined
+        }
+      }
+    }
     particlesRef.current = particles
     logoInteractBoundsRef.current = logoHomeBounds(particles)
     /** viscousCoffee mode is no longer wired up — always nullify the wake pool. */
@@ -2518,7 +2679,7 @@ export default function HomeParticleLogoHero({
         y: sb.y,
       }
     }
-  }, [logoImg, reduceParallax, animatedParticleCap, interactionMode])
+  }, [logoImg, wordmarkImgState, reduceParallax, animatedParticleCap, interactionMode])
 
   buildRef.current = build
 
