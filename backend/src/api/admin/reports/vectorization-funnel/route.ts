@@ -1,12 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { BetaAnalyticsDataClient } from "@google-analytics/data"
 
 import { GA4_PROPERTY_ID } from "../../../../lib/constants"
-import {
-  getServiceAccountKey,
-  isSeoConfigured,
-} from "../../../../services/seo-analytics/google-auth"
+import { isSeoConfigured } from "../../../../services/seo-analytics/google-auth"
+import { buildGa4Caller } from "../../../../services/seo-analytics/ga4-caller"
 import {
   fetchOrdersForReports,
   inRange,
@@ -86,13 +83,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
   if (ga4Configured) {
     try {
-      const key = getServiceAccountKey()
-      const client = new BetaAnalyticsDataClient({
-        credentials: {
-          client_email: key.client_email,
-          private_key: key.private_key,
-        },
-      })
+      const client = buildGa4Caller()
       const response = await client.runReport({
         property: `properties/${GA4_PROPERTY_ID}`,
         dateRanges: [
@@ -118,8 +109,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         },
         limit: 10,
       })
-      const rows = response[0]?.rows ?? []
-      for (const r of rows) {
+      for (const r of response.rows) {
         const name = r.dimensionValues?.[0]?.value ?? ""
         const count = Number(r.metricValues?.[0]?.value ?? 0)
         if (!Number.isFinite(count)) continue
