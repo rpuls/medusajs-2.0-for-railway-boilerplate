@@ -35,26 +35,25 @@ const formatBytes = (n: number): string => {
 
 /**
  * Compact strip of "operational health" tiles that doesn't need the full
- * report-card treatment: MinIO storage size + a click-out to Vercel Speed
- * Insights. Both are external-data signals where the actual dashboard is
- * better than re-implementing it here.
+ * report-card treatment: MinIO storage size, Vercel Speed Insights deep
+ * link, and live PostHog traffic numbers. All three are external-data
+ * signals where the original dashboard is better than re-implementing it.
  *
- * The Speed Insights link is only rendered when VERCEL_SPEED_INSIGHTS_URL
- * is set on the *admin frontend* build, surfaced via a tiny `/admin/reports/config`
- * route response or — simpler — a NEXT_PUBLIC env var injected at build time.
- * Default behavior: render the placeholder + setup hint.
+ * The Speed Insights link is fetched from /admin/reports/config so the
+ * URL doesn't have to be inlined into the admin bundle at build time
+ * (admin frontend can't read backend env vars without a NEXT_PUBLIC_
+ * prefix and a build-time injection).
  */
-const SPEED_INSIGHTS_URL =
-  typeof process !== "undefined" &&
-  typeof (process as any).env?.VERCEL_SPEED_INSIGHTS_URL === "string"
-    ? (process as any).env.VERCEL_SPEED_INSIGHTS_URL
-    : null
+type ConfigResponse = {
+  vercel_speed_insights_url: string | null
+}
 
 export const OperationalTiles = () => {
   const [storage, setStorage] = useState<StorageResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [posthog, setPosthog] = useState<PostHogResponse | null>(null)
   const [posthogLoading, setPosthogLoading] = useState(false)
+  const [speedInsightsUrl, setSpeedInsightsUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -85,6 +84,21 @@ export const OperationalTiles = () => {
       .finally(() => {
         if (!cancelled) setPosthogLoading(false)
       })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/admin/reports/config`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { vercel_speed_insights_url: null }))
+      .then((j) => {
+        if (!cancelled) {
+          setSpeedInsightsUrl((j as ConfigResponse).vercel_speed_insights_url)
+        }
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
@@ -158,9 +172,9 @@ export const OperationalTiles = () => {
           <Text size="xsmall" className="text-ui-fg-subtle">
             Core Web Vitals (Vercel)
           </Text>
-          {SPEED_INSIGHTS_URL ? (
+          {speedInsightsUrl ? (
             <a
-              href={SPEED_INSIGHTS_URL}
+              href={speedInsightsUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: PALETTE.teal700 }}
