@@ -544,25 +544,46 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
     })
   })
 
-  describe("supplier + dimensions + format selector", () => {
-    it("buildBatchCreatesFromParsedCsv writes Product Supplier to product.metadata.supplier", () => {
+  describe("brand + dimensions + format selector", () => {
+    it("buildBatchCreatesFromParsedCsv collects Product Brand into brandValuesByHandle (not metadata)", () => {
       const r = emptyRow()
-      r["product handle"] = "supplier-shirt"
-      r["product title"] = "Supplier Shirt"
+      r["product handle"] = "brand-shirt"
+      r["product title"] = "Brand Shirt"
       r["product status"] = "published"
       r["shipping profile id"] = "sp_test"
-      r["variant sku"] = "SUP-1"
+      r["variant sku"] = "BRA-1"
       r["variant option 1 name"] = "Size"
       r["variant option 1 value"] = "M"
       r["variant price aud"] = "10"
-      r["product supplier"] = "DNC Workwear"
+      r["product brand"] = "DNC Workwear"
 
       const parsed = parseCsv(buildCsv([r]))
-      const { creates, errors } = buildBatchCreatesFromParsedCsv(parsed)
+      const { creates, errors, brandValuesByHandle } = buildBatchCreatesFromParsedCsv(parsed)
 
       expect(errors).toEqual([])
-      const meta = (creates[0] as Record<string, unknown>).metadata as Record<string, unknown>
-      expect(meta.supplier).toBe("DNC Workwear")
+      const meta = (creates[0] as Record<string, unknown>).metadata as
+        | Record<string, unknown>
+        | undefined
+      /** Brand is NOT written to metadata anymore — it's linked via the Brand module after batch create. */
+      expect(meta?.supplier).toBeUndefined()
+      expect(brandValuesByHandle.get("brand-shirt")).toBe("DNC Workwear")
+    })
+
+    it("buildBatchCreatesFromParsedCsv accepts the legacy 'Product Supplier' header as a back-compat alias", () => {
+      const r = emptyRow()
+      r["product handle"] = "legacy-supplier-shirt"
+      r["product title"] = "Legacy Supplier Shirt"
+      r["product status"] = "published"
+      r["shipping profile id"] = "sp_test"
+      r["variant sku"] = "LEG-1"
+      r["variant option 1 name"] = "Size"
+      r["variant option 1 value"] = "M"
+      r["variant price aud"] = "10"
+      r["product brand"] = "AS Colour"
+
+      const parsed = parseCsv(buildCsv([r]))
+      const { brandValuesByHandle } = buildBatchCreatesFromParsedCsv(parsed)
+      expect(brandValuesByHandle.get("legacy-supplier-shirt")).toBe("AS Colour")
     })
 
     it("buildBatchCreatesFromParsedCsv parses product + variant Length/Width/Height", () => {
@@ -809,11 +830,11 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       expect(skus).toContain("CCS149U-NAVY-RED-L")
     })
 
-    it("expansion stamps Product Supplier=Biz Care and surfaces Colour + Size as the two options", () => {
+    it("expansion stamps Product Brand=Biz Care and surfaces Colour + Size as the two options", () => {
       const parsed = parseCsv(SAMPLE_CSV)
       const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
       const sageS = exp.rows.find((r) => r["variant sku"] === "CCS149U-SAGE-BLACK-S")!
-      expect(sageS["product supplier"]).toBe("Biz Care")
+      expect(sageS["product brand"]).toBe("Biz Care")
       expect(sageS["product status"]).toBe("draft")
       expect(sageS["variant option 1 name"]).toBe("Colour")
       expect(sageS["variant option 1 value"]).toBe("Sage/Black")
@@ -849,7 +870,7 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       expect(res.hints.some((h) => h.toLowerCase().includes("draft"))).toBe(true)
     })
 
-    it("buildBatchCreatesFromParsedCsv ingests expanded Biz Care rows with supplier metadata + tags", () => {
+    it("buildBatchCreatesFromParsedCsv ingests expanded Biz Care rows with brand cell + tags", () => {
       const parsed = parseCsv(SAMPLE_CSV)
       const expanded = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
       const reparsed = parseCsv(
@@ -865,7 +886,8 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
           ),
         ].join("\n")
       )
-      const { creates, tagValuesByHandle, errors } = buildBatchCreatesFromParsedCsv(reparsed)
+      const { creates, tagValuesByHandle, brandValuesByHandle, errors } =
+        buildBatchCreatesFromParsedCsv(reparsed)
       expect(errors).toEqual([])
       expect(creates.length).toBe(2)
 
@@ -873,7 +895,9 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
         (c) => (c as Record<string, unknown>).handle === "biz-care-ccs149u"
       ) as Record<string, unknown>
       expect(socks.title).toBe("Unisex Happy Feet Comfort Socks")
-      expect((socks.metadata as Record<string, unknown>).supplier).toBe("Biz Care")
+      /** Brand now lives on brandValuesByHandle (linked separately after batch create), not metadata. */
+      expect(brandValuesByHandle.get("biz-care-ccs149u")).toBe("Biz Care")
+      expect((socks.metadata as Record<string, unknown> | undefined)?.supplier).toBeUndefined()
       /** Tag values live in tagValuesByHandle now; the page resolves them to ids before the batch call. */
       expect(socks.tags).toBeUndefined()
       expect(tagValuesByHandle.get("biz-care-ccs149u") ?? []).toEqual(
@@ -970,7 +994,7 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       })
       const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
       expect(exp.rows[0]?.["product handle"]).toBe("biz-collection-ba35")
-      expect(exp.rows[0]?.["product supplier"]).toBe("Biz Collection")
+      expect(exp.rows[0]?.["product brand"]).toBe("Biz Collection")
       expect(exp.rows[0]?.["variant price aud"]).toBe("14.2")
     })
 
@@ -1106,7 +1130,7 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       })
       const exp = expandHoneybeeCatalogToTemplate(parsed, "sp_test")
       expect(exp.rows[0]?.["product handle"]).toBe("syzmik-zc503")
-      expect(exp.rows[0]?.["product supplier"]).toBe("Syzmik")
+      expect(exp.rows[0]?.["product brand"]).toBe("Syzmik")
     })
   })
 
@@ -1269,11 +1293,11 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       )
     })
 
-    it("expansion stamps Product Supplier=Ramo, sets HTML description, attaches primary_category + attribute_type as tags", () => {
+    it("expansion stamps Product Brand=Ramo, sets HTML description, attaches primary_category + attribute_type as tags", () => {
       const parsed = parseCsv(SAMPLE_CSV)
       const exp = expandRamoCatalogToTemplate(parsed, "sp_test")
       const apron = exp.rows.find((r) => r["variant sku"] === "AP401S_AZ_S")!
-      expect(apron["product supplier"]).toBe("Ramo")
+      expect(apron["product brand"]).toBe("Ramo")
       expect(apron["product status"]).toBe("draft")
       expect(apron["product description"]).toContain("210 gsm")
       expect(apron["variant option 1 name"]).toBe("Colour")
@@ -1302,13 +1326,13 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
           ),
         ].join("\n")
       )
-      const { creates, errors } = buildBatchCreatesFromParsedCsv(reparsed)
+      const { creates, errors, brandValuesByHandle } = buildBatchCreatesFromParsedCsv(reparsed)
       expect(errors).toEqual([])
       expect(creates.length).toBe(2)
       const raglan = creates.find(
         (c) => (c as Record<string, unknown>).handle === "ramo-b103rg"
       ) as Record<string, unknown>
-      expect((raglan.metadata as Record<string, unknown>).supplier).toBe("Ramo")
+      expect(brandValuesByHandle.get("ramo-b103rg")).toBe("Ramo")
       const variants = raglan.variants as Array<{ sku: string }>
       expect(variants.length).toBe(3)
       expect(variants.map((v) => v.sku)).toEqual(

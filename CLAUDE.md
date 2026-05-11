@@ -10,6 +10,36 @@ Custom-print e-commerce platform built on Medusa v2 (`backend/`) and Next.js 15 
 
 The two apps are sibling packages, **not** a workspace — separate `node_modules`, separate `tsconfig.json`. Code that needs to live in both must be hand-mirrored (see "Production-stage sync" below).
 
+## Brands (single source of truth)
+
+One `Brand` entity owns every product's brand identity. Storefront filtering, brand landing pages (`/brands/[handle]`), and reporting all read from it.
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/brand/](backend/src/modules/brand/) |
+| Model | [backend/src/modules/brand/models/brand.ts](backend/src/modules/brand/models/brand.ts) |
+| Migration | [backend/src/modules/brand/migrations/Migration20260511000000.ts](backend/src/modules/brand/migrations/Migration20260511000000.ts) |
+| Product↔Brand link | [backend/src/links/product-brand.ts](backend/src/links/product-brand.ts) |
+| Admin REST | [backend/src/api/admin/brands/route.ts](backend/src/api/admin/brands/route.ts) + [\[id\]/route.ts](backend/src/api/admin/brands/[id]/route.ts) |
+| Store REST | [backend/src/api/store/brands/route.ts](backend/src/api/store/brands/route.ts) + [\[handle\]/route.ts](backend/src/api/store/brands/[handle]/route.ts) |
+| Per-product assignment | [backend/src/api/admin/products/\[id\]/brand/route.ts](backend/src/api/admin/products/[id]/brand/route.ts) |
+| Admin CRUD page | [backend/src/admin/routes/brands/page.tsx](backend/src/admin/routes/brands/page.tsx) |
+| Admin product widget | [backend/src/admin/widgets/product-brand.tsx](backend/src/admin/widgets/product-brand.tsx) |
+| Brand picker (reusable) | [backend/src/admin/components/brands/brand-picker.tsx](backend/src/admin/components/brands/brand-picker.tsx) |
+| Spreadsheet importer resolver | [backend/src/admin/lib/spreadsheet-sync-brands.ts](backend/src/admin/lib/spreadsheet-sync-brands.ts) |
+| Storefront data layer | [storefront/src/lib/data/brands.ts](storefront/src/lib/data/brands.ts) |
+| Storefront presentation (logo/colour by handle) | [storefront/src/modules/brands/data/brands.ts](storefront/src/modules/brands/data/brands.ts) |
+| `/brands/[handle]` landing | [storefront/src/app/\[countryCode\]/(main)/brands/\[handle\]/page.tsx](storefront/src/app/[countryCode]/(main)/brands/[handle]/page.tsx) |
+| One-shot migration script | [backend/src/scripts/migrate-products-to-brand-entity.ts](backend/src/scripts/migrate-products-to-brand-entity.ts) |
+
+**Hierarchy**: brands optionally have a `parent_id` (one level). FashionBiz is the parent of Biz Care, Biz Collection, Syzmik, and Biz Corporates — enables supplier-mix reporting at multiple grain levels.
+
+**Importer**: the spreadsheet sync uses a single "Product Brand" column (back-compat reads "Product Supplier" too). Values are resolved by name or `external_code` (case-insensitive) and missing brands are auto-created. New brands default to `parent_id = null` — staff re-parent in admin.
+
+**Preview UI**: both spreadsheet-sync flows (`/app/spreadsheet-sync` and `/app/spreadsheet-sync-update`) show a per-product checklist before submitting the batch. Products with validation warnings start unchecked. Unchecking skips the product entirely (no metadata writes, no link).
+
+**Deprecated**: legacy `metadata.brand` / `metadata.supplier` / `metadata.manufacturer` / `metadata.label` reads are kept only as fallbacks in the catalog graph route. Schedule a follow-up to delete those after a couple of weeks of clean writes.
+
 ## Customer-portal feature stack (Phases 1-4)
 
 These four phases compose into the SC Prints customer portal. Each is independently deployable; they layer in build order.

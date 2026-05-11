@@ -231,6 +231,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/brand",
+    },
+
+    {
       resolve: "./src/modules/search-log",
     },
 

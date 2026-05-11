@@ -1,9 +1,9 @@
 import { Metadata } from "next"
 
 import { getGraphSummary } from "@lib/data/graph"
+import { listBrands } from "@lib/data/brands"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import BrandsHero from "@modules/brands/components/brands-hero"
-import { BRAND_TILES } from "@modules/brands/data/brands"
 import { BrandsGraphPreview } from "@modules/graph/components/brands-graph-preview"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -39,6 +39,11 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
 
 export default async function BrandsPage() {
   /**
+   * Live brand list from the backend Brand module (one source of truth). Falls back to an
+   * empty array if the backend is unreachable — the BrandsHero animation handles that case.
+   */
+  const brands = await listBrands()
+  /**
    * Load the catalog graph summary for the preview embed. The `/store/graph`
    * summary payload is tiny (root + brand + category super-nodes) and is
    * cached via Next.js fetch tags, so we share the same cache with `/explore`.
@@ -63,7 +68,7 @@ export default async function BrandsPage() {
 
   return (
     <>
-      <BrandsHero />
+      <BrandsHero brands={brands} />
 
       {graphSummary ? (
         <section className="content-container border-t border-ui-border-base py-16 small:py-20">
@@ -101,12 +106,14 @@ export default async function BrandsPage() {
           </p>
         </div>
         <ul className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-3 small:grid-cols-3 md:grid-cols-4">
-          {BRAND_TILES.map((b) => (
+          {brands.map((b) => (
             <li
               key={b.id}
               className="rounded-xl border border-ui-border-base bg-ui-bg-subtle px-4 py-3 text-center text-small-regular text-ui-fg-base"
             >
-              {b.name}
+              <LocalizedClientLink href={`/brands/${b.handle}`} className="hover:text-ui-fg-interactive">
+                {b.name}
+              </LocalizedClientLink>
             </li>
           ))}
         </ul>

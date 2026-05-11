@@ -1,4 +1,5 @@
-import type { BrandTile } from "@modules/brands/data/brands"
+/** Minimal shape needed by the layout solver — just an id to seed pseudo-random positions. */
+type BrandTileLike = { id: string }
 
 /** Effective tile footprint used by the solver (visual logos are lighter than full square boxes). */
 const TILE_PX = 112
@@ -49,7 +50,7 @@ function nudgeAngleOutOfExclusion(angle: number): number {
  * inner hole keeps tiles off the headline; relaxation pushes tiles apart.
  */
 export function computeTilePositions(
-  tiles: BrandTile[],
+  tiles: BrandTileLike[],
   ringEl: HTMLElement
 ): { x: number; y: number }[] {
   const w = ringEl.offsetWidth

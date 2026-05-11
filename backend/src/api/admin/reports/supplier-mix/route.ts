@@ -22,6 +22,12 @@ import {
  * brand tag at the order level today.
  *
  * Returns counts and revenue split.
+ *
+ * TODO(brand-migration): With the Brand entity now in place, this endpoint can be enriched
+ * by joining order.items → line_item.product → product.brand to produce a per-brand
+ * breakdown (and parent-aware totals so FashionBiz rolls up Biz Care/Collection/Syzmik).
+ * Tracked as a follow-up because doing it inline here would require expanding the order
+ * query to include line-item product brand, which the order-reports cache currently doesn't.
  */
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)

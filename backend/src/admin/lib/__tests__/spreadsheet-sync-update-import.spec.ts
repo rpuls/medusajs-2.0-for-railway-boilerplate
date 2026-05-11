@@ -353,31 +353,51 @@ describe("spreadsheet-sync-update-import", () => {
       expect(updates[0]).toEqual({ id: "prod_dim_bad", title: "Keep", height: 10 })
     })
 
-    it("patches product.metadata.supplier when product supplier column is enabled", () => {
+    it("emits brand cell as a side effect when product brand column is enabled", () => {
+      const headers = [...PRODUCT_IMPORT_CSV_HEADERS]
+      const lines = [
+        headers.join(","),
+        [...headers]
+          .map((h) => {
+            if (h === "Product Id") return "prod_br"
+            if (h === "Variant SKU") return "SKU"
+            if (h === "Product Brand") return "Biz Collection"
+            return ""
+          })
+          .join(","),
+      ]
+      const parsed = parseCsv(lines.join("\n"))
+      const { updates, errors, brandValueByProductId } = buildBatchUpdatesFromParsedCsv(parsed, {
+        enabledCsvKeys: new Set(["product brand"]),
+      })
+      expect(errors.length).toBe(0)
+      /** Brand never goes onto patch.metadata — it's a side-channel value linked separately. */
+      expect(updates).toEqual([])
+      expect(brandValueByProductId.get("prod_br")).toBe("Biz Collection")
+    })
+
+    it("falls back to the legacy 'Product Supplier' header when 'Product Brand' is missing", () => {
       const headers = [...PRODUCT_IMPORT_CSV_HEADERS, "Product Supplier"]
       const lines = [
         headers.join(","),
-        // First product: only supplier set
-        [...headers].map((h) => {
-          if (h === "Product Id") return "prod_sup"
-          if (h === "Variant SKU") return "SKU"
-          if (h === "Product Supplier") return "Biz Collection"
-          return ""
-        }).join(","),
+        [...headers]
+          .map((h) => {
+            if (h === "Product Id") return "prod_legacy"
+            if (h === "Variant SKU") return "SKU"
+            if (h === "Product Supplier") return "DNC Workwear"
+            return ""
+          })
+          .join(","),
       ]
       const parsed = parseCsv(lines.join("\n"))
-      const { updates, errors } = buildBatchUpdatesFromParsedCsv(parsed, {
-        enabledCsvKeys: new Set(["product supplier"]),
+      const { brandValueByProductId } = buildBatchUpdatesFromParsedCsv(parsed, {
+        enabledCsvKeys: new Set(["product brand"]),
       })
-      expect(errors.length).toBe(0)
-      expect(updates[0]).toEqual({
-        id: "prod_sup",
-        metadata: { supplier: "Biz Collection" },
-      })
+      expect(brandValueByProductId.get("prod_legacy")).toBe("DNC Workwear")
     })
 
-    it("computeProductUpdateColumnCandidates surfaces dimension + supplier columns when present", () => {
-      const headers = [...PRODUCT_IMPORT_CSV_HEADERS, "Product Supplier"]
+    it("computeProductUpdateColumnCandidates surfaces dimension + brand columns when present", () => {
+      const headers = [...PRODUCT_IMPORT_CSV_HEADERS]
       const dataRow = headers
         .map((h) => {
           if (h === "Product Id") return "prod_can"
@@ -385,7 +405,7 @@ describe("spreadsheet-sync-update-import", () => {
           if (h === "Product Length") return "30"
           if (h === "Product Width") return "20"
           if (h === "Product Height") return "5"
-          if (h === "Product Supplier") return "AS Colour"
+          if (h === "Product Brand") return "AS Colour"
           return ""
         })
         .join(",")
@@ -395,7 +415,7 @@ describe("spreadsheet-sync-update-import", () => {
       expect(keys.has("product length")).toBe(true)
       expect(keys.has("product width")).toBe(true)
       expect(keys.has("product height")).toBe(true)
-      expect(keys.has("product supplier")).toBe(true)
+      expect(keys.has("product brand")).toBe(true)
     })
   })
 })

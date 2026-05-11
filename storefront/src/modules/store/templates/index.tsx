@@ -1,14 +1,25 @@
 import { Suspense } from "react"
 
 import { listStoreProductTags, listStoreProductTypes } from "@lib/data/catalog-facets"
+import { listBrands } from "@lib/data/brands"
 import AsColourStoreUgcMasonry from "@modules/brands/components/as-colour-store-ugc-masonry"
-import { BRAND_TILES, isAsColourStoreBrand, isRamoStoreBrand } from "@modules/brands/data/brands"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { CatalogFacetOptions, ProductFilters } from "@modules/store/components/refinement-list/types"
 
 import PaginatedProducts from "./paginated-products"
+
+/**
+ * Brand-aware route customizations that used to live behind the `isRamoStoreBrand` /
+ * `isAsColourStoreBrand` helpers. The filter URL still uses `?brand=<handle>` or `?brand=<name>`,
+ * so we match either; logic moves here so the helpers can be deleted along with BRAND_TILES.
+ */
+function brandMatchesAny(filter: string | undefined, targets: ReadonlyArray<string>): boolean {
+  if (!filter) return false
+  const f = filter.trim().toLowerCase()
+  return targets.some((t) => t.toLowerCase() === f)
+}
 
 const StoreTemplate = async ({
   sortBy,
@@ -35,19 +46,34 @@ const StoreTemplate = async ({
 }) => {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
-  const isRamo = isRamoStoreBrand(brand)
-  const isAsColour = isAsColourStoreBrand(brand)
-  const catalogTitle = isRamo ? "Ramo" : brand?.trim() ? brand.trim() : "All products"
 
-  const [productTypes, productTags] = await Promise.all([
+  const [productTypes, productTags, brands] = await Promise.all([
     listStoreProductTypes(),
     listStoreProductTags(),
+    listBrands(),
   ])
 
+  const matchedBrand = brand
+    ? brands.find(
+        (b) =>
+          b.handle.toLowerCase() === brand.trim().toLowerCase() ||
+          b.name.toLowerCase() === brand.trim().toLowerCase()
+      ) ?? null
+    : null
+  const isRamo = brandMatchesAny(brand, ["ramo", "stanley/stella"])
+  const isAsColour = brandMatchesAny(brand, ["as-colour", "as colour"])
+  const catalogTitle = matchedBrand
+    ? matchedBrand.name
+    : isRamo
+      ? "Ramo"
+      : brand?.trim()
+        ? brand.trim()
+        : "All products"
+
   const facetOptions: CatalogFacetOptions = {
-    brands: BRAND_TILES.map((t) => ({
-      id: t.storeQuery ?? t.name,
-      label: t.name,
+    brands: brands.map((b) => ({
+      id: b.handle,
+      label: b.name,
     })),
     types: productTypes.map((pt) => ({
       id: pt.id,

@@ -1,6 +1,5 @@
 import { resolveVariantColourFromCsvRow } from "./as-colour-csv-variant-colour"
 import type { ParsedCsv } from "./csv-import"
-import { PRODUCT_SUPPLIER_METADATA_KEY } from "./product-import-template-csv"
 
 /** Payload accepted by `sdk.admin.product.batch({ update })`. */
 export type SpreadsheetProductUpdate = Record<string, unknown>
@@ -93,7 +92,7 @@ export const PRODUCT_PATCH_COLUMN_DEFS: readonly ProductPatchColumnDef[] = [
   { csvKey: "product length", label: "Product length" },
   { csvKey: "product width", label: "Product width" },
   { csvKey: "product height", label: "Product height" },
-  { csvKey: "product supplier", label: "Product supplier (metadata.supplier)" },
+  { csvKey: "product brand", label: "Product brand (link to Brand entity)" },
 ] as const
 
 const PATCH_CSV_KEYS = new Set(PRODUCT_PATCH_COLUMN_DEFS.map((d) => d.csvKey))
@@ -181,8 +180,11 @@ function firstRowFeedsPatch(first: Record<string, string>, csvKey: string): bool
       const n = Number(raw)
       return Number.isFinite(n)
     }
-    case "product supplier":
-      return !!(first["product supplier"] ?? "").trim()
+    case "product brand":
+      return (
+        !!((first["product brand"] ?? "") as string).trim() ||
+        !!((first["product supplier"] ?? "") as string).trim()
+      )
     default:
       return false
   }
@@ -332,10 +334,20 @@ export type BuildBatchUpdateOptions = {
   enabledCsvKeys?: ReadonlySet<string>
 }
 
+/**
+ * Side-channel outputs from the per-product patch pass for fields that don't go into the
+ * Medusa `product.batch({ update })` payload directly. Brand belongs here because it lives in
+ * the separate Brand module and is attached via a Module Link, not a product column.
+ */
+export type ProductPatchSideEffects = {
+  brandValueByProductId: Map<string, string>
+}
+
 function applyProductPatchColumns(
   first: Record<string, string>,
   patch: SpreadsheetProductUpdate,
-  enabledCsvKeys: ReadonlySet<string> | undefined
+  enabledCsvKeys: ReadonlySet<string> | undefined,
+  sideEffects?: ProductPatchSideEffects
 ): void {
   const allow = (k: string): boolean =>
     enabledCsvKeys === undefined ? PATCH_CSV_KEYS.has(k) : enabledCsvKeys.has(k)
@@ -499,14 +511,18 @@ function applyProductPatchColumns(
     }
   }
 
-  if (allow("product supplier")) {
-    const supplier = (first["product supplier"] ?? "").trim()
-    if (supplier) {
-      const existing =
-        patch.metadata && typeof patch.metadata === "object" && !Array.isArray(patch.metadata)
-          ? (patch.metadata as Record<string, unknown>)
-          : {}
-      patch.metadata = { ...existing, [PRODUCT_SUPPLIER_METADATA_KEY]: supplier }
+  /**
+   * Brand patching emits a side-channel value rather than touching `patch.metadata`. The caller
+   * (the spreadsheet-sync-update page) resolves these values to Brand IDs via
+   * `spreadsheet-sync-brands.ts` and applies them through the product↔brand Module Link after
+   * the regular `sdk.admin.product.batch({ update })` call returns.
+   */
+  if (allow("product brand")) {
+    const brandRaw =
+      ((first["product brand"] ?? "") as string).trim() ||
+      ((first["product supplier"] ?? "") as string).trim()
+    if (brandRaw && sideEffects) {
+      sideEffects.brandValueByProductId.set(String(patch.id ?? ""), brandRaw)
     }
   }
 }
@@ -529,25 +545,30 @@ export function buildBatchUpdatesFromParsedCsv(
 ): {
   updates: SpreadsheetProductUpdate[]
   errors: string[]
+  /** Brand cell value per Product Id — resolved & linked by the caller (see spreadsheet-sync-brands). */
+  brandValueByProductId: Map<string, string>
 } {
   const errors: string[] = []
+  const sideEffects: ProductPatchSideEffects = {
+    brandValueByProductId: new Map(),
+  }
   const { enabledCsvKeys } = options ?? {}
 
   if (enabledCsvKeys !== undefined && enabledCsvKeys.size === 0) {
     errors.push("Select at least one column to update.")
-    return { updates: [], errors }
+    return { updates: [], errors, brandValueByProductId: sideEffects.brandValueByProductId }
   }
 
   const headerErr = validateProductUpdateHeaders(parsed)
   if (headerErr) {
     errors.push(headerErr)
-    return { updates: [], errors }
+    return { updates: [], errors, brandValueByProductId: sideEffects.brandValueByProductId }
   }
 
   const preview = computeProductUpdatePreview(parsed)
   preview.validationErrors.forEach((e) => errors.push(e))
   if (preview.validationErrors.length > 0) {
-    return { updates: [], errors }
+    return { updates: [], errors, brandValueByProductId: sideEffects.brandValueByProductId }
   }
 
   const grouped = groupRowsByProductId(parsed.rows)
@@ -566,11 +587,12 @@ export function buildBatchUpdatesFromParsedCsv(
         ? undefined
         : new Set([...enabledCsvKeys].filter((k) => k !== VARIANT_GARMENT_METADATA_CSV_KEY))
 
-    applyProductPatchColumns(first, patch, productOnlyKeys)
+    applyProductPatchColumns(first, patch, productOnlyKeys, sideEffects)
 
-    /** Only `id` means nothing to change — skip or warn */
+    /** Only `id` means nothing to change — but if brand was emitted as a side-effect that's still useful, keep the productId tracked. */
     const keysToSend = Object.keys(patch).filter((k) => k !== "id")
-    if (keysToSend.length === 0) {
+    const hasBrandSideEffect = sideEffects.brandValueByProductId.has(productId)
+    if (keysToSend.length === 0 && !hasBrandSideEffect) {
       if (variantGarmentSelected && productGroupHasVariantGarmentMetadata(rows)) {
         continue
       }
@@ -585,10 +607,12 @@ export function buildBatchUpdatesFromParsedCsv(
       continue
     }
 
-    updates.push(patch)
+    if (keysToSend.length > 0) {
+      updates.push(patch)
+    }
   }
 
-  return { updates, errors }
+  return { updates, errors, brandValueByProductId: sideEffects.brandValueByProductId }
 }
 
 export type VariantGarmentCsvRow = {

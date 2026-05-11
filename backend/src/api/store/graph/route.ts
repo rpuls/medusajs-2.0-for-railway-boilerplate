@@ -142,7 +142,20 @@ function inferBrandFromHandle(handle: string | null | undefined): string | null 
   return null
 }
 
+/**
+ * Brand resolution priority for the catalog graph:
+ *   1. Linked Brand entity (one source of truth, populated by the spreadsheet importer +
+ *      `/admin/products/:id/brand` widget). Expansion happens via the product↔brand link in
+ *      `query.graph(...)`.
+ *   2. Legacy `metadata.brand` — left in place for the 2-week post-migration window so any
+ *      product that escaped the link backfill still surfaces in the graph.
+ *   3. Handle-prefix inference — last-resort fallback for products that were imported before
+ *      either of the above existed.
+ */
 function resolveProductBrand(row: ProductRow): string | null {
+  const linked = (row as { brand?: { name?: string } | Array<{ name?: string }> | null }).brand
+  const linkedName = Array.isArray(linked) ? linked[0]?.name : linked?.name
+  if (typeof linkedName === "string" && linkedName.trim()) return linkedName.trim()
   const metaBrand =
     typeof row.metadata?.brand === "string" ? (row.metadata.brand as string).trim() : ""
   if (metaBrand) return metaBrand
@@ -373,6 +386,9 @@ const PRODUCT_FIELDS = [
   "thumbnail",
   "metadata",
   "status",
+  "brand.id",
+  "brand.name",
+  "brand.handle",
   "variants.id",
   "variants.prices.amount",
   "variants.prices.currency_code",
@@ -503,7 +519,7 @@ async function buildSummary(query: QueryGraph): Promise<GraphPayload> {
   for (;;) {
     const { data } = await query.graph({
       entity: "product",
-      fields: ["id", "handle", "metadata"],
+      fields: ["id", "handle", "metadata", "brand.name"],
       filters: { status: "published" },
       pagination: { take, skip },
     })

@@ -1,107 +1,55 @@
+/**
+ * Presentation styles for brand tiles on the storefront. The canonical list of brands lives in
+ * the backend Brand module — fetch it via `getBrands()` in `@lib/data/brands`. This file is
+ * presentation only: the brand `bgClass`, `initials`, and `logoSrc` keyed by brand handle.
+ *
+ * New brands without an entry here get a generic fallback. Edit this map (handle → style)
+ * when adding presentation for a new brand; or, better, store the logo URL on the Brand row
+ * itself (`logo_url`) and the storefront will use that instead.
+ */
+
 const LOGO_BASE = "/images/brands/logos"
 
-/** Canonical `?brand=` for the Ramo storefront (maps to Stanley/Stella supplier metadata in filters) */
-export const RAMO_BRAND_QUERY = "Ramo"
-
-/**
- * @deprecated Kept for bookmarks / old links. Prefer {@link RAMO_BRAND_QUERY}.
- * Product filtering for both values is handled in the storefront product list.
- */
-export const STANLEY_STELLA_BRAND_FILTER = "Stanley/Stella"
-
-/** Canonical `?brand=` value for AS Colour (matches {@link BRAND_TILES} `name`). */
-export const AS_COLOUR_BRAND_QUERY = "AS Colour"
-
-export function isRamoStoreBrand(brand?: string | null): boolean {
-  const b = brand?.trim()
-  if (!b) {
-    return false
-  }
-  return b === RAMO_BRAND_QUERY || b === STANLEY_STELLA_BRAND_FILTER
-}
-
-export function isAsColourStoreBrand(brand?: string | null): boolean {
-  const b = brand?.trim().toLowerCase()
-  return b === AS_COLOUR_BRAND_QUERY.toLowerCase()
-}
-
-export type BrandTile = {
-  id: string
-  name: string
+export type BrandPresentation = {
   initials: string
-  /** Tailwind-friendly bg class when no logo or image failed to load */
   bgClass: string
-  /** Optional logo for the brands hero ring */
   logoSrc?: string
-  /** Store filter value for `?brand=`; defaults to `name` if omitted */
-  storeQuery?: string
 }
 
-export const BRAND_TILES: BrandTile[] = [
-  {
-    id: "as-colour",
-    name: "AS Colour",
-    initials: "AS",
-    bgClass: "bg-zinc-900",
-    logoSrc: `${LOGO_BASE}/as-colour.png`,
-  },
-  {
-    id: "gildan",
-    name: "Gildan",
-    initials: "G",
-    bgClass: "bg-blue-700",
-    logoSrc: `${LOGO_BASE}/gildan.png`,
-  },
-  {
-    id: "syzmik",
-    name: "Syzmik",
-    initials: "SY",
-    bgClass: "bg-slate-800",
-    logoSrc: `${LOGO_BASE}/syzmik-workwear.svg`,
-  },
-  {
-    id: "biz-collection",
-    name: "Biz Collection",
-    initials: "B+",
-    bgClass: "bg-rose-800",
-    logoSrc: `${LOGO_BASE}/biz-collection.svg`,
-  },
-  {
-    id: "american-apparel",
-    name: "American Apparel",
-    initials: "AA",
-    bgClass: "bg-neutral-800",
-    logoSrc: `${LOGO_BASE}/american-apparel.png`,
-  },
-  {
-    id: "anvil",
-    name: "Anvil",
-    initials: "A",
-    bgClass: "bg-slate-700",
-    logoSrc: `${LOGO_BASE}/anvil.png`,
-  },
-  {
-    id: "dnc",
-    name: "DNC Workwear",
-    initials: "DNC",
-    bgClass: "bg-zinc-600",
-    logoSrc: `${LOGO_BASE}/dnc.png`,
-  },
-  {
-    id: "grace",
-    name: "Grace Collection",
-    initials: "GC",
-    bgClass: "bg-stone-500",
-    logoSrc: `${LOGO_BASE}/grace.svg`,
-  },
-  {
-    id: "ramo",
-    name: "Ramo",
-    initials: "R",
-    bgClass: "bg-emerald-800",
-    logoSrc: `${LOGO_BASE}/ramo.svg`,
-    storeQuery: RAMO_BRAND_QUERY,
-  },
-  { id: "aussie-pacific", name: "Aussie Pacific", initials: "AP", bgClass: "bg-sky-900" },
-  { id: "winning-spirit", name: "Winning Spirit", initials: "WS", bgClass: "bg-indigo-900" },
-]
+const BRAND_PRESENTATION_BY_HANDLE: Record<string, BrandPresentation> = {
+  "as-colour": { initials: "AS", bgClass: "bg-zinc-900", logoSrc: `${LOGO_BASE}/as-colour.png` },
+  gildan: { initials: "G", bgClass: "bg-blue-700", logoSrc: `${LOGO_BASE}/gildan.png` },
+  syzmik: { initials: "SY", bgClass: "bg-slate-800", logoSrc: `${LOGO_BASE}/syzmik-workwear.svg` },
+  "biz-collection": { initials: "B+", bgClass: "bg-rose-800", logoSrc: `${LOGO_BASE}/biz-collection.svg` },
+  "american-apparel": { initials: "AA", bgClass: "bg-neutral-800", logoSrc: `${LOGO_BASE}/american-apparel.png` },
+  anvil: { initials: "A", bgClass: "bg-slate-700", logoSrc: `${LOGO_BASE}/anvil.png` },
+  "dnc-workwear": { initials: "DNC", bgClass: "bg-zinc-600", logoSrc: `${LOGO_BASE}/dnc.png` },
+  grace: { initials: "GC", bgClass: "bg-stone-500", logoSrc: `${LOGO_BASE}/grace.svg` },
+  ramo: { initials: "R", bgClass: "bg-emerald-800", logoSrc: `${LOGO_BASE}/ramo.svg` },
+  "aussie-pacific": { initials: "AP", bgClass: "bg-sky-900" },
+  "winning-spirit": { initials: "WS", bgClass: "bg-indigo-900" },
+  fashionbiz: { initials: "FZ", bgClass: "bg-rose-900" },
+  "biz-care": { initials: "BC", bgClass: "bg-teal-700" },
+  "biz-corporates": { initials: "BC", bgClass: "bg-blue-800" },
+  "stanley-stella": { initials: "SS", bgClass: "bg-stone-700" },
+  "next-level": { initials: "NL", bgClass: "bg-zinc-800" },
+  honeybee: { initials: "HB", bgClass: "bg-amber-700" },
+}
+
+const FALLBACK_PRESENTATION: BrandPresentation = {
+  initials: "B",
+  bgClass: "bg-stone-500",
+}
+
+export function getBrandPresentation(handle: string): BrandPresentation {
+  return BRAND_PRESENTATION_BY_HANDLE[handle.toLowerCase()] ?? FALLBACK_PRESENTATION
+}
+
+export function brandInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 3)
+}

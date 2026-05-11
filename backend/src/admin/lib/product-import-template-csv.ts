@@ -96,12 +96,21 @@ export const PRODUCT_IMPORT_SUPPLEMENTAL_COLUMNS = [
   ...PRODUCT_CATEGORY_PATH_COLUMNS,
   "Product Metadata JSON",
   ...PRODUCT_IMAGE_URL_EXTRA_COLUMNS,
-  /** Free-form supplier/vendor identity, persisted on `product.metadata.supplier`. */
-  "Product Supplier",
+  /**
+   * Brand identity (e.g. "DNC Workwear", "Biz Collection", or an external code like "DNC").
+   * Resolved to a Brand row via the spreadsheet importer and attached to the product through
+   * the product↔brand Module Link. The metadata key below is the legacy fallback for the
+   * one-shot migration; new imports should rely on the link.
+   */
+  "Product Brand",
 ] as const
 
-/** Metadata key on `product.metadata` carrying the supplier identity from `Product Supplier`. */
-export const PRODUCT_SUPPLIER_METADATA_KEY = "supplier"
+/**
+ * Legacy metadata key from before the Brand module existed. Retained only so the
+ * `migrate-products-to-brand-entity` script can pick up the value during the one-shot
+ * migration. New imports write to the link, not to metadata.
+ */
+export const PRODUCT_BRAND_LEGACY_METADATA_KEYS = ["brand", "supplier", "manufacturer", "label"] as const
 
 export const PRODUCT_IMPORT_CSV_HEADERS: string[] = [
   ...PRODUCT_IMPORT_TEMPLATE_COLUMNS,
@@ -142,6 +151,7 @@ export const PRODUCT_IMPORT_EXPORT_LIST_FIELDS =
     "*variants.options",
     "*options",
     "*options.values",
+    "*brand",
   ].join(",")
 
 const TRUE_FALSE = (value: unknown): string => {
@@ -640,7 +650,20 @@ export function buildProductImportTemplateRows(products: unknown[]): string[][] 
         /** Product Image 3..N Url — placeholder; existing 1/2 already covered above. */
         ...Array.from({ length: PRODUCT_IMAGE_URL_COLUMN_COUNT - 2 }, () => ""),
         formatCell(
-          (product.metadata as Record<string, unknown> | undefined)?.[PRODUCT_SUPPLIER_METADATA_KEY] ?? ""
+          (() => {
+            const brand = (product as Record<string, unknown>).brand as
+              | { name?: unknown }
+              | Array<{ name?: unknown }>
+              | undefined
+            const direct = Array.isArray(brand) ? brand[0] : brand
+            if (direct?.name) return String(direct.name)
+            const meta = product.metadata as Record<string, unknown> | undefined
+            for (const k of PRODUCT_BRAND_LEGACY_METADATA_KEYS) {
+              const v = meta?.[k]
+              if (typeof v === "string" && v.trim()) return v
+            }
+            return ""
+          })()
         ),
       ])
     }

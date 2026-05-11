@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation"
-
-const DNC_BRAND = "DNC Workwear"
+import { permanentRedirect } from "next/navigation"
 
 type PageProps = {
   params: Promise<{ countryCode: string }>
@@ -8,7 +6,5 @@ type PageProps = {
 
 export default async function DncBrandPage({ params }: PageProps) {
   const { countryCode } = await params
-  redirect(
-    `/${countryCode}/store?brand=${encodeURIComponent(DNC_BRAND)}`
-  )
+  permanentRedirect(`/${countryCode}/brands/dnc-workwear`)
 }

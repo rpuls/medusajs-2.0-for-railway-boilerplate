@@ -20,8 +20,18 @@ import {
   VARIANT_GARMENT_METADATA_CSV_KEY,
   type VariantGarmentCsvRow,
 } from "../../lib/spreadsheet-sync-update-import"
+import {
+  resolveBrandValues,
+  resolveBrandIdForValue,
+  type BrandClient,
+} from "../../lib/spreadsheet-sync-brands"
 import { parseCsv } from "../../lib/csv-import"
 import { sdk } from "../../lib/sdk"
+
+const adminFetchPath = (path: string) => {
+  const base = (import.meta.env.VITE_BACKEND_URL ?? "").replace(/\/$/, "")
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`
+}
 
 const mergeVariantGarmentMetadata = (
   existing: Record<string, unknown> | undefined,
@@ -49,6 +59,8 @@ const SpreadsheetSyncUpdatePage = () => {
 
   /** Which patchable CSV columns to send to Medusa (subset of analysed candidates). */
   const [enabledList, setEnabledList] = useState<string[]>([])
+  /** Product IDs the staff has unchecked in the per-product preview list. Skipped before batch. */
+  const [skippedProductIds, setSkippedProductIds] = useState<Set<string>>(new Set())
 
   const fileAnalysis = useMemo(() => {
     if (!rawCsvText) {
@@ -87,16 +99,68 @@ const SpreadsheetSyncUpdatePage = () => {
           string,
           Map<string, VariantGarmentCsvRow>
         >(),
+        brandValueByProductId: new Map<string, string>(),
       }
     }
-    const { updates, errors } = buildBatchUpdatesFromParsedCsv(fileAnalysis.parsed, { enabledCsvKeys })
+    const { updates, errors, brandValueByProductId } = buildBatchUpdatesFromParsedCsv(
+      fileAnalysis.parsed,
+      { enabledCsvKeys }
+    )
     const vg = buildVariantGarmentDataByProductId(fileAnalysis.parsed, enabledCsvKeys)
     return {
       updates,
       buildErrors: [...errors, ...vg.errors],
       variantGarmentByProduct: vg.byProduct,
+      brandValueByProductId,
     }
   }, [fileAnalysis, enabledCsvKeys])
+
+  /**
+   * Per-product preview rows for the update flow. Grouped by `Product Id` (not handle, since
+   * update mode matches against existing rows by id). No warning-driven auto-uncheck here —
+   * update warnings live at the batch level, not per-product.
+   */
+  const previewProductsForUpdate = useMemo(() => {
+    if (!fileAnalysis || fileAnalysis.preview.validationErrors.length > 0) return []
+    const map = new Map<
+      string,
+      { handle: string; title: string; brand: string | null; rowCount: number }
+    >()
+    const order: string[] = []
+    for (const row of fileAnalysis.parsed.rows) {
+      const id = (row["product id"] ?? "").trim()
+      if (!id) continue
+      const existing = map.get(id)
+      if (existing) {
+        existing.rowCount += 1
+      } else {
+        order.push(id)
+        map.set(id, {
+          handle: (row["product handle"] ?? "").trim(),
+          title: (row["product title"] ?? "").trim() || id,
+          brand:
+            ((row["product brand"] ?? row["product supplier"] ?? "") as string).trim() || null,
+          rowCount: 1,
+        })
+      }
+    }
+    return order.map((id) => ({ id, ...map.get(id)! }))
+  }, [fileAnalysis])
+
+  useEffect(() => {
+    setSkippedProductIds(new Set())
+  }, [rawCsvText, previewProductsForUpdate.length])
+
+  const toggleSkipUpdate = useCallback((id: string) => {
+    setSkippedProductIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const includedUpdateCount = previewProductsForUpdate.length - skippedProductIds.size
 
   const toggleColumn = useCallback((csvKey: string, next: boolean) => {
     setEnabledList((prev) => {
@@ -156,6 +220,7 @@ const SpreadsheetSyncUpdatePage = () => {
     buildErrors.length === 0 &&
     (updates.length > 0 || hasVariantGarmentWork) &&
     enabledList.length > 0 &&
+    includedUpdateCount > 0 &&
     !syncing
 
   const onSync = useCallback(async () => {
@@ -170,11 +235,33 @@ const SpreadsheetSyncUpdatePage = () => {
       return
     }
     const enabled = new Set(enabledList)
-    const { updates: toUpdate, errors } = buildBatchUpdatesFromParsedCsv(parsed, {
+    const {
+      updates: allToUpdate,
+      errors,
+      brandValueByProductId,
+    } = buildBatchUpdatesFromParsedCsv(parsed, {
       enabledCsvKeys: enabled,
     })
     const vg = buildVariantGarmentDataByProductId(parsed, enabled)
-    if (errors.length > 0 || vg.errors.length > 0 || (toUpdate.length === 0 && vg.byProduct.size === 0)) {
+    if (errors.length > 0 || vg.errors.length > 0) {
+      return
+    }
+    /**
+     * Strip out products the staff unchecked in the preview list. Same semantics as the create
+     * flow: skipped products are filtered out before the batch update call so no metadata,
+     * variants, or brand links change for them.
+     */
+    const toUpdate = (allToUpdate as Array<Record<string, unknown> & { id?: string }>).filter(
+      (u) => !skippedProductIds.has(String(u.id ?? ""))
+    )
+    /** Also drop variant garment work and brand updates for skipped products. */
+    for (const id of [...vg.byProduct.keys()]) {
+      if (skippedProductIds.has(id)) vg.byProduct.delete(id)
+    }
+    for (const id of [...brandValueByProductId.keys()]) {
+      if (skippedProductIds.has(id)) brandValueByProductId.delete(id)
+    }
+    if (toUpdate.length === 0 && vg.byProduct.size === 0 && brandValueByProductId.size === 0) {
       return
     }
 
@@ -341,6 +428,66 @@ const SpreadsheetSyncUpdatePage = () => {
         }
       }
 
+      if (brandValueByProductId.size > 0) {
+        const distinctValues: string[] = []
+        const seen = new Set<string>()
+        for (const v of brandValueByProductId.values()) {
+          const k = v.trim().toLowerCase()
+          if (k && !seen.has(k)) {
+            seen.add(k)
+            distinctValues.push(v)
+          }
+        }
+        log.push(`Resolving ${distinctValues.length} product brand(s)…`)
+        try {
+          const brandClient: BrandClient = {
+            list: ({ limit, offset }) =>
+              fetch(
+                adminFetchPath(`/admin/brands?limit=${limit ?? 200}&offset=${offset ?? 0}`),
+                { credentials: "include" }
+              ).then((r) => r.json()),
+            create: (body) =>
+              fetch(adminFetchPath("/admin/brands"), {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              }).then(async (r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.json()
+              }),
+          }
+          const resolution = await resolveBrandValues(brandClient, distinctValues)
+          resolution.createdLog.forEach((m) => log.push(m))
+          let okN = 0
+          let failN = 0
+          for (const [productId, cell] of brandValueByProductId) {
+            const brandId = resolveBrandIdForValue(cell, resolution)
+            if (!brandId) {
+              failN++
+              continue
+            }
+            try {
+              const r = await fetch(adminFetchPath(`/admin/products/${productId}/brand`), {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ brand_id: brandId }),
+              })
+              if (r.ok) okN++
+              else failN++
+            } catch {
+              failN++
+            }
+          }
+          log.push(`Brand links: ${okN} attached, ${failN} failed.`)
+        } catch (e) {
+          log.push(
+            `Brand resolution failed: ${e instanceof Error ? e.message : String(e)} — brand links not applied.`
+          )
+        }
+      }
+
       log.push("Done.")
       setSyncLog(log)
     } catch (e) {
@@ -349,7 +496,7 @@ const SpreadsheetSyncUpdatePage = () => {
     } finally {
       setSyncing(false)
     }
-  }, [rawCsvText, enabledList])
+  }, [rawCsvText, enabledList, skippedProductIds])
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -444,6 +591,12 @@ const SpreadsheetSyncUpdatePage = () => {
             <div className="flex flex-col gap-2">
               <Text size="small">
                 Products (distinct ids): <strong>{preview.productCount}</strong>
+                {previewProductsForUpdate.length > 0 ? (
+                  <span className="text-ui-fg-muted">
+                    {" "}
+                    · selected to patch: <strong>{includedUpdateCount}</strong>
+                  </span>
+                ) : null}
               </Text>
               <Text size="small">
                 Variant rows in file: <strong>{preview.variantRowCount}</strong>
@@ -451,6 +604,81 @@ const SpreadsheetSyncUpdatePage = () => {
               <Text size="small" className="text-ui-fg-muted">
                 Rows with the same Product Id should agree on product-level columns; the first row per id wins.
               </Text>
+
+              {previewProductsForUpdate.length > 0 && preview.validationErrors.length === 0 ? (
+                <div className="mt-3 rounded-md border border-ui-border-base">
+                  <div className="flex items-center justify-between gap-2 border-b border-ui-border-base bg-ui-bg-subtle px-3 py-2">
+                    <Text size="xsmall" className="text-ui-fg-subtle">
+                      Choose which products to patch. Unchecking skips all updates for that product (including brand + variant images).
+                    </Text>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="small"
+                        variant="transparent"
+                        onClick={() => setSkippedProductIds(new Set())}
+                      >
+                        Select all
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="transparent"
+                        onClick={() =>
+                          setSkippedProductIds(
+                            new Set(previewProductsForUpdate.map((p) => p.id))
+                          )
+                        }
+                      >
+                        Deselect all
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto overscroll-contain">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-ui-bg-base">
+                        <tr className="border-b border-ui-border-base text-left text-ui-fg-subtle text-xs">
+                          <th className="px-3 py-1 w-8"></th>
+                          <th className="px-3 py-1">Product Id</th>
+                          <th className="px-3 py-1">Handle</th>
+                          <th className="px-3 py-1">Title</th>
+                          <th className="px-3 py-1">Brand</th>
+                          <th className="px-3 py-1 text-right">Rows</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewProductsForUpdate.map((p) => {
+                          const checked = !skippedProductIds.has(p.id)
+                          return (
+                            <tr
+                              key={p.id}
+                              className={`border-b last:border-b-0 border-ui-border-base ${
+                                checked ? "" : "opacity-60"
+                              }`}
+                            >
+                              <td className="px-3 py-1.5">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => toggleSkipUpdate(p.id)}
+                                />
+                              </td>
+                              <td className="px-3 py-1.5 font-mono text-xs truncate max-w-[180px]">
+                                {p.id}
+                              </td>
+                              <td className="px-3 py-1.5 font-mono text-xs truncate max-w-[160px]">
+                                {p.handle || <span className="text-ui-fg-muted">—</span>}
+                              </td>
+                              <td className="px-3 py-1.5 truncate max-w-[220px]">{p.title}</td>
+                              <td className="px-3 py-1.5 truncate max-w-[140px]">
+                                {p.brand ?? <span className="text-ui-fg-muted">—</span>}
+                              </td>
+                              <td className="px-3 py-1.5 text-right">{p.rowCount}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
 
               {variantGarmentUncheckedWarning ? (
                 <div className="rounded-md border border-ui-border-strong bg-ui-bg-subtle p-3">

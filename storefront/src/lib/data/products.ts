@@ -6,30 +6,36 @@ import { nextHeaders } from "./sdk-helpers"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { ProductFilters } from "@modules/store/components/refinement-list/types"
 import { sortProducts } from "@lib/util/sort-products"
-import { inferBrandFromHandle } from "@lib/util/infer-brand-from-handle"
 import { isHoodieGarmentProduct } from "@modules/products/lib/variant-options"
 
+/**
+ * Match a product's brand against the URL `?brand=` filter. The filter value is the brand's
+ * handle (URL-friendly) so the storefront filter is stable across renames; we also accept the
+ * brand name (case-insensitive) for backwards compatibility with pre-migration links.
+ *
+ * Returns true if either the resolved brand handle or name matches the filter.
+ */
 function productBrandMatchesClientFilter(
-  productBrandLower: string,
+  product: { brand?: { handle?: string | null; name?: string | null } | Array<{ handle?: string | null; name?: string | null }> | null },
   filterRaw: string
 ): boolean {
   const f = filterRaw.trim().toLowerCase()
-  if (productBrandLower.includes(f)) {
-    return true
-  }
-  if (f === "ramo") {
-    return (
-      productBrandLower.includes("ramo") ||
-      productBrandLower.includes("stanley") ||
-      productBrandLower.includes("stella")
-    )
-  }
+  if (!f) return false
+  const brand = Array.isArray(product.brand) ? product.brand[0] : product.brand
+  if (!brand) return false
+  const handle = (brand.handle ?? "").trim().toLowerCase()
+  if (handle && (handle === f || handle.replace(/-/g, "") === f.replace(/-/g, ""))) return true
+  const name = (brand.name ?? "").trim().toLowerCase()
+  if (name && name === f) return true
   return false
 }
 
-/** Include product + variant metadata (e.g. brand, garment_images), weight and tags for the storefront. */
+/**
+ * Field expansion for storefront product queries. `*brand` pulls in the linked Brand row
+ * (id, name, handle, parent_id) so the storefront filter and PDP can read it directly.
+ */
 const STORE_PRODUCT_FIELDS =
-  "+metadata,+type,+weight,*variants.calculated_price,*variants.options,+variants.metadata,+variants.sku,+variants.weight,+tags"
+  "+metadata,+type,+weight,*variants.calculated_price,*variants.options,+variants.metadata,+variants.sku,+variants.weight,+tags,*brand"
 
 /**
  * Next.js Data Cache: tag for on-demand `revalidateTag("products", "max")`, plus a max age so catalog
@@ -327,13 +333,6 @@ export const getProductsListWithSort = cache(async function ({
         (variant as HttpTypes.StoreProductVariant)?.inventory_quantity === null ||
         (variant as HttpTypes.StoreProductVariant).inventory_quantity! > 0
     )
-    const brandMeta = getMetadataValue(product, ["brand", "manufacturer", "label"])
-    const brandFromHandle = inferBrandFromHandle(product.handle ?? "")
-    const brand =
-      (brandMeta?.trim()
-        ? brandMeta.trim()
-        : brandFromHandle
-      )?.toLowerCase() ?? null
     const fabric = getMetadataValue(product, [
       "fabric_type",
       "fabric",
@@ -358,10 +357,7 @@ export const getProductsListWithSort = cache(async function ({
     }
 
     if (filters?.brand) {
-      if (!brand) {
-        return false
-      }
-      if (!productBrandMatchesClientFilter(brand, filters.brand)) {
+      if (!productBrandMatchesClientFilter(product as any, filters.brand)) {
         return false
       }
     }

@@ -5,10 +5,20 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { useRef, useState, type CSSProperties } from "react"
 
-import { BRAND_TILES } from "@modules/brands/data/brands"
+import { brandInitials, getBrandPresentation } from "@modules/brands/data/brands"
+import type { StorefrontBrand } from "@lib/data/brands"
 import { computeTilePositions } from "@modules/brands/components/brands-hero/tile-placement"
 import { RamoLogoInline } from "@modules/brands/components/ramo-logo-inline"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+
+type BrandsHeroTile = {
+  id: string
+  handle: string
+  name: string
+  initials: string
+  bgClass: string
+  logoSrc?: string
+}
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -27,7 +37,18 @@ const floatDelayForIndex = (i: number) =>
 /** Scroll area height — shorter = “Full list” earlier; still room for headline scroll */
 const SCROLL_TRACK_VH = 200
 
-export default function BrandsHero() {
+export default function BrandsHero({ brands }: { brands: StorefrontBrand[] }) {
+  const tiles: BrandsHeroTile[] = brands.map((b) => {
+    const presentation = getBrandPresentation(b.handle)
+    return {
+      id: b.id,
+      handle: b.handle,
+      name: b.name,
+      initials: presentation.initials || brandInitials(b.name),
+      bgClass: presentation.bgClass,
+      logoSrc: b.logo_url ?? presentation.logoSrc,
+    }
+  })
   const scrollTrackRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const ringRef = useRef<HTMLDivElement>(null)
@@ -57,7 +78,7 @@ export default function BrandsHero() {
       }
 
       const applyFinalTiles = (animate: boolean) => {
-        const targets = computeTilePositions(BRAND_TILES, ring)
+        const targets = computeTilePositions(tiles, ring)
         if (!animate || reduced) {
           tiles.forEach((el, i) => {
             const t = targets[i]
@@ -213,12 +234,11 @@ export default function BrandsHero() {
             ref={ringRef}
             className="relative z-[1] mt-3 flex min-h-[21rem] w-full min-w-0 max-w-[min(99vw,76rem)] flex-1 items-center justify-center -translate-y-6 small:mt-4 small:min-h-[26rem] small:-translate-y-8"
           >
-            {BRAND_TILES.map((brand, i) => {
-              const isRamoTile = brand.id === "ramo"
+            {tiles.map((brand, i) => {
+              const isRamoTile = brand.handle === "ramo"
               const showLogo =
                 !isRamoTile && Boolean(brand.logoSrc) && !logoLoadFailed[brand.id]
-              const brandParam = brand.storeQuery ?? brand.name
-              const storeHref = `/store?brand=${encodeURIComponent(brandParam)}`
+              const storeHref = `/brands/${brand.handle}`
               return (
                 <div
                   key={brand.id}

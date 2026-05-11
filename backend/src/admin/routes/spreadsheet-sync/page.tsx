@@ -1,5 +1,5 @@
-import { Button, Container, Heading, Input, Text } from "@medusajs/ui"
-import { useCallback, useMemo, useState } from "react"
+import { Button, Checkbox, Container, Heading, Input, Text } from "@medusajs/ui"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { HelpTooltip } from "../../components/reports/help-tooltip"
 
@@ -34,6 +34,16 @@ import {
   resolveTagValues,
   type TagClient,
 } from "../../lib/spreadsheet-sync-tags"
+import {
+  resolveBrandValues,
+  resolveBrandIdForValue,
+  type BrandClient,
+} from "../../lib/spreadsheet-sync-brands"
+import {
+  groupRowsByProduct,
+  initialSkippedHandles,
+  type PreviewProduct,
+} from "../../lib/spreadsheet-sync-preview"
 import type { TierMoneyMinor } from "../../lib/spreadsheet-money"
 import { parseCsv } from "../../lib/csv-import"
 import { sdk } from "../../lib/sdk"
@@ -61,6 +71,12 @@ const SpreadsheetSyncPage = () => {
   const [syncing, setSyncing] = useState(false)
   const [syncLog, setSyncLog] = useState<string[]>([])
   const [tierResults, setTierResults] = useState<TierApplyResult[] | null>(null)
+  /**
+   * Handles the staff have unchecked in the per-product preview list — these are filtered out
+   * before the batch create call so the products never enter Medusa. Defaults to whatever
+   * `initialSkippedHandles` returns (i.e. products with warnings start unchecked).
+   */
+  const [skippedHandles, setSkippedHandles] = useState<Set<string>>(new Set())
 
   const normalized = useMemo(() => {
     if (!rawCsvText) {
@@ -171,6 +187,58 @@ const SpreadsheetSyncPage = () => {
 
   const readyParsed = normalized?.readyParsed ?? null
 
+  /**
+   * Per-product preview rows — drives the skip-checkbox list above the Confirm button.
+   * Recomputed whenever the parsed CSV changes; auto-uncheck on validation warnings.
+   *
+   * Computed lazily so the heavy `buildBatchCreatesFromParsedCsv` only runs when there's
+   * something to show.
+   */
+  const previewProducts = useMemo<PreviewProduct[]>(() => {
+    if (!readyParsed) return []
+    try {
+      const { creates, warningsByHandle, brandValuesByHandle } =
+        buildBatchCreatesFromParsedCsv(readyParsed)
+      const rowsForGrouping = creates.map((c) => ({
+        handle: (c as { handle?: string }).handle ?? "",
+        title: (c as { title?: string }).title,
+        brand: brandValuesByHandle.get((c as { handle?: string }).handle ?? "") ?? null,
+      }))
+      return groupRowsByProduct(rowsForGrouping, { warningsByHandle })
+    } catch {
+      return []
+    }
+  }, [readyParsed])
+
+  /** Reset skipped state whenever the underlying preview changes (new file / format switch). */
+  useEffect(() => {
+    setSkippedHandles(initialSkippedHandles(previewProducts))
+  }, [previewProducts])
+
+  const toggleSkip = useCallback((handle: string) => {
+    setSkippedHandles((prev) => {
+      const next = new Set(prev)
+      if (next.has(handle)) next.delete(handle)
+      else next.add(handle)
+      return next
+    })
+  }, [])
+
+  const selectAll = useCallback(() => setSkippedHandles(new Set()), [])
+  const deselectAll = useCallback(
+    () => setSkippedHandles(new Set(previewProducts.map((p) => p.handle))),
+    [previewProducts]
+  )
+  const deselectWarnings = useCallback(
+    () =>
+      setSkippedHandles(
+        new Set(previewProducts.filter((p) => p.warnings.length > 0).map((p) => p.handle))
+      ),
+    [previewProducts]
+  )
+
+  const includedCount = previewProducts.length - skippedHandles.size
+
   const onPickFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     setParseError(null)
@@ -196,6 +264,7 @@ const SpreadsheetSyncPage = () => {
     preview &&
     preview.validationErrors.length === 0 &&
     preview.productCount > 0 &&
+    includedCount > 0 &&
     !syncing
 
   const onSync = useCallback(async () => {
@@ -252,8 +321,15 @@ const SpreadsheetSyncPage = () => {
       return
     }
 
-    const { creates, tierBySku, errors, warnings, categoryPathsByHandle, tagValuesByHandle } =
-      buildBatchCreatesFromParsedCsv(workingParsed)
+    const {
+      creates: allCreates,
+      tierBySku,
+      errors,
+      warnings,
+      categoryPathsByHandle,
+      tagValuesByHandle,
+      brandValuesByHandle,
+    } = buildBatchCreatesFromParsedCsv(workingParsed)
 
     if (errors.length) {
       errors.forEach((e) => log.push(`Validation: ${e}`))
@@ -264,8 +340,22 @@ const SpreadsheetSyncPage = () => {
 
     warnings.forEach((w) => log.push(`Note: ${w}`))
 
+    /**
+     * Filter out products the staff unchecked in the preview list. Skipped products never
+     * enter Medusa — no metadata, no link, nothing. Reasoning lives in the preview helper.
+     */
+    const creates = (allCreates as Array<Record<string, unknown> & { handle?: string }>).filter(
+      (c) => !skippedHandles.has(c.handle ?? "")
+    )
+    const skippedCount = allCreates.length - creates.length
+    if (skippedCount > 0) {
+      log.push(
+        `Skipping ${skippedCount} product(s) per preview selection (uncheck list). Importing ${creates.length}.`
+      )
+    }
+
     if (!creates.length) {
-      log.push("Nothing to create — no product groups found.")
+      log.push("Nothing to create — every product was unchecked in the preview, or none found.")
       setSyncLog(log)
       setSyncing(false)
       return
@@ -335,7 +425,61 @@ const SpreadsheetSyncPage = () => {
       }
     }
 
+    /**
+     * Resolve brand cells now (before the batch create). Auto-creates missing brands so we can
+     * attach links immediately after create instead of in a second pass. Skipped products are
+     * already filtered out, so their brand cells don't trigger auto-creation either.
+     */
+    let brandResolution: Awaited<ReturnType<typeof resolveBrandValues>> | null = null
+    if (brandValuesByHandle.size) {
+      const includedBrandValues: string[] = []
+      const seen = new Set<string>()
+      for (const create of creates) {
+        const handle = create.handle ?? ""
+        const cell = brandValuesByHandle.get(handle)
+        if (!cell) continue
+        const k = cell.trim().toLowerCase()
+        if (k && !seen.has(k)) {
+          seen.add(k)
+          includedBrandValues.push(cell)
+        }
+      }
+      if (includedBrandValues.length) {
+        log.push(`Resolving ${includedBrandValues.length} product brand(s)…`)
+        try {
+          const brandClient: BrandClient = {
+            list: ({ limit, offset }) =>
+              fetch(
+                adminFetchPath(`/admin/brands?limit=${limit ?? 200}&offset=${offset ?? 0}`),
+                { credentials: "include" }
+              ).then((r) => r.json()),
+            create: (body) =>
+              fetch(adminFetchPath("/admin/brands"), {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              }).then(async (r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                return r.json()
+              }),
+          }
+          brandResolution = await resolveBrandValues(brandClient, includedBrandValues)
+          brandResolution.createdLog.forEach((m) => log.push(m))
+          log.push(
+            `Brands resolved (${brandResolution.idByLowerName.size}/${includedBrandValues.length} matched or created).`
+          )
+        } catch (e) {
+          log.push(
+            `Brand resolution failed: ${e instanceof Error ? e.message : String(e)} — products will be created without brand links.`
+          )
+        }
+      }
+    }
+
     const tierPayload: Array<{ variant_id: string; tiers_minor: TierMoneyMinor }> = []
+    /** Map of product id (from batch create response) → resolved brand id, applied via link after create. */
+    const brandLinkPayload: Array<{ product_id: string; brand_id: string }> = []
 
     try {
       const batches = chunkCreates(creates, PRODUCT_BATCH_CHUNK_SIZE)
@@ -346,10 +490,10 @@ const SpreadsheetSyncPage = () => {
 
         const resp = (await sdk.admin.product.batch(
           { create: chunk as never },
-          { fields: "handle,+variants.id,+variants.sku" }
+          { fields: "id,handle,+variants.id,+variants.sku" }
         )) as {
-          created?: Array<{ handle?: string; variants?: Array<{ id?: string; sku?: string | null }> }>
-          products?: Array<{ handle?: string; variants?: Array<{ id?: string; sku?: string | null }> }>
+          created?: Array<{ id?: string; handle?: string; variants?: Array<{ id?: string; sku?: string | null }> }>
+          products?: Array<{ id?: string; handle?: string; variants?: Array<{ id?: string; sku?: string | null }> }>
         }
 
         const created = resp.created ?? resp.products ?? []
@@ -365,7 +509,39 @@ const SpreadsheetSyncPage = () => {
               tierPayload.push({ variant_id: v.id, tiers_minor: tiers })
             }
           }
+
+          if (product.id && brandResolution) {
+            const cell = brandValuesByHandle.get(product.handle ?? "")
+            const brandId = cell ? resolveBrandIdForValue(cell, brandResolution) : null
+            if (brandId) {
+              brandLinkPayload.push({ product_id: product.id, brand_id: brandId })
+            }
+          }
         }
+      }
+
+      if (brandLinkPayload.length) {
+        log.push(`Attaching brand link for ${brandLinkPayload.length} product(s)…`)
+        let brandLinkOk = 0
+        let brandLinkFail = 0
+        for (const { product_id, brand_id } of brandLinkPayload) {
+          try {
+            const r = await fetch(
+              adminFetchPath(`/admin/products/${product_id}/brand`),
+              {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ brand_id }),
+              }
+            )
+            if (r.ok) brandLinkOk++
+            else brandLinkFail++
+          } catch {
+            brandLinkFail++
+          }
+        }
+        log.push(`Brand links: ${brandLinkOk} attached, ${brandLinkFail} failed.`)
       }
 
       if (tierPayload.length) {
@@ -428,6 +604,7 @@ const SpreadsheetSyncPage = () => {
     newCollectionTitle,
     newCollectionHandle,
     importFormat,
+    skippedHandles,
   ])
 
   const wholesaleNeedsShipping =
@@ -674,6 +851,12 @@ const SpreadsheetSyncPage = () => {
                 <div className="flex flex-col gap-2">
                   <Text size="small">
                     Products (distinct handles): <strong>{preview.productCount}</strong>
+                    {previewProducts.length > 0 ? (
+                      <span className="text-ui-fg-muted">
+                        {" "}
+                        · selected to import: <strong>{includedCount}</strong>
+                      </span>
+                    ) : null}
                   </Text>
                   <Text size="small">
                     Variant rows: <strong>{preview.variantCount}</strong>
@@ -682,6 +865,79 @@ const SpreadsheetSyncPage = () => {
                     Tier pricing rules (explicit tier columns or derived from Variant Price AUD):{" "}
                     <strong>{preview.tierRuleCount}</strong>
                   </Text>
+
+                  {previewProducts.length > 0 && preview.validationErrors.length === 0 ? (
+                    <div className="mt-3 rounded-md border border-ui-border-base">
+                      <div className="flex items-center justify-between gap-2 border-b border-ui-border-base bg-ui-bg-subtle px-3 py-2">
+                        <Text size="xsmall" className="text-ui-fg-subtle">
+                          Choose which products to import. Products with warnings start unchecked.
+                        </Text>
+                        <div className="flex items-center gap-1">
+                          <Button size="small" variant="transparent" onClick={selectAll}>
+                            Select all
+                          </Button>
+                          <Button size="small" variant="transparent" onClick={deselectAll}>
+                            Deselect all
+                          </Button>
+                          <Button size="small" variant="transparent" onClick={deselectWarnings}>
+                            Deselect warnings only
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto overscroll-contain">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-ui-bg-base">
+                            <tr className="border-b border-ui-border-base text-left text-ui-fg-subtle text-xs">
+                              <th className="px-3 py-1 w-8"></th>
+                              <th className="px-3 py-1">Handle</th>
+                              <th className="px-3 py-1">Title</th>
+                              <th className="px-3 py-1">Brand</th>
+                              <th className="px-3 py-1 text-right">Variants</th>
+                              <th className="px-3 py-1">Warnings</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previewProducts.map((p) => {
+                              const checked = !skippedHandles.has(p.handle)
+                              return (
+                                <tr
+                                  key={p.handle}
+                                  className={`border-b last:border-b-0 border-ui-border-base ${
+                                    checked ? "" : "opacity-60"
+                                  }`}
+                                >
+                                  <td className="px-3 py-1.5">
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={() => toggleSkip(p.handle)}
+                                    />
+                                  </td>
+                                  <td className="px-3 py-1.5 font-mono text-xs truncate max-w-[200px]">
+                                    {p.handle}
+                                  </td>
+                                  <td className="px-3 py-1.5 truncate max-w-[220px]">{p.title}</td>
+                                  <td className="px-3 py-1.5 truncate max-w-[140px]">
+                                    {p.brand ?? <span className="text-ui-fg-muted">—</span>}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right">{p.variantCount}</td>
+                                  <td className="px-3 py-1.5 text-xs">
+                                    {p.warnings.length === 0 ? (
+                                      <span className="text-ui-fg-muted">—</span>
+                                    ) : (
+                                      <span className="text-ui-tag-orange-text" title={p.warnings.join("\n")}>
+                                        {p.warnings.length} warning
+                                        {p.warnings.length > 1 ? "s" : ""}
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : null}
                   {preview.validationErrors.length ? (
                     <div className="rounded-md border border-ui-border-error bg-ui-bg-error p-3">
                       <Text size="small" weight="plus" className="text-ui-fg-error">
@@ -717,6 +973,15 @@ const SpreadsheetSyncPage = () => {
             {!canSync && readyParsed && preview?.validationErrors.length === 0 && preview.productCount === 0 ? (
               <Text size="small" className="text-ui-fg-muted">
                 No rows to sync.
+              </Text>
+            ) : null}
+            {!canSync &&
+            readyParsed &&
+            preview?.validationErrors.length === 0 &&
+            preview.productCount > 0 &&
+            includedCount === 0 ? (
+              <Text size="small" className="text-ui-fg-warning">
+                Every product is unchecked — select at least one product to enable sync.
               </Text>
             ) : null}
             {!canSync && wholesaleNeedsShipping ? (

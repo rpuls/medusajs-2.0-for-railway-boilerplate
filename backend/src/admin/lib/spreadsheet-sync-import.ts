@@ -3,7 +3,6 @@ import {
   PRODUCT_CATEGORY_PATH_COLUMN_COUNT,
   PRODUCT_IMAGE_URL_COLUMN_COUNT,
   PRODUCT_IMPORT_CSV_HEADERS,
-  PRODUCT_SUPPLIER_METADATA_KEY,
   PRODUCT_TAG_COLUMN_COUNT,
 } from "./product-import-template-csv"
 import {
@@ -800,7 +799,7 @@ export function expandRamoCatalogToTemplate(
         base["product external id"] = productUrl
       }
 
-      base["product supplier"] = "Ramo"
+      base["product brand"] = "Ramo"
 
       rowsOut.push(base)
     }
@@ -961,7 +960,7 @@ export function expandHoneybeeCatalogToTemplate(
         base["product external id"] = productUrl
       }
 
-      base["product supplier"] = brand.supplier
+      base["product brand"] = brand.supplier
 
       rowsOut.push(base)
     }
@@ -1638,6 +1637,20 @@ export type BuildCreatesResult = {
    * sending the batch — same lifecycle as `categoryPathsByHandle`.
    */
   tagValuesByHandle: Map<string, string[]>
+  /**
+   * Brand cell value per product handle (from the "Product Brand" column, with back-compat for the
+   * older "Product Supplier" label). The page resolves these to Brand IDs via
+   * `spreadsheet-sync-brands.ts` and then attaches them via the product↔brand Module Link
+   * after the batch create call. Empty values leave the product brand-less.
+   */
+  brandValuesByHandle: Map<string, string>
+  /**
+   * Non-fatal warnings collected per product handle. Drives the per-product skip checkbox in the
+   * spreadsheet-sync preview UI: a product whose handle has any entry in this map is auto-unchecked
+   * by default. Currently includes barcode-dedupe details. Does NOT contain validation errors
+   * (those abort the product entirely and never reach the preview).
+   */
+  warningsByHandle: Map<string, string[]>
 }
 
 export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesResult => {
@@ -1647,18 +1660,26 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
   const seenBarcodes = new Set<string>()
   const categoryPathsByHandle = new Map<string, string[][]>()
   const tagValuesByHandle = new Map<string, string[]>()
+  const brandValuesByHandle = new Map<string, string>()
+  const warningsByHandle = new Map<string, string[]>()
   let barcodeDedupeCount = 0
+
+  const pushWarning = (handle: string, msg: string) => {
+    const arr = warningsByHandle.get(handle) ?? []
+    arr.push(msg)
+    warningsByHandle.set(handle, arr)
+  }
 
   const headerErr = validateHeaders(parsed)
   if (headerErr) {
     errors.push(headerErr)
-    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle, tagValuesByHandle }
+    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle, tagValuesByHandle, brandValuesByHandle, warningsByHandle }
   }
 
   const previewRun = computeSpreadsheetPreview(parsed)
   previewRun.validationErrors.forEach((e) => errors.push(e))
   if (previewRun.validationErrors.length > 0) {
-    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle, tagValuesByHandle }
+    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle, tagValuesByHandle, brandValuesByHandle, warningsByHandle }
   }
 
   const grouped = groupRowsByHandle(parsed.rows)
@@ -1769,11 +1790,11 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
       if (barcodeRaw) {
         if (seenBarcodes.has(barcodeRaw)) {
           barcodeDedupeCount++
+          const dedupeMsg = `${rowLabel}: duplicate barcode "${barcodeRaw}" — omitted on this variant (SKU ${sku} still imported; first occurrence in file keeps barcode).`
           if (barcodeDedupeDetails.length < BARCODE_DEDUPE_WARNING_CAP) {
-            barcodeDedupeDetails.push(
-              `${rowLabel}: duplicate barcode "${barcodeRaw}" — omitted on this variant (SKU ${sku} still imported; first occurrence in file keeps barcode).`
-            )
+            barcodeDedupeDetails.push(dedupeMsg)
           }
+          pushWarning(handle, dedupeMsg)
           barcode = undefined
         } else {
           seenBarcodes.add(barcodeRaw)
@@ -1805,18 +1826,26 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
     }
 
     const viewImageMetadata = buildProductViewImageMetadataFromRow(first)
-    const supplierRaw = (first["product supplier"] ?? "").trim()
-    const supplierMetadata: Record<string, unknown> | undefined = supplierRaw
-      ? { [PRODUCT_SUPPLIER_METADATA_KEY]: supplierRaw }
-      : undefined
+    /**
+     * Brand cell — accepts the new "Product Brand" column header and the older
+     * "Product Supplier" header (back-compat for in-flight CSV exports). The value
+     * isn't written to product metadata; it's resolved to a Brand ID and attached
+     * via the product↔brand Module Link after the batch create call. See
+     * `spreadsheet-sync-brands.ts`.
+     */
+    const brandCellRaw =
+      ((first["product brand"] ?? "") as string).trim() ||
+      ((first["product supplier"] ?? "") as string).trim()
+    if (brandCellRaw) {
+      brandValuesByHandle.set(handle, brandCellRaw)
+    }
     const mergedMetadata: Record<string, unknown> | undefined = (() => {
-      if (!viewImageMetadata && !productMetadataExtra && !supplierMetadata) {
+      if (!viewImageMetadata && !productMetadataExtra) {
         return undefined
       }
       return {
         ...(productMetadataExtra ?? {}),
         ...(viewImageMetadata ?? {}),
-        ...(supplierMetadata ?? {}),
       }
     })()
 
@@ -1872,7 +1901,7 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
     }
   }
 
-  return { creates, tierBySku, errors, warnings, categoryPathsByHandle, tagValuesByHandle }
+  return { creates, tierBySku, errors, warnings, categoryPathsByHandle, tagValuesByHandle, brandValuesByHandle, warningsByHandle }
 }
 
 export const PRODUCT_BATCH_CHUNK_SIZE = 10

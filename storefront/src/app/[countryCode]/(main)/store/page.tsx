@@ -1,6 +1,5 @@
 import { Metadata } from "next"
 
-import { isAsColourStoreBrand, isRamoStoreBrand } from "@modules/brands/data/brands"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import StoreTemplate from "@modules/store/templates"
 
@@ -10,16 +9,15 @@ export async function generateMetadata({
   searchParams: Promise<{ brand?: string }>
 }): Promise<Metadata> {
   const { brand } = await searchParams
-  if (isRamoStoreBrand(brand)) {
+  /**
+   * Brand-specific landing copy now lives at `/brands/[handle]` (server-rendered from the
+   * Brand row). For deep-linked `/store?brand=…` filters, fall back to a generic store title;
+   * the URL doesn't carry a brand handle so we'd need an extra fetch just to title the page.
+   */
+  if (brand) {
     return {
-      title: "Ramo",
-      description: "Ramo by Stanley/Stella — explore products.",
-    }
-  }
-  if (isAsColourStoreBrand(brand)) {
-    return {
-      title: "AS Colour",
-      description: "Browse AS Colour basics and apparel.",
+      title: `${brand} — Store`,
+      description: `Browse ${brand} products from our catalog.`,
     }
   }
   return {

@@ -154,7 +154,58 @@ describe("buildProductImportTemplateRows", () => {
     expect(row[idx("Variant Bulk Pricing JSON")]).toContain('"tiers"')
   })
 
-  it("emits Product Supplier from product.metadata.supplier", () => {
+  it("emits Product Brand from linked product.brand.name", () => {
+    const products = [
+      {
+        id: "p1",
+        handle: "h",
+        title: "T",
+        subtitle: "",
+        description: "",
+        status: "published",
+        thumbnail: "",
+        weight: "",
+        hs_code: "",
+        origin_country: "",
+        mid_code: "",
+        material: "",
+        shipping_profile_id: "",
+        discountable: true,
+        external_id: "",
+        variants: [
+          {
+            id: "v1",
+            title: "Default",
+            sku: "S",
+            barcode: "",
+            allow_backorder: false,
+            manage_inventory: true,
+            weight: "",
+            hs_code: "",
+            origin_country: "",
+            mid_code: "",
+            material: "",
+            prices: [],
+            options: [],
+            metadata: {},
+          },
+        ],
+        collection: null,
+        type: null,
+        sales_channels: [],
+        tags: [],
+        images: [],
+        options: [],
+        metadata: {},
+        brand: { id: "brand_asc", name: "AS Colour", handle: "as-colour" },
+      },
+    ]
+
+    const row = buildProductImportTemplateRows(products as unknown[])[0]
+    expect(row[idx("Product Brand")]).toBe("AS Colour")
+  })
+
+  it("falls back to legacy metadata.brand when no link is present", () => {
     const products = [
       {
         id: "p1",
@@ -201,6 +252,6 @@ describe("buildProductImportTemplateRows", () => {
     ]
 
     const row = buildProductImportTemplateRows(products as unknown[])[0]
-    expect(row[idx("Product Supplier")]).toBe("AS Colour")
+    expect(row[idx("Product Brand")]).toBe("AS Colour")
   })
 })
