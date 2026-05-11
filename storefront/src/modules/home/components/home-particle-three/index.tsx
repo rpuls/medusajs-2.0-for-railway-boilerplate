@@ -190,13 +190,20 @@ function ParticleField({
     }
 
     /** Per-particle trailing state.
-     *   trailUntil[i]  — wall-clock ms; 0 = not trailing
-     *   releaseTime[i] — wall-clock ms when this particle entered trail
-     *   wasInDisk[i]   — 1 if particle was in disk last frame (edge detect)
-     *   trailFlags[i]  — 0 or 1, mirrored to the GPU each frame as aTrail
-     *                    so the shader can tint debug-mode particles. */
+     *   trailUntil[i]   — wall-clock ms; 0 = not trailing
+     *   releaseTime[i]  — wall-clock ms when this particle entered trail
+     *   trailOffX/Y[i]  — particle position MINUS cursor position at
+     *                     release. Lets the wake start at the particle's
+     *                     actual interaction point and fade onto the
+     *                     cursor path over time, instead of teleporting
+     *                     every particle straight onto the history line.
+     *   wasInDisk[i]    — 1 if particle was in disk last frame (edge detect)
+     *   trailFlags[i]   — 0 or 1, mirrored to the GPU each frame as aTrail
+     *                     so the shader can tint debug-mode particles. */
     const trailUntil = new Float32Array(count)
     const releaseTime = new Float32Array(count)
+    const trailOffX = new Float32Array(count)
+    const trailOffY = new Float32Array(count)
     const wasInDisk = new Uint8Array(count)
     const trailFlags = new Float32Array(count)
 
@@ -227,6 +234,8 @@ function ParticleField({
         trailHash,
         trailUntil,
         releaseTime,
+        trailOffX,
+        trailOffY,
         wasInDisk,
         trailFlags,
         count,
@@ -295,6 +304,8 @@ function ParticleField({
       trailHash,
       trailUntil,
       releaseTime,
+      trailOffX,
+      trailOffY,
       wasInDisk,
       trailFlags,
       count,
@@ -401,8 +412,23 @@ function ParticleField({
             const stretchSign = rand01 * 2 - 1
             const stretchAmp = wakeAlongStretchBmp * stretchSign
 
-            px = sample.x + tanX * stretchAmp + perpX * bandAmp
-            py = sample.y + tanY * stretchAmp + perpY * bandAmp
+            /** Release-relative offset: at release we recorded the
+             * particle's position relative to the cursor. Apply it here
+             * scaled by offDecay so at elapsed=0 the particle is at its
+             * release position (sample + originalOffset = particle's
+             * actual position when released), and by elapsed=trailFollowMs
+             * the offset has decayed to 0 and the particle has converged
+             * to the pure cursor path. This is what makes the wake LOOK
+             * like particles peeling off where the cursor touched them
+             * instead of teleporting onto an arbitrary history point. */
+            const offDecay = 1 - u
+            const offX = trailOffX[i]! * offDecay
+            const offY = trailOffY[i]! * offDecay
+
+            px =
+              sample.x + offX + tanX * stretchAmp + perpX * bandAmp
+            py =
+              sample.y + offY + tanY * stretchAmp + perpY * bandAmp
           }
           /** If sample is null (history empty), particle holds last position. */
         }
@@ -469,6 +495,11 @@ function ParticleField({
         if (roll < trailingProbability) {
           trailUntil[i] = nowTick + trailFollowMs
           releaseTime[i] = nowTick
+          /** Record where THIS particle is relative to the cursor at the
+           * moment of release. This is the offset that anchors the start
+           * of its wake to its actual interaction point. */
+          trailOffX[i] = px - mx
+          trailOffY[i] = py - my
         }
       }
       wasInDisk[i] = inDisk ? 1 : 0
