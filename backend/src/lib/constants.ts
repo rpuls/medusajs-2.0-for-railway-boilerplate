@@ -45,6 +45,12 @@ export const STORE_CORS = process.env.STORE_CORS ?? ""
 export const REDIS_URL = process.env.REDIS_URL
 export const STRIPE_API_KEY = process.env.STRIPE_API_KEY
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
+export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID
+export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET
+export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID
+/** Set PAYPAL_IS_SANDBOX=true to use PayPal Sandbox; any other value uses live. */
+export const PAYPAL_IS_SANDBOX =
+  String(process.env.PAYPAL_IS_SANDBOX).toLowerCase() === "true"
 export const SHIPSTATION_API_KEY = process.env.SHIPSTATION_API_KEY
 export const SHIPSTATION_WEBHOOK_SECRET = process.env.SHIPSTATION_WEBHOOK_SECRET
 export const SHIPSTATION_WAREHOUSE_POSTCODE = process.env.SHIPSTATION_WAREHOUSE_POSTCODE

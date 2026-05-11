@@ -19,6 +19,10 @@ import {
   STORE_CORS,
   STRIPE_API_KEY,
   STRIPE_WEBHOOK_SECRET,
+  PAYPAL_CLIENT_ID,
+  PAYPAL_CLIENT_SECRET,
+  PAYPAL_WEBHOOK_ID,
+  PAYPAL_IS_SANDBOX,
   SHIPSTATION_API_KEY,
   ASCOLOUR_SUBSCRIPTION_KEY,
   ASCOLOUR_EMAIL,
@@ -163,20 +167,34 @@ const medusaConfig = {
         }]
       : []),
 
-    ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET
+    ...((STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET) || (PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET)
       ? [{
           key: Modules.PAYMENT,
           resolve: '@medusajs/payment',
           options: {
             providers: [
-              {
-                resolve: '@medusajs/payment-stripe',
-                id: 'stripe',
-                options: {
-                  apiKey: STRIPE_API_KEY,
-                  webhookSecret: STRIPE_WEBHOOK_SECRET,
-                },
-              },
+              ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET
+                ? [{
+                    resolve: '@medusajs/payment-stripe',
+                    id: 'stripe',
+                    options: {
+                      apiKey: STRIPE_API_KEY,
+                      webhookSecret: STRIPE_WEBHOOK_SECRET,
+                    },
+                  }]
+                : []),
+              ...(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET
+                ? [{
+                    resolve: '@alphabite/medusa-paypal/providers/paypal',
+                    id: 'paypal',
+                    options: {
+                      clientId: PAYPAL_CLIENT_ID,
+                      clientSecret: PAYPAL_CLIENT_SECRET,
+                      isSandbox: PAYPAL_IS_SANDBOX,
+                      webhookId: PAYPAL_WEBHOOK_ID,
+                    },
+                  }]
+                : []),
             ],
           },
         }]
@@ -256,6 +274,17 @@ const medusaConfig = {
   ],
 
   plugins: [
+    ...(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET
+      ? [{
+          resolve: '@alphabite/medusa-paypal',
+          options: {
+            clientId: PAYPAL_CLIENT_ID,
+            clientSecret: PAYPAL_CLIENT_SECRET,
+            isSandbox: PAYPAL_IS_SANDBOX,
+            webhookId: PAYPAL_WEBHOOK_ID,
+          },
+        }]
+      : []),
     ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY
       ? [{
           resolve: '@rokmohar/medusa-plugin-meilisearch',

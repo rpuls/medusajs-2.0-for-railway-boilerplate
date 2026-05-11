@@ -110,18 +110,13 @@ const StripePaymentButton = ({
 
   const stripe = useStripe()
   const elements = useElements()
-  const card = elements?.getElement("card")
-
-  const session = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
-  )
 
   const disabled = !stripe || !elements ? true : false
 
   const handlePayment = async () => {
     setSubmitting(true)
 
-    if (!stripe || !elements || !card || !cart) {
+    if (!stripe || !elements || !cart) {
       setSubmitting(false)
       return
     }
@@ -133,15 +128,20 @@ const StripePaymentButton = ({
       currency: (cart.currency_code ?? "AUD").toUpperCase(),
     })
 
-    await stripe
-      .confirmCardPayment(session?.data.client_secret as string, {
-        payment_method: {
-          card: card,
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        // Afterpay and other redirect methods land back here; StripeReturnHandler
+        // in payment-wrapper picks up the payment_intent params and calls placeOrder().
+        return_url: typeof window !== "undefined"
+          ? `${window.location.origin}${window.location.pathname}`
+          : "",
+        payment_method_data: {
           billing_details: {
             name:
-              cart.billing_address?.first_name +
+              (cart.billing_address?.first_name ?? "") +
               " " +
-              cart.billing_address?.last_name,
+              (cart.billing_address?.last_name ?? ""),
             address: {
               city: cart.billing_address?.city ?? undefined,
               country: cart.billing_address?.country_code ?? undefined,
@@ -154,38 +154,44 @@ const StripePaymentButton = ({
             phone: cart.billing_address?.phone ?? undefined,
           },
         },
-      })
-      .then(({ error, paymentIntent }) => {
-        if (error) {
-          const pi = error.payment_intent
+      },
+      // Only redirect when the method requires it (e.g. Afterpay).
+      // Cards complete in place without a page redirect.
+      redirect: "if_required",
+    })
 
-          if (
-            (pi && pi.status === "requires_capture") ||
-            (pi && pi.status === "succeeded")
-          ) {
-            onPaymentCompleted()
-          }
+    if (error) {
+      const pi = error.payment_intent
 
-          phCapture("payment_error", {
-            gateway: "stripe",
-            error_code: error.code ?? null,
-            error_type: error.type ?? null,
-            decline_code: (error as any).decline_code ?? null,
-            payment_intent_status: pi?.status ?? null,
-            message: error.message ?? null,
-          })
-
-          setErrorMessage(error.message || null)
-          return
-        }
-
-        const status = paymentIntent?.status
-        if (status === "requires_capture" || status === "succeeded") {
-          return onPaymentCompleted()
-        }
-
+      if (
+        (pi && pi.status === "requires_capture") ||
+        (pi && pi.status === "succeeded")
+      ) {
+        onPaymentCompleted()
         return
+      }
+
+      phCapture("payment_error", {
+        gateway: "stripe",
+        error_code: error.code ?? null,
+        error_type: error.type ?? null,
+        decline_code: (error as any).decline_code ?? null,
+        payment_intent_status: pi?.status ?? null,
+        message: error.message ?? null,
       })
+
+      setErrorMessage(error.message || null)
+      setSubmitting(false)
+      return
+    }
+
+    const status = paymentIntent?.status
+    if (status === "requires_capture" || status === "succeeded") {
+      onPaymentCompleted()
+      return
+    }
+
+    setSubmitting(false)
   }
 
   return (
