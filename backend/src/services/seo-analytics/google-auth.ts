@@ -1,10 +1,14 @@
 import { google } from "googleapis"
-import type { JWT } from "google-auth-library"
 
 import {
   GOOGLE_SERVICE_ACCOUNT_JSON,
   SEO_IMPERSONATION_USER,
 } from "../../lib/constants"
+
+// google-auth-library is a transitive dep of googleapis (not a direct dep
+// in package.json), so importing types from it doesn't resolve in tsc.
+// Pull the JWT type out of googleapis itself.
+type GoogleJwt = InstanceType<typeof google.auth.JWT>
 
 type ServiceAccountKey = {
   client_email: string
@@ -75,7 +79,7 @@ export function getImpersonationSubject(): string | undefined {
  * about it. Use this everywhere instead of `new google.auth.JWT(...)` —
  * inline JWT construction will silently miss the DWD wiring.
  */
-export function buildGoogleJwt(scopes: string[]): JWT {
+export function buildGoogleJwt(scopes: string[]): GoogleJwt {
   const key = getServiceAccountKey()
   const subject = getImpersonationSubject()
   return new google.auth.JWT({
