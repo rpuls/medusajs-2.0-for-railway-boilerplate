@@ -92,8 +92,14 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   debugOverlay: false,
 }
 
+/** Keys of `ThreeTuning` whose value is a number — excludes booleans like
+ * `debugOverlay` so sliders can index without a runtime narrowing. */
+type NumericTuningKey = {
+  [K in keyof ThreeTuning]: ThreeTuning[K] extends number ? K : never
+}[keyof ThreeTuning]
+
 type SliderDef = {
-  key: keyof ThreeTuning
+  key: NumericTuningKey
   label: string
   min: number
   max: number
@@ -297,7 +303,7 @@ export default function ThreeTunerPanel({ tuning, onChange }: Props) {
   }, [tuning])
 
   const update = useCallback(
-    (key: keyof ThreeTuning, value: number) => {
+    (key: NumericTuningKey, value: number) => {
       onChange({ ...tuning, [key]: value })
     },
     [onChange, tuning]

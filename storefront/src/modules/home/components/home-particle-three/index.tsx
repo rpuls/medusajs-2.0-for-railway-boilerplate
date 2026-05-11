@@ -261,13 +261,15 @@ function ParticleField({
 
       const sm = smoothedCursor.current
       const SMOOTH_K = 0.35
+      let cur: { x: number; y: number }
       if (sm == null) {
-        smoothedCursor.current = { x: pos.x, y: pos.y }
+        cur = { x: pos.x, y: pos.y }
+        smoothedCursor.current = cur
       } else {
         sm.x += (pos.x - sm.x) * SMOOTH_K
         sm.y += (pos.y - sm.y) * SMOOTH_K
+        cur = sm
       }
-      const cur = smoothedCursor.current
       const now = performance.now()
       cursorHistory.current.push({ x: cur.x, y: cur.y, t: now })
     }
