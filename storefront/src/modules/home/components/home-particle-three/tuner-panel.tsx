@@ -1,6 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  CURATED_PRESETS,
+  appendUserPreset,
+  applyPreset,
+  deleteUserPreset,
+  loadUserPresets,
+  type Preset,
+} from "./presets"
 
 export type ThreeTuning = {
   particleCount: number
@@ -53,6 +61,9 @@ export type ThreeTuning = {
   /** Per-particle release stagger (ms). Particles hold their release
    * position until their stagger expires — staggers playback start. */
   wakeReleaseStaggerMs: number
+  /** When true, the canvas overlays a cursor-history polyline and tints
+   * particles in the trailing-playback state magenta. Diagnostic only. */
+  debugOverlay: boolean
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
@@ -78,6 +89,7 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   wakeAlongStretchBmp: 22,
   wakeBandSpreadBmp: 14,
   wakeReleaseStaggerMs: 350,
+  debugOverlay: false,
 }
 
 type SliderDef = {
@@ -242,7 +254,7 @@ const SLIDERS: SliderDef[] = [
   },
 ]
 
-const LS_KEY = "particle-threejs-tuning-v5"
+const LS_KEY = "particle-threejs-tuning-v6"
 
 export function loadStoredTuning(): ThreeTuning {
   if (typeof window === "undefined") return THREE_TUNING_DEFAULTS
@@ -272,6 +284,13 @@ type Props = {
 
 export default function ThreeTunerPanel({ tuning, onChange }: Props) {
   const [open, setOpen] = useState(true)
+  const [userPresets, setUserPresets] = useState<Preset[]>([])
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("")
+
+  /** Load user presets on mount. */
+  useEffect(() => {
+    setUserPresets(loadUserPresets())
+  }, [])
 
   useEffect(() => {
     saveStoredTuning(tuning)
@@ -287,7 +306,51 @@ export default function ThreeTunerPanel({ tuning, onChange }: Props) {
   const reset = useCallback(() => {
     onChange({ ...THREE_TUNING_DEFAULTS })
     saveStoredTuning(THREE_TUNING_DEFAULTS)
+    setSelectedPresetId("")
   }, [onChange])
+
+  const allPresets = useMemo<Preset[]>(
+    () => [...CURATED_PRESETS, ...userPresets],
+    [userPresets]
+  )
+
+  const handleSelectPreset = useCallback(
+    (id: string) => {
+      setSelectedPresetId(id)
+      if (id === "") return
+      const p = allPresets.find((x) => x.id === id)
+      if (p == null) return
+      onChange({ ...applyPreset(p), debugOverlay: tuning.debugOverlay })
+    },
+    [allPresets, onChange, tuning.debugOverlay]
+  )
+
+  const handleSaveCurrent = useCallback(() => {
+    const defaultName = `Preset ${new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`
+    const name = window.prompt(
+      "Name this preset (saved to localStorage):",
+      defaultName
+    )
+    if (name == null) return
+    const next = appendUserPreset(userPresets, name, tuning)
+    setUserPresets(next)
+    const justSaved = next[next.length - 1]
+    if (justSaved != null) setSelectedPresetId(justSaved.id)
+  }, [tuning, userPresets])
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedPresetId.startsWith("user:")) return
+    if (!window.confirm("Delete this saved preset?")) return
+    const next = deleteUserPreset(userPresets, selectedPresetId)
+    setUserPresets(next)
+    setSelectedPresetId("")
+  }, [selectedPresetId, userPresets])
+
+  const selectedPreset = allPresets.find((p) => p.id === selectedPresetId)
+  const canDelete = selectedPresetId.startsWith("user:")
 
   return (
     <div className="pointer-events-auto fixed right-4 top-20 z-50 w-72 rounded-lg border border-white/10 bg-black/85 p-3 text-xs text-white/90 backdrop-blur-md">
@@ -312,6 +375,83 @@ export default function ThreeTunerPanel({ tuning, onChange }: Props) {
       </div>
       {open ? (
         <div className="flex max-h-[80vh] flex-col gap-2.5 overflow-y-auto pr-1">
+          <div className="rounded border border-white/15 bg-white/5 p-2">
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-[11px] font-semibold text-white/90">
+                Preset history
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={handleSaveCurrent}
+                  className="rounded border border-white/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wide hover:border-white/50 hover:bg-white/10"
+                  title="Save current sliders as a new preset"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  disabled={!canDelete}
+                  className="rounded border border-white/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wide hover:border-white/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+                  title="Delete the selected user-saved preset"
+                >
+                  Del
+                </button>
+              </div>
+            </div>
+            <select
+              value={selectedPresetId}
+              onChange={(e) => handleSelectPreset(e.target.value)}
+              className="w-full rounded border border-white/15 bg-black/60 px-1.5 py-1 text-[11px] text-white/90 outline-none focus:border-white/40"
+            >
+              <option value="">— pick a preset —</option>
+              <optgroup label="Curated (git history)">
+                {CURATED_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </optgroup>
+              {userPresets.length > 0 ? (
+                <optgroup label="Saved">
+                  {userPresets.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                      {p.savedAt != null
+                        ? `  · ${new Date(p.savedAt).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}`
+                        : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+            </select>
+            {selectedPreset?.note != null ? (
+              <p className="mt-1 text-[10px] leading-tight text-white/50">
+                {selectedPreset.note}
+              </p>
+            ) : null}
+          </div>
+
+          <label className="flex items-center justify-between rounded border border-white/15 bg-white/5 px-2 py-1.5">
+            <span className="text-[11px] font-semibold text-white/90">
+              Debug overlay
+            </span>
+            <input
+              type="checkbox"
+              checked={tuning.debugOverlay}
+              onChange={(e) =>
+                onChange({ ...tuning, debugOverlay: e.target.checked })
+              }
+              className="h-3 w-3 accent-fuchsia-400"
+            />
+          </label>
+
           {SLIDERS.map((def) => {
             const v = tuning[def.key]
             const formatted =

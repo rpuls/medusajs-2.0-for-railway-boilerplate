@@ -40,13 +40,18 @@ import ThreeTunerPanel, {
 
 const VERTEX_SHADER = /* glsl */ `
   attribute vec3 aColor;
+  attribute float aTrail;
   uniform float uPointSize;
   uniform float uPixelRatio;
+  uniform float uDebug;
   varying vec3 vColor;
   void main() {
-    vColor = aColor;
+    // Debug tint: magenta for trailing particles when uDebug == 1.
+    vColor = mix(aColor, vec3(1.0, 0.15, 1.0), aTrail * uDebug);
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = uPointSize * uPixelRatio * (300.0 / -mv.z);
+    // Trailing particles get a small size boost in debug so they stand out.
+    float sizeBoost = 1.0 + aTrail * uDebug * 0.6;
+    gl_PointSize = uPointSize * uPixelRatio * sizeBoost * (300.0 / -mv.z);
     gl_Position = projectionMatrix * mv;
   }
 `
@@ -187,14 +192,18 @@ function ParticleField({
     /** Per-particle trailing state.
      *   trailUntil[i]  — wall-clock ms; 0 = not trailing
      *   releaseTime[i] — wall-clock ms when this particle entered trail
-     *   wasInDisk[i]   — 1 if particle was in disk last frame (edge detect) */
+     *   wasInDisk[i]   — 1 if particle was in disk last frame (edge detect)
+     *   trailFlags[i]  — 0 or 1, mirrored to the GPU each frame as aTrail
+     *                    so the shader can tint debug-mode particles. */
     const trailUntil = new Float32Array(count)
     const releaseTime = new Float32Array(count)
     const wasInDisk = new Uint8Array(count)
+    const trailFlags = new Float32Array(count)
 
     const geo = new THREE.BufferGeometry()
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3))
     geo.setAttribute("aColor", new THREE.BufferAttribute(colors, 3))
+    geo.setAttribute("aTrail", new THREE.BufferAttribute(trailFlags, 1))
 
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERTEX_SHADER,
@@ -205,6 +214,7 @@ function ParticleField({
       uniforms: {
         uPointSize: { value: tuningRef.current.pointSize },
         uPixelRatio: { value: 1 },
+        uDebug: { value: tuningRef.current.debugOverlay ? 1 : 0 },
       },
     })
 
@@ -218,6 +228,7 @@ function ParticleField({
         trailUntil,
         releaseTime,
         wasInDisk,
+        trailFlags,
         count,
       },
     }
@@ -283,11 +294,16 @@ function ParticleField({
       trailUntil,
       releaseTime,
       wasInDisk,
+      trailFlags,
       count,
     } = state
     const nm = tuningRef.current
     if (material.uniforms.uPointSize!.value !== nm.pointSize) {
       material.uniforms.uPointSize!.value = nm.pointSize
+    }
+    const debugOn = nm.debugOverlay ? 1 : 0
+    if (material.uniforms.uDebug!.value !== debugOn) {
+      material.uniforms.uDebug!.value = debugOn
     }
 
     const nowTick = performance.now()
@@ -392,6 +408,7 @@ function ParticleField({
 
         positions[i3] = px
         positions[i3 + 1] = py
+        trailFlags[i] = 1
         /** While trailing, suppress disk detection so we don't immediately
          * re-trail when the trail-band particle wanders back through. */
         wasInDisk[i] = 0
@@ -399,6 +416,7 @@ function ParticleField({
       } else if (tUntil > 0) {
         /** Trail just ended — clear the flag so next disk visit can re-arm. */
         trailUntil[i] = 0
+        trailFlags[i] = 0
       }
 
       /** CARRY MODEL (in-disk pull + void clamp) + edge-detected release. */
@@ -457,6 +475,11 @@ function ParticleField({
       positions[i3 + 1] = py
     }
     geometry.attributes.position!.needsUpdate = true
+    if (debugOn === 1) {
+      /** Only push aTrail to the GPU when debug is on — otherwise it has
+       * no visual effect and the upload is pure waste. */
+      geometry.attributes.aTrail!.needsUpdate = true
+    }
   })
 
   /** Auto-fit camera so the whole wordmark fits both axes. */
@@ -475,7 +498,136 @@ function ParticleField({
   }, [width, height, size.width, size.height, camera])
 
   return (
-    <points ref={pointsRef} geometry={geometry} material={material} />
+    <>
+      <points ref={pointsRef} geometry={geometry} material={material} />
+      <DebugCursorHistory
+        cursorHistory={cursorHistory}
+        smoothedCursor={smoothedCursor}
+        tuningRef={tuningRef}
+      />
+    </>
+  )
+}
+
+/** Cursor-history visualizer. Draws a polyline along the recorded cursor
+ * samples (newest = bright magenta head, fading to dim toward the tail)
+ * and a crosshair at the smoothed cursor position. Only mounted into
+ * the scene when `debugOverlay` is on, so the overhead is zero in the
+ * default release build.
+ *
+ * This is a diagnostic — it lets the user see EXACTLY what the wake
+ * playback has to work with: if the polyline is empty or only a single
+ * point, there is no history for particles to follow.
+ */
+function DebugCursorHistory({
+  cursorHistory,
+  smoothedCursor,
+  tuningRef,
+}: {
+  cursorHistory: React.MutableRefObject<CursorSample[]>
+  smoothedCursor: React.MutableRefObject<{ x: number; y: number } | null>
+  tuningRef: React.MutableRefObject<ThreeTuning>
+}) {
+  /** Pre-allocate max line capacity. 1024 samples × ~16ms ≈ 16s buffer,
+   * comfortably more than any sensible `trailFollowMs`. */
+  const MAX = 1024
+  const positions = useMemo(() => new Float32Array(MAX * 3), [])
+
+  const lineGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    g.setAttribute("position", new THREE.BufferAttribute(positions, 3))
+    g.setDrawRange(0, 0)
+    return g
+  }, [positions])
+
+  const lineMat = useMemo(
+    () =>
+      new THREE.LineBasicMaterial({
+        color: 0xff44ff,
+        transparent: true,
+        opacity: 0.85,
+        depthTest: false,
+        depthWrite: false,
+      }),
+    []
+  )
+
+  /** Build the THREE.Line object once and render via `<primitive>`. The
+   * lowercase `<line>` JSX element collides with SVG's `<line>` in TS. */
+  const lineObject = useMemo(
+    () => new THREE.Line(lineGeo, lineMat),
+    [lineGeo, lineMat]
+  )
+
+  const markerGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    g.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(3), 3)
+    )
+    return g
+  }, [])
+
+  const markerMat = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        color: 0xffff00,
+        size: 14,
+        sizeAttenuation: false,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+      }),
+    []
+  )
+
+  useFrame(() => {
+    const debug = tuningRef.current.debugOverlay
+    if (!debug) {
+      lineGeo.setDrawRange(0, 0)
+      markerMat.opacity = 0
+      return
+    }
+    const hist = cursorHistory.current
+    const n = Math.min(hist.length, MAX)
+    /** Copy samples newest-on-the-end into the position buffer. We slice
+     * from the tail so the line always shows the most recent window. */
+    const start = hist.length - n
+    for (let i = 0; i < n; i++) {
+      const s = hist[start + i]!
+      positions[i * 3] = s.x
+      positions[i * 3 + 1] = s.y
+      positions[i * 3 + 2] = 0.1
+    }
+    lineGeo.setDrawRange(0, n)
+    lineGeo.attributes.position!.needsUpdate = true
+
+    const sm = smoothedCursor.current
+    const m = markerGeo.attributes.position! as THREE.BufferAttribute
+    if (sm != null) {
+      const arr = m.array as Float32Array
+      arr[0] = sm.x
+      arr[1] = sm.y
+      arr[2] = 0.2
+      m.needsUpdate = true
+      markerMat.opacity = 1
+    } else {
+      markerMat.opacity = 0
+    }
+  })
+
+  /** Always mounted — when debug is off the draw range is 0 and marker
+   * opacity is 0, so the GPU cost is negligible. This lets the component
+   * react to tuning toggles without remount. */
+  return (
+    <>
+      <primitive object={lineObject} frustumCulled={false} />
+      <points
+        geometry={markerGeo}
+        material={markerMat}
+        frustumCulled={false}
+      />
+    </>
   )
 }
 
