@@ -3,7 +3,7 @@ import { google } from "googleapis"
 
 import { GSC_SITE_URL } from "../../../../lib/constants"
 import {
-  getServiceAccountKey,
+  buildGoogleJwt,
   isSeoConfigured,
 } from "../../../../services/seo-analytics/google-auth"
 import { parseDateRange } from "../../../../lib/reports/orders"
@@ -40,12 +40,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const dateOnly = (d: Date) => d.toISOString().slice(0, 10)
 
   try {
-    const key = getServiceAccountKey()
-    const auth = new google.auth.JWT({
-      email: key.client_email,
-      key: key.private_key,
-      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
-    })
+    const auth = buildGoogleJwt([
+      "https://www.googleapis.com/auth/webmasters.readonly",
+    ])
     const webmasters = google.webmasters({ version: "v3", auth })
     const fetchPeriod = async (startDate: string, endDate: string) => {
       const r = await webmasters.searchanalytics.query({

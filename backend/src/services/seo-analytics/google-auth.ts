@@ -1,3 +1,6 @@
+import { google } from "googleapis"
+import type { JWT } from "google-auth-library"
+
 import {
   GOOGLE_SERVICE_ACCOUNT_JSON,
   SEO_IMPERSONATION_USER,
@@ -63,4 +66,22 @@ export function isSeoConfigured(): boolean {
 export function getImpersonationSubject(): string | undefined {
   const trimmed = SEO_IMPERSONATION_USER?.trim()
   return trimmed && trimmed.length > 0 ? trimmed : undefined
+}
+
+/**
+ * Builds a Google JWT auth client for the given OAuth scopes. Automatically
+ * sets `subject` when SEO_IMPERSONATION_USER is configured (DWD path), so
+ * every consumer inherits impersonation without each one having to know
+ * about it. Use this everywhere instead of `new google.auth.JWT(...)` —
+ * inline JWT construction will silently miss the DWD wiring.
+ */
+export function buildGoogleJwt(scopes: string[]): JWT {
+  const key = getServiceAccountKey()
+  const subject = getImpersonationSubject()
+  return new google.auth.JWT({
+    email: key.client_email,
+    key: key.private_key,
+    scopes,
+    subject,
+  })
 }

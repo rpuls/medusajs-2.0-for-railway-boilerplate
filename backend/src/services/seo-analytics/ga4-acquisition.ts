@@ -1,6 +1,4 @@
-import { BetaAnalyticsDataClient } from "@google-analytics/data"
-
-import { getServiceAccountKey } from "./google-auth"
+import { buildGa4Caller } from "./ga4-caller"
 
 /**
  * Acquisition-focused GA4 queries. Distinct from `fetchGa4Summary` (which
@@ -17,16 +15,6 @@ import { getServiceAccountKey } from "./google-auth"
  */
 
 const TOP_LIMIT = 25
-
-const buildClient = () => {
-  const key = getServiceAccountKey()
-  return new BetaAnalyticsDataClient({
-    credentials: {
-      client_email: key.client_email,
-      private_key: key.private_key,
-    },
-  })
-}
 
 const toNum = (raw: string | null | undefined): number => {
   if (!raw) return 0
@@ -79,7 +67,7 @@ export async function fetchGa4Acquisition(
   fromIso: string,
   toIso: string
 ): Promise<Ga4Acquisition> {
-  const analytics = buildClient()
+  const analytics = buildGa4Caller()
   const property = `properties/${propertyId}`
   const dateRanges = [
     {
@@ -126,14 +114,14 @@ export async function fetchGa4Acquisition(
     }),
   ])
 
-  const totalsRow = totalsRes[0]?.rows?.[0]
+  const totalsRow = totalsRes.rows[0]
   const totals = {
     sessions: toNum(totalsRow?.metricValues?.[0]?.value),
     engaged_sessions: toNum(totalsRow?.metricValues?.[1]?.value),
     bounce_rate: toNum(totalsRow?.metricValues?.[2]?.value),
   }
 
-  const source_medium: Ga4SourceRow[] = (sourceRes[0]?.rows ?? []).map((r) => {
+  const source_medium: Ga4SourceRow[] = sourceRes.rows.map((r) => {
     const sessions = toNum(r.metricValues?.[0]?.value)
     const engaged = toNum(r.metricValues?.[1]?.value)
     return {
@@ -146,7 +134,7 @@ export async function fetchGa4Acquisition(
     }
   })
 
-  const landing_pages: Ga4LandingRow[] = (landingRes[0]?.rows ?? []).map((r) => {
+  const landing_pages: Ga4LandingRow[] = landingRes.rows.map((r) => {
     const sessions = toNum(r.metricValues?.[0]?.value)
     const engaged = toNum(r.metricValues?.[1]?.value)
     return {
@@ -158,7 +146,7 @@ export async function fetchGa4Acquisition(
     }
   })
 
-  const devices: Ga4DeviceRow[] = (deviceRes[0]?.rows ?? []).map((r) => {
+  const devices: Ga4DeviceRow[] = deviceRes.rows.map((r) => {
     return {
       device: r.dimensionValues?.[0]?.value ?? "unknown",
       sessions: toNum(r.metricValues?.[0]?.value),

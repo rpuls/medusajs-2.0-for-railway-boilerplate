@@ -1,6 +1,4 @@
-import { BetaAnalyticsDataClient } from "@google-analytics/data"
-
-import { getServiceAccountKey } from "./google-auth"
+import { buildGa4Caller } from "./ga4-caller"
 
 /**
  * GA4 Enhanced Ecommerce queries — only meaningful once the storefront
@@ -8,16 +6,6 @@ import { getServiceAccountKey } from "./google-auth"
  * Until events accumulate (24-48h after first deploy), these queries
  * return zero counts.
  */
-
-const buildClient = () => {
-  const key = getServiceAccountKey()
-  return new BetaAnalyticsDataClient({
-    credentials: {
-      client_email: key.client_email,
-      private_key: key.private_key,
-    },
-  })
-}
 
 const toNum = (raw: string | null | undefined): number => {
   if (!raw) return 0
@@ -69,7 +57,7 @@ export async function fetchGa4Ecommerce(
   fromIso: string,
   toIso: string
 ): Promise<Ga4Ecommerce> {
-  const analytics = buildClient()
+  const analytics = buildGa4Caller()
   const property = `properties/${propertyId}`
   const dateRanges = [
     { startDate: toIsoDate(fromIso), endDate: toIsoDate(toIso) },
@@ -121,7 +109,7 @@ export async function fetchGa4Ecommerce(
     { id: "purchase", label: "Purchases" },
   ]
   const sessionsByEvent = new Map<string, number>()
-  for (const r of eventsRes[0]?.rows ?? []) {
+  for (const r of eventsRes.rows) {
     const name = r.dimensionValues?.[0]?.value ?? ""
     const sessions = toNum(r.metricValues?.[0]?.value)
     sessionsByEvent.set(name, sessions)
@@ -132,7 +120,7 @@ export async function fetchGa4Ecommerce(
   }))
 
   // Channels
-  const channels: Ga4ChannelRow[] = (channelsRes[0]?.rows ?? []).map((r) => {
+  const channels: Ga4ChannelRow[] = channelsRes.rows.map((r) => {
     const sessions = toNum(r.metricValues?.[0]?.value)
     const addToCarts = toNum(r.metricValues?.[1]?.value)
     const beginCheckouts = toNum(r.metricValues?.[2]?.value)
@@ -151,7 +139,7 @@ export async function fetchGa4Ecommerce(
     }
   })
 
-  const totalsRow = totalsRes[0]?.rows?.[0]
+  const totalsRow = totalsRes.rows[0]
   const totalSessions = toNum(totalsRow?.metricValues?.[0]?.value)
   const totalPurchases = toNum(totalsRow?.metricValues?.[1]?.value)
   const totalRevenue = toNum(totalsRow?.metricValues?.[2]?.value)

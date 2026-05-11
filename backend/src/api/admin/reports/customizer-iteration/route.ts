@@ -1,11 +1,8 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { BetaAnalyticsDataClient } from "@google-analytics/data"
 
 import { GA4_PROPERTY_ID } from "../../../../lib/constants"
-import {
-  getServiceAccountKey,
-  isSeoConfigured,
-} from "../../../../services/seo-analytics/google-auth"
+import { isSeoConfigured } from "../../../../services/seo-analytics/google-auth"
+import { buildGa4Caller } from "../../../../services/seo-analytics/ga4-caller"
 import { parseDateRange } from "../../../../lib/reports/orders"
 
 /**
@@ -36,13 +33,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   try {
-    const key = getServiceAccountKey()
-    const client = new BetaAnalyticsDataClient({
-      credentials: {
-        client_email: key.client_email,
-        private_key: key.private_key,
-      },
-    })
+    const client = buildGa4Caller()
     const property = `properties/${GA4_PROPERTY_ID}`
     const dateRanges = [
       {
@@ -97,7 +88,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     ])
 
     const counts = new Map<string, { events: number; users: number; sessions: number }>()
-    for (const r of byEvent[0]?.rows ?? []) {
+    for (const r of byEvent.rows) {
       const name = r.dimensionValues?.[0]?.value ?? ""
       counts.set(name, {
         events: Number(r.metricValues?.[0]?.value ?? 0),
@@ -116,7 +107,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       counts.get("customizer_design_saved")?.sessions ?? 0
 
     // Daily action trend
-    const trend = (sessionsRes[0]?.rows ?? []).map((r) => {
+    const trend = sessionsRes.rows.map((r) => {
       const raw = r.dimensionValues?.[0]?.value ?? ""
       // GA4 returns YYYYMMDD
       const iso =

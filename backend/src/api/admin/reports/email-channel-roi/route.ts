@@ -1,11 +1,8 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { BetaAnalyticsDataClient } from "@google-analytics/data"
 
 import { GA4_PROPERTY_ID } from "../../../../lib/constants"
-import {
-  getServiceAccountKey,
-  isSeoConfigured,
-} from "../../../../services/seo-analytics/google-auth"
+import { isSeoConfigured } from "../../../../services/seo-analytics/google-auth"
+import { buildGa4Caller } from "../../../../services/seo-analytics/ga4-caller"
 import { parseDateRange } from "../../../../lib/reports/orders"
 
 /**
@@ -42,13 +39,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   try {
-    const key = getServiceAccountKey()
-    const client = new BetaAnalyticsDataClient({
-      credentials: {
-        client_email: key.client_email,
-        private_key: key.private_key,
-      },
-    })
+    const client = buildGa4Caller()
     const property = `properties/${GA4_PROPERTY_ID}`
     const dateRanges = [
       {
@@ -107,7 +98,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const toNum = (raw: string | null | undefined): number =>
       raw ? Number(raw) || 0 : 0
 
-    const campaigns = (byCampaign[0]?.rows ?? []).map((r) => {
+    const campaigns = byCampaign.rows.map((r) => {
       const sessions = toNum(r.metricValues?.[0]?.value)
       const purchases = toNum(r.metricValues?.[1]?.value)
       const revenue = toNum(r.metricValues?.[2]?.value)
@@ -124,7 +115,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       }
     })
 
-    const totalsRow = totals[0]?.rows?.[0]
+    const totalsRow = totals.rows[0]
     const totalSessions = toNum(totalsRow?.metricValues?.[0]?.value)
     const totalPurchases = toNum(totalsRow?.metricValues?.[1]?.value)
     const totalRevenue = toNum(totalsRow?.metricValues?.[2]?.value)
