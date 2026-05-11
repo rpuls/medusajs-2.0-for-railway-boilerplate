@@ -143,6 +143,8 @@ function ParticleField({
       colors[i3 + 2] = (c1[2] + (c2[2] - c1[2]) * localT) / 255
     }
 
+    const velocities = new Float32Array(count * 3)
+
     const geo = new THREE.BufferGeometry()
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3))
     geo.setAttribute("aColor", new THREE.BufferAttribute(colors, 3))
@@ -167,7 +169,7 @@ function ParticleField({
     return {
       geometry: geo,
       material: mat,
-      state: { positions, homes, count },
+      state: { positions, homes, velocities, count },
     }
   }, [stipple, particleCount, width, height, tuningRef])
 
@@ -223,22 +225,23 @@ function ParticleField({
     }
   }, [camera])
 
-  /** Per-frame physics — carry model.
+  /** Per-frame physics — carry model + velocity layer.
    *
-   * IN DISK:  target = lerp(home, cursor, carryStrength × falloff²)
-   *   Particles are pulled toward the cursor position. Because the blend
-   *   rate (inBlend × dt) is finite, a fast-moving cursor outruns the
-   *   particles — they lag behind, naturally forming a comet tail without
-   *   any explicit trail offset. The void zone (cursorDisplacement) keeps
-   *   a clean empty hole at the cursor tip.
+   * CARRY MODEL (existing):
+   *   IN DISK:  target = lerp(home, cursor, carryStrength × falloff²)
+   *   OUT OF DISK: target = home
+   *   Particle lerps toward target at inBlend/outBlend rate.
    *
-   * OUT OF DISK: target = home.
-   *   Slow outBlend × dt means the displaced particles take 2–3 s to drift
-   *   home, leaving a long visible tail after the cursor passes.
+   * VELOCITY LAYER (new):
+   *   When the cursor moves through the disk, two forces inject velocity:
+   *   - Flow: cursor velocity is injected into nearby particles → wake
+   *     that streams behind the cursor in its direction of travel.
+   *   - Vortex: tangential force around cursor center → rolling swirl.
+   *   Velocity decays exponentially (velocityDamping) over 0.5–3 seconds.
    */
   useFrame((_, dtRaw) => {
     const dt = Math.min(0.05, dtRaw)
-    const { positions, homes, count } = state
+    const { positions, homes, velocities, count } = state
     const nm = tuningRef.current
     if (material.uniforms.uPointSize!.value !== nm.pointSize) {
       material.uniforms.uPointSize!.value = nm.pointSize
@@ -255,16 +258,25 @@ function ParticleField({
     const inAlpha  = Math.min(1.0, nm.inBlend  * dt)
     const outAlpha = Math.min(1.0, nm.outBlend * dt)
 
+    const mvx = mouseVel.current.vx
+    const mvy = mouseVel.current.vy
+    const cursorSpeed = Math.hypot(mvx, mvy)
+    const decayFactor = Math.exp(-nm.velocityDamping * dt)
+
     for (let i = 0; i < count; i++) {
       const i3 = i * 3
       const hx = homes[i3]!
       const hy = homes[i3 + 1]!
       let px = positions[i3]!
       let py = positions[i3 + 1]!
+      let vx = velocities[i3]!
+      let vy = velocities[i3 + 1]!
 
       let targetX = hx
       let targetY = hy
       let inDisk = false
+      let falloff = 0
+      let distFromCursor = 0
 
       if (haveCursor) {
         const dx = hx - mx
@@ -274,16 +286,14 @@ function ParticleField({
         if (distSq < radSq) {
           inDisk = true
           const dist = Math.sqrt(Math.max(distSq, 0.001))
+          distFromCursor = dist
           const norm = 1 - dist / cursorRadius
-          const falloff = norm * norm
+          falloff = norm * norm
 
-          /** Pull home toward cursor: target = lerp(home, cursor, carry). */
           const carry = nm.carryStrength * falloff
           targetX = hx + (mx - hx) * carry
           targetY = hy + (my - hy) * carry
 
-          /** Void: if target has landed closer to cursor than voidR, push
-           * it back out so the cursor centre stays visibly empty. */
           if (voidR > 0) {
             const tdx = targetX - mx
             const tdy = targetY - my
@@ -301,8 +311,28 @@ function ParticleField({
       px += (targetX - px) * alpha
       py += (targetY - py) * alpha
 
-      positions[i3]     = px
-      positions[i3 + 1] = py
+      if (haveCursor && inDisk && distFromCursor > 0.001) {
+        vx += mvx * nm.flowStrength * falloff * dt
+        vy += mvy * nm.flowStrength * falloff * dt
+
+        const rdx = (hx - mx) / distFromCursor
+        const rdy = (hy - my) / distFromCursor
+        const tx = -rdy
+        const ty =  rdx
+        vx += tx * nm.vortexStrength * cursorSpeed * falloff * dt
+        vy += ty * nm.vortexStrength * cursorSpeed * falloff * dt
+      }
+
+      vx *= decayFactor
+      vy *= decayFactor
+
+      px += vx
+      py += vy
+
+      velocities[i3]     = vx
+      velocities[i3 + 1] = vy
+      positions[i3]      = px
+      positions[i3 + 1]  = py
     }
     geometry.attributes.position!.needsUpdate = true
   })

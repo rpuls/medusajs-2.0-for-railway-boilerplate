@@ -30,6 +30,14 @@ export type ThreeTuning = {
    * Lower = longer tail. */
   outBlend: number
   pointSize: number
+  /** Fraction of cursor velocity injected as particle velocity per frame.
+   * Creates flow/wake that streams behind the cursor direction. 0 = none. */
+  flowStrength: number
+  /** Tangential spin force around cursor center as it moves. 0 = none. */
+  vortexStrength: number
+  /** Exponential velocity decay rate per second.
+   * vel *= exp(-velocityDamping * dt). Higher = shorter wake tail. */
+  velocityDamping: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
@@ -47,6 +55,9 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   /** outBlend=0.5 → alpha≈0.008/frame → ~2–3 s visible comet tail. */
   outBlend: 0.5,
   pointSize: 2.5,
+  flowStrength: 1.2,
+  vortexStrength: 0.06,
+  velocityDamping: 1.4,
 }
 
 type SliderDef = {
@@ -121,6 +132,36 @@ const SLIDERS: SliderDef[] = [
       "How fast particles drift back to home after cursor leaves. Lower = longer visible tail. 0.5 = ~2–3s tail. 1.8 = ~1s. 5 = ~0.3s.",
   },
   {
+    key: "flowStrength",
+    label: "Flow strength",
+    min: 0,
+    max: 5,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    description:
+      "How much cursor velocity is injected into nearby particles. Creates a wake that streams in the cursor's direction of travel.",
+  },
+  {
+    key: "vortexStrength",
+    label: "Vortex swirl",
+    min: 0,
+    max: 0.3,
+    step: 0.005,
+    format: (v) => v.toFixed(3),
+    description:
+      "Tangential spin force around the cursor. Creates a rolling vortex swirl as the cursor passes.",
+  },
+  {
+    key: "velocityDamping",
+    label: "Wake decay",
+    min: 0.1,
+    max: 8,
+    step: 0.1,
+    format: (v) => v.toFixed(1),
+    description:
+      "How fast the wake velocity fades. Higher = shorter-lived trail. 1.4 ≈ 0.7s half-life. 0.5 ≈ 1.4s half-life.",
+  },
+  {
     key: "pointSize",
     label: "Point size",
     min: 0.5,
@@ -131,7 +172,7 @@ const SLIDERS: SliderDef[] = [
   },
 ]
 
-const LS_KEY = "particle-threejs-tuning-v3"
+const LS_KEY = "particle-threejs-tuning-v4"
 
 export function loadStoredTuning(): ThreeTuning {
   if (typeof window === "undefined") return THREE_TUNING_DEFAULTS
