@@ -485,14 +485,17 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       const csv = `${headerRow}\n${dataRow}`
 
       const parsed = parseCsv(csv)
-      const { creates, categoryPathsByHandle, errors } = buildBatchCreatesFromParsedCsv(parsed)
+      const { creates, categoryPathsByHandle, tagValuesByHandle, errors } =
+        buildBatchCreatesFromParsedCsv(parsed)
       expect(errors).toEqual([])
       expect(creates.length).toBe(1)
       const c = creates[0] as Record<string, unknown>
-      expect(c.tags).toEqual([
-        { value: "audience:unisex" },
-        { value: "material:cotton-poly" },
-        { value: "weight:mid" },
+      /** Tags live in tagValuesByHandle now — the page resolves values → ids before sending the batch. */
+      expect(c.tags).toBeUndefined()
+      expect(tagValuesByHandle.get("dnc-1101")).toEqual([
+        "audience:unisex",
+        "material:cotton-poly",
+        "weight:mid",
       ])
       expect(c.images).toEqual([
         { url: "https://x/a.jpg" },
@@ -862,7 +865,7 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
           ),
         ].join("\n")
       )
-      const { creates, errors } = buildBatchCreatesFromParsedCsv(reparsed)
+      const { creates, tagValuesByHandle, errors } = buildBatchCreatesFromParsedCsv(reparsed)
       expect(errors).toEqual([])
       expect(creates.length).toBe(2)
 
@@ -871,8 +874,9 @@ SKUB,Child Blue M,Blue,M,931111,https://cdn.dncworkwear.com.au/y.jpg,,,$22.50,,`
       ) as Record<string, unknown>
       expect(socks.title).toBe("Unisex Happy Feet Comfort Socks")
       expect((socks.metadata as Record<string, unknown>).supplier).toBe("Biz Care")
-      const tags = socks.tags as Array<{ value: string }>
-      expect(tags.map((t) => t.value)).toEqual(
+      /** Tag values live in tagValuesByHandle now; the page resolves them to ids before the batch call. */
+      expect(socks.tags).toBeUndefined()
+      expect(tagValuesByHandle.get("biz-care-ccs149u") ?? []).toEqual(
         expect.arrayContaining(["accessories", "socks", "healthwear"])
       )
       const variants = socks.variants as Array<{ sku: string }>

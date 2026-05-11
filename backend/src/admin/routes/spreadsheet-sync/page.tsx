@@ -29,6 +29,11 @@ import {
   resolveCategoryPaths,
   type CategoryClient,
 } from "../../lib/spreadsheet-sync-categories"
+import {
+  applyTagIdsToCreates,
+  resolveTagValues,
+  type TagClient,
+} from "../../lib/spreadsheet-sync-tags"
 import type { TierMoneyMinor } from "../../lib/spreadsheet-money"
 import { parseCsv } from "../../lib/csv-import"
 import { sdk } from "../../lib/sdk"
@@ -247,7 +252,7 @@ const SpreadsheetSyncPage = () => {
       return
     }
 
-    const { creates, tierBySku, errors, warnings, categoryPathsByHandle } =
+    const { creates, tierBySku, errors, warnings, categoryPathsByHandle, tagValuesByHandle } =
       buildBatchCreatesFromParsedCsv(workingParsed)
 
     if (errors.length) {
@@ -292,6 +297,40 @@ const SpreadsheetSyncPage = () => {
       } catch (e) {
         log.push(
           `Category resolution failed: ${e instanceof Error ? e.message : String(e)} — products will be created without categories.`
+        )
+      }
+    }
+
+    /**
+     * Tags must be resolved to ids before the batch create — `sdk.admin.product.batch` rejects `{ value }`-shaped
+     * tag refs with "Field 'create, N, tags, M, id' is required". Same lifecycle as categories above.
+     */
+    if (tagValuesByHandle.size) {
+      const allValues: string[] = []
+      const valueSeen = new Set<string>()
+      for (const values of tagValuesByHandle.values()) {
+        for (const v of values) {
+          const k = v.trim().toLowerCase()
+          if (k && !valueSeen.has(k)) {
+            valueSeen.add(k)
+            allValues.push(v)
+          }
+        }
+      }
+      log.push(`Resolving ${allValues.length} product tag(s)…`)
+      try {
+        const tagClient: TagClient = sdk.admin.productTag as unknown as TagClient
+        const { idByLowerValue, createdLog } = await resolveTagValues(tagClient, allValues)
+        log.push(...createdLog)
+        applyTagIdsToCreates(
+          creates as Array<Record<string, unknown> & { handle?: string }>,
+          tagValuesByHandle,
+          idByLowerValue
+        )
+        log.push(`Tags resolved (${idByLowerValue.size}/${allValues.length} matched or created).`)
+      } catch (e) {
+        log.push(
+          `Tag resolution failed: ${e instanceof Error ? e.message : String(e)} — products will be created without tags.`
         )
       }
     }

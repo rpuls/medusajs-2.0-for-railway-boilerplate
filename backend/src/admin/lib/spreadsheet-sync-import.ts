@@ -1631,6 +1631,13 @@ export type BuildCreatesResult = {
    * category IDs (auto-creating missing levels) before sending the create batch.
    */
   categoryPathsByHandle: Map<string, string[][]>
+  /**
+   * Free-form tag VALUES (e.g. "accessories", "socks") collected from `Product Tag 1..N` columns, keyed by
+   * product handle. `sdk.admin.product.batch({ create })` requires tag references by `id` (not `value`), so
+   * the page resolves these into existing-or-newly-created tag IDs (via `spreadsheet-sync-tags.ts`) before
+   * sending the batch — same lifecycle as `categoryPathsByHandle`.
+   */
+  tagValuesByHandle: Map<string, string[]>
 }
 
 export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesResult => {
@@ -1639,18 +1646,19 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
   const tierBySku = new Map<string, TierMoneyMinor>()
   const seenBarcodes = new Set<string>()
   const categoryPathsByHandle = new Map<string, string[][]>()
+  const tagValuesByHandle = new Map<string, string[]>()
   let barcodeDedupeCount = 0
 
   const headerErr = validateHeaders(parsed)
   if (headerErr) {
     errors.push(headerErr)
-    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle }
+    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle, tagValuesByHandle }
   }
 
   const previewRun = computeSpreadsheetPreview(parsed)
   previewRun.validationErrors.forEach((e) => errors.push(e))
   if (previewRun.validationErrors.length > 0) {
-    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle }
+    return { creates: [], tierBySku, errors, warnings: [], categoryPathsByHandle, tagValuesByHandle }
   }
 
   const grouped = groupRowsByHandle(parsed.rows)
@@ -1703,9 +1711,9 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
     }))
 
     const productTagValues = collectProductTagsFromRow(first)
-    const productTags = productTagValues.length
-      ? productTagValues.map((value) => ({ value }))
-      : undefined
+    if (productTagValues.length) {
+      tagValuesByHandle.set(handle, productTagValues)
+    }
 
     const productMetadataExtra = parseProductMetadataJsonFromRow(first)
 
@@ -1846,7 +1854,7 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
       images: images.length ? images : undefined,
       options,
       variants,
-      ...(productTags ? { tags: productTags } : {}),
+      /** Tags resolved post-build: see `tagValuesByHandle` in result + `spreadsheet-sync-tags.ts`. */
       ...(mergedMetadata ? { metadata: mergedMetadata } : {}),
     })
   }
@@ -1864,7 +1872,7 @@ export const buildBatchCreatesFromParsedCsv = (parsed: ParsedCsv): BuildCreatesR
     }
   }
 
-  return { creates, tierBySku, errors, warnings, categoryPathsByHandle }
+  return { creates, tierBySku, errors, warnings, categoryPathsByHandle, tagValuesByHandle }
 }
 
 export const PRODUCT_BATCH_CHUNK_SIZE = 10
