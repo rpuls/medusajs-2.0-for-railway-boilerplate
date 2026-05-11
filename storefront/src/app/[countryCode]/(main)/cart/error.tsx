@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { phCaptureException } from "@lib/posthog"
 
 type Props = {
   error: Error & { digest?: string }
@@ -11,6 +12,7 @@ type Props = {
 export default function CartError({ error, reset }: Props) {
   useEffect(() => {
     console.error("Cart route error boundary:", error)
+    phCaptureException(error, { digest: error.digest, scope: "cart-error" })
   }, [error])
 
   return (

@@ -36,6 +36,9 @@ if (typeof window !== "undefined" && apiKey && !(posthog as any).__loaded) {
     // Standard PostHog autocapture — covers rage-clicks, dead-clicks,
     // basic interaction events without us writing any code.
     autocapture: true,
+    // Capture unhandled errors and promise rejections as $exception events.
+    // Surfaced in PostHog → Error tracking.
+    capture_exceptions: true,
     // Session recordings are off until you flip them on in the
     // PostHog project settings → Recordings. Keeping this default
     // avoids surprise data collection.

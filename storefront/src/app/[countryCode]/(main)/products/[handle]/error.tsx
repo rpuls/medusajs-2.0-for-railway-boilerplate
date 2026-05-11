@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { phCaptureException } from "@lib/posthog"
 
 type Props = {
   error: Error & { digest?: string }
@@ -10,6 +11,7 @@ type Props = {
 export default function ProductPageError({ error, reset }: Props) {
   useEffect(() => {
     console.error("PDP route error boundary:", error)
+    phCaptureException(error, { digest: error.digest, scope: "pdp-error" })
   }, [error])
 
   return (

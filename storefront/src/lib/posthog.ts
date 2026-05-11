@@ -57,6 +57,18 @@ export const phCapture = (event: string, properties?: Record<string, any>) => {
   }
 }
 
+export const phCaptureException = (
+  error: unknown,
+  properties?: Record<string, any>
+) => {
+  if (!isReady()) return
+  try {
+    posthog.captureException(error, properties)
+  } catch {
+    // intentional silent
+  }
+}
+
 /** Manual pageview — App Router doesn't auto-fire on route change. */
 export const phCapturePageView = (url?: string) => {
   if (!isReady()) return
