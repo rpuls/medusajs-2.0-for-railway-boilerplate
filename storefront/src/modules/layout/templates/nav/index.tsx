@@ -118,11 +118,11 @@ export default async function Nav() {
               data-testid="nav-store-link"
             >
               <Image
-                src="/branding/sc-prints-logo-white.png"
+                src="/branding/sc-prints-logo-transparent.png"
                 alt="SC Prints"
                 width={158}
                 height={52}
-                className="h-12 w-auto"
+                className="h-12 w-auto invert"
                 priority
               />
             </LocalizedClientLink>

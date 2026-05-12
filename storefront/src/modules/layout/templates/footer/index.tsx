@@ -17,7 +17,7 @@ export default async function Footer() {
           <div className="flex min-w-0 flex-col gap-4 lg:pr-2">
             <LocalizedClientLink
               href="/"
-              className="inline-flex w-fit items-center rounded-lg bg-ui-fg-base px-3 py-2"
+              className="inline-flex w-fit items-center"
             >
               <Image
                 src="/branding/sc-prints-logo-transparent.png"
