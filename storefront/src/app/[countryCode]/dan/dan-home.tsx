@@ -1,11 +1,66 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, useReducedMotion } from "framer-motion"
+import { Archivo_Black } from "next/font/google"
 
 import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-hero"
-import { V3_TUNING, WORDMARK_GRADIENT } from "../(main)/particle-flow/v3-splash"
+import { V3_TUNING } from "../(main)/particle-flow/v3-splash"
+
+/** Heavy geometric sans matching the "DMC / PROUD / MARY" reference. Used both
+ * as the wordmark mask (rasterised to a data URL on mount) and for any future
+ * stacked-type compositions on this page. */
+const archivoBlack = Archivo_Black({ weight: "400", subsets: ["latin"] })
+
+/** Rasterise stacked all-caps lines into a transparent PNG data URL. Each line
+ * is auto-sized so its measured width fills the available row, giving the
+ * three rows visually-matched widths even though the character counts differ
+ * — mirrors the reference image's stack. Ink is black so the particle hero's
+ * `inkPolarity="dark"` picks it as the wordmark mask. */
+function rasterStackedWordmark(
+  fontFamily: string,
+  lines: string[],
+  bitmapW: number,
+  bitmapH: number
+): string {
+  const canvas = document.createElement("canvas")
+  canvas.width = bitmapW
+  canvas.height = bitmapH
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return ""
+  ctx.clearRect(0, 0, bitmapW, bitmapH)
+  ctx.fillStyle = "#000"
+  ctx.textBaseline = "alphabetic"
+  ctx.textAlign = "left"
+  const sidePadFrac = 0.015
+  const avail = bitmapW * (1 - sidePadFrac * 2)
+  /** Tight vertical packing — caps of row N+1 sit just under the descender line
+   * of row N. Row height is the bitmap height divided by N rows; the actual
+   * cap height per line is ~0.75 of that, matching the reference's stack. */
+  const rowH = bitmapH / lines.length
+  for (let i = 0; i < lines.length; i++) {
+    const text = lines[i]!
+    /** Two-pass sizing: measure at a probe size, then scale up so measured
+     * width matches `avail`. Clamp final size so a short line (e.g. "DMC")
+     * doesn't blow taller than the row. */
+    const probe = rowH * 1.4
+    ctx.font = `400 ${probe}px ${fontFamily}`
+    const probedW = ctx.measureText(text).width || 1
+    let size = (probe * avail) / probedW
+    const verticalCap = rowH * 1.25
+    if (size > verticalCap) size = verticalCap
+    ctx.font = `400 ${size}px ${fontFamily}`
+    const measured = ctx.measureText(text).width
+    const x = (bitmapW - measured) / 2
+    /** Alphabetic baseline placed near the bottom of the row so the caps fill
+     * the row top-to-bottom. 0.88 of row height places the baseline cleanly
+     * inside the row without clipping descenders (none in caps, but safe). */
+    const y = i * rowH + rowH * 0.88
+    ctx.fillText(text, x, y)
+  }
+  return canvas.toDataURL("image/png")
+}
 
 /** Per-word clip-up reveal — words slide in from below their own baseline. */
 function SplitTextReveal({
@@ -69,6 +124,45 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
   const [aboutOpen, setAboutOpen] = useState(false)
   const reduced = useReducedMotion() ?? false
 
+  /** Generated stacked-text wordmark mask (data URL). Built once on mount after
+   * the Archivo Black font is loaded. Null until ready so the hero doesn't
+   * flash an unstyled (system-font) raster, which would not match the reference. */
+  const [wordmarkSrc, setWordmarkSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const family = archivoBlack.style.fontFamily
+    /** Ensure the font face is actually loaded before rastering; otherwise
+     * the canvas falls back to a system sans and the wordmark looks wrong. */
+    const probePx = 200
+    document.fonts
+      .load(`400 ${probePx}px ${family}`)
+      .then(() => {
+        if (cancelled) return
+        const src = rasterStackedWordmark(
+          family,
+          ["DMC", "PROUD", "MARY"],
+          1800,
+          1500
+        )
+        if (src) setWordmarkSrc(src)
+      })
+      .catch(() => {
+        /** Font failed to load — still rasterise so the hero has SOMETHING
+         * (system fallback). Visually weaker but functional. */
+        if (cancelled) return
+        const src = rasterStackedWordmark(
+          family,
+          ["DMC", "PROUD", "MARY"],
+          1800,
+          1500
+        )
+        if (src) setWordmarkSrc(src)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const bioParagraphs = [
     <>
       Dr Daniel Mudie Cunningham is an artist, curator, writer and educator, and the Director of{" "}
@@ -108,42 +202,22 @@ export default function DanHome({ countryCode }: { countryCode: string }) {
   return (
     <div className="dan-content" style={{ position: "relative", minHeight: "100vh" }}>
 
-      {/* DMC particle animation with photo-reveal behind it */}
-      <div style={{ position: "relative" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/dan/proud-mary-hero.webp"
-          alt=""
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center",
-          }}
-        />
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(0,0,0,0.72)",
-            pointerEvents: "none",
-          }}
-        />
-        <HomeParticleLogoHero
-          presentation="embedded"
-          interactionMode="newmix"
-          animatedParticleCap={55000}
-          logoSrc="/branding/dmc-logo-1.png"
-          inkPolarity="bright"
-          sectionAriaLabel="DMC particle logo"
-          newmixLiveTuning={V3_TUNING}
-          wordmarkGradient={WORDMARK_GRADIENT}
-          bgClassName=""
-        />
+      {/* "DMC / PROUD / MARY" particle wordmark — particles sample colours from
+          the photo so the wordmark IS the picture and shatters when disturbed. */}
+      <div style={{ position: "relative", background: "#000" }}>
+        {wordmarkSrc != null && (
+          <HomeParticleLogoHero
+            presentation="embedded"
+            interactionMode="newmix"
+            animatedParticleCap={55000}
+            logoSrc={wordmarkSrc}
+            inkPolarity="dark"
+            sectionAriaLabel="DMC PROUD MARY particle wordmark"
+            newmixLiveTuning={V3_TUNING}
+            wordmarkImageSrc="/dan/proud-mary-hero.webp"
+            bgClassName=""
+          />
+        )}
       </div>
 
       {/* Header + image section */}
