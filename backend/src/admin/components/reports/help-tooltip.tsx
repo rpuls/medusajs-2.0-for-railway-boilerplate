@@ -138,6 +138,9 @@ export const HelpTooltip = ({
     }
     side="top"
     maxWidth={440}
+    // Reports page has a sticky filter bar at z-30; bump the tooltip above
+    // it so help text isn't covered by the Date range / Region selects.
+    className="!z-[60]"
   >
     <span
       style={{
