@@ -12,12 +12,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: "swap", 
 })
 
-// NEW: Viewport settings to prevent awkward mobile zooming on inputs
 export const viewport: Viewport = {
   themeColor: "#EEEEEE",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 }
 
 // NEW: Upgraded SEO & Social Media sharing configuration

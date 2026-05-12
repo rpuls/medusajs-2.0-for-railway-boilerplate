@@ -20,7 +20,7 @@ export default function InstagramFeedStrip({
   return (
     <section className="border-t border-ui-border-base bg-ui-bg-subtle">
       <div className="content-container flex flex-wrap items-center justify-between gap-3 py-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ui-fg-muted">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-primary)]/80">
           On the gram
         </p>
         <a

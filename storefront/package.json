@@ -80,8 +80,10 @@
     "webpack": "^5.104.1",
     "zod": "^4.3.6"
   },
+  "browserslist": "> 0.5%, last 2 versions, not dead, not ie 11",
   "devDependencies": {
     "@babel/core": "^7.28.6",
+    "@next/bundle-analyzer": "16.2.6",
     "@medusajs/client-types": "preview",
     "@medusajs/ui-preset": "preview",
     "@playwright/test": "^1.55.1",

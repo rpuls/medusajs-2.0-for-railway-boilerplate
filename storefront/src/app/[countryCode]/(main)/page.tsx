@@ -194,7 +194,7 @@ export default async function Home({
         <section className="content-container py-12">
           <div className="mb-6 flex items-end justify-between">
             <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
                 Featured range
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-ui-fg-base">
@@ -239,7 +239,7 @@ export default async function Home({
         {/* 5. Services — shown while customer is in discovery mode */}
         <section className="content-container py-14">
           <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
               Decoration &amp; finishing
             </p>
             <h2 className="mt-2 text-3xl font-semibold text-ui-fg-base">
@@ -255,7 +255,7 @@ export default async function Home({
         {/* 7. Bulk order CTA — when the customer is closest to a decision */}
         <section className="content-container py-16">
           <div className="rounded-2xl border border-ui-border-base bg-ui-bg-subtle p-8 small:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
               Prefer to talk it through?
             </p>
             <h2 className="mt-3 text-3xl font-semibold text-ui-fg-base">

@@ -91,4 +91,13 @@ const nextConfig = {
   // ──────────────────────────────────────────────────────────────────
 }
 
-module.exports = nextConfig
+// Wrap with @next/bundle-analyzer when ANALYZE=true. Only required at
+// analyze time so devs/CI without the dep can still build normally.
+if (process.env.ANALYZE === "true") {
+  const withBundleAnalyzer = require("@next/bundle-analyzer")({
+    enabled: true,
+  })
+  module.exports = withBundleAnalyzer(nextConfig)
+} else {
+  module.exports = nextConfig
+}

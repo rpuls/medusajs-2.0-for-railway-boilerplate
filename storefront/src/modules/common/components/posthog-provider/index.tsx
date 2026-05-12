@@ -23,29 +23,41 @@ const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
 const apiHost =
   process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com"
 
-if (typeof window !== "undefined" && apiKey && !(posthog as any).__loaded) {
+const initPostHog = () => {
+  if (typeof window === "undefined" || !apiKey || (posthog as any).__loaded) {
+    return
+  }
   posthog.init(apiKey, {
     api_host: apiHost,
-    // Don't auto-fire pageview on init — we handle them explicitly via
-    // the route-change effect below so SPA navigations register too.
     capture_pageview: false,
-    // Only attach a person profile when the user has been identified
-    // (after login). Anonymous traffic still gets recorded but isn't
-    // bound to a synthetic profile that bloats the dashboard.
     person_profiles: "identified_only",
-    // Standard PostHog autocapture — covers rage-clicks, dead-clicks,
-    // basic interaction events without us writing any code.
     autocapture: true,
-    // Capture unhandled errors and promise rejections as $exception events.
-    // Surfaced in PostHog → Error tracking.
     capture_exceptions: true,
-    // Session recordings are off until you flip them on in the
-    // PostHog project settings → Recordings. Keeping this default
-    // avoids surprise data collection.
     disable_session_recording: false,
-    // Don't capture on bots / known crawlers.
     rate_limiting: { events_per_second: 10 },
   })
+}
+
+// Defer initialization until after the page is interactive so PostHog's
+// 92 KiB doesn't compete with first-party JS on the critical path. The
+// phCapturePageViewWhenReady helper polls until __loaded so the first
+// pageview is preserved through the delay.
+if (typeof window !== "undefined" && apiKey) {
+  const schedule = () => {
+    const ric = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout: number }) => number)
+      | undefined
+    if (ric) {
+      ric(initPostHog, { timeout: 4000 })
+    } else {
+      setTimeout(initPostHog, 1500)
+    }
+  }
+  if (document.readyState === "complete") {
+    schedule()
+  } else {
+    window.addEventListener("load", schedule, { once: true })
+  }
 }
 
 export const PostHogProvider = ({ children }: { children: React.ReactNode }) => {

@@ -1,3 +1,4 @@
+import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type BrandImageLink = {
@@ -41,7 +42,7 @@ const ScrollingPictureBar = () => {
     <section className="w-full bg-ui-bg-base py-8 small:py-10">
       <div className="content-container mb-4 small:mb-6">
         <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
             Shop by brand
           </p>
           <h2 className="mt-2 text-3xl font-semibold text-ui-fg-base">
@@ -65,11 +66,12 @@ const ScrollingPictureBar = () => {
               href={brandImage.href}
               className="group relative h-[38vh] w-[84vw] shrink-0 overflow-hidden rounded-2xl border border-ui-border-base shadow-elevation-card-rest transition-all hover:border-[var(--brand-secondary)]/60 small:h-[48vh] small:w-[72vw]"
             >
-              <img
+              <Image
                 src={brandImage.imageSrc}
                 alt={brandImage.imageAlt}
-                className="h-full w-full object-cover"
-                loading="lazy"
+                fill
+                sizes="(max-width: 1024px) 84vw, 72vw"
+                className="object-cover"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
               <div className="pointer-events-none absolute bottom-4 left-4 rounded-md border border-white/25 bg-black/45 px-3 py-2 backdrop-blur-sm">

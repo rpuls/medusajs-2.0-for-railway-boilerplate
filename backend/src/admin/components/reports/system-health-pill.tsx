@@ -63,7 +63,7 @@ export const SystemHealthPill = () => {
 
   const status = data?.overall ?? (loading ? "unset" : "down")
   const tooltipBody = (
-    <div className="flex flex-col gap-y-0.5">
+    <div className="flex flex-col gap-y-0.5 max-h-[calc(100vh-200px)] overflow-auto">
       <Text size="xsmall" className="font-medium">
         {STATUS_LABEL[status]}
       </Text>
@@ -89,7 +89,7 @@ export const SystemHealthPill = () => {
   )
 
   return (
-    <Tooltip content={tooltipBody} side="bottom">
+    <Tooltip content={tooltipBody} side="bottom" maxWidth={280} className="!z-50">
       <span
         className="inline-flex items-center gap-x-1.5 px-2 py-1 rounded-md cursor-help"
         style={{

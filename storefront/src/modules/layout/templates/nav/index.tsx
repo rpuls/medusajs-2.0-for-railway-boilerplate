@@ -78,7 +78,7 @@ const buildCategoryBrowseGroups = (
   return groups
 }
 
-export default async function Nav() {
+async function NavSideMenu() {
   const [regions, { collections }, categories] = await Promise.all([
     listRegions().then((regions: StoreRegion[]) => regions),
     getCollectionsList(0, 100),
@@ -97,16 +97,31 @@ export default async function Nav() {
   )
 
   return (
+    <SideMenu
+      regions={regions}
+      collectionLinks={menuCollectionLinks}
+      categoryBrowseGroups={categoryBrowseGroups}
+    />
+  )
+}
+
+export default function Nav() {
+  return (
     <div className="sticky top-0 inset-x-0 z-50 group">
       <header className="relative h-20 mx-auto bg-ui-fg-base duration-200">
-        <nav className="content-container flex h-full w-full items-center justify-between gap-6 text-base font-medium text-[rgba(248,250,252,0.9)]">
+        <nav className="content-container flex h-full w-full items-center justify-between gap-6 text-base font-medium text-white">
           <div className="flex-1 basis-0 h-full flex items-center">
             <div className="h-full">
-              <SideMenu
-                regions={regions}
-                collectionLinks={menuCollectionLinks}
-                categoryBrowseGroups={categoryBrowseGroups}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    aria-hidden
+                    className="h-full w-10"
+                  />
+                }
+              >
+                <NavSideMenu />
+              </Suspense>
             </div>
           </div>
 
