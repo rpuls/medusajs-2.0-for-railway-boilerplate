@@ -9,12 +9,32 @@ import {
 } from "@medusajs/framework/types"
 
 import {
+  ARTWORK_STAGE_EVENT,
+  BLANKS_STAGE_EVENT,
   PRODUCTION_STAGE_EVENT,
+  deriveTracksFromLegacyStage,
+  isArtworkStage,
+  isBlanksStage,
   isProductionStage,
   type ProductionStage,
   type ProductionStageChangedEvent,
   type ProductionStageHistoryEntry,
+  type ProductionTrack,
 } from "../../../../../lib/production-stage"
+
+function trackForStage(stage: ProductionStage): ProductionTrack {
+  if (isArtworkStage(stage) || stage === "art_review") return "artwork"
+  if (isBlanksStage(stage) || stage === "blanks_ordered" || stage === "blanks_arrived") {
+    return "blanks"
+  }
+  return "production"
+}
+
+const EVENT_FOR_TRACK: Record<ProductionTrack, string> = {
+  artwork: ARTWORK_STAGE_EVENT,
+  blanks: BLANKS_STAGE_EVENT,
+  production: PRODUCTION_STAGE_EVENT,
+}
 import { getPostHog } from "../../../../../lib/posthog"
 
 /**
@@ -132,24 +152,35 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       continue
     }
 
+    const track = trackForStage(toStage)
+    const derived = deriveTracksFromLegacyStage(toStage)
+
     const history = readHistory(meta)
     const newEntry: ProductionStageHistoryEntry = {
       stage: toStage,
       changed_at: changedAt,
       changed_by: changedBy,
       note,
+      track,
     }
     const nextHistory = [...history, newEntry]
 
+    const metaUpdate: Record<string, unknown> = {
+      ...meta,
+      production_stage: toStage,
+      production_stage_changed_at: changedAt,
+      production_stage_history: nextHistory,
+    }
+    if (track === "artwork") {
+      metaUpdate.artwork_stage = derived.artwork_stage
+      metaUpdate.artwork_stage_changed_at = changedAt
+    } else if (track === "blanks") {
+      metaUpdate.blanks_stage = derived.blanks_stage
+      metaUpdate.blanks_stage_changed_at = changedAt
+    }
+
     try {
-      await orderModuleService.updateOrders(orderId, {
-        metadata: {
-          ...meta,
-          production_stage: toStage,
-          production_stage_changed_at: changedAt,
-          production_stage_history: nextHistory,
-        },
-      })
+      await orderModuleService.updateOrders(orderId, { metadata: metaUpdate })
     } catch (err: any) {
       results.push({
         order_id: orderId,
@@ -168,9 +199,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       changed_at: changedAt,
       changed_by: changedBy,
       note,
+      track,
     }
     try {
-      await eventBus.emit({ name: PRODUCTION_STAGE_EVENT, data: event })
+      await eventBus.emit({ name: EVENT_FOR_TRACK[track], data: event })
     } catch (err: any) {
       logger.warn?.(
         `bulk-production-stage: failed to emit event for ${orderId}: ${err?.message ?? err}`

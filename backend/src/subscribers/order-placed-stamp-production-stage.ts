@@ -55,6 +55,7 @@ export default async function orderPlacedStampProductionStageHandler({
     changed_at: changedAt,
     changed_by: "system",
     note: "Order received — auto-stamped at placement.",
+    track: "production",
   }
 
   try {
@@ -64,6 +65,10 @@ export default async function orderPlacedStampProductionStageHandler({
         production_stage: "received",
         production_stage_changed_at: changedAt,
         production_stage_history: [initialEntry],
+        artwork_stage: "pending",
+        artwork_stage_changed_at: changedAt,
+        blanks_stage: "not_started",
+        blanks_stage_changed_at: changedAt,
       },
     })
   } catch (error) {

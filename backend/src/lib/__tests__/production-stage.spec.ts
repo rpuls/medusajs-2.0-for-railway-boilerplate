@@ -1,12 +1,24 @@
 import {
+  ARTWORK_STAGES,
+  ARTWORK_STAGES_THAT_EMAIL,
+  BLANKS_STAGES,
+  BLANKS_STAGES_THAT_EMAIL,
   CUSTOMER_MILESTONES,
+  DOWNSTREAM_STAGES,
+  DOWNSTREAM_STAGES_THAT_EMAIL,
   PRODUCTION_STAGES,
   PRODUCTION_STAGE_LABEL,
   STAGES_THAT_EMAIL,
   customerMilestoneForStage,
+  deriveTracksFromLegacyStage,
+  isArtworkStage,
+  isBlanksStage,
+  isDownstreamStage,
   isProductionStage,
-  shouldEmailForStageTransition,
-  type ProductionStage,
+  nextStageInTrack,
+  shouldEmailForArtworkTransition,
+  shouldEmailForBlanksTransition,
+  shouldEmailForDownstreamTransition,
 } from "../production-stage"
 
 describe("production-stage constants", () => {
@@ -26,99 +38,186 @@ describe("production-stage constants", () => {
   it("flags the agreed milestones as email-triggering", () => {
     expect(STAGES_THAT_EMAIL.has("awaiting_approval")).toBe(true)
     expect(STAGES_THAT_EMAIL.has("in_production")).toBe(true)
+    expect(ARTWORK_STAGES_THAT_EMAIL.has("awaiting_approval")).toBe(true)
+    expect(DOWNSTREAM_STAGES_THAT_EMAIL.has("in_production")).toBe(true)
   })
 
   it("does not double-email shipped (Medusa core handles that)", () => {
     expect(STAGES_THAT_EMAIL.has("shipped")).toBe(false)
+    expect(DOWNSTREAM_STAGES_THAT_EMAIL.has("shipped")).toBe(false)
   })
 
-  it("only emails milestones inside the canonical stage list", () => {
-    for (const stage of STAGES_THAT_EMAIL) {
-      expect(PRODUCTION_STAGES).toContain(stage)
-    }
+  it("blanks track is internal-only — no customer emails", () => {
+    expect(BLANKS_STAGES_THAT_EMAIL.size).toBe(0)
   })
 })
 
 describe("customerMilestoneForStage", () => {
-  it("collapses internal artwork stages into the 'artwork' milestone", () => {
-    const artworkStages: ProductionStage[] = ["art_review", "awaiting_approval", "approved"]
-    for (const stage of artworkStages) {
-      expect(customerMilestoneForStage(stage)).toBe("artwork")
+  it("collapses every artwork-track value into 'preparing'", () => {
+    for (const s of ARTWORK_STAGES) {
+      expect(customerMilestoneForStage(s)).toBe("preparing")
     }
+    expect(customerMilestoneForStage("art_review")).toBe("preparing")
   })
 
-  it("collapses internal production stages into the 'production' milestone", () => {
-    const productionStages: ProductionStage[] = [
-      "blanks_ordered",
-      "blanks_arrived",
-      "in_production",
-      "quality_check",
-    ]
-    for (const stage of productionStages) {
-      expect(customerMilestoneForStage(stage)).toBe("production")
+  it("collapses every blanks-track value into 'preparing'", () => {
+    for (const s of BLANKS_STAGES) {
+      expect(customerMilestoneForStage(s)).toBe("preparing")
     }
+    expect(customerMilestoneForStage("blanks_ordered")).toBe("preparing")
+    expect(customerMilestoneForStage("blanks_arrived")).toBe("preparing")
   })
 
-  it("preserves shipped + delivered as their own milestones", () => {
+  it("preserves received / production / shipped / delivered milestones", () => {
+    expect(customerMilestoneForStage("received")).toBe("received")
+    expect(customerMilestoneForStage("in_production")).toBe("production")
+    expect(customerMilestoneForStage("quality_check")).toBe("production")
     expect(customerMilestoneForStage("shipped")).toBe("shipped")
     expect(customerMilestoneForStage("delivered")).toBe("delivered")
   })
 })
 
-describe("isProductionStage", () => {
-  it("accepts every canonical stage", () => {
+describe("type guards", () => {
+  it("isProductionStage accepts every canonical stage", () => {
     for (const stage of PRODUCTION_STAGES) {
       expect(isProductionStage(stage)).toBe(true)
     }
-  })
-
-  it("rejects invalid strings, junk, and non-strings", () => {
     expect(isProductionStage("not_a_stage")).toBe(false)
-    expect(isProductionStage("")).toBe(false)
-    expect(isProductionStage(undefined)).toBe(false)
     expect(isProductionStage(null)).toBe(false)
-    expect(isProductionStage(42)).toBe(false)
-    expect(isProductionStage({})).toBe(false)
+  })
+  it("track-specific guards are mutually exclusive within their track", () => {
+    for (const s of ARTWORK_STAGES) expect(isArtworkStage(s)).toBe(true)
+    for (const s of BLANKS_STAGES) expect(isBlanksStage(s)).toBe(true)
+    for (const s of DOWNSTREAM_STAGES) expect(isDownstreamStage(s)).toBe(true)
   })
 })
 
-describe("shouldEmailForStageTransition", () => {
-  it("emails on the agreed milestones for forward transitions", () => {
-    expect(shouldEmailForStageTransition("art_review", "awaiting_approval")).toBe(true)
-    expect(shouldEmailForStageTransition("approved", "in_production")).toBe(true)
-    expect(shouldEmailForStageTransition(null, "awaiting_approval")).toBe(true)
-    expect(shouldEmailForStageTransition(undefined, "in_production")).toBe(true)
+describe("deriveTracksFromLegacyStage", () => {
+  it("maps each legacy stage to the documented track triple", () => {
+    expect(deriveTracksFromLegacyStage("received")).toEqual({
+      artwork_stage: "pending",
+      blanks_stage: "not_started",
+      production_stage: "received",
+    })
+    expect(deriveTracksFromLegacyStage("art_review")).toEqual({
+      artwork_stage: "in_review",
+      blanks_stage: "not_started",
+      production_stage: "received",
+    })
+    expect(deriveTracksFromLegacyStage("awaiting_approval")).toEqual({
+      artwork_stage: "awaiting_approval",
+      blanks_stage: "not_started",
+      production_stage: "received",
+    })
+    expect(deriveTracksFromLegacyStage("approved")).toEqual({
+      artwork_stage: "approved",
+      blanks_stage: "not_started",
+      production_stage: "received",
+    })
+    expect(deriveTracksFromLegacyStage("blanks_ordered")).toEqual({
+      artwork_stage: "approved",
+      blanks_stage: "ordered",
+      production_stage: "received",
+    })
+    expect(deriveTracksFromLegacyStage("blanks_arrived")).toEqual({
+      artwork_stage: "approved",
+      blanks_stage: "arrived",
+      production_stage: "received",
+    })
+    expect(deriveTracksFromLegacyStage("in_production")).toEqual({
+      artwork_stage: "approved",
+      blanks_stage: "arrived",
+      production_stage: "in_production",
+    })
+    expect(deriveTracksFromLegacyStage("delivered")).toEqual({
+      artwork_stage: "approved",
+      blanks_stage: "arrived",
+      production_stage: "delivered",
+    })
   })
 
-  it("never emails for stages outside STAGES_THAT_EMAIL", () => {
-    expect(shouldEmailForStageTransition("received", "art_review")).toBe(false)
-    expect(shouldEmailForStageTransition("approved", "blanks_ordered")).toBe(false)
-    expect(shouldEmailForStageTransition("in_production", "shipped")).toBe(false)
-    expect(shouldEmailForStageTransition("shipped", "delivered")).toBe(false)
+  it("treats null/undefined as a brand-new order", () => {
+    const expected = {
+      artwork_stage: "pending",
+      blanks_stage: "not_started",
+      production_stage: "received",
+    }
+    expect(deriveTracksFromLegacyStage(null)).toEqual(expected)
+    expect(deriveTracksFromLegacyStage(undefined)).toEqual(expected)
+  })
+})
+
+describe("shouldEmailForArtworkTransition", () => {
+  it("emails when entering awaiting_approval from earlier", () => {
+    expect(shouldEmailForArtworkTransition("pending", "awaiting_approval")).toBe(true)
+    expect(shouldEmailForArtworkTransition("in_review", "awaiting_approval")).toBe(true)
+    expect(shouldEmailForArtworkTransition(null, "awaiting_approval")).toBe(true)
   })
 
-  it("does not email on same-stage transitions", () => {
-    expect(shouldEmailForStageTransition("awaiting_approval", "awaiting_approval")).toBe(false)
-    expect(shouldEmailForStageTransition("in_production", "in_production")).toBe(false)
+  it("does not email approval/pending/review (no customer ping)", () => {
+    expect(shouldEmailForArtworkTransition("awaiting_approval", "approved")).toBe(false)
+    expect(shouldEmailForArtworkTransition("pending", "in_review")).toBe(false)
   })
 
-  it("suppresses emails on rollback (the bug this function exists for)", () => {
-    // in_production → awaiting_approval: customer already approved once.
-    expect(shouldEmailForStageTransition("in_production", "awaiting_approval")).toBe(false)
-    // approved → awaiting_approval: rollback, customer already saw this email.
-    expect(shouldEmailForStageTransition("approved", "awaiting_approval")).toBe(false)
-    // shipped (somehow) → in_production: still a rollback, no second "on the press" email.
-    expect(shouldEmailForStageTransition("shipped", "in_production")).toBe(false)
+  it("suppresses on rollback from approved → awaiting_approval", () => {
+    expect(shouldEmailForArtworkTransition("approved", "awaiting_approval")).toBe(false)
   })
 
-  it("DOES email on forward re-entry after a rollback", () => {
-    // After rollback to awaiting_approval, moving forward to in_production again
-    // is a real new milestone — the previous in_production was undone.
-    expect(shouldEmailForStageTransition("awaiting_approval", "in_production")).toBe(true)
+  it("re-emails forward re-entry after rollback", () => {
+    expect(shouldEmailForArtworkTransition("in_review", "awaiting_approval")).toBe(true)
+  })
+})
+
+describe("shouldEmailForBlanksTransition", () => {
+  it("never emails — blanks track is internal-only", () => {
+    expect(shouldEmailForBlanksTransition("not_started", "ordered")).toBe(false)
+    expect(shouldEmailForBlanksTransition("ordered", "arrived")).toBe(false)
+    expect(shouldEmailForBlanksTransition(null, "arrived")).toBe(false)
+  })
+})
+
+describe("shouldEmailForDownstreamTransition", () => {
+  it("emails on entry to in_production", () => {
+    expect(shouldEmailForDownstreamTransition("received", "in_production")).toBe(true)
   })
 
-  it("ignores garbage from_stage values gracefully", () => {
-    // Stale events with malformed from_stage should still email if to_stage qualifies.
-    expect(shouldEmailForStageTransition("not_a_real_stage" as any, "in_production")).toBe(true)
+  it("does not email shipped/delivered (handled elsewhere or terminal)", () => {
+    expect(shouldEmailForDownstreamTransition("in_production", "shipped")).toBe(false)
+    expect(shouldEmailForDownstreamTransition("shipped", "delivered")).toBe(false)
+  })
+
+  it("suppresses rollback", () => {
+    expect(shouldEmailForDownstreamTransition("quality_check", "in_production")).toBe(false)
+    expect(shouldEmailForDownstreamTransition("shipped", "in_production")).toBe(false)
+  })
+
+  it("ignores same-stage transitions", () => {
+    expect(shouldEmailForDownstreamTransition("in_production", "in_production")).toBe(false)
+  })
+})
+
+describe("nextStageInTrack", () => {
+  it("advances within the artwork track", () => {
+    expect(nextStageInTrack("pending")).toBe("in_review")
+    expect(nextStageInTrack("in_review")).toBe("awaiting_approval")
+    expect(nextStageInTrack("awaiting_approval")).toBe("approved")
+    expect(nextStageInTrack("approved")).toBeNull()
+  })
+  it("advances within the blanks track", () => {
+    expect(nextStageInTrack("not_started")).toBe("ordered")
+    expect(nextStageInTrack("ordered")).toBe("arrived")
+    expect(nextStageInTrack("arrived")).toBeNull()
+  })
+  it("advances within the downstream track", () => {
+    expect(nextStageInTrack("received")).toBe("in_production")
+    expect(nextStageInTrack("in_production")).toBe("quality_check")
+    expect(nextStageInTrack("quality_check")).toBe("shipped")
+    expect(nextStageInTrack("shipped")).toBe("delivered")
+    expect(nextStageInTrack("delivered")).toBeNull()
+  })
+  it("routes legacy values to the correct successor", () => {
+    expect(nextStageInTrack("art_review")).toBe("awaiting_approval")
+    expect(nextStageInTrack("blanks_ordered")).toBe("blanks_arrived")
+    expect(nextStageInTrack("blanks_arrived")).toBeNull()
   })
 })

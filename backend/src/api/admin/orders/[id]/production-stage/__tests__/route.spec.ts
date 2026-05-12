@@ -97,8 +97,9 @@ describe("POST /admin/orders/:id/production-stage", () => {
       name: PRODUCTION_STAGE_EVENT,
       data: expect.objectContaining({
         order_id: "order-1",
-        from_stage: null,
+        from_stage: "received",
         to_stage: "in_production",
+        track: "production",
       }),
     })
 
@@ -164,9 +165,12 @@ describe("POST /admin/orders/:id/production-stage", () => {
     const patch = orderModule.updateOrders.mock.calls[0][1]
     expect(patch.metadata.production_stage_history).toHaveLength(2)
     expect(patch.metadata.production_stage_history[0].stage).toBe("received")
+    // Legacy "art_review" is routed through deriveTracksFromLegacyStage and
+    // lands on the artwork track as "in_review".
     expect(patch.metadata.production_stage_history[1]).toMatchObject({
-      stage: "art_review",
+      stage: "in_review",
       note: "Heading to design",
+      track: "artwork",
     })
   })
 

@@ -30,8 +30,9 @@ import { CalendarView } from "./components/calendar-view"
 import { BookmarkBar } from "./components/bookmark-bar"
 import { HelpTooltip } from "../../components/reports/help-tooltip"
 import {
-  PRODUCTION_STAGES,
   PRODUCTION_STAGE_LABEL,
+  nextStageInTrack,
+  isProductionStage,
 } from "../../../lib/production-stage"
 
 /* ---------- types mirrored from /admin/reports/production-snapshot ------- */
@@ -78,37 +79,32 @@ type Snapshot = {
   stages: SnapshotStage[]
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  received: "Order received",
-  art_review: "Artwork review",
-  awaiting_approval: "Awaiting approval",
-  approved: "Approved",
-  blanks_ordered: "Blanks ordered",
-  blanks_arrived: "Blanks received",
-  in_production: "In production",
-  quality_check: "Quality check",
-  shipped: "Shipped",
-  delivered: "Delivered",
-}
+const STAGE_LABELS: Record<string, string> = PRODUCTION_STAGE_LABEL
 
-/** Customer-milestone collapse for the Kanban view (matches storefront stepper). */
+/**
+ * Kanban swimlanes. With the parallel-track split, an order in the early
+ * phase can be artwork-pending and/or blanks-pending independently — but the
+ * snapshot endpoint still buckets by `production_stage`, so the lanes here
+ * are derived from that value. New stage names (artwork: pending/in_review/
+ * approved, blanks: not_started/ordered/arrived) live alongside legacy names
+ * so historical orders remain in their correct lane.
+ */
 const KANBAN_LANES: Array<{ id: string; label: string; stages: string[] }> = [
   { id: "received", label: "Received", stages: ["received"] },
   {
     id: "artwork",
     label: "Artwork",
-    stages: ["art_review", "awaiting_approval"],
+    stages: ["art_review", "pending", "in_review", "awaiting_approval", "approved"],
+  },
+  {
+    id: "blanks",
+    label: "Blanks",
+    stages: ["blanks_ordered", "blanks_arrived", "not_started", "ordered", "arrived"],
   },
   {
     id: "production",
     label: "In production",
-    stages: [
-      "approved",
-      "blanks_ordered",
-      "blanks_arrived",
-      "in_production",
-      "quality_check",
-    ],
+    stages: ["in_production", "quality_check"],
   },
   { id: "shipped", label: "Shipped", stages: ["shipped"] },
   { id: "delivered", label: "Delivered", stages: ["delivered"] },
@@ -789,10 +785,7 @@ const OrderRow = ({
   const bandColor = STAGE_HEALTH_COLORS[band]
   const [advancing, setAdvancing] = useState(false)
 
-  const stageIdx = PRODUCTION_STAGES.indexOf(stage as any)
-  const nextStage = stageIdx >= 0 && stageIdx < PRODUCTION_STAGES.length - 1
-    ? PRODUCTION_STAGES[stageIdx + 1]
-    : null
+  const nextStage = isProductionStage(stage) ? nextStageInTrack(stage) : null
 
   const advance = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -901,10 +894,7 @@ const KanbanCard = ({
   const bandColor = STAGE_HEALTH_COLORS[band]
   const [advancing, setAdvancing] = useState(false)
 
-  const stageIdx = PRODUCTION_STAGES.indexOf(stage as any)
-  const nextStage = stageIdx >= 0 && stageIdx < PRODUCTION_STAGES.length - 1
-    ? PRODUCTION_STAGES[stageIdx + 1]
-    : null
+  const nextStage = isProductionStage(stage) ? nextStageInTrack(stage) : null
 
   const advance = async (e: React.MouseEvent) => {
     e.preventDefault()

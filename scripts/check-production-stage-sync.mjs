@@ -174,14 +174,30 @@ if (backend && storefront) {
   // Email-triggering stages
   const backendEmail = extractSetMembers(backend, "STAGES_THAT_EMAIL")
   if (backendEmail) backendEmail.sort()
-  // Storefront doesn't have STAGES_THAT_EMAIL today (only backend sends emails),
-  // so we only check that backend's set is a subset of the canonical stage list.
   if (backendEmail && backendStages) {
     const stageSet = new Set(backendStages)
     const stray = backendEmail.filter((s) => !stageSet.has(s))
     if (stray.length) {
       fail(`STAGES_THAT_EMAIL contains stages not in PRODUCTION_STAGES: ${stray.join(", ")}`)
     }
+  }
+
+  // Per-track arrays + labels — must match across the two files
+  for (const arrName of ["ARTWORK_STAGES", "BLANKS_STAGES", "DOWNSTREAM_STAGES"]) {
+    const b = extractStringArray(backend, arrName)
+    const s = extractStringArray(storefront, arrName)
+    if (!b || !s) fail(`Could not parse ${arrName} on one of the files.`)
+    else compare(arrName, b, s)
+  }
+  for (const labelName of [
+    "ARTWORK_STAGE_LABEL",
+    "BLANKS_STAGE_LABEL",
+    "DOWNSTREAM_STAGE_LABEL",
+  ]) {
+    const b = extractStringRecord(backend, labelName)
+    const s = extractStringRecord(storefront, labelName)
+    if (!b || !s) fail(`Could not parse ${labelName} on one of the files.`)
+    else compare(labelName, b, s)
   }
 
   // Milestone mapping

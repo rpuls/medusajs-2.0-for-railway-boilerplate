@@ -2,6 +2,8 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 
 import {
+  ARTWORK_STAGE_EVENT,
+  BLANKS_STAGE_EVENT,
   PRODUCTION_STAGE_EVENT,
   type ProductionStageChangedEvent,
 } from "../lib/production-stage"
@@ -36,5 +38,5 @@ export default async function automationOnStageChanged({
 }
 
 export const config: SubscriberConfig = {
-  event: PRODUCTION_STAGE_EVENT,
+  event: [PRODUCTION_STAGE_EVENT, ARTWORK_STAGE_EVENT, BLANKS_STAGE_EVENT],
 }

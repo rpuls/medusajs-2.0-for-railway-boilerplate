@@ -1,12 +1,18 @@
 import { HttpTypes } from "@medusajs/types"
 
 import {
+  ARTWORK_STAGES,
+  ARTWORK_STAGE_LABEL,
+  BLANKS_STAGES,
+  BLANKS_STAGE_LABEL,
   CUSTOMER_MILESTONES,
   CUSTOMER_MILESTONE_LABEL,
   PRODUCTION_STAGE_LABEL,
   customerMilestoneForStage,
   milestoneIndex,
   readProductionStageMetadata,
+  type ArtworkStage,
+  type BlanksStage,
   type CustomerMilestone,
 } from "@modules/order/lib/production-stage"
 
@@ -25,10 +31,67 @@ const formatDate = (iso: string | null | undefined): string => {
   })
 }
 
-const ProductionStageTracker = ({ order }: Props) => {
-  const { stage, changedAt, history } = readProductionStageMetadata(
-    (order.metadata ?? null) as Record<string, unknown> | null
+const MiniTrack = <T extends string>({
+  title,
+  stages,
+  labels,
+  current,
+}: {
+  title: string
+  stages: readonly T[]
+  labels: Record<T, string>
+  current: T
+}) => {
+  const activeIdx = stages.indexOf(current)
+  return (
+    <div className="rounded-lg border border-ui-border-base bg-ui-bg-base p-3">
+      <p className="text-xs font-semibold text-ui-fg-subtle uppercase tracking-wide mb-2">
+        {title}
+      </p>
+      <ol className="flex items-center gap-1">
+        {stages.map((s, idx) => {
+          const isComplete = idx < activeIdx
+          const isCurrent = idx === activeIdx
+          const dotClasses = [
+            "flex items-center justify-center rounded-full w-5 h-5 text-[10px] font-semibold shrink-0",
+            isComplete
+              ? "bg-[var(--brand-primary)] text-white"
+              : isCurrent
+              ? "bg-[var(--brand-primary)] text-white ring-2 ring-[var(--brand-primary)]/20"
+              : "bg-ui-bg-component text-ui-fg-subtle border border-ui-border-base",
+          ].join(" ")
+          const connectorClasses = [
+            "flex-1 h-0.5",
+            isComplete ? "bg-[var(--brand-primary)]" : "bg-ui-border-base",
+          ].join(" ")
+          return (
+            <li key={s} className="flex items-center flex-1 last:flex-none">
+              <div className="flex flex-col items-center gap-1">
+                <div className={dotClasses} aria-hidden>
+                  {isComplete ? "✓" : idx + 1}
+                </div>
+                <p
+                  className={`text-[10px] text-center leading-tight ${
+                    isCurrent ? "text-ui-fg-base font-medium" : "text-ui-fg-subtle"
+                  }`}
+                >
+                  {labels[s]}
+                </p>
+              </div>
+              {idx < stages.length - 1 ? (
+                <div className={connectorClasses} aria-hidden />
+              ) : null}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
+}
+
+const ProductionStageTracker = ({ order }: Props) => {
+  const { stage, changedAt, history, artworkStage, blanksStage } =
+    readProductionStageMetadata((order.metadata ?? null) as Record<string, unknown> | null)
 
   if (!stage) {
     return null
@@ -41,6 +104,9 @@ const ProductionStageTracker = ({ order }: Props) => {
   for (const entry of history) {
     lastEntryByMilestone.set(customerMilestoneForStage(entry.stage), entry.changed_at)
   }
+
+  const showPreparingDetail = activeMilestone === "preparing"
+  const awaitingApproval = artworkStage === "awaiting_approval"
 
   return (
     <section
@@ -93,7 +159,7 @@ const ProductionStageTracker = ({ order }: Props) => {
                   <p className={labelClasses}>
                     {CUSTOMER_MILESTONE_LABEL[milestone]}
                   </p>
-                  {isCurrent ? (
+                  {isCurrent && !showPreparingDetail ? (
                     <p className="text-xs text-ui-fg-subtle mt-0.5">
                       {PRODUCTION_STAGE_LABEL[stage]}
                     </p>
@@ -112,13 +178,31 @@ const ProductionStageTracker = ({ order }: Props) => {
         })}
       </ol>
 
-      {stage === "awaiting_approval" ? (
+      {showPreparingDetail ? (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <MiniTrack<ArtworkStage>
+            title="Artwork approval"
+            stages={ARTWORK_STAGES}
+            labels={ARTWORK_STAGE_LABEL}
+            current={artworkStage}
+          />
+          <MiniTrack<BlanksStage>
+            title="Garment stock"
+            stages={BLANKS_STAGES}
+            labels={BLANKS_STAGE_LABEL}
+            current={blanksStage}
+          />
+        </div>
+      ) : null}
+
+      {awaitingApproval ? (
         <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <p className="text-sm font-medium text-amber-900">
             Action needed: please reply to our proof email to approve your artwork.
           </p>
           <p className="text-xs text-amber-800 mt-1">
-            We can&apos;t move to production until you sign off.
+            We&apos;ll start production as soon as you sign off — your blanks may
+            already be on the way.
           </p>
         </div>
       ) : null}
