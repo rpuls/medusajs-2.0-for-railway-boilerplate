@@ -86,6 +86,7 @@
     "@next/bundle-analyzer": "16.2.6",
     "@medusajs/client-types": "preview",
     "@medusajs/ui-preset": "preview",
+    "@next/bundle-analyzer": "16.2.6",
     "@playwright/test": "^1.55.1",
     "@swc/core": "^1.5.7",
     "@swc/jest": "^0.2.39",
