@@ -39,11 +39,19 @@ import {
 
 const STAGE_URGENCY: Record<ProductionStage, "needed_now" | "needed_soon" | "lead_time_ok" | "skip"> = {
   received: "lead_time_ok",
+  // artwork track
+  pending: "lead_time_ok",
+  in_review: "lead_time_ok",
   art_review: "lead_time_ok",
   awaiting_approval: "lead_time_ok",
   approved: "needed_soon",
+  // blanks track
+  not_started: "lead_time_ok",
+  ordered: "needed_soon",
+  arrived: "needed_now",
   blanks_ordered: "needed_soon",
   blanks_arrived: "needed_now",
+  // downstream
   in_production: "needed_now",
   quality_check: "needed_now",
   shipped: "skip",
