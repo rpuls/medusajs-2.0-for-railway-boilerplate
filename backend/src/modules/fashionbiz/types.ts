@@ -67,12 +67,22 @@ export type FashionBizColour = {
   tag_name_alt?: string | null
 }
 
+/**
+ * The API docs claim every section here is `string[]`, but in practice
+ * single-item sections are often returned as a bare `string` (observed
+ * live 2026-05-13 on biz-collection/bp2616ms — `fabric` was a string
+ * while on bp2616ls it was a `string[]` of length 1).
+ *
+ * Callers should normalise via `toStringArray` in mapping.ts before
+ * iterating. New unknown shapes are also tolerated and dropped.
+ */
 export type FashionBizDescription = {
   sizes?: string
-  fabric?: string[]
-  features?: string[]
-  cares?: string[]
-  extras?: string[]
+  fabric?: string | string[]
+  features?: string | string[]
+  cares?: string | string[]
+  extras?: string | string[]
+  product_detail_message?: string | string[]
 }
 
 /** Shape of an item in the `simple` product list (no description, no colours). */

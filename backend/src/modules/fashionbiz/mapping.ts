@@ -31,22 +31,38 @@ export const titleCase = (s: string | undefined) => {
 }
 
 /**
+ * Coerce a FashionBiz description section into a string array. The API is
+ * inconsistent: `fabric` (and occasionally other sections) is returned as
+ * `string[]` for some products and as a single `string` for others
+ * (observed live 2026-05-13 on biz-collection/bp2616ms vs bp2616ls).
+ * Non-strings are dropped to defend against future shape drift.
+ */
+const toStringArray = (value: unknown): string[] => {
+  if (!value) return []
+  if (typeof value === "string") return value.trim() ? [value] : []
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string" && v.length > 0)
+  return []
+}
+
+/**
  * Render the FashionBiz `description` object into a single readable block
  * suitable for `product.description`. Sections are emitted only if they
- * have content.
+ * have content. Tolerates string-or-array shapes per section (see
+ * `toStringArray` above).
  */
 export const renderDescription = (description: FashionBizDescription | undefined): string => {
   if (!description) return ""
   const parts: string[] = []
   if (description.sizes) parts.push(`Sizes: ${description.sizes}`)
-  const sections: Array<[string, string[] | undefined]> = [
+  const sections: Array<[string, unknown]> = [
     ["Fabric", description.fabric],
     ["Features", description.features],
     ["Care", description.cares],
     ["Extras", description.extras],
   ]
-  for (const [label, items] of sections) {
-    if (items && items.length) {
+  for (const [label, raw] of sections) {
+    const items = toStringArray(raw)
+    if (items.length) {
       parts.push(`${label}:\n${items.map((i) => `- ${i}`).join("\n")}`)
     }
   }

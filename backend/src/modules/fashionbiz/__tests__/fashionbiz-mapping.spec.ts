@@ -67,6 +67,40 @@ describe("FashionBiz mapping helpers", () => {
       })
       expect(rendered).toBe("Sizes: S - XL")
     })
+
+    // FashionBiz API ships `fabric` (and other sections) as `string`
+    // sometimes and `string[]` other times. Observed live on bp2616ms
+    // vs bp2616ls. The renderer must tolerate both, plus malformed shapes.
+    it("tolerates fabric returned as a bare string", () => {
+      const rendered = renderDescription({
+        sizes: "S - 5XL",
+        fabric: "60% Cotton, 40% Polyester Sorona; 190 GSM; 4-Way stretch",
+        features: ["Plain non-quilted yoke"],
+      } as any)
+      expect(rendered).toContain("Fabric:\n- 60% Cotton, 40% Polyester Sorona; 190 GSM; 4-Way stretch")
+      expect(rendered).toContain("Features:\n- Plain non-quilted yoke")
+    })
+
+    it("drops non-string values inside a section array", () => {
+      const rendered = renderDescription({
+        features: ["valid", null, undefined, 42, ""] as any,
+      })
+      expect(rendered).toBe("Features:\n- valid")
+    })
+
+    it("ignores unknown shapes silently", () => {
+      const rendered = renderDescription({
+        fabric: { weird: "object" } as any,
+      })
+      expect(rendered).toBe("")
+    })
+
+    it("emits nothing for an empty-string section", () => {
+      const rendered = renderDescription({
+        fabric: "" as any,
+      })
+      expect(rendered).toBe("")
+    })
   })
 
   describe("collectImageUrls", () => {
