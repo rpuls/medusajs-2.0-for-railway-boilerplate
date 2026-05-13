@@ -15,11 +15,21 @@ type Preview = {
   error?: string
 }
 
+type Shipment = {
+  trackingNumber?: string
+  trackingUrl?: string
+  carrier?: string
+  shippedAt?: string
+}
+
 type StatusPayload = {
   sent: boolean
   ascolour_order_id: string | null
   ascolour_status: string | null
   ascolour_sent_at: string | null
+  ascolour_shipments: Shipment[]
+  ascolour_last_synced_at: string | null
+  last_sync_error: string | null
   last_error: string | null
   preview: Preview
 }
@@ -99,6 +109,14 @@ const OrderAsColourDropshipWidget = ({ data }: DetailWidgetProps<AdminOrder>) =>
   const summaryRow = useMemo(() => {
     if (!status) return null
     if (status.sent) {
+      const statusLabel = status.ascolour_status ?? "Sent"
+      const isShipped = /shipped|delivered/i.test(statusLabel)
+      const isCancelled = /cancel/i.test(statusLabel)
+      const badgeColor: "green" | "red" | "blue" | "grey" = isCancelled
+        ? "red"
+        : isShipped
+          ? "green"
+          : "blue"
       return (
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col">
@@ -107,9 +125,12 @@ const OrderAsColourDropshipWidget = ({ data }: DetailWidgetProps<AdminOrder>) =>
             </Text>
             <Text size="xsmall" className="text-ui-fg-subtle">
               Sent {formatDate(status.ascolour_sent_at)}
+              {status.ascolour_last_synced_at
+                ? ` · Synced ${formatDate(status.ascolour_last_synced_at)}`
+                : ""}
             </Text>
           </div>
-          <Badge color="green">{status.ascolour_status ?? "Sent"}</Badge>
+          <Badge color={badgeColor}>{statusLabel}</Badge>
         </div>
       )
     }
@@ -139,6 +160,44 @@ const OrderAsColourDropshipWidget = ({ data }: DetailWidgetProps<AdminOrder>) =>
           <Text size="small" className="text-ui-fg-error">
             Previous attempt failed: {status.last_error}
           </Text>
+        ) : null}
+        {status?.last_sync_error ? (
+          <Text size="small" className="text-ui-fg-error">
+            Last status sync failed: {status.last_sync_error}
+          </Text>
+        ) : null}
+
+        {status?.sent && status.ascolour_shipments?.length ? (
+          <div className="flex flex-col gap-y-2">
+            <Text size="small" weight="plus">
+              Shipments ({status.ascolour_shipments.length})
+            </Text>
+            <ul className="text-ui-fg-subtle text-sm">
+              {status.ascolour_shipments.map((s, i) => (
+                <li
+                  key={`${s.trackingNumber ?? "ship"}-${i}`}
+                  className="flex justify-between gap-2"
+                >
+                  <span>
+                    {s.carrier ? `${s.carrier} ` : ""}
+                    {s.trackingUrl ? (
+                      <a
+                        href={s.trackingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        {s.trackingNumber ?? "Track"}
+                      </a>
+                    ) : (
+                      <code>{s.trackingNumber ?? "—"}</code>
+                    )}
+                  </span>
+                  <span>{s.shippedAt ? formatDate(s.shippedAt) : ""}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         {!status?.sent && previewItems.length > 0 ? (

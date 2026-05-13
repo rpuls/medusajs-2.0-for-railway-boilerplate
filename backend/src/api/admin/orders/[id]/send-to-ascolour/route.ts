@@ -51,6 +51,11 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     ascolour_order_id: meta.ascolour_order_id ?? null,
     ascolour_status: meta.ascolour_status ?? null,
     ascolour_sent_at: meta.ascolour_sent_at ?? null,
+    ascolour_shipments: Array.isArray(meta.ascolour_shipments)
+      ? meta.ascolour_shipments
+      : [],
+    ascolour_last_synced_at: meta.ascolour_last_synced_at ?? null,
+    last_sync_error: meta.ascolour_last_sync_error ?? null,
     last_error: meta.ascolour_last_error ?? null,
     preview,
   })
