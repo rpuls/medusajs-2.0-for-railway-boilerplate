@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Button, Container, Heading, Input, Text, Textarea } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -461,4 +462,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.after",
 })
 
-export default OrderProductionStageWidget
+export default withWidgetBoundary(OrderProductionStageWidget, "order-production-stage")

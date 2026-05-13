@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { useEffect } from "react"
 
 import { sdk } from "../lib/sdk"
@@ -104,4 +105,4 @@ export const config = defineWidgetConfig({
   zone: "product.list.before",
 })
 
-export default AgentProductsDebugWidget
+export default withWidgetBoundary(AgentProductsDebugWidget, "agent-products-debug")

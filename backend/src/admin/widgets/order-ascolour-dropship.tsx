@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Button, Container, Heading, Input, Label, Text, Textarea } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -225,4 +226,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.side.after",
 })
 
-export default OrderAsColourDropshipWidget
+export default withWidgetBoundary(OrderAsColourDropshipWidget, "order-ascolour-dropship")

@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { Heading, Text } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
@@ -100,4 +101,4 @@ export const config = defineWidgetConfig({
   zone: "order.list.before",
 })
 
-export default KeyboardShortcuts
+export default withWidgetBoundary(KeyboardShortcuts, "keyboard-shortcuts")

@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { Text } from "@medusajs/ui"
 import { useEffect, useRef, useState } from "react"
 
@@ -249,4 +250,4 @@ export const config = defineWidgetConfig({
   zone: "order.list.before",
 })
 
-export default CmdKPalette
+export default withWidgetBoundary(CmdKPalette, "cmd-k-palette")

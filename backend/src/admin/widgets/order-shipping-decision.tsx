@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminOrder } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { useMemo } from "react"
@@ -112,4 +113,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.side.after",
 })
 
-export default OrderShippingDecisionWidget
+export default withWidgetBoundary(OrderShippingDecisionWidget, "order-shipping-decision")

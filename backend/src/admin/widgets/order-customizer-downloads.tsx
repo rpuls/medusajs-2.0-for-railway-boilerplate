@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { useCallback, useEffect, useState } from "react"
@@ -246,4 +247,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.after",
 })
 
-export default OrderCustomizerDownloadsWidget
+export default withWidgetBoundary(OrderCustomizerDownloadsWidget, "order-customizer-downloads")

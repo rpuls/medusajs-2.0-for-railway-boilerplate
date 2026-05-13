@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { Text } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
@@ -121,4 +122,4 @@ export const config = defineWidgetConfig({
   zone: "order.list.before",
 })
 
-export default StatusBannerWidget
+export default withWidgetBoundary(StatusBannerWidget, "status-banner")

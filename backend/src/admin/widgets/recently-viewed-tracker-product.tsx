@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { useEffect } from "react"
 
 import { recordRecentlyViewed } from "./recently-viewed"
@@ -20,4 +21,4 @@ export const config = defineWidgetConfig({
   zone: "product.details.before",
 })
 
-export default RecentlyViewedTrackerProduct
+export default withWidgetBoundary(RecentlyViewedTrackerProduct, "recently-viewed-tracker-product")

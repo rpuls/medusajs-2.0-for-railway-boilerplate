@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { useMemo } from "react"
@@ -67,4 +68,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.side.after",
 })
 
-export default OrderVectorizationFlagWidget
+export default withWidgetBoundary(OrderVectorizationFlagWidget, "order-vectorization-flag")

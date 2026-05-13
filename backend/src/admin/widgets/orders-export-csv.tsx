@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder } from "@medusajs/framework/types"
 import { Button, Container, Text } from "@medusajs/ui"
 import { useCallback, useState } from "react"
@@ -208,4 +209,4 @@ export const config = defineWidgetConfig({
   zone: "order.list.before",
 })
 
-export default OrdersExportCsv
+export default withWidgetBoundary(OrdersExportCsv, "orders-export-csv")

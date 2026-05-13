@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { useEffect } from "react"
 
 /**
@@ -50,4 +51,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.before",
 })
 
-export default OrderPresenceHeartbeat
+export default withWidgetBoundary(OrderPresenceHeartbeat, "order-presence-heartbeat")

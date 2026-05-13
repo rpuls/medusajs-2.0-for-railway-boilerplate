@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminOrder } from "@medusajs/framework/types"
 import {
   Badge,
@@ -289,4 +290,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.after",
 })
 
-export default OrderShipStationParcelsWidget
+export default withWidgetBoundary(OrderShipStationParcelsWidget, "order-shipstation-parcels")

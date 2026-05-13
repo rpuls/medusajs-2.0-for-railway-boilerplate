@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { Button, Container, Heading, Tabs, Text, Textarea, toast } from "@medusajs/ui"
 import { Trash } from "@medusajs/icons"
 import { useEffect, useState } from "react"
@@ -270,4 +271,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.after",
 })
 
-export default OrderCommentsAuditWidget
+export default withWidgetBoundary(OrderCommentsAuditWidget, "order-comments-audit")

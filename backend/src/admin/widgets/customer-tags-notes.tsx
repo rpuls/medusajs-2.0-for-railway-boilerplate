@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { Button, Container, Heading, Input, Label, Select, Switch, Text, Textarea, toast } from "@medusajs/ui"
 import { Trash, Plus, PinTackSolid } from "@medusajs/icons"
 import { useEffect, useState } from "react"
@@ -370,4 +371,4 @@ export const config = defineWidgetConfig({
   zone: "customer.details.side.after",
 })
 
-export default CustomerTagsNotesWidget
+export default withWidgetBoundary(CustomerTagsNotesWidget, "customer-tags-notes")

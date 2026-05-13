@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminProduct } from "@medusajs/framework/types"
 import { Button, Container, Heading, Text } from "@medusajs/ui"
 import { useCallback, useEffect, useState } from "react"
@@ -122,4 +123,4 @@ export const config = defineWidgetConfig({
   zone: "product.details.side.after",
 })
 
-export default ProductBrandWidget
+export default withWidgetBoundary(ProductBrandWidget, "product-brand")

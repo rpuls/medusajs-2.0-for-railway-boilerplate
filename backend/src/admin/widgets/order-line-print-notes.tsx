@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminOrder } from "@medusajs/framework/types"
 import { Container, Heading, Text } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -143,4 +144,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.side.after",
 })
 
-export default OrderLinePrintNotesWidget
+export default withWidgetBoundary(OrderLinePrintNotesWidget, "order-line-print-notes")

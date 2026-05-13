@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { FetchError } from "@medusajs/js-sdk"
 import { Button, Container, Text } from "@medusajs/ui"
 import { useCallback, useRef, useState, type ChangeEvent } from "react"
@@ -163,4 +164,4 @@ export const config = defineWidgetConfig({
   zone: "product_type.list.before",
 })
 
-export default ProductTypesExportCsv
+export default withWidgetBoundary(ProductTypesExportCsv, "product-types-export-csv")

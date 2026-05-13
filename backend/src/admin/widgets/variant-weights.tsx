@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminProduct } from "@medusajs/framework/types"
 import { Button, Container, Heading, Input, Text, Tooltip } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -247,4 +248,4 @@ export const config = defineWidgetConfig({
   zone: "product.details.after",
 })
 
-export default VariantWeightsWidget
+export default withWidgetBoundary(VariantWeightsWidget, "variant-weights")

@@ -1,4 +1,5 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { withWidgetBoundary } from "../components/widget-error-boundary"
 import { Container, Heading, Text } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
@@ -118,7 +119,7 @@ export const config = defineWidgetConfig({
   zone: "order.list.before",
 })
 
-export default RecentlyViewedSidebar
+export default withWidgetBoundary(RecentlyViewedSidebar, "recently-viewed")
 
 // Helper exposed for the per-page trackers to push entries.
 export const recordRecentlyViewed = (entry: Omit<Entry, "viewed_at">) => {
