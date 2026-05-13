@@ -12,7 +12,7 @@ import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import HomeCoreServicesLordicons from "@modules/home/components/home-core-services-lordicons"
 import HowOrderWorksSection from "@modules/home/components/how-order-works-section"
-import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-hero/deferred"
+import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-hero"
 import type { NewmixLiveTuning } from "@modules/home/components/home-particle-logo-hero/newmix-live-tuning"
 import { WORDMARK_GRADIENT } from "@modules/common/lib/wordmark-gradient"
 
