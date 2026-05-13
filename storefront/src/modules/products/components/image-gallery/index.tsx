@@ -182,7 +182,7 @@ const ImageGallery = ({ product, images, thumbnail }: ImageGalleryProps) => {
         {displayImages.map((image, index) => (
           <div
             key={`${image.id}-${index}-${normalizeImageUrl(image.url).slice(-48)}`}
-            className={`w-full scroll-mt-28 ${displayImages.length === 1 ? "col-span-2" : ""}`}
+            className={`w-full scroll-mt-28 ${displayImages.length === 1 && !colorHoverPreview ? "col-span-2" : ""}`}
           >
           <Container
             className="relative aspect-square w-full overflow-hidden bg-ui-bg-subtle"
