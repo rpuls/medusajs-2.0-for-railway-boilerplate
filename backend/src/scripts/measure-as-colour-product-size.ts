@@ -16,29 +16,37 @@ export default async function measureAsColourProductSize({
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
-  // Same field expansion the storefront uses (STORE_PRODUCT_FIELDS).
-  // See storefront/src/lib/data/products.ts:37
+  // Mikro-ORM blows up on wildcard expansion of computed fields like
+  // `calculated_price` (it tries to traverse the property descriptor),
+  // so list real fields explicitly. This is close enough to what the
+  // storefront fetches (STORE_PRODUCT_FIELDS in
+  // storefront/src/lib/data/products.ts:37) to see where the bloat lives.
   const fields = [
-    "*",
+    "id",
+    "handle",
+    "title",
+    "subtitle",
+    "description",
+    "material",
+    "thumbnail",
+    "status",
     "metadata",
-    "type.*",
     "weight",
-    "variants.*",
-    "variants.calculated_price.*",
-    "variants.options.*",
-    "variants.metadata",
-    "variants.sku",
-    "variants.weight",
+    "type.*",
     "tags.*",
     "brand.*",
     "images.*",
     "options.*",
     "options.values.*",
+    "variants.id",
+    "variants.sku",
+    "variants.title",
+    "variants.barcode",
+    "variants.weight",
+    "variants.metadata",
+    "variants.options.*",
   ]
 
-  // calculated_price requires a pricing context with at minimum a
-  // currency_code. The storefront supplies this implicitly via region_id;
-  // when calling query.graph directly we have to pass it ourselves.
   const { data: products } = await query.graph({
     entity: "product",
     fields,
@@ -51,11 +59,6 @@ export default async function measureAsColourProductSize({
         "as-colour-1004-1004",
       ],
     },
-    context: {
-      variants: {
-        calculated_price: { context: { currency_code: "aud" } },
-      },
-    } as any,
   })
 
   logger.info(`Fetched ${products.length} products`)
