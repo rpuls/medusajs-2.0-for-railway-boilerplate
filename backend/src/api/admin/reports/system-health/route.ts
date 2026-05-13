@@ -270,9 +270,11 @@ export async function GET(_req: MedusaRequest, res: MedusaResponse) {
     }),
     ping("AS Colour", {
       configured: Boolean(ASCOLOUR_SUBSCRIPTION_KEY),
-      url: ASCOLOUR_BASE_URL ? `${ASCOLOUR_BASE_URL.replace(/\/$/, "")}/products?limit=1` : undefined,
+      url: ASCOLOUR_BASE_URL
+        ? `${ASCOLOUR_BASE_URL.replace(/\/$/, "")}/catalog/products?pageSize=1`
+        : undefined,
       headers: ASCOLOUR_SUBSCRIPTION_KEY
-        ? { "Ocp-Apim-Subscription-Key": ASCOLOUR_SUBSCRIPTION_KEY }
+        ? { "Subscription-Key": ASCOLOUR_SUBSCRIPTION_KEY }
         : undefined,
     }),
     ping("Meilisearch", {
