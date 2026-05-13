@@ -1,7 +1,6 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import NextImage from "next/image"
 import { useEffect, useState } from "react"
 import type { ComponentProps } from "react"
 
@@ -9,49 +8,49 @@ import type HomeParticleLogoHeroT from "./index"
 
 type Props = ComponentProps<typeof HomeParticleLogoHeroT>
 
-const FALLBACK_SRC = "/branding/sc-prints-logo-white.png"
+const DEFAULT_LOGO_SRC = "/branding/sc-prints-logo-transparent.png"
 
-const StaticHero = ({
-  presentation,
+// Mirrors the *first paint* of the real particle hero exactly:
+// same wrapper dimensions, same logo image position/sizing/opacity. When
+// the dynamic chunk mounts and the canvas takes over, the wordmark stays
+// in the identical pixel slot — no DOM tree swap, no layout shift.
+const HeroPlaceholder = ({
   bgClassName,
+  presentation,
+  logoSrc,
 }: {
-  presentation: Props["presentation"]
   bgClassName?: string
+  presentation: Props["presentation"]
+  logoSrc?: string | null
 }) => {
-  if (presentation === "fullscreen") {
-    return (
-      <div
-        aria-label="SC Prints"
-        className={`flex min-h-screen flex-col items-center justify-center text-white ${
-          bgClassName ?? "bg-ui-fg-base"
-        }`}
-      >
-        <NextImage
-          src={FALLBACK_SRC}
-          alt="SC Prints"
-          width={320}
-          height={120}
-          priority
-          className="h-auto w-full max-w-xs object-contain opacity-90"
-        />
-      </div>
-    )
-  }
-  return (
-    <section
-      aria-label="SC Prints"
-      className={`relative flex min-h-[min(72vh,680px)] flex-col text-white ${
+  const src = logoSrc ?? DEFAULT_LOGO_SRC
+  const isFullscreen = presentation === "fullscreen"
+  const sectionClass = isFullscreen
+    ? `flex min-h-screen flex-col items-center justify-center ${
+        bgClassName ?? "bg-ui-fg-base"
+      } text-white`
+    : `relative flex min-h-[min(72vh,680px)] w-full flex-col overflow-hidden ${
         bgClassName ?? "bg-black"
-      }`}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-16">
-        <NextImage
-          src={FALLBACK_SRC}
-          alt="SC Prints"
-          width={320}
-          height={120}
-          priority
-          className="h-auto w-full max-w-xs object-contain opacity-90"
+      } text-white`
+
+  return (
+    <section aria-label="SC Prints" className={sectionClass}>
+      <div className="absolute inset-0">
+        {/* Plain <img> matches the canvas hero's first-paint positioning
+            byte-for-byte (see index.tsx ~line 4520). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          draggable={false}
+          aria-hidden
+          className={`pointer-events-none absolute left-1/2 z-[5] max-w-[min(96%,80rem)] -translate-x-1/2 -translate-y-1/2 object-contain ${
+            isFullscreen
+              ? "top-[48%] max-h-[min(50vh,460px)]"
+              : "top-1/2 max-h-[min(58vh,560px)]"
+          }`}
         />
       </div>
     </section>
@@ -63,11 +62,10 @@ const ParticleHero = dynamic(() => import("./index"), {
   loading: () => null,
 })
 
-// Wraps the heavy canvas particle hero so the homepage can render a static
-// wordmark immediately (becomes the LCP element) and only mount the canvas
-// after the page is interactive. Keeps the JS chunk out of the initial
-// bundle entirely — the audit's `chunks/16` (~30s of CPU) was the particle
-// physics shipping on first paint.
+// Renders a static-image placeholder that pixel-matches the particle
+// hero's first frame (so swapping doesn't shift layout), and only mounts
+// the heavy canvas chunk after window.load + idle. Keeps the audit's
+// `chunks/16` (~30s of CPU) out of the initial bundle.
 export default function DeferredParticleLogoHero(props: Props) {
   const [ready, setReady] = useState(false)
 
@@ -92,9 +90,10 @@ export default function DeferredParticleLogoHero(props: Props) {
 
   if (!ready) {
     return (
-      <StaticHero
-        presentation={props.presentation}
+      <HeroPlaceholder
         bgClassName={props.bgClassName}
+        presentation={props.presentation}
+        logoSrc={props.logoSrc as string | null | undefined}
       />
     )
   }
