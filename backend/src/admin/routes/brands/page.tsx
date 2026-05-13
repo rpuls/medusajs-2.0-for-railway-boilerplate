@@ -151,7 +151,7 @@ const BrandFormDrawer = ({
                 placeholder="auto-derived from name if blank"
               />
               <Text size="xsmall" className="text-ui-fg-muted">
-                URL slug. Used in `/brands/<handle>` and as a stable filter key.
+                URL slug. Used in `/brands/&lt;handle&gt;` and as a stable filter key.
               </Text>
             </div>
 
