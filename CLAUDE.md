@@ -125,6 +125,10 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | `POSTHOG_PROJECT_ID` | Optional. Numeric PostHog project ID (visible in URLs like `app.posthog.com/project/12345/...`). Required alongside `POSTHOG_PERSONAL_API_KEY`. | unset |
 | `POSTHOG_HOST` | Optional. PostHog instance host. Use `https://us.i.posthog.com` (default), `https://eu.i.posthog.com`, or your self-hosted URL. | `https://us.i.posthog.com` |
 
+| `FASHIONBIZ_API_TOKEN` | Optional. FashionBiz Public API v3 token (Authorization: `Token <token>`). Required to enable the FashionBiz importer + nightly stock sync. When unset, the FashionBiz module is not registered and the cron is a no-op. | unset |
+| `FASHIONBIZ_BRANCH` | Optional. FashionBiz country shorthand: `au`, `nz`, or `ca`. | `au` |
+| `FASHIONBIZ_BASE_URL` | Optional. FashionBiz API base URL — only override for staging or proxy. | `https://www.fashionbizapis.com/api/v3` |
+
 All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 
 ### Storefront (`storefront/.env`)
@@ -160,6 +164,48 @@ Admin sidebar entry at `/app/seo-analytics` showing 28-day Search Console + GA4 
 | Admin page | [backend/src/admin/routes/seo-analytics/page.tsx](backend/src/admin/routes/seo-analytics/page.tsx) |
 
 If `GOOGLE_SERVICE_ACCOUNT_JSON` is unset the cron and routes no-op silently — dev environments without Google credentials still boot.
+
+## Catalog importers
+
+### AS Colour API importer + hourly inventory sync
+
+Pulls every AS Colour style + variant from their authenticated catalog API, creates Medusa products with bulk-pricing metadata, links each to the AS Colour `Brand`, and refreshes stock at the "AS Colour Warehouse" stock location every hour via a delta query.
+
+| Component | Path |
+| --- | --- |
+| Module (client + service + types + pricing wrapper) | [backend/src/modules/ascolour/](backend/src/modules/ascolour/) |
+| Initial import script | [backend/src/scripts/import-as-colour-from-api.ts](backend/src/scripts/import-as-colour-from-api.ts) |
+| Hourly stock sync job | [backend/src/jobs/sync-ascolour-inventory.ts](backend/src/jobs/sync-ascolour-inventory.ts) |
+| Shared price ladder | [backend/src/utils/bulk-price-ladder.ts](backend/src/utils/bulk-price-ladder.ts) |
+
+Run the initial import with `pnpm --filter backend medusa exec import-as-colour-from-api` (env vars: `IMPORT_LIMIT`, `IMPORT_DRY_RUN`).
+
+### FashionBiz API importer + daily inventory sync
+
+Same pattern as AS Colour, for the FashionBiz family (Biz Collection, Biz Care, Biz Corporates, Syzmik — Good-Mates deferred). Hits the public v3 API at `fashionbizapis.com/api/v3/` with `Authorization: Token <FASHIONBIZ_API_TOKEN>`. Products land linked to their respective `Brand` entities (already seeded under the `FashionBiz` parent). Stock refreshes nightly at 04:00 UTC via the "FashionBiz Warehouse" stock location.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/fashionbiz/](backend/src/modules/fashionbiz/) |
+| Initial import script | [backend/src/scripts/import-fashionbiz-from-api.ts](backend/src/scripts/import-fashionbiz-from-api.ts) |
+| Daily stock sync job (`0 4 * * *`) | [backend/src/jobs/sync-fashionbiz-inventory.ts](backend/src/jobs/sync-fashionbiz-inventory.ts) |
+| Pure mapping helpers | [backend/src/modules/fashionbiz/mapping.ts](backend/src/modules/fashionbiz/mapping.ts) |
+| Pricing wrapper (delegates to shared ladder) | [backend/src/modules/fashionbiz/pricing.ts](backend/src/modules/fashionbiz/pricing.ts) |
+
+Run the initial import with:
+
+```bash
+IMPORT_BRANDS=biz-collection IMPORT_LIMIT=5 \
+  pnpm --filter backend medusa exec import-fashionbiz-from-api
+```
+
+Env vars: `IMPORT_LIMIT` (per-brand cap), `IMPORT_DRY_RUN=1` (no DB writes), `IMPORT_BRANDS` (comma-separated subset; default is all four).
+
+**Pricing**: the FashionBiz `prices` array carries three wholesale tiers (`1-99`, `100-499`, `500`). The importer treats `prices[0].price` (the 1-99 tier) as the supplier cost and runs it through the shared `buildPriceLadder()` markup formula — same shape as AS Colour, so storefront tier-pricing rendering "just works". The raw 3-tier wholesale array is preserved in `variant.metadata.raw_prices` for audit.
+
+**Idempotency**: create-only, keyed by handle (`{brand}-{slug}`, e.g. `biz-collection-p400ms`). Existing handles are skipped — re-importing to update is a planned follow-up.
+
+**Stock**: lives at a separate `"FashionBiz Warehouse"` stock location, parallel to `"AS Colour Warehouse"`, so per-supplier stock provenance is preserved. The daily job walks every variant whose `metadata.fashionbiz.product_slug` is set, groups by `(brand, slug, colour)`, and calls one `/stock` endpoint per group (FashionBiz has no `updated_at` filter, so a full sweep is required).
 
 ## Tests
 

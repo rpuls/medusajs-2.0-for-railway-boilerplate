@@ -192,6 +192,18 @@ export const ASCOLOUR_WORKSHOP_EMAIL = process.env.ASCOLOUR_WORKSHOP_EMAIL
 export const ASCOLOUR_WORKSHOP_PHONE = process.env.ASCOLOUR_WORKSHOP_PHONE
 
 /**
+ * FashionBiz Public API v3 (Biz Collection, Biz Care, Biz Corporates, Syzmik,
+ * Good-Mates). Token issued per-customer by FashionBiz; branch is the country
+ * shorthand (au/nz/ca). When the token is missing the module simply isn't
+ * registered, so the importer/job become no-ops — dev environments without a
+ * token still boot cleanly.
+ */
+export const FASHIONBIZ_API_TOKEN = process.env.FASHIONBIZ_API_TOKEN
+export const FASHIONBIZ_BRANCH = process.env.FASHIONBIZ_BRANCH || "au"
+export const FASHIONBIZ_BASE_URL =
+  process.env.FASHIONBIZ_BASE_URL || "https://www.fashionbizapis.com/api/v3"
+
+/**
  * Google Search Console + Google Analytics 4 (read-only).
  *
  * `GOOGLE_SERVICE_ACCOUNT_JSON` is the full JSON key for a service account.
