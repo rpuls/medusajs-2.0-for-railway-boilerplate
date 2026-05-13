@@ -208,13 +208,17 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
       continue
     }
 
+    // Field names per the real AS Colour API shape (see probe-ascolour-product.ts):
+    //   variant: { sku, styleCode, name, colour, sizeCode, weight, imageUrl, GTIN12, ... }
+    //   image:   { styleCode, imageType, urlStandard, urlThumbnail, urlTiny, urlZoom }
+    //   product: { styleCode, styleName, description, composition, productType, productWeight, ... }
     const sizes = new Set<string>()
     const colours = new Set<string>()
-    for (const v of variants) {
-      if (v.size) sizes.add(v.size)
+    for (const v of variants as any[]) {
+      if (v.sizeCode) sizes.add(v.sizeCode)
       if (v.colour) colours.add(v.colour)
     }
-    const hasSize = sizes.size > 1 || (sizes.size === 1 && !sizes.has("One Size"))
+    const hasSize = sizes.size > 1 || (sizes.size === 1 && !sizes.has("OS"))
     const hasColour = colours.size > 0
 
     const options: { title: string; values: string[] }[] = []
@@ -224,33 +228,34 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
 
     const productImages: { url: string }[] = []
     const seen = new Set<string>()
-    for (const img of images) {
-      if (img.url && !seen.has(img.url)) {
-        seen.add(img.url)
-        productImages.push({ url: img.url })
+    for (const img of images as any[]) {
+      // Prefer the largest non-zoom render. AS Colour returns urlStandard
+      // (~386px), urlThumbnail (~220px), urlTiny (~44px), urlZoom (~1280px).
+      // urlZoom is the print-quality master; urlStandard is the catalog tile.
+      const url = img.urlStandard || img.urlZoom || img.urlThumbnail || img.urlTiny
+      if (url && !seen.has(url)) {
+        seen.add(url)
+        productImages.push({ url })
       }
     }
     const thumbnail = productImages[0]?.url
 
-    const productVariants = variants.map((v) => {
+    const productVariants = (variants as any[]).map((v) => {
       const variantOptions: Record<string, string> = {}
       if (hasColour && v.colour) variantOptions["Colour"] = v.colour
-      if (hasSize && v.size) variantOptions["Size"] = v.size
+      if (hasSize && v.sizeCode) variantOptions["Size"] = v.sizeCode
       if (!hasColour && !hasSize) variantOptions["Default"] = "Default"
 
       const cost = costBySku.get(v.sku)
       const ladder = cost !== undefined ? buildPriceLadder(cost) : null
       const amount = ladder ? ladder.base : 0
 
-      const titleParts = [v.colour, v.size].filter(Boolean)
-      const variantTitle = titleParts.join(" / ") || v.sku
+      const titleParts = [v.colour, v.sizeCode].filter(Boolean)
+      const variantTitle = titleParts.join(" / ") || v.name || v.sku
 
-      const weight =
-        typeof v.weight === "number"
-          ? v.weight
-          : typeof product.weight === "number"
-          ? product.weight
-          : undefined
+      // AS Colour `weight` on variants is a string (e.g. "320 GSM" / "Heavy
+      // Weight"), not a number. Skip — Medusa expects grams as a number.
+      const weight = undefined
 
       if (cost !== undefined) {
         skuToInventory.push({ sku: v.sku, styleCode: product.styleCode })
@@ -259,7 +264,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
       return {
         title: variantTitle,
         sku: v.sku,
-        barcode: v.barcode,
+        barcode: v.GTIN12 ?? undefined,
         weight,
         manage_inventory: true,
         allow_backorder: false,
@@ -270,28 +275,29 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
             styleCode: product.styleCode,
             sku: v.sku,
             colour: v.colour,
-            colourCode: v.colourCode,
-            size: v.size,
+            sizeCode: v.sizeCode,
           },
           ...(ladder ? { bulk_pricing: buildBulkPricingMetadata(ladder) } : {}),
         },
       }
     })
 
-    const title = product.productName
-      ? titleCase(product.productName)
+    // AS Colour `styleName` often comes through as "Parcel Tote | 1000" —
+    // strip the trailing "| <code>" if present so titles read naturally.
+    const rawStyleName = (product as any).styleName ?? ""
+    const cleanedName = rawStyleName.replace(/\s*\|\s*\d+[A-Z]*\s*$/, "").trim()
+    const title = cleanedName
+      ? titleCase(cleanedName)
       : `AS Colour ${product.styleCode}`
 
     toCreate.push({
       title,
       handle,
       status: ProductStatus.PUBLISHED,
-      description: product.description ?? undefined,
+      description: (product as any).description ?? undefined,
       thumbnail,
-      weight: typeof product.weight === "number" ? product.weight : undefined,
-      material: product.fabric ?? undefined,
-      origin_country: product.countryOfOrigin ?? undefined,
-      hs_code: product.hsCode ?? undefined,
+      // AS Colour's `productWeight` is a string ("Heavy Weight"), not grams — skip.
+      material: (product as any).composition ?? undefined,
       images: productImages,
       options,
       variants: productVariants,
