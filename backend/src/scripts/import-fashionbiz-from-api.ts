@@ -42,11 +42,9 @@ import {
   FashionBizProduct,
 } from "../modules/fashionbiz/types"
 import { priceLadderFromFashionBiz } from "../modules/fashionbiz/pricing"
+import { buildBulkPricingMetadata } from "../utils/bulk-price-ladder"
 import {
-  buildBulkPricingMetadata,
-  toMinorAud,
-} from "../utils/bulk-price-ladder"
-import {
+  buildGarmentImagesForColour,
   collectImageUrls,
   handleForProduct,
   renderDescription,
@@ -304,7 +302,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
             allow_backorder: false,
             options: variantOptions,
             prices: [
-              { amount: toMinorAud(ladder.base), currency_code: PRICE_CURRENCY_CODE },
+              { amount: ladder.base, currency_code: PRICE_CURRENCY_CODE },
             ],
             metadata: {
               fashionbiz: {
@@ -320,6 +318,8 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
               bulk_pricing: buildBulkPricingMetadata(ladder),
               raw_prices: product.prices ?? [],
               cost_adjustment: costAdjustment,
+              garment_images: buildGarmentImagesForColour(colour),
+              garment_color: colour.name,
             },
           })
         }

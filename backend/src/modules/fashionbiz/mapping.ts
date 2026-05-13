@@ -6,6 +6,7 @@
 
 import {
   FashionBizBrandSlug,
+  FashionBizColour,
   FashionBizDescription,
   FashionBizImage,
   FashionBizProduct,
@@ -69,7 +70,55 @@ export const renderDescription = (description: FashionBizDescription | undefined
   return parts.join("\n\n")
 }
 
-/** Image URLs across every colour, deduped, ordered by colour index then image index. */
+/**
+ * Score an image's `image_type` so flat/ghost garment shots sort before
+ * model/lifestyle photos. Lower score = higher priority.
+ */
+const flatnessScore = (img: FashionBizImage): number => {
+  const t = (img.image_type ?? "").toLowerCase()
+  if (t.includes("flat") || t.includes("ghost") || t.includes("product") || t.includes("technical")) return 0
+  if (t.includes("model") || t.includes("lifestyle") || t.includes("catwalk")) return 2
+  return 1
+}
+
+/** Sort images: `front === true` first, then flat/ghost over model, then API index. */
+const sortImages = (imgs: FashionBizImage[]): FashionBizImage[] =>
+  [...imgs].sort((a, b) => {
+    const frontA = a.front ? 0 : 1
+    const frontB = b.front ? 0 : 1
+    if (frontA !== frontB) return frontA - frontB
+    const scoreA = flatnessScore(a)
+    const scoreB = flatnessScore(b)
+    if (scoreA !== scoreB) return scoreA - scoreB
+    return (a.index ?? 0) - (b.index ?? 0)
+  })
+
+/**
+ * Build the `garment_images` metadata block for a single colour variant.
+ * Picks the best flat/front image as `front`, looks for a back-view image as
+ * `back`, and lists all URLs in flat-preference order in `all`.
+ */
+export const buildGarmentImagesForColour = (
+  colour: FashionBizColour
+): { front: string; back?: string; all: string[] } => {
+  const sorted = sortImages(colour.images ?? [])
+  const all = sorted.map((img) => img.https_attachment_url).filter(Boolean)
+
+  const front = all[0] ?? ""
+
+  const backUrl = sorted.find((img) => {
+    const url = img.https_attachment_url?.toLowerCase() ?? ""
+    return url.includes("back")
+  })?.https_attachment_url
+
+  return {
+    front,
+    ...(backUrl ? { back: backUrl } : {}),
+    all,
+  }
+}
+
+/** Image URLs across every colour, deduped, flat images first within each colour. */
 export const collectImageUrls = (product: FashionBizProduct): string[] => {
   const urls: string[] = []
   const seen = new Set<string>()
@@ -80,13 +129,12 @@ export const collectImageUrls = (product: FashionBizProduct): string[] => {
       urls.push(url)
     }
   }
-  for (const top of product.images ?? []) push(top)
+  for (const top of sortImages(product.images ?? [])) push(top)
   const colours = [...(product.colors ?? [])].sort(
     (a, b) => (a.index ?? 0) - (b.index ?? 0)
   )
   for (const c of colours) {
-    const imgs = [...(c.images ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-    for (const img of imgs) push(img)
+    for (const img of sortImages(c.images ?? [])) push(img)
   }
   return urls
 }
