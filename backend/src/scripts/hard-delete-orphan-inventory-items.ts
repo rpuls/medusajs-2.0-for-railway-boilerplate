@@ -38,16 +38,23 @@ export default async function hardDeleteOrphanInventoryItems({ container }: Exec
   const ASCOLOUR_SKU_REGEX = "^[0-9]{3,5}-[A-Z0-9]+"
 
   // Find inventory_items matching AS Colour SKU pattern that have no
-  // matching variant_inventory_item link (orphans). Module Links live in
-  // their own table — use a NOT EXISTS for portability.
+  // live link row pointing to a live product_variant. The link table
+  // `product_variant_inventory_item` and `product_variant` live in
+  // different Medusa modules with no FK cascade — hard-deleting a
+  // product_variant leaves its link rows behind with deleted_at IS NULL
+  // pointing at a now-missing variant. Those stranded links must not
+  // count as "still in use". See backend/src/lib/orphan-inventory.ts
+  // for the predicate this SQL mirrors.
   const targets: Array<{ id: string; sku: string }> = await pg("inventory_item as ii")
     .select("ii.id", "ii.sku")
     .whereRaw(`ii.sku ~ ?`, [ASCOLOUR_SKU_REGEX])
     .whereNotExists(function () {
-      this.select("*")
+      this.select(pg.raw("1"))
         .from("product_variant_inventory_item as link")
+        .innerJoin("product_variant as v", "v.id", "link.variant_id")
         .whereRaw("link.inventory_item_id = ii.id")
         .whereNull("link.deleted_at")
+        .whereNull("v.deleted_at")
     })
 
   if (!targets.length) {
