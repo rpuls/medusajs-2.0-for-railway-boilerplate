@@ -47,9 +47,12 @@ export default async function diagnoseAsColourInventory({ container }: ExecArgs)
   logger.info(`Candidate link tables: ${JSON.stringify(candidateTables)}`)
 
   // 3) How many inventory_items match the AS Colour regex? (including soft-deleted)
-  const totalRows = await pg("inventory_item")
+  // `pg` is typed `as any` (Knex isn't re-exported with proper types from
+  // the container), so we can't pass a generic to `.count` — TS2347. Cast
+  // the awaited result instead.
+  const totalRows = (await pg("inventory_item")
     .whereRaw("sku ~ ?", [ASCOLOUR_SKU_REGEX])
-    .count<{ count: string }[]>("id as count")
+    .count("id as count")) as Array<{ count: string }>
   const total = Number(totalRows[0]?.count ?? 0)
   logger.info(`Total inventory_items matching AS Colour regex: ${total}`)
 
