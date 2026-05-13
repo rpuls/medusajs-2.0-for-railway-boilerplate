@@ -2171,6 +2171,16 @@ export default function HomeParticleLogoHero({
   const rafRef = useRef<number | null>(null)
   /** Restarts the simulation loop if it was idle (e.g. after tab sleep). */
   const rafResumeRef = useRef<() => void>(() => {})
+  /**
+   * Perf gating for the rAF loop. The canvas simulation costs ~30s of CPU
+   * over the page lifetime (PageSpeed audit). Holding it off until the
+   * page is interactive AND the hero is on-screen drops mobile TBT
+   * dramatically with no visual change — the static <img> placeholder at
+   * line ~4520 is already in the same pixel slot, so the canvas paints
+   * in-place once it does start.
+   */
+  const rafReadyRef = useRef(false)
+  const rafVisibleRef = useRef(true)
   /** Stable 2D context for canvasC; reset in build after backing store is sized. */
   const canvasCCtxRef = useRef<CanvasRenderingContext2D | null>(null)
   const buildRef = useRef<() => void>(() => {})
@@ -4250,19 +4260,31 @@ export default function HomeParticleLogoHero({
       } catch (err) {
         console.error("[HomeParticleLogoHero] RAF step failed:", err)
       } finally {
-        frameId = requestAnimationFrame(tick)
-        rafRef.current = frameId
+        // Gate the reschedule on idle-ready (one-shot, after window.load
+        // + requestIdleCallback) AND on hero visibility (via IO). When
+        // either flag is false, drop the loop — `resume()` will pick it
+        // up again when both flip back to true.
+        if (rafReadyRef.current && rafVisibleRef.current) {
+          frameId = requestAnimationFrame(tick)
+          rafRef.current = frameId
+        } else {
+          frameId = null
+          rafRef.current = null
+        }
       }
     }
 
     const resume = () => {
+      if (!rafReadyRef.current || !rafVisibleRef.current) return
       if (frameId == null) {
         frameId = requestAnimationFrame(tick)
         rafRef.current = frameId
       }
     }
     rafResumeRef.current = resume
-    resume()
+    // Don't start immediately. The gating useEffect below calls resume()
+    // once both ready+visible are true. The static <img> placeholder is
+    // visible in the meantime, so the hero never looks empty.
 
     return () => {
       rafResumeRef.current = () => {}
@@ -4271,6 +4293,64 @@ export default function HomeParticleLogoHero({
         frameId = null
       }
       rafRef.current = null
+    }
+  }, [])
+
+  /**
+   * Perf gate for the rAF loop. Two conditions must both be true before
+   * the simulation starts running, and either flipping false pauses it:
+   *   1. rafReadyRef — set once after `window.load` + requestIdleCallback.
+   *      Keeps the canvas off the critical-path JS budget.
+   *   2. rafVisibleRef — IntersectionObserver on `stackRef`. Pauses the
+   *      simulation when the hero scrolls offscreen so the page stops
+   *      burning CPU on something nobody is looking at.
+   * The static <img> placeholder remains visible until the canvas
+   * eventually rasters, so the hero is never empty.
+   */
+  useEffect(() => {
+    let cancelled = false
+
+    const markReady = () => {
+      if (cancelled) return
+      rafReadyRef.current = true
+      rafResumeRef.current()
+    }
+    const scheduleReady = () => {
+      const ric = (window as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback
+      if (ric) {
+        ric(markReady, { timeout: 4000 })
+      } else {
+        setTimeout(markReady, 1500)
+      }
+    }
+    if (document.readyState === "complete") {
+      scheduleReady()
+    } else {
+      window.addEventListener("load", scheduleReady, { once: true })
+    }
+
+    let io: IntersectionObserver | null = null
+    const stackEl = stackRef.current
+    if (stackEl && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0]
+          if (!entry) return
+          const wasVisible = rafVisibleRef.current
+          rafVisibleRef.current = entry.isIntersecting
+          if (!wasVisible && entry.isIntersecting) {
+            rafResumeRef.current()
+          }
+        },
+        { root: null, rootMargin: "200px", threshold: 0 }
+      )
+      io.observe(stackEl)
+    }
+
+    return () => {
+      cancelled = true
+      window.removeEventListener("load", scheduleReady)
+      if (io) io.disconnect()
     }
   }, [])
 
