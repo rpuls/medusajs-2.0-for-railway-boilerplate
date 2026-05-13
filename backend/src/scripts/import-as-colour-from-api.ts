@@ -6,7 +6,6 @@ import {
 } from "@medusajs/framework/utils"
 import {
   createProductsWorkflow,
-  createProductTagsWorkflow,
   createInventoryLevelsWorkflow,
   updateInventoryLevelsWorkflow,
 } from "@medusajs/medusa/core-flows"
@@ -23,9 +22,16 @@ import {
   buildBulkPricingMetadata,
   buildPriceLadder,
 } from "../modules/ascolour/pricing"
+import { BRAND_MODULE } from "../modules/brand"
 
 const PRICE_CURRENCY_CODE = "aud"
-const AS_COLOUR_TAG = "as-colour"
+// AS Colour brand identity — single source of truth via the Brand entity
+// (per the brands convention in CLAUDE.md). external_code keeps the brand
+// identifiable across importers (spreadsheet sync resolves by name OR
+// external_code, case-insensitive).
+const AS_COLOUR_BRAND_NAME = "AS Colour"
+const AS_COLOUR_BRAND_HANDLE = "as-colour"
+const AS_COLOUR_BRAND_EXTERNAL_CODE = "ASCOLOUR"
 const AS_COLOUR_LOCATION_NAME = "AS Colour Warehouse"
 
 const slugify = (s: string) =>
@@ -160,20 +166,35 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
     (existing ?? []).map((p: any) => [p.handle, p.id])
   )
 
-  // 3b. Resolve (or create) the as-colour product tag — Medusa 2.x's
-  // createProductsWorkflow needs an existing tag id, not a `{ value }` shorthand.
-  const { data: existingTags } = await query.graph({
-    entity: "product_tag",
-    fields: ["id", "value"],
-    filters: { value: [AS_COLOUR_TAG] },
-  })
-  let asColourTagId: string | undefined = (existingTags ?? [])[0]?.id
-  if (!asColourTagId && !dryRun) {
-    const { result: createdTags } = await createProductTagsWorkflow(container).run({
-      input: { product_tags: [{ value: AS_COLOUR_TAG }] },
-    })
-    asColourTagId = (createdTags as any[])[0]?.id
-    logger.info(`Created product tag "${AS_COLOUR_TAG}" (${asColourTagId}).`)
+  // 3b. Resolve (or create) the AS Colour Brand entity. Brand is the
+  // single source of truth for brand identity (see CLAUDE.md "Brands");
+  // we link products to it after creation, NOT via product tags or
+  // metadata.
+  const brandService = container.resolve(BRAND_MODULE) as any
+  const existingBrands = await brandService.listBrands({})
+  let asColourBrand = (existingBrands as any[]).find(
+    (b) =>
+      (b.external_code ?? "").toUpperCase() === AS_COLOUR_BRAND_EXTERNAL_CODE ||
+      (b.handle ?? "").toLowerCase() === AS_COLOUR_BRAND_HANDLE ||
+      (b.name ?? "").toLowerCase() === AS_COLOUR_BRAND_NAME.toLowerCase()
+  )
+  if (!asColourBrand && !dryRun) {
+    const [created] = await brandService.createBrands([
+      {
+        name: AS_COLOUR_BRAND_NAME,
+        handle: AS_COLOUR_BRAND_HANDLE,
+        external_code: AS_COLOUR_BRAND_EXTERNAL_CODE,
+        is_active: true,
+      },
+    ])
+    asColourBrand = created
+    logger.info(`Created brand "${AS_COLOUR_BRAND_NAME}" (${asColourBrand.id}).`)
+  } else if (!asColourBrand && dryRun) {
+    logger.info(
+      `[DRY] Would create brand "${AS_COLOUR_BRAND_NAME}" (handle ${AS_COLOUR_BRAND_HANDLE}, external_code ${AS_COLOUR_BRAND_EXTERNAL_CODE}).`
+    )
+  } else {
+    logger.info(`Reusing existing brand "${asColourBrand.name}" (${asColourBrand.id}).`)
   }
 
   // 4. Build product create payloads
@@ -276,7 +297,8 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
       variants: productVariants,
       shipping_profile_id: shippingProfileId,
       sales_channels: [{ id: defaultSalesChannelId }],
-      tags: asColourTagId ? [{ id: asColourTagId }] : [],
+      // Brand identity comes from the linked Brand entity (see CLAUDE.md
+      // "Brands"). No product tag for brand — we link below after create.
       metadata: {
         source: "ascolour",
         ascolour: {
@@ -301,7 +323,29 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   const { result } = await createProductsWorkflow(container).run({
     input: { products: toCreate },
   })
-  logger.info(`Created ${(result as any[])?.length ?? 0} products.`)
+  const createdProducts = (result as any[]) ?? []
+  logger.info(`Created ${createdProducts.length} products.`)
+
+  // 5b. Link each new product to the AS Colour Brand entity via the
+  // product↔brand Module Link (defined in src/links/product-brand.ts).
+  if (asColourBrand && createdProducts.length) {
+    const link = container.resolve(ContainerRegistrationKeys.LINK) as any
+    let linkOk = 0
+    let linkFail = 0
+    for (const p of createdProducts) {
+      try {
+        await link.create({
+          [Modules.PRODUCT]: { product_id: p.id },
+          [BRAND_MODULE]: { brand_id: asColourBrand.id },
+        })
+        linkOk++
+      } catch (err: any) {
+        linkFail++
+        logger.warn(`Failed to link product ${p.id} to brand: ${err?.message ?? err}`)
+      }
+    }
+    logger.info(`Linked ${linkOk} product(s) to AS Colour brand (${linkFail} failed).`)
+  }
 
   // 6. Seed initial inventory at the AS Colour location
   if (!asColourLocationId) {
