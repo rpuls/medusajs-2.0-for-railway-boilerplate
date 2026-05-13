@@ -444,6 +444,52 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
   }
   logger.info(`Linked ${linkOk} product(s) to brand (${linkFail} failed).`)
 
+  // 5c. Force-patch garment_images on created variants.
+  // When Medusa restores a soft-deleted product (same handle), it keeps the
+  // original variants and their old metadata, ignoring the new payload.
+  // Querying by SKU and patching any variant missing garment_images ensures
+  // the metadata is always correct regardless of create vs restore path.
+  {
+    const garmentImagesBySku = new Map<string, { garment_images: any; garment_color: string }>()
+    for (const payload of toCreate) {
+      for (const v of payload.variants ?? []) {
+        if (v.sku && v.metadata?.garment_images) {
+          garmentImagesBySku.set(v.sku, {
+            garment_images: v.metadata.garment_images,
+            garment_color: v.metadata.garment_color,
+          })
+        }
+      }
+    }
+
+    if (garmentImagesBySku.size > 0) {
+      const productModuleService = container.resolve(Modules.PRODUCT) as any
+      if (typeof productModuleService.updateProductVariants === "function") {
+        const skus = Array.from(garmentImagesBySku.keys())
+        const { data: dbVariants } = await query.graph({
+          entity: "product_variant",
+          fields: ["id", "sku", "metadata"],
+          filters: { sku: skus },
+        })
+        let patchCount = 0
+        for (const dbv of dbVariants ?? []) {
+          const sku = (dbv as any).sku as string
+          const patch = garmentImagesBySku.get(sku)
+          if (!patch) continue
+          const existingMeta = ((dbv as any).metadata ?? {}) as Record<string, any>
+          if (existingMeta.garment_images?.front) continue
+          await productModuleService.updateProductVariants((dbv as any).id, {
+            metadata: { ...existingMeta, ...patch },
+          })
+          patchCount++
+        }
+        if (patchCount > 0) {
+          logger.info(`Patched garment_images on ${patchCount} restored variant(s).`)
+        }
+      }
+    }
+  }
+
   // 6. Seed inventory levels at the FashionBiz Warehouse
   if (!locationId) {
     logger.warn("FashionBiz stock location missing; skipping inventory seed.")
