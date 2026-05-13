@@ -421,6 +421,12 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
     const brandId = handleToBrandId.get(p.handle)
     if (!brandId) continue
     try {
+      // Dismiss any stale link first (survives soft-delete of previous product)
+      // then create fresh. dismiss() is a no-op when no link exists.
+      await link.dismiss({
+        [Modules.PRODUCT]: { product_id: p.id },
+        [BRAND_MODULE]: { brand_id: brandId },
+      })
       await link.create({
         [Modules.PRODUCT]: { product_id: p.id },
         [BRAND_MODULE]: { brand_id: brandId },

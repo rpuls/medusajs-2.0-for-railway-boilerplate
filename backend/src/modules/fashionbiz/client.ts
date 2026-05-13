@@ -103,7 +103,7 @@ export class FashionBizClient {
   ): Promise<FashionBizStockResponse> {
     const encodedColour = FashionBizClient.encodeColourForStock(colour)
     return this.sendRequest<FashionBizStockResponse>(
-      `/products/${brand}/${this.options.branch}/${encodeURIComponent(slug)}/${encodedColour}`
+      `/products/${brand}/${this.options.branch}/${encodeURIComponent(slug)}/${encodedColour}/`
     )
   }
 }
