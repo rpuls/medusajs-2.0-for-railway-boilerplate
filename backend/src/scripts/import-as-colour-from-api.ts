@@ -13,16 +13,33 @@ import { ASCOLOUR_MODULE } from "../modules/ascolour"
 import AsColourService from "../modules/ascolour/service"
 import {
   AsColourImage,
-  AsColourInventoryItem,
-  AsColourPriceListEntry,
   AsColourProduct,
   AsColourVariant,
 } from "../modules/ascolour/types"
+import { buildPriceLadder, type PriceLadder } from "../modules/ascolour/pricing"
 import {
-  buildBulkPricingMetadata,
-  buildPriceLadder,
-} from "../modules/ascolour/pricing"
+  tierMinorToPriceSetRows,
+  tierMinorToBulkPricingMetadata,
+  type TierMoneyMinor,
+} from "../utils/bulk-tier-prices"
 import { BRAND_MODULE } from "../modules/brand"
+
+/**
+ * Convert the major-unit retail PriceLadder (built from the supplier cost via
+ * buildPriceLadder()) into the minor-unit TierMoneyMinor shape that the
+ * shared bulk-tier helpers (used by the spreadsheet importer + apply-variant-
+ * tier-prices route) consume. Centralising the conversion here keeps the
+ * spreadsheet path and the API importers writing IDENTICAL price-set rows
+ * and IDENTICAL `metadata.bulk_pricing.tiers` so the storefront tier UI
+ * works for products from either source.
+ */
+const ladderToTierMinor = (ladder: PriceLadder): TierMoneyMinor => ({
+  t1_9: Math.round(ladder.base * 100),
+  t10_19: Math.round(ladder.tier10to19 * 100),
+  t20_49: Math.round(ladder.tier20to49 * 100),
+  t50_99: Math.round(ladder.tier50to99 * 100),
+  t100_plus: Math.round(ladder.tier100Plus * 100),
+})
 
 const PRICE_CURRENCY_CODE = "aud"
 // AS Colour brand identity — single source of truth via the Brand entity
@@ -248,7 +265,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
 
       const cost = costBySku.get(v.sku)
       const ladder = cost !== undefined ? buildPriceLadder(cost) : null
-      const amount = ladder ? ladder.base : 0
+      const tierMinor = ladder ? ladderToTierMinor(ladder) : null
 
       const titleParts = [v.colour, v.sizeCode].filter(Boolean)
       const variantTitle = titleParts.join(" / ") || v.name || v.sku
@@ -261,6 +278,18 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
         skuToInventory.push({ sku: v.sku, styleCode: product.styleCode })
       }
 
+      // Build the 5-tier price-set rows (qty bands 1-9 / 10-19 / 20-49 /
+      // 50-99 / 100+). Without these, Medusa's pricing module only knows
+      // one price and `calculated_amount` ignores cart quantity — see
+      // utils/bulk-tier-prices.ts for the shared helper used here, also
+      // called by the spreadsheet sync apply-variant-tier-prices route.
+      // When `cost` is unknown (SKU missing from AS Colour pricelist) we
+      // fall back to a zero-price single row so the variant still creates;
+      // the operator can fix pricing manually in admin afterwards.
+      const prices = tierMinor
+        ? tierMinorToPriceSetRows(tierMinor, PRICE_CURRENCY_CODE)
+        : [{ amount: 0, currency_code: PRICE_CURRENCY_CODE }]
+
       return {
         title: variantTitle,
         sku: v.sku,
@@ -269,7 +298,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
         manage_inventory: true,
         allow_backorder: false,
         options: variantOptions,
-        prices: [{ amount, currency_code: PRICE_CURRENCY_CODE }],
+        prices,
         metadata: {
           ascolour: {
             styleCode: product.styleCode,
@@ -277,7 +306,12 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
             colour: v.colour,
             sizeCode: v.sizeCode,
           },
-          ...(ladder ? { bulk_pricing: buildBulkPricingMetadata(ladder) } : {}),
+          // Storefront reads `metadata.bulk_pricing.tiers` (array of
+          // {min_quantity, max_quantity, amount}) — same shape the
+          // spreadsheet path writes via apply-variant-tier-prices.
+          ...(tierMinor
+            ? { bulk_pricing: tierMinorToBulkPricingMetadata(tierMinor, "ascolour-api") }
+            : {}),
         },
       }
     })
