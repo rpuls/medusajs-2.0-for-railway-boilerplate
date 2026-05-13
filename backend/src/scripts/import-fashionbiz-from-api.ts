@@ -425,20 +425,21 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
     const brandId = handleToBrandId.get(p.handle)
     if (!brandId) continue
     try {
-      // Dismiss any stale link first (survives soft-delete of previous product)
-      // then create fresh. dismiss() is a no-op when no link exists.
-      await link.dismiss({
-        [Modules.PRODUCT]: { product_id: p.id },
-        [BRAND_MODULE]: { brand_id: brandId },
-      })
       await link.create({
         [Modules.PRODUCT]: { product_id: p.id },
         [BRAND_MODULE]: { brand_id: brandId },
       })
       linkOk++
     } catch (err: any) {
-      linkFail++
-      logger.warn(`Failed to link product ${p.id} (${p.handle}) to brand: ${err?.message ?? err}`)
+      // Medusa restores soft-deleted products on same-handle create, so the
+      // brand link may already exist from a previous import run — that's fine.
+      if (err?.message?.includes("Cannot create multiple links")) {
+        linkOk++
+        logger.info(`Product ${p.handle} already linked to brand — skipping.`)
+      } else {
+        linkFail++
+        logger.warn(`Failed to link product ${p.id} (${p.handle}) to brand: ${err?.message ?? err}`)
+      }
     }
   }
   logger.info(`Linked ${linkOk} product(s) to brand (${linkFail} failed).`)
