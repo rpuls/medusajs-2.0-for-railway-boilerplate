@@ -35,6 +35,9 @@ const initPostHog = () => {
     capture_exceptions: true,
     disable_session_recording: false,
     rate_limiting: { events_per_second: 10 },
+    // Surveys aren't used on this storefront; opting out skips loading
+    // surveys.js (~33 KiB) and removes its 5-min cache-TTL refetch.
+    disable_surveys: true,
   })
 }
 
