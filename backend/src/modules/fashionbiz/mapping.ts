@@ -71,10 +71,15 @@ export const renderDescription = (description: FashionBizDescription | undefined
 }
 
 /**
- * Score an image's `image_type` so flat/ghost garment shots sort before
- * model/lifestyle photos. Lower score = higher priority.
+ * Score an image so flat/ghost garment shots sort before model/lifestyle.
+ * FashionBiz URL convention: _Product_ = flat garment, _Talent_ = model.
+ * Falls back to image_type field if URL gives no signal.
+ * Lower score = higher priority.
  */
 const flatnessScore = (img: FashionBizImage): number => {
+  const url = img.https_attachment_url ?? ""
+  if (url.includes("_Product_")) return 0
+  if (url.includes("_Talent_")) return 2
   const t = (img.image_type ?? "").toLowerCase()
   if (t.includes("flat") || t.includes("ghost") || t.includes("product") || t.includes("technical")) return 0
   if (t.includes("model") || t.includes("lifestyle") || t.includes("catwalk")) return 2
@@ -93,21 +98,23 @@ const sortImages = (imgs: FashionBizImage[]): FashionBizImage[] =>
     return (a.index ?? 0) - (b.index ?? 0)
   })
 
-const urlLooksLikeFront = (url: string) => {
-  const l = url.toLowerCase()
-  return l.includes("_front") || l.includes("-front") || l.includes("/front") || l.includes("front.")
-}
+/**
+ * FashionBiz URL pattern: _Product_{colour}_01 = flat front,
+ * _Product_{colour}_02 = flat back, _Talent_ = model/lifestyle.
+ * The index suffix (_01, _02) may be followed by a hash or the extension.
+ */
+const urlIsProductFront = (url: string) =>
+  url.includes("_Product_") && (url.includes("_01_") || url.includes("_01."))
 
-const urlLooksLikeBack = (url: string) => {
-  const l = url.toLowerCase()
-  return l.includes("_back") || l.includes("-back") || l.includes("/back") || l.includes("back.")
-}
+const urlIsProductBack = (url: string) =>
+  url.includes("_Product_") && (url.includes("_02_") || url.includes("_02."))
+
+const urlIsProductFlat = (url: string) => url.includes("_Product_")
 
 /**
  * Build the `garment_images` metadata block for a single colour variant.
- * Prefers URL-based front/back detection (e.g. filename_front.jpg) over
- * the `front` boolean and `image_type` API fields, which are often absent.
- * Falls back to flat-preference sort order when no URL keyword is found.
+ * Uses FashionBiz's _Product_/_Talent_ URL convention to identify flat
+ * garment shots vs model photos, and _01/_02 suffix for front vs back.
  */
 export const buildGarmentImagesForColour = (
   colour: FashionBizColour
@@ -115,14 +122,14 @@ export const buildGarmentImagesForColour = (
   const sorted = sortImages(colour.images ?? [])
   const all = sorted.map((img) => img.https_attachment_url).filter(Boolean)
 
-  // Prefer a URL explicitly named "front"; if none, take the first non-back image
   const frontUrl =
-    all.find(urlLooksLikeFront) ??
-    all.find((u) => !urlLooksLikeBack(u)) ??
-    all[0] ??
-    ""
+    all.find(urlIsProductFront) ??  // e.g. P515MS_Product_Black_01_xxx.jpg
+    all.find(urlIsProductFlat) ??   // any flat _Product_ image as fallback
+    all[0] ?? ""
 
-  const backUrl = all.find(urlLooksLikeBack)
+  const backUrl =
+    all.find(urlIsProductBack) ??   // e.g. P515MS_Product_Black_02_xxx.jpg
+    undefined
 
   return {
     front: frontUrl,
