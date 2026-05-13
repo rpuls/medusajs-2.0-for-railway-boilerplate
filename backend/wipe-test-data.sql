@@ -226,9 +226,10 @@ BEGIN
   END LOOP;
 END $$;
 
--- Delete only CUSTOMER auth identities; preserve admin (entity_id matches user.id)
+-- Delete only CUSTOMER auth identities; preserve admin auth.
+-- emailpass provider stores the user's EMAIL in entity_id, so match on email.
 DELETE FROM "provider_identity"
-WHERE entity_id NOT IN (SELECT id FROM "user");
+WHERE entity_id NOT IN (SELECT email FROM "user");
 
 DELETE FROM "auth_identity"
 WHERE id NOT IN (SELECT auth_identity_id FROM "provider_identity");
