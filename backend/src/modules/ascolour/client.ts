@@ -42,7 +42,8 @@ export class AsColourClient {
 
   private async sendRequest<T = any>(
     path: string,
-    init: RequestInit & { authBearer?: boolean } = {}
+    init: RequestInit & { authBearer?: boolean } = {},
+    attempt = 0
   ): Promise<T> {
     const { authBearer, ...rest } = init
     const headers: Record<string, string> = {
@@ -59,6 +60,16 @@ export class AsColourClient {
 
     const url = `${this.options.base_url}${path}`
     const resp = await fetch(url, { ...rest, headers })
+
+    // AS Colour rate-limits aggressively (HTTP 429 with a Retry-After in
+    // seconds). Sleep for the suggested duration and retry; without this,
+    // bulk imports and the inventory cron will partial-fail under load.
+    if (resp.status === 429 && attempt < 5) {
+      const retryHeader = resp.headers.get("retry-after")
+      const seconds = Math.max(1, Math.min(120, Number.parseInt(retryHeader ?? "30", 10) || 30))
+      await new Promise((r) => setTimeout(r, (seconds + 1) * 1000))
+      return this.sendRequest<T>(path, init, attempt + 1)
+    }
 
     const contentType = resp.headers.get("content-type") ?? ""
     const body = contentType.includes("application/json")

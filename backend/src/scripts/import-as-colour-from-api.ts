@@ -6,6 +6,7 @@ import {
 } from "@medusajs/framework/utils"
 import {
   createProductsWorkflow,
+  createProductTagsWorkflow,
   createInventoryLevelsWorkflow,
   updateInventoryLevelsWorkflow,
 } from "@medusajs/medusa/core-flows"
@@ -65,10 +66,21 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const ascolour = container.resolve(ASCOLOUR_MODULE) as AsColourService
 
+  // medusa exec swallows --flag-style args via its own yargs parser, so the
+  // canonical way to pass options to scripts is environment variables. Old
+  // --dry-run / --limit=N args are still honoured when they reach `args`.
   const flags = new Set(args ?? [])
   const limitArg = (args ?? []).find((a) => a.startsWith("--limit="))
-  const limit = limitArg ? Number.parseInt(limitArg.split("=")[1], 10) : undefined
-  const dryRun = flags.has("--dry-run")
+  const envLimit = process.env.IMPORT_LIMIT
+  const limit = limitArg
+    ? Number.parseInt(limitArg.split("=")[1], 10)
+    : envLimit
+      ? Number.parseInt(envLimit, 10)
+      : undefined
+  const dryRun =
+    flags.has("--dry-run") ||
+    process.env.IMPORT_DRY_RUN === "1" ||
+    process.env.IMPORT_DRY_RUN === "true"
 
   const salesChannelService = container.resolve(Modules.SALES_CHANNEL) as any
   const fulfillmentService = container.resolve(Modules.FULFILLMENT) as any
@@ -147,6 +159,22 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   const existingByHandle = new Map<string, string>(
     (existing ?? []).map((p: any) => [p.handle, p.id])
   )
+
+  // 3b. Resolve (or create) the as-colour product tag — Medusa 2.x's
+  // createProductsWorkflow needs an existing tag id, not a `{ value }` shorthand.
+  const { data: existingTags } = await query.graph({
+    entity: "product_tag",
+    fields: ["id", "value"],
+    filters: { value: [AS_COLOUR_TAG] },
+  })
+  let asColourTagId: string | undefined = (existingTags ?? [])[0]?.id
+  if (!asColourTagId && !dryRun) {
+    const { result: createdTags } = await createProductTagsWorkflow(container).run({
+      input: { product_tags: [{ value: AS_COLOUR_TAG }] },
+    })
+    asColourTagId = (createdTags as any[])[0]?.id
+    logger.info(`Created product tag "${AS_COLOUR_TAG}" (${asColourTagId}).`)
+  }
 
   // 4. Build product create payloads
   const toCreate: any[] = []
@@ -248,7 +276,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
       variants: productVariants,
       shipping_profile_id: shippingProfileId,
       sales_channels: [{ id: defaultSalesChannelId }],
-      tags: [{ value: AS_COLOUR_TAG }],
+      tags: asColourTagId ? [{ id: asColourTagId }] : [],
       metadata: {
         source: "ascolour",
         ascolour: {
