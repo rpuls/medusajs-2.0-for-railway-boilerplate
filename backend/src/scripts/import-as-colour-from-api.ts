@@ -334,11 +334,22 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
 
   // 5b. Link each new product to the AS Colour Brand entity via the
   // product↔brand Module Link (defined in src/links/product-brand.ts).
+  // The link is symmetric (no isList) — a brand can be linked to many
+  // products, but the (product_id, brand_id) tuple must be unique.
+  // Treat "already linked" as a no-op so re-runs of the script are
+  // idempotent.
   if (asColourBrand && createdProducts.length) {
     const link = container.resolve(ContainerRegistrationKeys.LINK) as any
+    const seenProductIds = new Set<string>()
+    const uniqueProducts = createdProducts.filter((p: any) => {
+      if (!p?.id || seenProductIds.has(p.id)) return false
+      seenProductIds.add(p.id)
+      return true
+    })
     let linkOk = 0
+    let linkSkipped = 0
     let linkFail = 0
-    for (const p of createdProducts) {
+    for (const p of uniqueProducts) {
       try {
         await link.create({
           [Modules.PRODUCT]: { product_id: p.id },
@@ -346,11 +357,18 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
         })
         linkOk++
       } catch (err: any) {
-        linkFail++
-        logger.warn(`Failed to link product ${p.id} to brand: ${err?.message ?? err}`)
+        const msg = String(err?.message ?? err)
+        if (/already|multiple links|duplicate/i.test(msg)) {
+          linkSkipped++
+        } else {
+          linkFail++
+          logger.warn(`Failed to link product ${p.id} to brand: ${msg}`)
+        }
       }
     }
-    logger.info(`Linked ${linkOk} product(s) to AS Colour brand (${linkFail} failed).`)
+    logger.info(
+      `Linked ${linkOk} product(s) to AS Colour brand (${linkSkipped} already linked, ${linkFail} failed).`
+    )
   }
 
   // 6. Seed initial inventory at the AS Colour location
