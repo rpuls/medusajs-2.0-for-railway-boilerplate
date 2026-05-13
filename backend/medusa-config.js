@@ -40,6 +40,9 @@ import {
   ASCOLOUR_WORKSHOP_COUNTRY_CODE,
   ASCOLOUR_WORKSHOP_EMAIL,
   ASCOLOUR_WORKSHOP_PHONE,
+  FASHIONBIZ_API_TOKEN,
+  FASHIONBIZ_BRANCH,
+  FASHIONBIZ_BASE_URL,
   WORKER_MODE,
   MINIO_ENDPOINT,
   MINIO_ACCESS_KEY,
@@ -222,6 +225,17 @@ const medusaConfig = {
               email: ASCOLOUR_WORKSHOP_EMAIL,
               phone: ASCOLOUR_WORKSHOP_PHONE,
             },
+          },
+        }]
+      : []),
+
+    ...(FASHIONBIZ_API_TOKEN
+      ? [{
+          resolve: "./src/modules/fashionbiz",
+          options: {
+            token: FASHIONBIZ_API_TOKEN,
+            branch: FASHIONBIZ_BRANCH,
+            base_url: FASHIONBIZ_BASE_URL,
           },
         }]
       : []),
