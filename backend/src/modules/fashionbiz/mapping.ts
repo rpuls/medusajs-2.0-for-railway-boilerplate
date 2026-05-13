@@ -93,10 +93,21 @@ const sortImages = (imgs: FashionBizImage[]): FashionBizImage[] =>
     return (a.index ?? 0) - (b.index ?? 0)
   })
 
+const urlLooksLikeFront = (url: string) => {
+  const l = url.toLowerCase()
+  return l.includes("_front") || l.includes("-front") || l.includes("/front") || l.includes("front.")
+}
+
+const urlLooksLikeBack = (url: string) => {
+  const l = url.toLowerCase()
+  return l.includes("_back") || l.includes("-back") || l.includes("/back") || l.includes("back.")
+}
+
 /**
  * Build the `garment_images` metadata block for a single colour variant.
- * Picks the best flat/front image as `front`, looks for a back-view image as
- * `back`, and lists all URLs in flat-preference order in `all`.
+ * Prefers URL-based front/back detection (e.g. filename_front.jpg) over
+ * the `front` boolean and `image_type` API fields, which are often absent.
+ * Falls back to flat-preference sort order when no URL keyword is found.
  */
 export const buildGarmentImagesForColour = (
   colour: FashionBizColour
@@ -104,15 +115,17 @@ export const buildGarmentImagesForColour = (
   const sorted = sortImages(colour.images ?? [])
   const all = sorted.map((img) => img.https_attachment_url).filter(Boolean)
 
-  const front = all[0] ?? ""
+  // Prefer a URL explicitly named "front"; if none, take the first non-back image
+  const frontUrl =
+    all.find(urlLooksLikeFront) ??
+    all.find((u) => !urlLooksLikeBack(u)) ??
+    all[0] ??
+    ""
 
-  const backUrl = sorted.find((img) => {
-    const url = img.https_attachment_url?.toLowerCase() ?? ""
-    return url.includes("back")
-  })?.https_attachment_url
+  const backUrl = all.find(urlLooksLikeBack)
 
   return {
-    front,
+    front: frontUrl,
     ...(backUrl ? { back: backUrl } : {}),
     all,
   }

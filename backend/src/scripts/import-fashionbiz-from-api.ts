@@ -302,7 +302,11 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
             allow_backorder: false,
             options: variantOptions,
             prices: [
-              { amount: ladder.base, currency_code: PRICE_CURRENCY_CODE },
+              { amount: ladder.base, currency_code: PRICE_CURRENCY_CODE, min_quantity: 1, max_quantity: 9 },
+              { amount: ladder.tier10to19, currency_code: PRICE_CURRENCY_CODE, min_quantity: 10, max_quantity: 19 },
+              { amount: ladder.tier20to49, currency_code: PRICE_CURRENCY_CODE, min_quantity: 20, max_quantity: 49 },
+              { amount: ladder.tier50to99, currency_code: PRICE_CURRENCY_CODE, min_quantity: 50, max_quantity: 99 },
+              { amount: ladder.tier100Plus, currency_code: PRICE_CURRENCY_CODE, min_quantity: 100 },
             ],
             metadata: {
               fashionbiz: {

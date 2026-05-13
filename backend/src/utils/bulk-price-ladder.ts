@@ -51,8 +51,12 @@ export const buildPriceLadder = (
 export const toMinorAud = (major: number): number => Math.round(major * 100)
 
 /**
- * Build the `metadata.bulk_pricing` block in the same shape the spreadsheet
- * importer + storefront tier-pricing rendering already consume.
+ * Build the `metadata.bulk_pricing` block consumed by the storefront tier
+ * pricing display and the customizer's calculatePricing() function.
+ *
+ * Includes both the legacy flat fields (backwards compat) and a `tiers`
+ * array in the shape getBulkPricingTiers() reads:
+ *   { min_quantity, max_quantity?, amount }  — amount in minor units (cents).
  */
 export const buildBulkPricingMetadata = (ladder: PriceLadder) => ({
   base_sale_price: ladder.base,
@@ -60,4 +64,11 @@ export const buildBulkPricingMetadata = (ladder: PriceLadder) => ({
   tier_20_to_49_price: ladder.tier20to49,
   tier_50_to_99_price: ladder.tier50to99,
   tier_100_plus_price: ladder.tier100Plus,
+  tiers: [
+    { min_quantity: 1, max_quantity: 9, amount: ladder.base },
+    { min_quantity: 10, max_quantity: 19, amount: ladder.tier10to19 },
+    { min_quantity: 20, max_quantity: 49, amount: ladder.tier20to49 },
+    { min_quantity: 50, max_quantity: 99, amount: ladder.tier50to99 },
+    { min_quantity: 100, amount: ladder.tier100Plus },
+  ],
 })
