@@ -1,9 +1,15 @@
 import { sdk } from "@lib/config"
 import { cache } from "react"
+import { nextHeaders } from "./sdk-helpers"
+
+const CATEGORIES_FETCH_INIT = nextHeaders({
+  tags: ["categories"],
+  revalidate: 600,
+})
 
 export const listCategories = cache(async function () {
   return sdk.store.category
-    .list({ fields: "+category_children" }, { next: { tags: ["categories"] } })
+    .list({ fields: "+category_children" }, CATEGORIES_FETCH_INIT)
     .then(({ product_categories }) => product_categories)
 })
 
@@ -15,7 +21,7 @@ export const getCategoriesList = cache(async function (
     // TODO: Look into fixing the type
     // @ts-ignore
     { limit, offset },
-    { next: { tags: ["categories"] } }
+    CATEGORIES_FETCH_INIT
   )
 })
 
@@ -27,6 +33,6 @@ export const getCategoryByHandle = cache(async function (
     // TODO: Look into fixing the type
     // @ts-ignore
     { handle: categoryHandle },
-    { next: { tags: ["categories"] } }
+    CATEGORIES_FETCH_INIT
   )
 })

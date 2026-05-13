@@ -2,17 +2,23 @@ import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { cache } from "react"
 import { HttpTypes } from "@medusajs/types"
+import { nextHeaders } from "./sdk-helpers"
+
+const REGIONS_FETCH_INIT = nextHeaders({
+  tags: ["regions"],
+  revalidate: 3600,
+})
 
 export const listRegions = cache(async function () {
   return sdk.store.region
-    .list({}, { next: { tags: ["regions"] } })
+    .list({}, REGIONS_FETCH_INIT)
     .then(({ regions }) => regions)
     .catch(medusaError)
 })
 
 export const retrieveRegion = cache(async function (id: string) {
   return sdk.store.region
-    .retrieve(id, {}, { next: { tags: ["regions"] } })
+    .retrieve(id, {}, REGIONS_FETCH_INIT)
     .then(({ region }) => region)
     .catch(medusaError)
 })
