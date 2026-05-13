@@ -2420,7 +2420,24 @@ export default function HomeParticleLogoHero({
     }
 
     const nLogo = candidates.length
-    const cap = Math.max(1, Math.floor(animatedParticleCap))
+    /**
+     * Scale the particle cap by viewport width. Each particle is one
+     * physics update per frame; the homepage was shipping 55k on every
+     * device, which dominates mobile TBT (PageSpeed audit). Mobile
+     * phones get a smaller cap so the wordmark still reads as a
+     * stipple but the per-frame work fits in budget. Re-evaluated on
+     * every build() invocation, so window resize across breakpoints
+     * picks up the new value on the next rebuild.
+     */
+    const cap = (() => {
+      const requested = Math.max(1, Math.floor(animatedParticleCap))
+      if (typeof window === "undefined") return requested
+      const w = window.innerWidth
+      if (w < 640) return Math.min(requested, 18000)
+      if (w < 1024) return Math.min(requested, 32000)
+      if (w < 1440) return Math.min(requested, 45000)
+      return requested
+    })()
     const heroHomeCount =
       nLogo > 0
         ? Math.min(cap, Math.round(cap * FULL_HERO_HOME_FRACTION))
