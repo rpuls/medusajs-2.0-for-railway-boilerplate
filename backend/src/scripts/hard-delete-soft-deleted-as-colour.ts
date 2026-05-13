@@ -31,22 +31,36 @@ export default async function hardDeleteSoftDeletedAsColour({ container, args }:
     process.env.HARD_DELETE_CONFIRM === "1" ||
     process.env.HARD_DELETE_CONFIRM === "true"
 
-  // Find every soft-deleted as-colour-* product directly via SQL.
-  const targets: Array<{ id: string; handle: string; title: string }> = await pg("product")
-    .select("id", "handle", "title")
+  // Find every as-colour-* product, soft-deleted or live. The handle
+  // prefix is the unambiguous source-of-origin marker, and the script
+  // is gated by HARD_DELETE_CONFIRM so accidental live wipes are blocked.
+  const includeLive =
+    process.env.INCLUDE_LIVE === "1" ||
+    process.env.INCLUDE_LIVE === "true" ||
+    (args ?? []).includes("--include-live")
+
+  let qb = pg("product")
+    .select("id", "handle", "title", "deleted_at")
     .whereLike("handle", "as-colour-%")
-    .whereNotNull("deleted_at")
+  if (!includeLive) {
+    qb = qb.whereNotNull("deleted_at")
+  }
+  const targets: Array<{ id: string; handle: string; title: string; deleted_at: string | null }> =
+    await qb
 
   if (!targets.length) {
     logger.info("No soft-deleted as-colour-* products to hard-delete.")
     return
   }
 
+  const liveCount = targets.filter((t) => !t.deleted_at).length
+  const softCount = targets.length - liveCount
   logger.info(
-    `Found ${targets.length} soft-deleted as-colour-* products eligible for hard delete.`
+    `Found ${targets.length} as-colour-* products eligible for hard delete (${liveCount} live, ${softCount} soft-deleted).`
   )
   for (const p of targets.slice(0, 10)) {
-    logger.info(`  - ${p.handle} :: ${p.title}`)
+    const state = p.deleted_at ? " [SOFT-DELETED]" : " [LIVE]"
+    logger.info(`  - ${p.handle} :: ${p.title}${state}`)
   }
   if (targets.length > 10) logger.info(`  ... and ${targets.length - 10} more`)
 
