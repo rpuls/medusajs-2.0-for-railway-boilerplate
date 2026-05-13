@@ -93,6 +93,22 @@ const Payment = ({
         await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })
+
+        // For Stripe we early-return here so the user can fill in the
+        // PaymentElement before the second click advances to review.
+        // `initiatePaymentSession` only invalidates the cart cache —
+        // it does NOT re-render the already-mounted server tree, so the
+        // parent <Wrapper> would keep handing us the old cart (no Stripe
+        // session, no client_secret) and <PaymentElement> would never mount.
+        // `router.refresh()` forces the re-fetch so the Stripe Elements
+        // provider mounts on the next render. Safe here because we are NOT
+        // also calling `router.push()` on this branch — the comment below
+        // about not combining refresh + push only applies to the
+        // advance-to-review path.
+        if (stripeSelected) {
+          router.refresh()
+          return
+        }
       }
 
       // PaymentElement must be complete before advancing (first submit may only create the session).
