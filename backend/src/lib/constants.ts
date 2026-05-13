@@ -202,6 +202,23 @@ export const FASHIONBIZ_API_TOKEN = process.env.FASHIONBIZ_API_TOKEN
 export const FASHIONBIZ_BRANCH = process.env.FASHIONBIZ_BRANCH || "au"
 export const FASHIONBIZ_BASE_URL =
   process.env.FASHIONBIZ_BASE_URL || "https://www.fashionbizapis.com/api/v3"
+/**
+ * The FashionBiz Public API exposes a "1-99" wholesale tier price, but the
+ * price SC Prints is actually charged (visible on FashionBiz's distributor
+ * storefront — `au-store.fashionbizapps.com`) sits ~15% higher than that
+ * tier. Observed 2026-05-13 across P400MS, BP2616MS, BP2610MS, P515MS:
+ * storefront/API ratios were 1.1505, 1.1498, 1.1498, 1.1541 respectively.
+ *
+ * This multiplier is applied to the API "1-99" price before it's fed into
+ * the bulk-price ladder, so retail markups stay correct.
+ *
+ * Default 1.0 = ingest API price as-is (no adjustment). Set to e.g. 1.15
+ * to match observed customer pricing. Tune per-environment if FashionBiz
+ * changes their pricing model.
+ */
+export const FASHIONBIZ_COST_ADJUSTMENT = Number.parseFloat(
+  process.env.FASHIONBIZ_COST_ADJUSTMENT || "1.0"
+)
 
 /**
  * Google Search Console + Google Analytics 4 (read-only).

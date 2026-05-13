@@ -127,10 +127,16 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
     process.env.IMPORT_DRY_RUN === "1" ||
     process.env.IMPORT_DRY_RUN === "true"
   const brands = parseBrandsEnv(process.env.IMPORT_BRANDS)
+  const costAdjustment = fashionbiz.getCostAdjustment()
 
   logger.info(
-    `FashionBiz import — brands=[${brands.join(", ")}], limit=${limit ?? "all"}, dryRun=${dryRun}`
+    `FashionBiz import — brands=[${brands.join(", ")}], limit=${limit ?? "all"}, dryRun=${dryRun}, costAdjustment=${costAdjustment}`
   )
+  if (costAdjustment === 1.0) {
+    logger.warn(
+      "FASHIONBIZ_COST_ADJUSTMENT is 1.0 — using raw API '1-99' tier price as cost. The distributor storefront typically charges ~15% above this; set FASHIONBIZ_COST_ADJUSTMENT=1.15 to match."
+    )
+  }
 
   // Common dependencies
   const salesChannelService = container.resolve(Modules.SALES_CHANNEL) as any
@@ -239,7 +245,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
         continue
       }
 
-      const ladder = priceLadderFromFashionBiz(product.prices)
+      const ladder = priceLadderFromFashionBiz(product.prices, costAdjustment)
       if (!ladder) {
         logger.warn(
           `  ${batch.brand}/${product.slug}: no usable prices — skipping (FashionBiz returned ${product.prices?.length ?? 0} tiers)`
@@ -313,6 +319,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
               },
               bulk_pricing: buildBulkPricingMetadata(ladder),
               raw_prices: product.prices ?? [],
+              cost_adjustment: costAdjustment,
             },
           })
         }

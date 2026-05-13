@@ -43,6 +43,7 @@ import {
   FASHIONBIZ_API_TOKEN,
   FASHIONBIZ_BRANCH,
   FASHIONBIZ_BASE_URL,
+  FASHIONBIZ_COST_ADJUSTMENT,
   WORKER_MODE,
   MINIO_ENDPOINT,
   MINIO_ACCESS_KEY,
@@ -236,6 +237,7 @@ const medusaConfig = {
             token: FASHIONBIZ_API_TOKEN,
             branch: FASHIONBIZ_BRANCH,
             base_url: FASHIONBIZ_BASE_URL,
+            cost_adjustment: FASHIONBIZ_COST_ADJUSTMENT,
           },
         }]
       : []),

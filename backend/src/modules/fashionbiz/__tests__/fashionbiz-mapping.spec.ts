@@ -133,7 +133,7 @@ describe("FashionBiz mapping helpers", () => {
 })
 
 describe("priceLadderFromFashionBiz", () => {
-  it("uses the 1-99 tier as cost", () => {
+  it("uses the 1-99 tier as cost (no adjustment)", () => {
     const ladder = priceLadderFromFashionBiz([
       { tier: "1-99", price: 10.5 },
       { tier: "100-499", price: 10.4 },
@@ -157,6 +157,41 @@ describe("priceLadderFromFashionBiz", () => {
     expect(priceLadderFromFashionBiz(undefined)).toBeNull()
     expect(priceLadderFromFashionBiz([{ tier: "1-99", price: 0 }])).toBeNull()
     expect(priceLadderFromFashionBiz([{ tier: "1-99", price: NaN }])).toBeNull()
+  })
+
+  describe("with costAdjustment", () => {
+    // P400MS observed: API 1-99 = $10.50, storefront price = $12.08 (~×1.15).
+    // After adjustment we feed 10.50 * 1.15 = 12.075 into the ladder.
+    it("applies the multiplier before the ladder", () => {
+      const ladder = priceLadderFromFashionBiz(
+        [{ tier: "1-99", price: 10.5 }],
+        1.15
+      )
+      expect(ladder).not.toBeNull()
+      // 12.075 * 1.65 = 19.92375 → round2 = 19.92
+      expect(ladder!.tier100Plus).toBe(19.92)
+      // standard = 19.92375 / 0.75 = 26.565 → 26.57 (1.65/0.75 = 2.2 exactly,
+      // so standard is cost*2.2 = 12.075*2.2 = 26.565)
+      expect(ladder!.standard).toBe(26.57)
+      expect(ladder!.base).toBe(26.57)
+    })
+
+    it("treats explicit 1.0 the same as no adjustment", () => {
+      const a = priceLadderFromFashionBiz([{ tier: "1-99", price: 10.5 }])
+      const b = priceLadderFromFashionBiz([{ tier: "1-99", price: 10.5 }], 1.0)
+      expect(a).toEqual(b)
+    })
+
+    it("falls back to 1.0 for invalid adjustment values", () => {
+      const baseline = priceLadderFromFashionBiz([{ tier: "1-99", price: 10.5 }])
+      // NaN / 0 / negative all coerce to 1.0 — defends against env-var typos
+      // that would otherwise zero out every price.
+      for (const bad of [NaN, 0, -1.5, Number.POSITIVE_INFINITY]) {
+        expect(
+          priceLadderFromFashionBiz([{ tier: "1-99", price: 10.5 }], bad)
+        ).toEqual(baseline)
+      }
+    })
   })
 })
 

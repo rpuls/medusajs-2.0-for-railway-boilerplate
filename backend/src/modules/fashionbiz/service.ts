@@ -45,6 +45,16 @@ export default class FashionBizService {
     return this.options_
   }
 
+  /**
+   * Effective cost multiplier — clamped to a positive finite number to defend
+   * against env-var typos that would otherwise zero out every price.
+   */
+  getCostAdjustment(): number {
+    const raw = this.options_.cost_adjustment
+    if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) return 1.0
+    return raw
+  }
+
   async fetchAllProductsForBrand(brand: FashionBizBrandSlug): Promise<FashionBizProductStub[]> {
     const resp = await this.client_.getSimpleProductList(brand)
     return resp.products ?? []

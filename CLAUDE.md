@@ -128,6 +128,7 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | `FASHIONBIZ_API_TOKEN` | Optional. FashionBiz Public API v3 token (Authorization: `Token <token>`). Required to enable the FashionBiz importer + nightly stock sync. When unset, the FashionBiz module is not registered and the cron is a no-op. | unset |
 | `FASHIONBIZ_BRANCH` | Optional. FashionBiz country shorthand: `au`, `nz`, or `ca`. | `au` |
 | `FASHIONBIZ_BASE_URL` | Optional. FashionBiz API base URL — only override for staging or proxy. | `https://www.fashionbizapis.com/api/v3` |
+| `FASHIONBIZ_COST_ADJUSTMENT` | Multiplier applied to the API "1-99" tier price before it's fed into the bulk-price ladder. The FashionBiz public API exposes a published "1-99" wholesale tier, but the distributor storefront (`au-store.fashionbizapps.com`) charges SC Prints **~15% above that tier** (observed 2026-05-13 across P400MS/BP2616MS/BP2610MS/P515MS, ratios 1.1505/1.1498/1.1498/1.1541). Production should set this to `1.15` so the retail ladder is calculated from the cost we'll actually be billed. | `1.0` (no adjustment — undercharges by ~15% if left at default) |
 
 All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 
@@ -201,7 +202,9 @@ IMPORT_BRANDS=biz-collection IMPORT_LIMIT=5 \
 
 Env vars: `IMPORT_LIMIT` (per-brand cap), `IMPORT_DRY_RUN=1` (no DB writes), `IMPORT_BRANDS` (comma-separated subset; default is all four).
 
-**Pricing**: the FashionBiz `prices` array carries three wholesale tiers (`1-99`, `100-499`, `500`). The importer treats `prices[0].price` (the 1-99 tier) as the supplier cost and runs it through the shared `buildPriceLadder()` markup formula — same shape as AS Colour, so storefront tier-pricing rendering "just works". The raw 3-tier wholesale array is preserved in `variant.metadata.raw_prices` for audit.
+**Pricing**: the FashionBiz `prices` array carries three wholesale tiers (`1-99`, `100-499`, `500`). The importer treats `prices[0].price` (the 1-99 tier) as the supplier cost, multiplies by `FASHIONBIZ_COST_ADJUSTMENT` (default 1.0, production should be `1.15` — see env var table), then runs the result through the shared `buildPriceLadder()` markup formula. Same ladder shape as AS Colour, so storefront tier-pricing rendering "just works". The raw 3-tier wholesale array and the adjustment factor that was applied are preserved in `variant.metadata.raw_prices` and `variant.metadata.cost_adjustment` for audit.
+
+The adjustment exists because the public-API "1-99" tier is a *published* price; FashionBiz's distributor storefront charges customers ~15% above that for trade pricing. Without the multiplier the storefront retail ladder underprices garments by ~15% relative to actual cost.
 
 **Idempotency**: create-only, keyed by handle (`{brand}-{slug}`, e.g. `biz-collection-p400ms`). Existing handles are skipped — re-importing to update is a planned follow-up.
 

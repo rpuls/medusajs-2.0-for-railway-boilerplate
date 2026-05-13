@@ -7,15 +7,17 @@ import { FashionBizPrice } from "./types"
  * The FashionBiz API returns wholesale tiers like:
  *   [{tier:"1-99", price:10.5}, {tier:"100-499", price:10.4}, {tier:"500", price:10.3}]
  *
- * We treat the 1-99 tier as the supplier cost and run it through the same
- * markup ladder AS Colour uses, so customer-facing prices stay consistent
- * across the catalog regardless of supplier.
+ * The "1-99" price is **not** what FashionBiz actually charges SC Prints —
+ * the distributor storefront sits ~15% above it. We multiply by
+ * `costAdjustment` (default 1.0, production typically 1.15) to align the
+ * cost we feed into the retail ladder with what we'll actually be billed.
  *
  * Returns `null` if no usable cost can be derived (e.g. `prices` missing
- * or contains only "Gold" / non-1-99 tiers).
+ * or contains only non-numeric values).
  */
 export function priceLadderFromFashionBiz(
-  prices: FashionBizPrice[] | undefined | null
+  prices: FashionBizPrice[] | undefined | null,
+  costAdjustment: number = 1.0
 ): PriceLadder | null {
   if (!prices?.length) return null
   // Prefer the "1-99" tier; fall back to the lowest-quantity tier if the
@@ -25,5 +27,7 @@ export function priceLadderFromFashionBiz(
   const source = oneToNn ?? fallback
   const cost = Number(source?.price)
   if (!Number.isFinite(cost) || cost <= 0) return null
-  return buildPriceLadder(cost)
+  const adjustment =
+    Number.isFinite(costAdjustment) && costAdjustment > 0 ? costAdjustment : 1.0
+  return buildPriceLadder(cost * adjustment)
 }

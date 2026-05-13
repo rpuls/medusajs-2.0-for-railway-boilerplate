@@ -19,6 +19,13 @@ export type FashionBizOptions = {
   token: string
   branch: FashionBizBranch
   base_url: string
+  /**
+   * Multiplier applied to the API "1-99" wholesale tier price before it
+   * feeds into the bulk-price ladder. Default 1.0 = ingest API price as-is.
+   * Observed: FashionBiz's distributor storefront charges ~15% above the
+   * public-API "1-99" tier, so production should set 1.15 to match.
+   */
+  cost_adjustment?: number
 }
 
 export type FashionBizPrice = {
