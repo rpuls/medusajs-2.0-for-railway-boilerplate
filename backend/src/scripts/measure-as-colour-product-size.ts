@@ -36,6 +36,9 @@ export default async function measureAsColourProductSize({
     "options.values.*",
   ]
 
+  // calculated_price requires a pricing context with at minimum a
+  // currency_code. The storefront supplies this implicitly via region_id;
+  // when calling query.graph directly we have to pass it ourselves.
   const { data: products } = await query.graph({
     entity: "product",
     fields,
@@ -48,6 +51,11 @@ export default async function measureAsColourProductSize({
         "as-colour-1004-1004",
       ],
     },
+    context: {
+      variants: {
+        calculated_price: { context: { currency_code: "aud" } },
+      },
+    } as any,
   })
 
   logger.info(`Fetched ${products.length} products`)

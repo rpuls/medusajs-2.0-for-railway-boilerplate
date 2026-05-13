@@ -53,12 +53,20 @@ export default async function syncAsColourInventory(container: MedusaContainer) 
     return
   }
 
+  // AS Colour's real /inventory/items response is one row per (sku, location)
+  // with the qty in `quantity` (not `available`) and no `warehouses` array.
+  // Sum across rows so multi-warehouse SKUs aggregate correctly. Fall back
+  // to the legacy nested shape if the API ever returns it.
   const stockBySku = new Map<string, number>()
-  for (const item of items) {
-    const total = item.warehouses?.length
-      ? item.warehouses.reduce((a, w) => a + (w.available ?? 0), 0)
-      : (item.available ?? 0)
-    if (item.sku) stockBySku.set(item.sku, total)
+  for (const item of items as any[]) {
+    if (!item?.sku) continue
+    const qty =
+      typeof item.quantity === "number"
+        ? item.quantity
+        : item.warehouses?.length
+          ? item.warehouses.reduce((a: number, w: any) => a + (w.available ?? 0), 0)
+          : (item.available ?? 0)
+    stockBySku.set(item.sku, (stockBySku.get(item.sku) ?? 0) + qty)
   }
 
   const skus = Array.from(stockBySku.keys())

@@ -119,6 +119,10 @@ export default class AsColourService {
 
   /**
    * Pick the warehouse with the highest available stock for a SKU. Used when building order payloads.
+   *
+   * Handles the real flat AS Colour shape ({sku, location, quantity, ...}),
+   * the legacy nested shape ({sku, warehouses: [...]}), and the older
+   * top-level {sku, warehouse, available} shape.
    */
   pickWarehouseForSku(item: AsColourInventoryItem | undefined): string | null {
     if (!item) return null
@@ -130,7 +134,7 @@ export default class AsColourService {
       if (best && (best.available ?? 0) > 0) return best.warehouse
       return sorted[0]?.warehouse ?? null
     }
-    return item.warehouse ?? null
+    return item.location ?? item.warehouse ?? null
   }
 
   async createDropshipOrder(payload: AsColourCreateOrderRequest): Promise<AsColourOrder> {

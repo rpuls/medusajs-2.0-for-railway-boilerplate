@@ -70,6 +70,12 @@ export type AsColourImage = {
 export type AsColourInventoryItem = {
   sku: string
   styleCode?: string
+  // Real API shape (confirmed via probe-ascolour-inventory.ts): one row per
+  // (sku, location) with the qty in `quantity`.
+  location?: string
+  quantity?: number
+  nextDeliveryETA?: string | null
+  // Legacy / alternate shapes — kept so parsers can fall back gracefully.
   warehouse?: string
   available?: number
   onHand?: number
