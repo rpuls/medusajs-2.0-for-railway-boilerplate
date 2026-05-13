@@ -1,56 +1,13 @@
 /**
- * Pricing ladder ported from scripts/build_as_colour_import_csv.py.
- *
- *   cost     = AS Colour trade price (ex GST)
- *   100+     = cost * 1.10 * 1.5  (= cost * 1.65, GST-incl floor)
- *   standard = 100+ / 0.75        (= cost * 2.20)
- *   10–19    = standard * 0.90
- *   20–49    = standard * 0.85
- *   50–99    = standard * 0.80
- *   base     = standard (covers Medusa qty 1–9)
- *
- * `cost` and outputs are AUD GST-inclusive dollars.
+ * AS Colour pricing helpers. The actual ladder math now lives in the shared
+ * `backend/src/utils/bulk-price-ladder.ts` so the FashionBiz importer (and
+ * any future suppliers that ingest a single wholesale cost per SKU) can
+ * reuse it without copy-pasting the formula.
  */
-export type PriceLadder = {
-  base: number
-  tier10to19: number
-  tier20to49: number
-  tier50to99: number
-  tier100Plus: number
-  standard: number
-}
+export {
+  buildPriceLadder,
+  buildBulkPricingMetadata,
+  toMinorAud,
+} from "../../utils/bulk-price-ladder"
 
-const round2 = (n: number) => Math.round(n * 100) / 100
-
-export const buildPriceLadder = (
-  cost: number,
-  baseMultiplier = 2.2
-): PriceLadder => {
-  const tier100PlusVal = cost * 1.1 * 1.5
-  const standard = tier100PlusVal / 0.75
-  const baseVal = (standard * baseMultiplier) / 2.2
-
-  return {
-    base: round2(baseVal),
-    tier10to19: round2(standard * 0.9),
-    tier20to49: round2(standard * 0.85),
-    tier50to99: round2(standard * 0.8),
-    tier100Plus: round2(tier100PlusVal),
-    standard: round2(standard),
-  }
-}
-
-/** Convert a major-unit AUD value to Medusa minor units (cents). */
-export const toMinorAud = (major: number): number => Math.round(major * 100)
-
-/**
- * Build the metadata.bulk_pricing block in the same shape spreadsheet-sync-import.ts uses,
- * so storefront tier-pricing rendering keeps working unchanged.
- */
-export const buildBulkPricingMetadata = (ladder: PriceLadder) => ({
-  base_sale_price: ladder.base,
-  tier_10_to_19_price: ladder.tier10to19,
-  tier_20_to_49_price: ladder.tier20to49,
-  tier_50_to_99_price: ladder.tier50to99,
-  tier_100_plus_price: ladder.tier100Plus,
-})
+export type { PriceLadder } from "../../utils/bulk-price-ladder"
