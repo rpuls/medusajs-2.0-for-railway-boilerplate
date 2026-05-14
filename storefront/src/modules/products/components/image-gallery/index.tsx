@@ -3,7 +3,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { Container } from "@medusajs/ui"
 import Image from "next/image"
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { remapStaleExternalGarmentUrl } from "@lib/util/remap-stale-supplier-images"
 import { useProductOptions } from "@modules/products/context/product-options-context"
 import {
@@ -24,9 +24,10 @@ type ImageGalleryProps = {
   product: HttpTypes.StoreProduct
   images: HttpTypes.StoreProductImage[]
   thumbnail?: string | null
+  heroLayout?: boolean
 }
 
-const ImageGallery = ({ product, images, thumbnail }: ImageGalleryProps) => {
+const ImageGallery = ({ product, images, thumbnail, heroLayout = false }: ImageGalleryProps) => {
   const { options, colorHoverPreview } = useProductOptions()
 
   const effectiveOptions = useMemo(() => {
@@ -167,6 +168,67 @@ const ImageGallery = ({ product, images, thumbnail }: ImageGalleryProps) => {
   }, [fallbackWithCatalogAngles])
 
   const hasProductImages = displayImages.length > 0
+
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  // Reset to first image whenever the colour/variant changes the display set.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setActiveIndex(0) }, [displayImages[0]?.url])
+
+  if (heroLayout) {
+    const heroImage = displayImages[activeIndex] ?? displayImages[0]
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-ui-bg-subtle">
+          {heroImage ? (
+            <Image
+              key={heroImage.url}
+              src={heroImage.url}
+              alt={`Product image ${activeIndex + 1}`}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="absolute inset-0 rounded-xl object-cover transition-opacity duration-300 ease-in-out"
+              style={{ objectFit: "cover" }}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-ui-fg-subtle">
+              No image available
+            </div>
+          )}
+        </div>
+        {displayImages.length > 1 && (
+          <div
+            className="flex gap-2 overflow-x-auto pb-1"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {displayImages.map((image, index) => (
+              <button
+                key={`${image.id}-${index}`}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                aria-label={`View image ${index + 1}`}
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors duration-150 ${
+                  index === activeIndex
+                    ? "border-ui-fg-base"
+                    : "border-transparent hover:border-ui-border-strong"
+                }`}
+              >
+                <Image
+                  src={image.url}
+                  alt={`Thumbnail ${index + 1}`}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                  style={{ objectFit: "cover" }}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex items-start relative">

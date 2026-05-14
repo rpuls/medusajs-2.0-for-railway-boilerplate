@@ -3266,6 +3266,7 @@ export default function CustomizerTemplate({
     // chip with a "Change" link once completed. Mirrors the reference
     // /Customizer.mov flow.
     const hasStep1 = showPdpLabeledOptionsStep
+    const isCustomizing = pdpStep > 1 || !hasStep1
     // `allowedPrintSides` is hoisted to the component body so the standalone
     // rail can share it; here we just react to the customer landing on a
     // disallowed side (e.g. via a stale `?side=back` querystring on a hat).
@@ -3388,7 +3389,29 @@ export default function CustomizerTemplate({
           layout (col-span sits on lg, where order-* is reset to none).
         */}
         <div className="order-2 lg:col-span-6 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
-          {integratedPdpSlots.gallery}
+          {/* Gallery collapses when customizing begins. Canvas is always mounted
+              below it — Fabric.js must never be unmounted/remounted. */}
+          <div
+            className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
+              isCustomizing
+                ? "max-h-0 opacity-0 pointer-events-none"
+                : "max-h-[3000px] opacity-100"
+            }`}
+            aria-hidden={isCustomizing}
+          >
+            {integratedPdpSlots.gallery}
+          </div>
+
+          {isCustomizing && (
+            <button
+              type="button"
+              onClick={() => setPdpStep(1)}
+              className="self-start text-xs font-medium text-ui-fg-interactive hover:underline"
+            >
+              ← Back to product images
+            </button>
+          )}
+
           {showSideNudge && (
             <div className="flex items-center gap-2 rounded-lg bg-ui-bg-subtle/90 px-3 py-2 text-xs text-ui-fg-base ring-1 ring-ui-border-base">
               <span className="shrink-0 text-ui-fg-muted" aria-hidden>✏</span>
@@ -3397,7 +3420,7 @@ export default function CustomizerTemplate({
           )}
           {editorColumn}
         </div>
-        <div className="order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:col-span-3 lg:sticky lg:top-24 lg:pr-1">
+        <div className="order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:col-span-3 lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
           <div className="space-y-1 border-b border-ui-border-base pb-4">
             <p className="text-xl font-semibold text-ui-fg-base">Customize and checkout</p>
             <p className="text-xs text-ui-fg-subtle">
@@ -3478,40 +3501,6 @@ export default function CustomizerTemplate({
                     onClick={() => {
                       setPdpStep1Done(true)
                       setPdpStep((s) => (s > 1 ? s : 2))
-                      // Smooth scroll first; if the browser ignores it
-                      // (some iOS versions do under specific scroll-snap
-                      // / overflow conditions), fall back to a forced
-                      // jump after a short tick. Belt-and-braces so the
-                      // CTA never feels like it "did nothing" on phone.
-                      if (typeof window !== "undefined") {
-                        const scrollToTarget = () => {
-                          const target = document.getElementById("product-customizer")
-                          if (!target) return false
-                          target.scrollIntoView({ behavior: "smooth", block: "start" })
-                          return true
-                        }
-                        const ok = scrollToTarget()
-                        // Force a re-attempt next tick in case the
-                        // smooth-scroll quietly no-op'd. iOS Safari
-                        // sometimes swallows the first call when the
-                        // tap originated inside a momentum scroll.
-                        window.setTimeout(() => {
-                          const target = document.getElementById("product-customizer")
-                          if (target) {
-                            const rect = target.getBoundingClientRect()
-                            // If we're not within ~80px of the top,
-                            // force-scroll. (Smooth scroll has had
-                            // ~300ms to land.)
-                            if (Math.abs(rect.top) > 80) {
-                              window.scrollTo({
-                                top: window.scrollY + rect.top - 16,
-                                behavior: "smooth",
-                              })
-                            }
-                          }
-                          void ok
-                        }, 350)
-                      }
                     }}
                   >
                     <svg

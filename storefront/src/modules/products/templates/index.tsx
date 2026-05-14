@@ -96,6 +96,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
       product={product}
       images={product?.images || []}
       thumbnail={product?.thumbnail || null}
+      heroLayout
     />
   )
   const variantPickersSlot = (
