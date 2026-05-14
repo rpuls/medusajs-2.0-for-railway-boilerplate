@@ -3396,20 +3396,22 @@ export default function CustomizerTemplate({
           gallery / canvas. Desktop keeps the original side-by-side
           layout (col-span sits on lg, where order-* is reset to none).
         */}
-        <div className={`order-2 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start ${
+        <div className={`order-2 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start transition-[grid-column] duration-300 ease-in-out ${
           isCustomizing ? "lg:col-span-7" : "lg:col-span-6"
         }`}>
           {/* Gallery collapses when customizing begins. Canvas is always mounted
               below it — Fabric.js must never be unmounted/remounted. */}
           <div
-            className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
+            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
               isCustomizing
-                ? "max-h-0 opacity-0 pointer-events-none"
-                : "max-h-[3000px] opacity-100"
+                ? "grid-rows-[0fr] opacity-0 pointer-events-none"
+                : "grid-rows-[1fr] opacity-100"
             }`}
             aria-hidden={isCustomizing}
           >
-            {integratedPdpSlots.gallery}
+            <div className="overflow-hidden min-h-0">
+              {integratedPdpSlots.gallery}
+            </div>
           </div>
 
           {isCustomizing && (
@@ -3430,7 +3432,7 @@ export default function CustomizerTemplate({
           )}
           {editorColumn}
         </div>
-        <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${
+        <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto transition-[grid-column] duration-300 ease-in-out ${
           isCustomizing ? "lg:col-span-5" : "lg:col-span-3"
         }`}>
           <div className="space-y-1 border-b border-ui-border-base pb-4">
