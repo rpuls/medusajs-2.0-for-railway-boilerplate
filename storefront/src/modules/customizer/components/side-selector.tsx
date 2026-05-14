@@ -15,9 +15,11 @@ type SideSelectorProps = {
   onSelectSide: (side: GarmentSide) => void
   /** Optional whitelist; when provided, only these sides render. */
   allowedSides?: GarmentSide[]
+  /** Sides that already have artwork — show a ✓ indicator on their tab. */
+  decoratedSides?: GarmentSide[]
 }
 
-export default function SideSelector({ currentSide, onSelectSide, allowedSides }: SideSelectorProps) {
+export default function SideSelector({ currentSide, onSelectSide, allowedSides, decoratedSides }: SideSelectorProps) {
   const visibleOptions = allowedSides
     ? SIDE_OPTIONS.filter((o) => allowedSides.includes(o.value))
     : SIDE_OPTIONS
@@ -29,6 +31,7 @@ export default function SideSelector({ currentSide, onSelectSide, allowedSides }
     >
       {visibleOptions.map((option) => {
         const selected = currentSide === option.value
+        const decorated = decoratedSides?.includes(option.value)
         return (
           <button
             key={option.value}
@@ -42,6 +45,9 @@ export default function SideSelector({ currentSide, onSelectSide, allowedSides }
             }`}
             onClick={() => onSelectSide(option.value)}
           >
+            {decorated && (
+              <span className="mr-0.5 text-[10px] text-emerald-600" aria-hidden>✓</span>
+            )}
             <span className="small:hidden">{option.short}</span>
             <span className="hidden small:inline">{option.label}</span>
           </button>

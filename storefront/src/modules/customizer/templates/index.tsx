@@ -616,7 +616,13 @@ export default function CustomizerTemplate({
   const [pdpStep, setPdpStep] = useState<1 | 2 | 3 | 4>(1)
   const [pdpStep1Done, setPdpStep1Done] = useState(false)
   const [pdpStep2Done, setPdpStep2Done] = useState(false)
-  const [pdpStep3Done, setPdpStep3Done] = useState(false)
+  const [sizingDoneSides, setSizingDoneSides] = useState<Set<GarmentSide>>(new Set())
+  // pdpStep3Done: true once at least one side is sized — gates the upload panel
+  const pdpStep3Done = sizingDoneSides.size > 0
+  // currentSideSized: true when the active side has a confirmed size — collapses Step 3
+  const currentSideSized = sizingDoneSides.has(currentSide)
+  // showSideNudge: brief banner when switching to an empty side in embedded mode
+  const [showSideNudge, setShowSideNudge] = useState(false)
   // "Edit existing cart line" mode: when present, the customizer pre-fills from
   // the line metadata and "Add to cart" replaces (add new + delete old).
   const editLineItemIdFromUrl = initialVariantSearchParams?.get("edit") ?? null
@@ -808,9 +814,9 @@ export default function CustomizerTemplate({
   useEffect(() => {
     if (!embedded) return
     if (allowedSizesForCurrentSide.length !== 1) return
-    if (pdpStep3Done && scpPrintSizeChosen) return
+    if (sizingDoneSides.has(currentSide) && scpPrintSizeChosen) return
     setScpPrintSizeChosen(true)
-    setPdpStep3Done(true)
+    setSizingDoneSides((prev) => new Set([...prev, currentSide]))
     setPdpStep((s) => (s > 3 ? s : 4))
   }, [embedded, allowedSizesForCurrentSide, pdpStep3Done, scpPrintSizeChosen])
 
@@ -827,6 +833,15 @@ export default function CustomizerTemplate({
     setPdpStep2Done(true)
     setPdpStep((s) => (s > 2 ? s : 3))
   }, [embedded, allowedPrintSides, pdpStep2Done])
+
+  // Show a brief nudge when the customer switches to a side with no artwork yet.
+  useEffect(() => {
+    if (!embedded) return
+    if (pdpStep < 2) return
+    // decoratedSides is populated after canvas load — only nudge once the wizard
+    // is past step 1 and the customer has actually switched sides.
+    setShowSideNudge(!decoratedSides.includes(currentSide))
+  }, [currentSide]) // eslint-disable-line react-hooks/exhaustive-deps
   const pdpHasVariantOptions = (selectedProduct.variants?.length ?? 0) > 1
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
@@ -1196,7 +1211,7 @@ export default function CustomizerTemplate({
         // Drop user straight onto the final step so they can update qty / re-upload.
         setPdpStep1Done(true)
         setPdpStep2Done(true)
-        setPdpStep3Done(true)
+        setSizingDoneSides(new Set(previousSides as GarmentSide[]))
         setPdpStep(4)
         setEditingHydrated(true)
       } catch {
@@ -1262,6 +1277,11 @@ export default function CustomizerTemplate({
       if (sid === "up_to_a6" || sid === "up_to_a4" || sid === "up_to_a3" || sid === "oversize") {
         setScpPrintSizeId(sid as ScpPrintSizeId)
         setScpPrintSizeChosen(true)
+        // Mark all sides as sized so the wizard doesn't re-prompt for print
+        // size when re-opening a previously saved/ordered design.
+        setSizingDoneSides(
+          new Set<GarmentSide>(["front", "back", "left_sleeve", "right_sleeve", "printed_tag"])
+        )
       }
     }
     if (pendingHydration.variantId) {
@@ -1502,6 +1522,7 @@ export default function CustomizerTemplate({
       updateLayers()
       updateDpiWarning()
       saveCurrentSide()
+      setShowSideNudge(false)
     }
 
     syncSize()
@@ -3138,6 +3159,15 @@ export default function CustomizerTemplate({
     </div>
   )
 
+  const sideLabel =
+    currentSide === "left_sleeve"
+      ? "Left Sleeve"
+      : currentSide === "right_sleeve"
+      ? "Right Sleeve"
+      : currentSide === "printed_tag"
+      ? "Printed Tag"
+      : currentSide.charAt(0).toUpperCase() + currentSide.slice(1)
+
   if (embedded && integratedPdpSlots) {
     // Guided wizard: steps reveal one at a time and collapse to a summary
     // chip with a "Change" link once completed. Mirrors the reference
@@ -3152,14 +3182,6 @@ export default function CustomizerTemplate({
     }
     const stepOffset = hasStep1 ? 0 : 1 // when no variant options, renumber 1->location
     const stepNum = (n: number) => n - stepOffset
-    const sideLabel =
-      currentSide === "left_sleeve"
-        ? "Left Sleeve"
-        : currentSide === "right_sleeve"
-        ? "Right Sleeve"
-        : currentSide === "printed_tag"
-        ? "Printed Tag"
-        : currentSide.charAt(0).toUpperCase() + currentSide.slice(1)
     const printSizeLabel =
       SCP_PRINT_SIZE_OPTIONS.find((opt) => opt.id === scpPrintSizeId)?.label ?? "Size"
 
@@ -3168,11 +3190,13 @@ export default function CustomizerTemplate({
       title,
       done,
       onChange,
+      badge,
     }: {
       num: number
       title: string
       done: boolean
       onChange?: () => void
+      badge?: string
     }) => (
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -3189,6 +3213,11 @@ export default function CustomizerTemplate({
           <h3 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-base truncate">
             {title}
           </h3>
+          {badge && (
+            <span className="shrink-0 rounded-full bg-ui-bg-base-hover px-2 py-0.5 text-[11px] font-medium text-ui-fg-base ring-1 ring-ui-border-base">
+              {badge}
+            </span>
+          )}
         </div>
         {done && onChange ? (
           <button
@@ -3249,6 +3278,12 @@ export default function CustomizerTemplate({
         */}
         <div className="order-2 lg:col-span-6 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
           {integratedPdpSlots.gallery}
+          {showSideNudge && (
+            <div className="flex items-center gap-2 rounded-lg bg-ui-bg-subtle/90 px-3 py-2 text-xs text-ui-fg-base ring-1 ring-ui-border-base">
+              <span className="shrink-0 text-ui-fg-muted" aria-hidden>✏</span>
+              Now designing <strong className="mx-0.5">{sideLabel}</strong> — upload artwork in the panel below.
+            </div>
+          )}
           {editorColumn}
         </div>
         <div className="order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:col-span-3 lg:sticky lg:top-24 lg:pr-1">
@@ -3408,21 +3443,8 @@ export default function CustomizerTemplate({
                     num={stepNum(2)}
                     title={decoratedCount > 0 ? "Add / change print positions" : "Print location"}
                     done={pdpStep2Done && pdpStep > 2}
-                    // Single-side products (hats) have nothing to change —
-                    // the picker would just bounce the customer through a
-                    // no-op back to the auto-advanced state.
-                    onChange={
-                      allowedPrintSides.length > 1
-                        ? () => {
-                            setPdpStep(2)
-                            // Going back to add/change another print location means
-                            // the customer is restarting the size flow for the next
-                            // location — clear the "chosen" highlight so the size
-                            // tiles aren't pre-selected when they reach step 3.
-                            setScpPrintSizeChosen(false)
-                          }
-                        : undefined
-                    }
+                    badge={pdpStep2Done && pdpStep > 2 ? sideLabel : undefined}
+                    // Tabs are always visible — no "Change" button needed.
                   />
 
                   {decoratedCount > 0 ? (
@@ -3445,26 +3467,26 @@ export default function CustomizerTemplate({
                     </div>
                   ) : null}
 
-                  {pdpStep === 2 || (!hasStep1 && pdpStep < 2) ? (
-                    <>
-                      <SideSelector
-                        currentSide={currentSide}
-                        allowedSides={allowedPrintSides}
-                        onSelectSide={(side) => {
-                          switchSide(side)
-                          setPdpStep2Done(true)
-                          setPdpStep((s) => (s > 2 ? s : 3))
-                        }}
-                      />
-                      <p className="text-xs text-ui-fg-subtle">
-                        Pick a location, then add artwork in the design preview. Repeat to print on
-                        more spots — each location is priced separately.
-                      </p>
-                    </>
-                  ) : (
+                  <SideSelector
+                    currentSide={currentSide}
+                    allowedSides={allowedPrintSides}
+                    decoratedSides={decoratedSides}
+                    onSelectSide={(side) => {
+                      switchSide(side)
+                      setPdpStep2Done(true)
+                      // Re-open Step 3 when switching to a location that hasn't
+                      // been sized yet; single-size sides auto-advance immediately.
+                      const newStep =
+                        pdpStep > 2 && !sizingDoneSides.has(side) ? 3
+                        : pdpStep > 2 ? pdpStep
+                        : 3
+                      setPdpStep(newStep)
+                    }}
+                  />
+                  {pdpStep === 2 && (
                     <p className="text-xs text-ui-fg-subtle">
-                      Currently editing:{" "}
-                      <span className="font-medium text-ui-fg-base">{sideLabel}</span>
+                      Pick a location, then add artwork in the design preview. Repeat to print on
+                      more spots — each location is priced separately.
                     </p>
                   )}
                 </div>
@@ -3485,7 +3507,7 @@ export default function CustomizerTemplate({
               <StepHeader
                 num={stepNum(3)}
                 title="Print size"
-                done={pdpStep3Done && pdpStep > 3}
+                done={currentSideSized && pdpStep > 3}
                 // Hide the "Change" link when the side only allows one size
                 // (hats, printed_tag, short-sleeve sleeves) — there's nothing
                 // to switch to, so the link would just bounce the customer
@@ -3531,7 +3553,7 @@ export default function CustomizerTemplate({
                           onClick={() => {
                             setScpPrintSizeId(opt.id)
                             setScpPrintSizeChosen(true)
-                            setPdpStep3Done(true)
+                            setSizingDoneSides((prev) => new Set([...prev, currentSide]))
                             setPdpStep((s) => (s > 3 ? s : 4))
                           }}
                           className={`flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-colors ${
@@ -3553,14 +3575,6 @@ export default function CustomizerTemplate({
                       )
                     })}
                   </div>
-                  {allowedPrintSides.length > 1 ? (
-                    <p className="text-xs text-ui-fg-subtle">
-                      Want prints in more than one spot? Pick a size for this location, then tap{" "}
-                      <span className="font-medium text-ui-fg-base">Change</span> on{" "}
-                      <span className="font-medium text-ui-fg-base">Print location</span> above to
-                      add another.
-                    </p>
-                  ) : null}
                 </>
               ) : (
                 <div className="space-y-2">
@@ -3579,21 +3593,6 @@ export default function CustomizerTemplate({
                       <span className="text-[11px] font-normal text-ui-fg-subtle">ea / location</span>
                     </p>
                   </div>
-                  {allowedPrintSides.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => setPdpStep(2)}
-                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--brand-secondary)] bg-ui-bg-subtle/40 px-3 py-2 text-left text-xs text-ui-fg-subtle transition-colors hover:bg-ui-bg-subtle hover:text-ui-fg-base"
-                    >
-                      <span>
-                        <span className="font-semibold text-ui-fg-base">+ Add another print location</span>
-                        <span className="block text-[11px] text-ui-fg-muted">
-                          Go back to step {stepNum(2)} to print on a different spot too.
-                        </span>
-                      </span>
-                      <span aria-hidden className="text-ui-fg-muted">›</span>
-                    </button>
-                  ) : null}
                 </div>
               )}
             </div>

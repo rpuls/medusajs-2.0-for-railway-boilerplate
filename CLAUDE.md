@@ -1,6 +1,52 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # SC Prints — Medusa.js + Next.js storefront
 
 Custom-print e-commerce platform built on Medusa v2 (`backend/`) and Next.js 15 (`storefront/`). Customers design garments in a Fabric.js canvas, save them to a personal "My Designs" library, re-order from past orders, and see live production status as their job moves through the shop.
+
+## Commands
+
+Each app has its own `node_modules` — always `cd` into the app first, or use `pnpm --filter`.
+
+### Backend (`cd backend`)
+
+```bash
+pnpm dev                  # start Medusa dev server (hot reload)
+pnpm build                # production build: medusa build + postBuild.js (needs DATABASE_URL set)
+pnpm test                 # run all Jest tests
+pnpm test -- --testPathPattern=src/lib/__tests__/production-stage  # single test file
+pnpm email:dev            # preview Resend email templates at localhost:3002
+```
+
+### Storefront (`cd storefront`)
+
+```bash
+pnpm dev                  # start Next.js dev server (waits for backend to be healthy first)
+pnpm build:next           # Next.js build only, skipping the backend health-check wrapper
+pnpm lint                 # ESLint via next lint
+pnpm test                 # run all Jest tests
+pnpm test -- --testPathPattern=src/modules/customizer/lib/dpi  # single test file
+pnpm test-e2e             # Playwright E2E tests
+```
+
+### Repo root
+
+```bash
+pnpm check-production-stage-sync   # validate backend & storefront production-stage files are in sync
+```
+
+### One-off backend scripts (run via Railway exec or local medusa exec)
+
+```bash
+# Local
+cd backend && npx medusa exec src/scripts/import-as-colour-from-api.ts
+# Railway
+cd /app/.medusa/server && npx medusa exec src/scripts/<name>.js
+```
+
+Always use the `.medusa/server` path on Railway — other forms fail.
 
 ## Repo layout
 
@@ -262,7 +308,7 @@ All audit items from the original review have been resolved. See "Fixed" below f
 ## Operational notes
 
 - **MinIO retention is load-bearing for re-order.** If lifecycle policies GC `customer_original_files` URLs, re-order will display fine but **add-to-cart will fail to re-render print PNGs**. Set retention to indefinite for these objects, or move them to a permanent bucket on order placement.
-- **Customizer template size** ([storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx)) is ~2750 lines. New canvas-related work should consider whether it can live in a separate component before adding to this file.
+- **Customizer template size** ([storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx)) is ~3700 lines. New canvas-related work should consider whether it can live in a separate component before adding to this file.
 - **Hand-written migration**: the Phase 2 migration ([Migration20260507000000.ts](backend/src/modules/designs/migrations/Migration20260507000000.ts)) was hand-written to match what `npx medusa db:generate designs` produces. If you'd rather have the auto-generated one, delete it and run the generator before `db:migrate`.
 - **Production boot auto-migrates.** The backend `start` script in [backend/package.json](backend/package.json) is `init-backend && cd .medusa/server && npx medusa db:migrate && npx medusa db:sync-links && npx medusa start --verbose`. Both DB ops are idempotent and safe to run from every replica (workers included) — Mikro-ORM holds an advisory lock during migrate, so concurrent boots serialise. **Do not remove the `db:migrate` / `db:sync-links` calls** — without them, any Medusa minor that ships schema changes will silently break prod.
 
@@ -293,3 +339,59 @@ The original `init-backend` script (from `medusajs-launch-utils`) only seeds + m
 ## Server / client component pattern (App Router)
 
 When a PDP variant or other view is a client component (`"use client"`) but needs server-fetched data, **render the server piece in the parent and pass it as a slot prop** — never `import` server-only modules into the client component. Reference implementation: [storefront/src/modules/customizer/components/embedded-product-customizer.tsx](storefront/src/modules/customizer/components/embedded-product-customizer.tsx) accepts an optional `integratedPdpSlots: { gallery: ReactNode; variantPickers: ReactNode }` prop; the parent server component composes those nodes from server-side data and hands them in. This avoids the "you're importing a Server Component into a Client Component" build failure that bites at deploy time, not in dev. New PDP templates (e.g. embroidery-only, sticker-only) should follow the same pattern.
+
+## Customizer wizard architecture
+
+The customizer lives in one large file: [storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx) (~3700 lines). Understanding the two rendering modes and the wizard state machine is essential before editing it.
+
+### Two rendering modes
+
+| Mode | Trigger | Layout |
+|------|---------|--------|
+| **Standalone** | `/customizer?product=<handle>` | Canvas left (flex-1), wizard sidebar right (`minmax(300px,420px)`) |
+| **Embedded PDP** | `embedded={true}` prop from `EmbeddedProductCustomizer` | Canvas + editor column on left (`lg:col-span-6`), wizard steps column on right (`lg:col-span-3`) within the PDP grid |
+
+The `embedded` prop and `integratedPdpSlots` distinguish the two modes throughout the render. Most canvas logic is shared; only the outer layout grid and step-header rendering differ.
+
+### Wizard step state machine
+
+Four steps controlled by `pdpStep: 1 | 2 | 3 | 4` and per-step done flags:
+
+```
+pdpStep  done flag       Step
+  1      pdpStep1Done    PRODUCT OPTIONS (colour/variant)
+  2      pdpStep2Done    ADD / CHANGE PRINT POSITIONS (side tabs)
+  3      pdpStep3Done    PRINT SIZE (A6 / A4 / A3 / Oversize)
+  4      —               QUANTITY & CHECKOUT
+```
+
+- `pdpStep` = the currently active (expanded) step.
+- A step shows its full UI when `pdpStep === stepNumber`.
+- When `pdpStep > stepNumber && stepNDone === true`, the step collapses to a summary header with a "Change" link (`onClick={() => setPdpStep(N)}`).
+- When `pdpStep < stepNumber`, the step renders as a dimmed `StepPreview` card.
+
+**Critical**: `pdpStep3Done` is a single boolean shared across all print locations. Once any location gets a size, Step 3 is considered done for every subsequent location. If you need per-location size tracking, this is the flag to replace with a `Record<GarmentSide, PrintSize | null>` map.
+
+### Multi-side (print location) flow
+
+- `currentSide: GarmentSide` — whichever side the canvas is currently showing.
+- `sideLayoutsRef` — a `useRef` map of `GarmentSide → Fabric.js JSON`. Saving/loading a side serialises/deserialises the canvas into this ref without a re-render.
+- `switchSide(side)` — saves the current canvas to `sideLayoutsRef`, then loads the target side's JSON.
+- `allowedPrintSides` — derived from `product.metadata.print_sides`; controls which tabs appear in `SideSelector`.
+- `decoratedSides` — sides that have at least one Fabric object. Used to show ✓ on tabs and to build `CustomizerMetadata` at cart-add time.
+
+### Key sub-components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `SideSelector` | `components/side-selector.tsx` | Tab row (Front / Back / Left Sleeve…); calls `onSelectSide` on click |
+| `DesignPreviewPopover` | `components/design-preview-popover.tsx` | Pink "Preview design N" pill; shows per-side mockup thumbnails |
+| `InputPanel` | `components/input-panel.tsx` | Left-side "Add to design" panel — file upload, text, "My uploads" |
+| `PricingPanel` | `components/pricing-panel.tsx` | Bulk discount table + unit price calculation |
+| `EmbeddedProductCustomizer` | `components/embedded-product-customizer.tsx` | Server→client bridge for the PDP; passes `integratedPdpSlots` in |
+
+### Canvas ↔ wizard data flow
+
+1. Customer places artwork → Fabric.js fires `object:added/modified` → `onCanvasModified` updates `sideLayoutsRef` and recalculates `decoratedSides`.
+2. Customer picks a print size in Step 3 → `setSelectedPrintArea(area)` + `setPdpStep3Done(true)`.
+3. "Add to cart" → `buildCustomizerMetadataBase()` serialises all sides from `sideLayoutsRef` + `selectedPrintArea` + `activeSide` into a `CustomizerMetadata` v2 object, which is stored on the cart line's `metadata`.
