@@ -67,6 +67,7 @@ import { sampleImageDominantColor } from "@modules/customizer/lib/sample-image-c
 import { HttpTypes } from "@medusajs/types"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { motion } from "framer-motion"
 import { trackCustomizerAction, trackCustomizerFunnel } from "@lib/analytics"
 import { phCapture } from "@lib/posthog"
 import * as fabric from "fabric"
@@ -2804,6 +2805,13 @@ export default function CustomizerTemplate({
 
       router.refresh()
 
+      // Items are now in the cart and counted in the cross-product
+      // aggregate. Clear the local size matrix so the bulk-tier
+      // projection doesn't double-count the just-added quantities
+      // against the freshly-refreshed aggregate (which already
+      // includes them).
+      setSizeMatrix((prev) => prev.map((row) => ({ ...row, quantity: 0 })))
+
       if (!cartHasHostedArtifactUrls) {
         if (renderHadPrintAndMockupStrings) {
           setStatusMessage(
@@ -3399,28 +3407,52 @@ export default function CustomizerTemplate({
         <div className={`order-2 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start transition-[grid-column] duration-300 ease-in-out ${
           isCustomizing ? "lg:col-span-7" : "lg:col-span-6"
         }`}>
-          {/* Gallery collapses when customizing begins. Canvas is always mounted
-              below it — Fabric.js must never be unmounted/remounted. */}
-          <div
-            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-              isCustomizing
-                ? "grid-rows-[0fr] opacity-0 pointer-events-none"
-                : "grid-rows-[1fr] opacity-100"
-            }`}
+          {/* Gallery curtain-wipes away when customizing begins (pattern lifted
+              from LabTierCCurtainWipeImage in the animation lab). The clipPath
+              sweeps right→left while max-height collapses the layout slot —
+              opacity fade overlaps so the canvas underneath fills the position
+              with a smooth, cinematic hand-off. Canvas must always stay mounted
+              for Fabric.js. */}
+          <motion.div
+            initial={false}
+            animate={{
+              clipPath: isCustomizing ? "inset(0% 100% 0% 0%)" : "inset(0% 0% 0% 0%)",
+              opacity: isCustomizing ? 0 : 1,
+              maxHeight: isCustomizing ? 0 : 3000,
+            }}
+            transition={{
+              clipPath: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+              opacity: { duration: 0.3, ease: "easeOut" },
+              maxHeight: { duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.08 },
+            }}
+            className={`overflow-hidden ${isCustomizing ? "pointer-events-none" : ""}`}
             aria-hidden={isCustomizing}
           >
-            <div className="overflow-hidden min-h-0">
-              {integratedPdpSlots.gallery}
-            </div>
-          </div>
+            {integratedPdpSlots.gallery}
+          </motion.div>
 
           {isCustomizing && (
             <button
               type="button"
               onClick={() => setPdpStep(1)}
-              className="self-start text-xs font-medium text-ui-fg-interactive hover:underline"
+              className="group inline-flex items-center gap-2 self-start rounded-full border border-ui-border-strong bg-ui-bg-base px-4 py-2 text-sm font-semibold text-ui-fg-base shadow-sm transition-all hover:border-ui-fg-base hover:bg-ui-bg-subtle hover:shadow-md active:scale-[0.98]"
             >
-              ← Back to product images
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className="transition-transform group-hover:-translate-x-0.5"
+              >
+                <path d="M19 12H5" />
+                <path d="M12 19l-7-7 7-7" />
+              </svg>
+              Back to product images
             </button>
           )}
 
@@ -3558,7 +3590,11 @@ export default function CustomizerTemplate({
               const decoratedCount = decoratedAllowed.length
               const totalAllowed = allowedPrintSides.length
               return (
-                <div className={`space-y-3 rounded-xl border p-4 ${
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+                  className={`space-y-3 rounded-xl border p-4 ${
                   pdpStep === 2
                     ? "border-ui-fg-base bg-ui-bg-base shadow-sm"
                     : "border-ui-border-base bg-ui-bg-subtle/40"
@@ -3615,7 +3651,7 @@ export default function CustomizerTemplate({
                       more spots — each location is priced separately.
                     </p>
                   )}
-                </div>
+                </motion.div>
               )
             })()
           ) : (
@@ -3630,7 +3666,11 @@ export default function CustomizerTemplate({
 
           {/* Step 3 — Print size */}
           {pdpStep >= 3 ? (
-            <div className={`space-y-3 rounded-xl border p-4 ${
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+              className={`space-y-3 rounded-xl border p-4 ${
               pdpStep === 3
                 ? "border-ui-fg-base bg-ui-bg-base shadow-sm"
                 : "border-ui-border-base bg-ui-bg-subtle/40"
@@ -3728,7 +3768,7 @@ export default function CustomizerTemplate({
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           ) : (
             <StepPreview
               num={stepNum(3)}
@@ -3741,7 +3781,12 @@ export default function CustomizerTemplate({
 
           {/* Step 4 — Quantities, notes & checkout */}
           {pdpStep >= 4 ? (
-            <>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+              className="flex flex-col gap-3"
+            >
               <div className="space-y-3 rounded-xl border border-ui-fg-base bg-ui-bg-base p-4 shadow-sm">
                 <StepHeader num={stepNum(4)} title="Quantity & checkout" done={false} active={true} help="Enter how many of each size you need. Bulk discounts apply automatically — the more you order, the lower the price per garment. Once you're happy, add to cart and complete checkout." />
                 {(() => {
@@ -3843,7 +3888,7 @@ export default function CustomizerTemplate({
                   {printNotes.length}/{CUSTOMIZER_PRINT_NOTES_MAX_LENGTH}
                 </p>
               </div>
-            </>
+            </motion.div>
           ) : (
             <StepPreview
               num={stepNum(4)}
