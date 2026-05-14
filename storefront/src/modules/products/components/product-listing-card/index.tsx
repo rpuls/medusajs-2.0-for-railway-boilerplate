@@ -428,7 +428,7 @@ function ProductListingCardTiltLift({
   )
   const [pointerInside, setPointerInside] = useState(false)
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 })
-  const MAX_TILT = 3
+  const MAX_TILT = 5
 
   const cardRootRef = useRef<HTMLElement | null>(null)
   const [swatchPhotosActive, setSwatchPhotosActive] = useState(false)
@@ -498,13 +498,13 @@ function ProductListingCardTiltLift({
   const liftSpring = LISTING_CARD_POP.liftSpring
 
   return (
+    <div style={{ perspective: `${LISTING_CARD_POP.perspectivePx}px` }} className="h-full w-full">
     <motion.article
       ref={cardRootRef}
       data-testid="product-wrapper"
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       onPointerMove={onPointerMove}
-      style={{ transformPerspective: LISTING_CARD_POP.perspectivePx }}
       animate={{
         y: pointerInside ? -LISTING_CARD_POP.liftPx : 0,
         scale: pointerInside ? LISTING_CARD_POP.hoverScale : 1,
@@ -528,6 +528,7 @@ function ProductListingCardTiltLift({
     >
       {content}
     </motion.article>
+    </div>
   )
 }
 
