@@ -1,6 +1,12 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { INotificationModuleService } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  Modules,
+} from "@medusajs/framework/utils"
+import type {
+  ICustomerModuleService,
+  INotificationModuleService,
+} from "@medusajs/framework/types"
 import { Pool } from "pg"
 import { ulid } from "ulid"
 import {
@@ -57,8 +63,15 @@ async function ensureNewsletterTable() {
           source_origin TEXT,
           source_ip TEXT,
           user_agent TEXT,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          customer_id TEXT,
+          migrated_at TIMESTAMPTZ
         )
+      `)
+      await newsletterPool.query(`
+        ALTER TABLE newsletter_subscriptions
+          ADD COLUMN IF NOT EXISTS customer_id TEXT,
+          ADD COLUMN IF NOT EXISTS migrated_at TIMESTAMPTZ
       `)
     })()
   }
@@ -116,6 +129,39 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const subscriptionId = (result.rows[0] as { id?: string })?.id ?? ulid()
+
+  try {
+    const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+    const { data: matches } = await query.graph({
+      entity: "customer",
+      fields: ["id", "metadata"],
+      filters: { email },
+    })
+    const customer = matches?.[0]
+    if (customer) {
+      const existingMeta = (customer.metadata ?? {}) as Record<string, unknown>
+      if (existingMeta.marketing_consent_email !== false) {
+        const customerModuleService: ICustomerModuleService = req.scope.resolve(
+          Modules.CUSTOMER
+        )
+        await customerModuleService.updateCustomers(customer.id, {
+          metadata: {
+            marketing_consent_email: true,
+            marketing_consent_updated_at: new Date().toISOString(),
+            marketing_consent_source: "signup",
+          },
+        })
+      }
+      await newsletterPool.query(
+        `UPDATE newsletter_subscriptions
+            SET customer_id = $1, migrated_at = COALESCE(migrated_at, NOW())
+          WHERE id = $2`,
+        [customer.id, subscriptionId]
+      )
+    }
+  } catch (error) {
+    console.error("Failed to sync newsletter subscription to customer consent", error)
+  }
   const teamRecipients = parseNotificationEmailList(
     NEWSLETTER_NOTIFICATION_EMAIL || CONTACT_NOTIFICATION_EMAIL
   )

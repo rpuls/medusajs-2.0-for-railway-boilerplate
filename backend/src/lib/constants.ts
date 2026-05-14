@@ -159,6 +159,53 @@ export const ADMIN_PUBLIC_URL = process.env.ADMIN_PUBLIC_URL
 export const REORDER_REMINDERS_ENABLED =
   String(process.env.REORDER_REMINDERS_ENABLED).toLowerCase() === "true"
 
+/**
+ * Abandoned-cart reminder cron is opt-in. Same posture as the reorder
+ * reminder — keep false until you've dry-run the candidate list against
+ * production and confirmed it isn't picking up carts that already
+ * converted or carts from customers who opted out of marketing email.
+ */
+export const ABANDONED_CART_REMINDERS_ENABLED =
+  String(process.env.ABANDONED_CART_REMINDERS_ENABLED).toLowerCase() === "true"
+
+/**
+ * A cart is only eligible once it's at least this many hours old (gives
+ * the customer time to come back on their own) and at most this many
+ * (older than the ceiling means we're never going to win them back from
+ * a single snapshot — treat as lost).
+ */
+export const ABANDONED_CART_AGE_MIN_HOURS = parseIntEnv(
+  process.env.ABANDONED_CART_AGE_MIN_HOURS,
+  6
+)
+export const ABANDONED_CART_AGE_MAX_HOURS = parseIntEnv(
+  process.env.ABANDONED_CART_AGE_MAX_HOURS,
+  72
+)
+export const ABANDONED_CART_MAX_SENDS_PER_RUN = parseIntEnv(
+  process.env.ABANDONED_CART_MAX_SENDS_PER_RUN,
+  50
+)
+
+/**
+ * Win-back email cron is opt-in. Fires weekly (Mondays) — pinging the
+ * same customer at most once every 90 days because severity gating in
+ * services/churn-queue/build-queue.ts uses the customer's median order
+ * gap to avoid spamming.
+ */
+export const WINBACK_EMAILS_ENABLED =
+  String(process.env.WINBACK_EMAILS_ENABLED).toLowerCase() === "true"
+
+/**
+ * Customer lifetime value (AUD) at or above which the admin LTV widget
+ * suggests adding the "VIP" tag. Also the value most admins will type
+ * into the automation-rules condition `lifetime_value gte N`.
+ */
+export const LTV_VIP_THRESHOLD_AUD = parseIntEnv(
+  process.env.LTV_VIP_THRESHOLD_AUD,
+  1500
+)
+
 /** If set, GET /key-exchange requires header x-medusa-key-exchange-secret (same value). */
 export const KEY_EXCHANGE_SECRET = process.env.KEY_EXCHANGE_SECRET
 
