@@ -6,6 +6,27 @@ import {
 import { z } from "zod"
 
 import { normalizeBulkPricingTiersFromVariantMetadata } from "../../../../../lib/scp-resolve-garment-unit-price"
+import { SCP_BLANK_ALIGNED_QUANTITY_TIERS } from "../../../../../lib/scp-dtf-print-pricing"
+
+// Fallback tier ranges for the storefront aggregate display when no eligible
+// line carries a variant tier ladder (e.g. a cart of cap-only SCP customizer
+// lines whose variants weren't imported with `bulk_pricing.tiers`). The SCP
+// blank-aligned ladder matches the standard 1-9 / 10-19 / 20-49 / 50-99 / 100+
+// ranges, so the banner copy stays consistent regardless of product mix.
+const FALLBACK_TIERS = SCP_BLANK_ALIGNED_QUANTITY_TIERS.map((t) => ({
+  min_quantity: t.minQuantity,
+  max_quantity: t.maxQuantity,
+}))
+
+const hasScpCustomizerMetadata = (
+  lineMetadata: Record<string, unknown> | null | undefined
+): boolean => {
+  if (!lineMetadata || typeof lineMetadata !== "object") return false
+  const customizerDesign = lineMetadata.customizerDesign as Record<string, unknown> | undefined
+  if (!customizerDesign || typeof customizerDesign !== "object") return false
+  const pricing = customizerDesign.pricing as Record<string, unknown> | undefined
+  return Boolean(pricing?.server && typeof pricing.server === "object")
+}
 
 const paramsSchema = z.object({
   id: z.string().min(1),
@@ -43,7 +64,14 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const { data: carts } = await query.graph({
     entity: "cart",
     filters: { id: cartId },
-    fields: ["id", "completed_at", "items.id", "items.quantity", "items.variant_id"],
+    fields: [
+      "id",
+      "completed_at",
+      "items.id",
+      "items.quantity",
+      "items.variant_id",
+      "items.metadata",
+    ],
   })
 
   const cart = carts?.[0] as
@@ -54,6 +82,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
           id?: string
           quantity?: number
           variant_id?: string | null
+          metadata?: Record<string, unknown> | null
         }>
       }
     | undefined
@@ -101,20 +130,39 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   for (const item of items) {
     const variantMeta = item.variant_id ? variantMetaById.get(item.variant_id) ?? null : null
     const qty = Math.max(0, Math.floor(item.quantity ?? 0))
-    if (!variantMeta) continue
-    if (variantMeta.exclude_from_bulk_aggregation === true) {
+    if (variantMeta?.exclude_from_bulk_aggregation === true) {
       excludedQty += qty
       continue
     }
-    const tiers = normalizeBulkPricingTiersFromVariantMetadata(variantMeta)
-    if (!tiers.length) continue
-    eligibleQty += qty
-    if (!sharedTiers) {
-      sharedTiers = tiers.map((t) => ({
-        min_quantity: t.minQuantity,
-        max_quantity: t.maxQuantity,
-      }))
+    // Variant carries the standard tier ladder → counts toward aggregate and
+    // donates its ranges as the shared tier table for the banner.
+    if (variantMeta) {
+      const tiers = normalizeBulkPricingTiersFromVariantMetadata(variantMeta)
+      if (tiers.length > 0) {
+        eligibleQty += qty
+        if (!sharedTiers) {
+          sharedTiers = tiers.map((t) => ({
+            min_quantity: t.minQuantity,
+            max_quantity: t.maxQuantity,
+          }))
+        }
+        continue
+      }
     }
+    // Variant has no ladder but the line is an SCP customizer line. Still
+    // counts toward the aggregate (so the print tier crosses boundaries
+    // consistently), but the banner falls back to the canonical SCP ranges
+    // since there's no variant-specific ladder to sample.
+    if (hasScpCustomizerMetadata(item.metadata)) {
+      eligibleQty += qty
+    }
+  }
+
+  // No eligible line had its own ladder but we still need ranges to render
+  // the banner. The SCP blank-aligned ladder uses the same boundaries as
+  // every variant importer, so this is safe.
+  if (!sharedTiers && eligibleQty > 0) {
+    sharedTiers = FALLBACK_TIERS
   }
 
   const effectiveQty = Math.max(0, eligibleQty)

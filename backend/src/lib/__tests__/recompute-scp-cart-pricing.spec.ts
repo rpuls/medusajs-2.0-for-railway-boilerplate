@@ -200,6 +200,91 @@ describe("recomputeScpCartPricingPure", () => {
     expect(result.prices.get("line_zero")).toBe(25)
   })
 
+  it("recomputes print tier for SCP customizer lines whose variant has no bulk_pricing.tiers", () => {
+    // Real-world case: a cap line was added at qty 100 → unit_price stamped
+    // with the 100+ print tier ($5/ea for A6). Customer reduced qty to 7 via
+    // the cart drawer. Variant has no `bulk_pricing.tiers` (some caps aren't
+    // imported with a ladder), but the line metadata still carries the SCP
+    // server block with `garment_unit_major` stamped at add-time.
+    const SCP_ONLY_LINE_META = {
+      customizerDesign: {
+        artifacts: [{ side: "front", print_size_id: "up_to_a6" }],
+        pricing: {
+          server: {
+            mode: "scp_dtf",
+            version: 1,
+            print_size_id: "up_to_a6",
+            tier_index: 4, // stamped at 100+ originally
+            decorated_sides: 1,
+            decorated_side_keys: ["front"],
+            garment_unit_major: 12.05,
+            print_total_major_per_garment: 5,
+            unit_price_major: 17.05,
+          },
+        },
+      },
+    }
+    const lines = [
+      {
+        id: "line_cap",
+        quantity: 7,
+        unit_price: 17.05,
+        variant: {
+          id: "var_cap",
+          metadata: {}, // No bulk_pricing.tiers
+        },
+        metadata: SCP_ONLY_LINE_META,
+      },
+    ]
+    const result = recomputeScpCartPricingPure(lines)
+    // Aggregate = 7 → 1-9 tier
+    expect(result.aggregated_quantity).toBe(7)
+    // Garment from stored value ($12.05) + A6 print at 1-9 tier ($8.50)
+    expect(result.prices.get("line_cap")).toBe(20.55)
+    expect(result.excluded_line_ids).toEqual([])
+  })
+
+  it("aggregates a mix of variant-ladder + scp-only lines", () => {
+    // Polo (with tiers) + Cap (SCP-only, no variant tiers).
+    // Total aggregated qty drives both: cap's print and polo's garment.
+    const SCP_CAP_META = {
+      customizerDesign: {
+        artifacts: [{ side: "front", print_size_id: "up_to_a6" }],
+        pricing: {
+          server: {
+            print_size_id: "up_to_a6",
+            decorated_sides: 1,
+            decorated_side_keys: ["front"],
+            garment_unit_major: 12.05,
+          },
+        },
+      },
+    }
+    const lines = [
+      {
+        id: "line_polo",
+        quantity: 45,
+        unit_price: 22.5,
+        variant: { id: "var_polo", metadata: VARIANT_A_TIERS },
+        metadata: customizerLineMeta("front"),
+      },
+      {
+        id: "line_cap",
+        quantity: 5,
+        unit_price: 17.05,
+        variant: { id: "var_cap", metadata: {} },
+        metadata: SCP_CAP_META,
+      },
+    ]
+    const result = recomputeScpCartPricingPure(lines)
+    // 45 + 5 = 50 → 50-99 tier (index 3)
+    expect(result.aggregated_quantity).toBe(50)
+    // Polo: variant 50-99 tier ($20) + A6 print at tier 3 ($5.50) = $25.50
+    expect(result.prices.get("line_polo")).toBe(25.5)
+    // Cap: stored garment ($12.05) + A6 print at tier 3 ($5.50) = $17.55
+    expect(result.prices.get("line_cap")).toBe(17.55)
+  })
+
   it("blends plain and customizer lines: plain garments get garment-only aggregated tier", () => {
     const lines = [
       {

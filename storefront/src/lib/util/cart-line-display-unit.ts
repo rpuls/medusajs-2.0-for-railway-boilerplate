@@ -34,12 +34,32 @@ export function variantWithInferredHandleForLineItem(
 export function cartLineUsesExplicitUnitPrice(
   item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem
 ): boolean {
-  const rec = item as { is_custom_price?: boolean; unit_price?: unknown }
-  return (
-    rec.is_custom_price === true &&
-    typeof rec.unit_price === "number" &&
-    Number.isFinite(rec.unit_price)
-  )
+  const rec = item as {
+    is_custom_price?: boolean
+    unit_price?: unknown
+    metadata?: Record<string, unknown> | null
+  }
+  const validUnitPrice =
+    typeof rec.unit_price === "number" && Number.isFinite(rec.unit_price)
+  if (!validUnitPrice) return false
+  // Path A: Medusa explicitly flagged the line as having a custom price.
+  if (rec.is_custom_price === true) return true
+  // Path B: the cart-retrieve response doesn't always carry `is_custom_price`
+  // (Medusa's default field selection trims it on some payloads, especially
+  // at checkout where enrichLineItems replaces the variant). For SCP
+  // customizer lines we can still recognise the line by its server-stamped
+  // pricing block on metadata — and we MUST honour `unit_price` there,
+  // because it bundles the print surcharge that the variant's
+  // `calculated_price` alone doesn't know about. Without this fallback,
+  // checkout silently strips the print component from the customer total.
+  const customizerDesign = rec.metadata?.customizerDesign as
+    | Record<string, unknown>
+    | undefined
+  if (customizerDesign && typeof customizerDesign === "object") {
+    const pricing = customizerDesign.pricing as Record<string, unknown> | undefined
+    if (pricing?.server && typeof pricing.server === "object") return true
+  }
+  return false
 }
 
 export function resolveCartLineDisplayUnitMinor(

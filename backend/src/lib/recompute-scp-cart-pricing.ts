@@ -79,20 +79,13 @@ const aggregationDisabled = (): boolean => {
   return normalized === "false" || normalized === "0" || normalized === "no"
 }
 
-const isLineEligible = (line: CartLineForRecompute): boolean => {
-  const variantMeta = line.variant?.metadata ?? null
-  if (!variantMeta) return false
-  if (variantMeta.exclude_from_bulk_aggregation === true) return false
-  const tiers = normalizeBulkPricingTiersFromVariantMetadata(variantMeta)
-  return tiers.length > 0
-}
-
 const readScpServerBlock = (
   metadata: Record<string, unknown> | null | undefined
 ): {
   printSizeId: ScpPrintSizeId | null
   decoratedLocations: DecoratedLocation[]
   decoratedSides: string[]
+  storedGarmentMajor: number | null
 } | null => {
   if (!metadata || typeof metadata !== "object") return null
   const customizerDesign = metadata.customizerDesign as Record<string, unknown> | undefined
@@ -105,10 +98,35 @@ const readScpServerBlock = (
   const printSizeRaw = server.print_size_id
   const printSizeId = isScpPrintSizeId(printSizeRaw) ? printSizeRaw : null
 
+  // Stamped at original add-time by `scp-line-items/route.ts`. Falls back to
+  // null for older payloads — callers handle that by trying variant tiers.
+  const storedGarmentRaw = server.garment_unit_major
+  const storedGarmentMajor =
+    typeof storedGarmentRaw === "number" && Number.isFinite(storedGarmentRaw)
+      ? storedGarmentRaw
+      : null
+
   const decoratedLocations = decoratedLocationsFromLineMetadata(metadata)
   const decoratedSides = decoratedSidesFromLineMetadata(metadata)
 
-  return { printSizeId, decoratedLocations, decoratedSides }
+  return { printSizeId, decoratedLocations, decoratedSides, storedGarmentMajor }
+}
+
+const isLineEligible = (line: CartLineForRecompute): boolean => {
+  const variantMeta = line.variant?.metadata ?? null
+  // Opt-out applies regardless of metadata shape.
+  if (variantMeta?.exclude_from_bulk_aggregation === true) return false
+  // Path A: variant carries a bulk-pricing ladder → standard garment line.
+  if (variantMeta) {
+    const tiers = normalizeBulkPricingTiersFromVariantMetadata(variantMeta)
+    if (tiers.length > 0) return true
+  }
+  // Path B: customizer line whose variant has no ladder (e.g. some caps).
+  // The garment portion is fixed at add-time; we only re-tier the print
+  // surcharge. Still eligible to participate in cart-wide aggregation so
+  // it benefits from (and contributes to) the aggregated qty.
+  const scpBlock = readScpServerBlock(line.metadata)
+  return Boolean(scpBlock && scpBlock.printSizeId)
 }
 
 const computeNewUnitPriceMajor = (
@@ -116,12 +134,21 @@ const computeNewUnitPriceMajor = (
   aggregatedQty: number
 ): number | null => {
   const variantMeta = line.variant?.metadata ?? null
-  const garmentMajor = garmentMajorFromBulkMetadataOrNull(variantMeta, aggregatedQty)
+  const garmentFromTiers = garmentMajorFromBulkMetadataOrNull(variantMeta, aggregatedQty)
+  const scpBlock = readScpServerBlock(line.metadata)
+
+  // Garment portion: prefer the live tier lookup when the variant has a
+  // ladder; otherwise fall back to the garment amount stamped at add-time.
+  // Either is fine — we just need a stable garment baseline.
+  const garmentMajor =
+    garmentFromTiers !== null
+      ? garmentFromTiers
+      : scpBlock?.storedGarmentMajor ?? null
+
   if (garmentMajor === null) return null
 
-  const scpBlock = readScpServerBlock(line.metadata)
+  // No customizer metadata → plain garment line, no print component.
   if (!scpBlock || !scpBlock.printSizeId) {
-    // Plain (non-customizer) garment line. Garment-only price.
     return round2(Math.max(0, garmentMajor))
   }
 
