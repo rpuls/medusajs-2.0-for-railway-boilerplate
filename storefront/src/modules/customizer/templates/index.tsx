@@ -3613,6 +3613,12 @@ export default function CustomizerTemplate({
                         : pdpStep > 2 ? pdpStep
                         : 3
                       setPdpStep(newStep)
+                      // Clear the shared "size chosen" flag when moving to an
+                      // unsized location so the size picker doesn't pre-select
+                      // the previous side's choice.
+                      if (!sizingDoneSides[side]) {
+                        setScpPrintSizeChosen(false)
+                      }
                     }}
                   />
                   {pdpStep === 2 && (
@@ -3659,6 +3665,11 @@ export default function CustomizerTemplate({
                   switchSide(nextSide)
                   setPdpStep2Done(true)
                   setPdpStep(3)
+                  // The new location hasn't been sized yet, so clear the
+                  // shared "size chosen" flag — otherwise the size picker
+                  // shows the previous location's choice pre-highlighted
+                  // and the customer has no visual cue to pick fresh.
+                  setScpPrintSizeChosen(false)
                 }}
                 className="w-full rounded-xl border-2 border-dashed border-fuchsia-500 bg-transparent px-4 py-3 text-left text-sm font-medium text-ui-fg-base transition-colors hover:border-fuchsia-600 hover:bg-fuchsia-50"
               >
