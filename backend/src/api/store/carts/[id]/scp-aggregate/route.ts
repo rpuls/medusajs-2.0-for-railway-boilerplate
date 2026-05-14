@@ -43,14 +43,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const { data: carts } = await query.graph({
     entity: "cart",
     filters: { id: cartId },
-    fields: [
-      "id",
-      "completed_at",
-      "items.id",
-      "items.quantity",
-      "items.variant_id",
-      "items.variant.metadata",
-    ],
+    fields: ["id", "completed_at", "items.id", "items.quantity", "items.variant_id"],
   })
 
   const cart = carts?.[0] as
@@ -60,8 +53,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         items?: Array<{
           id?: string
           quantity?: number
-          variant_id?: string
-          variant?: { metadata?: Record<string, unknown> | null } | null
+          variant_id?: string | null
         }>
       }
     | undefined
@@ -71,6 +63,34 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const items = Array.isArray(cart.items) ? cart.items : []
+
+  // Batch-fetch variant metadata directly. Following `items.variant.metadata`
+  // through the cart graph proved unreliable in production — the join
+  // collapsed to null silently and every line was treated as "no tiers", so
+  // the aggregate always returned 0. The working pattern from
+  // `resolveGarmentUnitAmountMajor` queries variants by id and reads metadata
+  // directly. One round-trip for the whole cart.
+  const variantIds = Array.from(
+    new Set(items.map((it) => it.variant_id).filter((id): id is string => typeof id === "string" && id.length > 0))
+  )
+
+  const variantMetaById = new Map<string, Record<string, unknown>>()
+  if (variantIds.length) {
+    const { data: variantRows } = await query.graph({
+      entity: "variants",
+      filters: { id: variantIds },
+      fields: ["id", "metadata"],
+    })
+    for (const row of (variantRows ?? []) as Array<{
+      id?: string
+      metadata?: Record<string, unknown> | null
+    }>) {
+      if (row?.id && row.metadata && typeof row.metadata === "object") {
+        variantMetaById.set(row.id, row.metadata)
+      }
+    }
+  }
+
   let eligibleQty = 0
   let excludedQty = 0
   // Shared tier table — the SCP ladder is uniform across all eligible
@@ -79,7 +99,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   let sharedTiers: Array<{ min_quantity: number; max_quantity?: number }> | null = null
 
   for (const item of items) {
-    const variantMeta = item.variant?.metadata ?? null
+    const variantMeta = item.variant_id ? variantMetaById.get(item.variant_id) ?? null : null
     const qty = Math.max(0, Math.floor(item.quantity ?? 0))
     if (!variantMeta) continue
     if (variantMeta.exclude_from_bulk_aggregation === true) {
