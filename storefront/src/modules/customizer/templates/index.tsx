@@ -55,6 +55,7 @@ import {
 } from "@modules/customizer/lib/print-spec"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { useProductOptionsOptional } from "@modules/products/context/product-options-context"
+import { useCustomizeModeOptional } from "@modules/products/context/customize-mode-context"
 import { sortApparelSizeLabels } from "@modules/products/lib/apparel-size-order"
 import {
   getGarmentImageUrlForPrintSide,
@@ -883,6 +884,14 @@ export default function CustomizerTemplate({
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
   const embedPdpQuantityStepNumber = showPdpLabeledOptionsStep ? 3 : 2
+  // True once the customer has advanced past step 1 (or immediately for
+  // products with no colour options). Shared with PdpLayoutGrid via the
+  // CustomizeMode context so the PDP aside hides + customizer expands.
+  const isCustomizing = embedded && (pdpStep > 1 || !showPdpLabeledOptionsStep)
+  const customizeModeCtx = useCustomizeModeOptional()
+  useEffect(() => {
+    customizeModeCtx?.setIsCustomizing(isCustomizing)
+  }, [isCustomizing, customizeModeCtx])
   const selectedVariant = useMemo(
     () =>
       selectedProduct?.variants?.find((variant) => variant.id === activeVariantId) ??
@@ -3266,7 +3275,6 @@ export default function CustomizerTemplate({
     // chip with a "Change" link once completed. Mirrors the reference
     // /Customizer.mov flow.
     const hasStep1 = showPdpLabeledOptionsStep
-    const isCustomizing = pdpStep > 1 || !hasStep1
     // `allowedPrintSides` is hoisted to the component body so the standalone
     // rail can share it; here we just react to the customer landing on a
     // disallowed side (e.g. via a stale `?side=back` querystring on a hat).
@@ -3388,7 +3396,9 @@ export default function CustomizerTemplate({
           gallery / canvas. Desktop keeps the original side-by-side
           layout (col-span sits on lg, where order-* is reset to none).
         */}
-        <div className="order-2 lg:col-span-6 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
+        <div className={`order-2 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start ${
+          isCustomizing ? "lg:col-span-7" : "lg:col-span-6"
+        }`}>
           {/* Gallery collapses when customizing begins. Canvas is always mounted
               below it — Fabric.js must never be unmounted/remounted. */}
           <div
@@ -3420,7 +3430,9 @@ export default function CustomizerTemplate({
           )}
           {editorColumn}
         </div>
-        <div className="order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:col-span-3 lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+        <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${
+          isCustomizing ? "lg:col-span-5" : "lg:col-span-3"
+        }`}>
           <div className="space-y-1 border-b border-ui-border-base pb-4">
             <p className="text-xl font-semibold text-ui-fg-base">Customize and checkout</p>
             <p className="text-xs text-ui-fg-subtle">
