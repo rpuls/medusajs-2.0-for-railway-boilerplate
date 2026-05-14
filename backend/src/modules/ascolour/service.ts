@@ -137,6 +137,30 @@ export default class AsColourService {
     return item.location ?? item.warehouse ?? null
   }
 
+  /**
+   * Pick the best warehouse from multiple inventory rows for a single SKU.
+   *
+   * The real AS Colour /inventory/items list endpoint returns one row per
+   * (sku, location) with qty in `quantity`. This method aggregates those rows
+   * and returns the location with the highest stock, falling back gracefully to
+   * the legacy nested and flat shapes.
+   */
+  pickWarehouseFromInventoryList(items: AsColourInventoryItem[]): string | null {
+    if (!items.length) return null
+    // Real API shape: {sku, location, quantity} — one row per location.
+    const withLocation = items.filter((i) => i.location)
+    if (withLocation.length) {
+      const best = [...withLocation].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0))[0]
+      return best.location!
+    }
+    // Legacy nested shape: {sku, warehouses: [{warehouse, available}]}
+    if (items[0].warehouses?.length) {
+      return this.pickWarehouseForSku(items[0])
+    }
+    // Oldest flat shape: {sku, warehouse, available}
+    return items[0].warehouse ?? null
+  }
+
   async createDropshipOrder(payload: AsColourCreateOrderRequest): Promise<AsColourOrder> {
     const resp = await this.client_.createOrder(payload)
     if (typeof resp === "string") {
