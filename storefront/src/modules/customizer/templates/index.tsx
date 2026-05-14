@@ -3822,26 +3822,6 @@ export default function CustomizerTemplate({
                     </p>
                   )
                 })()}
-                {(() => {
-                  const undecoratedAllowed = allowedPrintSides.filter(
-                    (s) => !decoratedSides.includes(s)
-                  )
-                  if (undecoratedAllowed.length === 0) return null
-                  const nextSide = undecoratedAllowed[0]
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        switchSide(nextSide)
-                        setPdpStep2Done(true)
-                        setPdpStep(3)
-                      }}
-                      className="w-full rounded-lg border border-dashed border-ui-border-base bg-transparent px-3 py-2.5 text-sm font-medium text-ui-fg-base transition-colors hover:border-ui-border-strong hover:bg-ui-bg-subtle"
-                    >
-                      + Add print to another location
-                    </button>
-                  )
-                })()}
                 <p className="text-xs text-ui-fg-subtle">
                   Set quantities per size, then add to cart.
                 </p>
