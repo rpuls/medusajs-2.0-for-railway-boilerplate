@@ -2959,36 +2959,6 @@ export default function CustomizerTemplate({
               </div>
             </div>
 
-            {embedded && pdpStep3Done && allowedPrintSides.length > 1 && (() => {
-              const undecoratedAllowed = allowedPrintSides.filter(
-                (s) => !decoratedSides.includes(s)
-              )
-              if (!undecoratedAllowed.length) return null
-              const nextSide = undecoratedAllowed[0]
-              const nextSideLabel =
-                nextSide === "left_sleeve" ? "Left Sleeve"
-                : nextSide === "right_sleeve" ? "Right Sleeve"
-                : nextSide === "printed_tag" ? "Printed Tag"
-                : nextSide.charAt(0).toUpperCase() + nextSide.slice(1)
-              return (
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchSide(nextSide)
-                    setPdpStep2Done(true)
-                    setPdpStep(3)
-                  }}
-                  className="w-full rounded-xl border-2 border-dashed border-ui-border-strong bg-transparent px-4 py-3 text-left text-sm font-medium text-ui-fg-base transition-colors hover:border-ui-fg-base hover:bg-ui-bg-subtle"
-                >
-                  <span className="text-base leading-none mr-2" aria-hidden>+</span>
-                  Add print to another location
-                  <span className="ml-1.5 text-xs font-normal text-ui-fg-subtle">
-                    (e.g. {nextSideLabel})
-                  </span>
-                </button>
-              )
-            })()}
-
             {vectorizationRequested && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 flex items-start justify-between gap-3">
                 <div>
@@ -3663,6 +3633,43 @@ export default function CustomizerTemplate({
               isNext={pdpStep === 1}
             />
           )}
+
+          {/* Add print to another location — magenta dashed CTA between
+              Step 2 (Print location) and Step 3 (Print size). Same gate as
+              before: only show once at least one location has been sized
+              and there is an unused side left. */}
+          {embedded && pdpStep3Done && allowedPrintSides.length > 1 && (() => {
+            const undecoratedAllowed = allowedPrintSides.filter(
+              (s) => !decoratedSides.includes(s)
+            )
+            if (!undecoratedAllowed.length) return null
+            const nextSide = undecoratedAllowed[0]
+            const nextSideLabel =
+              nextSide === "left_sleeve" ? "Left Sleeve"
+              : nextSide === "right_sleeve" ? "Right Sleeve"
+              : nextSide === "printed_tag" ? "Printed Tag"
+              : nextSide.charAt(0).toUpperCase() + nextSide.slice(1)
+            return (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+                onClick={() => {
+                  switchSide(nextSide)
+                  setPdpStep2Done(true)
+                  setPdpStep(3)
+                }}
+                className="w-full rounded-xl border-2 border-dashed border-fuchsia-500 bg-transparent px-4 py-3 text-left text-sm font-medium text-ui-fg-base transition-colors hover:border-fuchsia-600 hover:bg-fuchsia-50"
+              >
+                <span className="text-base leading-none mr-2 text-fuchsia-600" aria-hidden>+</span>
+                Add print to another location
+                <span className="ml-1.5 text-xs font-normal text-ui-fg-subtle">
+                  (e.g. {nextSideLabel})
+                </span>
+              </motion.button>
+            )
+          })()}
 
           {/* Step 3 — Print size */}
           {pdpStep >= 3 ? (
