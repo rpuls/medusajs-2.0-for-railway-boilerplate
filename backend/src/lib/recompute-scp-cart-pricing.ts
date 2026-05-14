@@ -217,8 +217,6 @@ export async function recomputeScpCartPricing(
       "items.unit_price",
       "items.variant_id",
       "items.metadata",
-      "items.variant.id",
-      "items.variant.metadata",
     ],
   })
 
@@ -226,13 +224,60 @@ export async function recomputeScpCartPricing(
     | {
         id?: string
         completed_at?: unknown
-        items?: CartLineForRecompute[]
+        items?: Array<{
+          id?: string
+          quantity?: number
+          unit_price?: unknown
+          variant_id?: string | null
+          metadata?: Record<string, unknown> | null
+        }>
       }
     | undefined
 
   if (!cart || cart.completed_at) return empty
-  const items: CartLineForRecompute[] = Array.isArray(cart.items) ? cart.items : []
-  if (!items.length) return empty
+  const rawItems = Array.isArray(cart.items) ? cart.items : []
+  if (!rawItems.length) return empty
+
+  // Batch-fetch variant metadata directly. Following `items.variant.metadata`
+  // through the cart graph collapses to null in production (the join doesn't
+  // hydrate metadata reliably), so every line would be skipped and the
+  // recompute would no-op. Matches the pattern used by
+  // `resolveGarmentUnitAmountMajor` in the add endpoint.
+  const variantIds = Array.from(
+    new Set(
+      rawItems
+        .map((it) => it.variant_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  )
+  const variantMetaById = new Map<string, Record<string, unknown>>()
+  if (variantIds.length) {
+    const { data: variantRows } = await query.graph({
+      entity: "variants",
+      filters: { id: variantIds },
+      fields: ["id", "metadata"],
+    })
+    for (const row of (variantRows ?? []) as Array<{
+      id?: string
+      metadata?: Record<string, unknown> | null
+    }>) {
+      if (row?.id && row.metadata && typeof row.metadata === "object") {
+        variantMetaById.set(row.id, row.metadata)
+      }
+    }
+  }
+
+  const items: CartLineForRecompute[] = rawItems.map((raw) => ({
+    id: raw.id ?? "",
+    quantity: typeof raw.quantity === "number" ? raw.quantity : 0,
+    unit_price: raw.unit_price,
+    variant_id: raw.variant_id ?? null,
+    metadata: raw.metadata ?? null,
+    variant: {
+      id: raw.variant_id ?? undefined,
+      metadata: raw.variant_id ? variantMetaById.get(raw.variant_id) ?? null : null,
+    },
+  }))
 
   const eligible: CartLineForRecompute[] = []
   const excluded: string[] = []
