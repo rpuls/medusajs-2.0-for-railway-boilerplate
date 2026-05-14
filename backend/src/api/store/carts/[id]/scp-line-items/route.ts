@@ -247,10 +247,27 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
     // doesn't replace the message. INVALID_DATA → 400; UNEXPECTED_STATE →
     // 500. We pick UNEXPECTED_STATE so retries are obvious to the customer
     // (it isn't a payload validation problem).
-    const detail =
-      workflowError instanceof Error
-        ? `${workflowError.name}: ${workflowError.message}`
-        : String(workflowError)
+    // Medusa v2 workflow.run() can throw a WorkflowError, a plain Error, an
+    // array of step errors, or occasionally a plain object. Serialize safely
+    // so the message surfaced to the storefront (and logs) is always readable.
+    // eslint-disable-next-line no-console
+    console.error("addToCartWorkflow threw:", workflowError)
+    let detail: string
+    if (workflowError instanceof Error) {
+      detail = `${workflowError.name}: ${workflowError.message}`
+    } else if (Array.isArray(workflowError)) {
+      detail = workflowError
+        .map((e) => (e instanceof Error ? `${e.name}: ${e.message}` : JSON.stringify(e)))
+        .join("; ")
+    } else if (typeof workflowError === "object" && workflowError !== null) {
+      try {
+        detail = JSON.stringify(workflowError)
+      } catch {
+        detail = String(workflowError)
+      }
+    } else {
+      detail = String(workflowError)
+    }
     throw new MedusaError(
       MedusaError.Types.UNEXPECTED_STATE,
       `addToCartWorkflow failed for variant ${variantId}, qty ${quantity}, unit_price ${unitPriceMajor}. ${detail}`
