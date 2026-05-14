@@ -42,7 +42,12 @@ import {
   FashionBizProduct,
 } from "../modules/fashionbiz/types"
 import { priceLadderFromFashionBiz } from "../modules/fashionbiz/pricing"
-import { buildBulkPricingMetadata } from "../utils/bulk-price-ladder"
+import type { PriceLadder } from "../utils/bulk-price-ladder"
+import {
+  tierMinorToPriceSetRows,
+  tierMinorToBulkPricingMetadata,
+  type TierMoneyMinor,
+} from "../utils/bulk-tier-prices"
 import {
   buildGarmentImagesForColour,
   collectImageUrls,
@@ -54,6 +59,22 @@ import { BRAND_MODULE } from "../modules/brand"
 
 const PRICE_CURRENCY_CODE = "aud"
 const FASHIONBIZ_LOCATION_NAME = "FashionBiz Warehouse"
+
+/**
+ * Convert the major-unit retail PriceLadder into the minor-unit
+ * TierMoneyMinor shape that the shared bulk-tier helpers consume — the same
+ * conversion the AS Colour importer does. Centralising it keeps the
+ * FashionBiz, AS Colour, and spreadsheet-sync paths writing IDENTICAL
+ * price-set rows and IDENTICAL `metadata.bulk_pricing.tiers` so the
+ * storefront tier UI works for products from any source.
+ */
+const ladderToTierMinor = (ladder: PriceLadder): TierMoneyMinor => ({
+  t1_9: Math.round(ladder.base * 100),
+  t10_19: Math.round(ladder.tier10to19 * 100),
+  t20_49: Math.round(ladder.tier20to49 * 100),
+  t50_99: Math.round(ladder.tier50to99 * 100),
+  t100_plus: Math.round(ladder.tier100Plus * 100),
+})
 
 /**
  * FashionBiz brand slug -> Brand entity handle. The Brand rows for these
@@ -250,6 +271,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
         )
         continue
       }
+      const tierMinor = ladderToTierMinor(ladder)
 
       const colours = (product.colors ?? []).filter(
         (c): c is FashionBizColour => !!c && (c.sizes?.length ?? 0) > 0
@@ -301,13 +323,10 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
             manage_inventory: true,
             allow_backorder: false,
             options: variantOptions,
-            prices: [
-              { amount: ladder.base, currency_code: PRICE_CURRENCY_CODE, min_quantity: 1, max_quantity: 9 },
-              { amount: ladder.tier10to19, currency_code: PRICE_CURRENCY_CODE, min_quantity: 10, max_quantity: 19 },
-              { amount: ladder.tier20to49, currency_code: PRICE_CURRENCY_CODE, min_quantity: 20, max_quantity: 49 },
-              { amount: ladder.tier50to99, currency_code: PRICE_CURRENCY_CODE, min_quantity: 50, max_quantity: 99 },
-              { amount: ladder.tier100Plus, currency_code: PRICE_CURRENCY_CODE, min_quantity: 100 },
-            ],
+            // 5 price-set rows (qty bands 1-9 / 10-19 / 20-49 / 50-99 / 100+)
+            // built via the shared helper so FashionBiz, AS Colour, and the
+            // spreadsheet-sync path all emit byte-identical rows.
+            prices: tierMinorToPriceSetRows(tierMinor, PRICE_CURRENCY_CODE),
             metadata: {
               fashionbiz: {
                 product_id: product.id,
@@ -319,7 +338,10 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
                 size: size.size,
                 hex_value: colour.hex_value ?? colour.tag_value ?? null,
               },
-              bulk_pricing: buildBulkPricingMetadata(ladder),
+              // Storefront reads `metadata.bulk_pricing.tiers` (array of
+              // {min_quantity, max_quantity, amount}) — same shape every
+              // other importer writes.
+              bulk_pricing: tierMinorToBulkPricingMetadata(tierMinor, "fashionbiz-api"),
               raw_prices: product.prices ?? [],
               cost_adjustment: costAdjustment,
               garment_images: buildGarmentImagesForColour(colour),
