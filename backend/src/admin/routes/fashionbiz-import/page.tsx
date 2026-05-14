@@ -1,5 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { ArrowDownTray } from "@medusajs/icons"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import {
   Badge,
   Button,
@@ -242,7 +243,21 @@ const FashionBizImportPage = () => {
     <div className="flex flex-col gap-6 p-8">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <Heading level="h1">FashionBiz Product Import</Heading>
+        <Heading level="h1" className="flex items-center">
+          FashionBiz Product Import
+          <HelpTooltip
+            text={{
+              title: "FashionBiz Product Import",
+              body: "Pulls the live FashionBiz catalogue (Biz Collection, Biz Care, Biz Corporates, Syzmik) and imports selected styles into Medusa. Switch brand tabs to browse each range separately.",
+              bullets: [
+                "New = not yet imported. Imported (greyed) = already exists — safe to leave unchecked.",
+                "Pricing uses the 1-99 wholesale tier × FASHIONBIZ_COST_ADJUSTMENT (set to 1.15 in production to match actual distributor billing).",
+                "Stock refreshes nightly at 04:00 UTC via the FashionBiz Warehouse stock location.",
+                "Idempotent: re-importing an existing handle is a no-op — use the spreadsheet update flow to patch existing products.",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-muted max-w-xl">
           Browse the live FashionBiz catalogue, select the products you want, and click Import.
           Products already in Medusa are shown greyed — deselect them or leave them unchecked.

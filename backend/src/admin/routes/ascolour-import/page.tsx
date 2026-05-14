@@ -1,5 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { ArrowDownTray } from "@medusajs/icons"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import {
   Badge,
   Button,
@@ -215,7 +216,21 @@ const AsColourImportPage = () => {
     <div className="flex flex-col gap-6 p-8">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <Heading level="h1">AS Colour Product Import</Heading>
+        <Heading level="h1" className="flex items-center">
+          AS Colour Product Import
+          <HelpTooltip
+            text={{
+              title: "AS Colour Product Import",
+              body: "Pulls the live AS Colour catalogue from their API and imports selected styles into Medusa. Run this once per style — re-importing an already-imported style is a no-op.",
+              bullets: [
+                "New badge = not yet in Medusa. Imported badge (greyed row) = already exists — leave unchecked.",
+                "Use 'Select new' to tick every unimported style on the current page.",
+                "Pricing, variants, and stock levels are pulled from the AS Colour API at import time; stock refreshes automatically every hour after that.",
+                "If a style fails, it appears in the Errors section — fix the issue and re-import just that style.",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-muted max-w-xl">
           Browse the live AS Colour catalogue, select the products you want, and click Import.
           Products already in Medusa are shown greyed — deselect them or leave them unchecked.

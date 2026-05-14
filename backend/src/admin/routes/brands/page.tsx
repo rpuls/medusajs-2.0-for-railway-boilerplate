@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import {
   Badge,
   Button,
@@ -382,7 +383,21 @@ const BrandsPage = () => {
     <div className="flex flex-col gap-y-4">
       <Container className="flex items-start justify-between">
         <div>
-          <Heading level="h1">Brands</Heading>
+          <Heading level="h1" className="flex items-center">
+            Brands
+            <HelpTooltip
+              text={{
+                title: "Brands",
+                body: "Single source of truth for every supplier/brand identity in the catalog. Products are linked to a brand via the spreadsheet importer or the product detail widget. The storefront /brands pages read directly from this list.",
+                bullets: [
+                  "Hierarchy: one level of parent → child (e.g. FashionBiz → Biz Collection). Set parent_id in the edit drawer.",
+                  "Handle is used in storefront URLs (/brands/[handle]) — changing it after launch breaks links.",
+                  "External code is matched case-insensitively by the spreadsheet importer; missing brands are auto-created.",
+                  "Inactive brands are hidden from the storefront but remain linked to existing products for reporting.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle mt-1">
             Canonical brand list. Linked to products via the spreadsheet importer
             and the product detail widget. Storefront `/brands` reads from this

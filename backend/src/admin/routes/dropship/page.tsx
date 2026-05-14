@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import {
   Badge,
   Button,
@@ -534,7 +535,21 @@ const AsColourDropshipPage = () => {
       {/* Page header */}
       <Container className="flex items-start justify-between">
         <div>
-          <Heading level="h1">AS Colour Orders</Heading>
+          <Heading level="h1" className="flex items-center">
+            AS Colour Orders
+            <HelpTooltip
+              text={{
+                title: "AS Colour Orders",
+                body: "Manage dropship fulfilment through AS Colour. Orders containing AS Colour SKUs appear here automatically. Pending orders have not been sent to AS Colour yet; Sent orders are being picked, packed, and shipped by AS Colour.",
+                bullets: [
+                  "Select one or more pending orders and click 'Send to AS Colour' to submit them for fulfilment.",
+                  "Use Shared send settings to set a default shipping method, order notes, and courier instructions applied to every send in this session.",
+                  "Refresh pulls the latest status from AS Colour — tracking numbers appear here once AS Colour ships.",
+                  "Only orders with AS Colour line items appear here; orders with mixed suppliers need manual split-fulfilment.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle mt-1">
             All orders with AS Colour items from the past 90 days. Select
             pending orders to send them together.
