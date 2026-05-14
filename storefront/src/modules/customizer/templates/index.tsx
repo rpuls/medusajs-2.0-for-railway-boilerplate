@@ -507,6 +507,33 @@ const ExpandCollapsePlus = () => (
   </span>
 )
 
+function HelpTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span className="relative inline-flex shrink-0">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setOpen(false)}
+        className="flex h-4 w-4 items-center justify-center rounded-full bg-ui-bg-base-hover text-[9px] font-bold text-ui-fg-muted ring-1 ring-ui-border-base transition hover:bg-ui-bg-subtle hover:text-ui-fg-base focus:outline-none focus-visible:ring-2"
+        aria-label="Help"
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute left-5 top-0 z-50 w-60 rounded-lg border border-ui-border-base bg-ui-bg-base p-3 text-xs leading-relaxed text-ui-fg-base shadow-lg"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
 export default function CustomizerTemplate({
   defaultGarmentImage,
   defaultGarmentTitle,
@@ -3223,6 +3250,7 @@ export default function CustomizerTemplate({
       onChange,
       badge,
       active,
+      help,
     }: {
       num: number
       title: string
@@ -3230,6 +3258,7 @@ export default function CustomizerTemplate({
       onChange?: () => void
       badge?: string
       active?: boolean
+      help?: string
     }) => (
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -3245,7 +3274,7 @@ export default function CustomizerTemplate({
           >
             {done ? "✓" : num}
           </span>
-          <h3 className={`text-sm font-semibold uppercase tracking-wide truncate ${active ? "text-ui-fg-base" : "text-ui-fg-base"}`}>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-base truncate">
             {title}
           </h3>
           {badge && (
@@ -3253,6 +3282,7 @@ export default function CustomizerTemplate({
               {badge}
             </span>
           )}
+          {help && <HelpTip text={help} />}
         </div>
         {done && onChange ? (
           <button
@@ -3402,6 +3432,7 @@ export default function CustomizerTemplate({
                 done={pdpStep1Done && pdpStep > 1}
                 active={pdpStep === 1}
                 onChange={() => setPdpStep(1)}
+                help="Pick your colour and any other options, then tap 'Customize this product' to open the design tool."
               />
               {pdpStep === 1 ? (
                 <>
@@ -3500,6 +3531,7 @@ export default function CustomizerTemplate({
                     done={pdpStep2Done && pdpStep > 2}
                     active={pdpStep === 2}
                     badge={pdpStep2Done && pdpStep > 2 ? sideLabel : undefined}
+                    help="Choose which part of the garment to print on — front, back, sleeves, or inside neck tag. Select a location, add your artwork, then use the button below the canvas to add prints to more locations. Each location is priced separately."
                     // Tabs are always visible — no "Change" button needed.
                   />
 
@@ -3570,6 +3602,7 @@ export default function CustomizerTemplate({
                 title="Print size"
                 done={currentSideSized && pdpStep > 3}
                 active={pdpStep === 3}
+                help="Pick the maximum print area for this location. Larger = more detail but higher cost per garment. A6 suits small logos and tags; Oversize covers most of the chest. You can choose different sizes for different locations."
                 // Hide the "Change" link when the side only allows one size
                 // (hats, printed_tag, short-sleeve sleeves) — there's nothing
                 // to switch to, so the link would just bounce the customer
@@ -3672,7 +3705,7 @@ export default function CustomizerTemplate({
           {pdpStep >= 4 ? (
             <>
               <div className="space-y-3 rounded-xl border border-ui-fg-base bg-ui-bg-base p-4 shadow-sm">
-                <StepHeader num={stepNum(4)} title="Quantity & checkout" done={false} active={true} />
+                <StepHeader num={stepNum(4)} title="Quantity & checkout" done={false} active={true} help="Enter how many of each size you need. Bulk discounts apply automatically — the more you order, the lower the price per garment. Once you're happy, add to cart and complete checkout." />
                 {(() => {
                   const sideShortMap: Record<GarmentSide, string> = {
                     front: "Front",
