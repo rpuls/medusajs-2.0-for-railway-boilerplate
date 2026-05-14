@@ -711,8 +711,8 @@ export async function setShippingMethod({
       await getAuthHeaders()
     )
     .then(() => {
-      revalidateTag("cart")
-      revalidateTag("shipping")
+      revalidateTag("cart", "max")
+      revalidateTag("shipping", "max")
     })
     .catch((err) => {
       console.error("[setShippingMethod] failed", {
