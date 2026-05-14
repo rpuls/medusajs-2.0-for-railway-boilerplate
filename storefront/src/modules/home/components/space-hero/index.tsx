@@ -24,25 +24,29 @@ interface PlanetDef {
 }
 
 const PLANET_DEFS: PlanetDef[] = [
+  // Innermost — Ice Moon, tiny & fast
   {
-    baseSize: 32, scale: 4, primary: "#45A29E", secondary: "#66FCF1",
-    trailColor: "#45A29E", orbitRX: 260, orbitRY: 100, speed: 0.00042,
-    startAngle: 0.5, type: "terran",
+    baseSize: 12, scale: 3, primary: "#C5C6C7", secondary: "#FFFFFF",
+    trailColor: "#C5C6C7", orbitRX: 210, orbitRY: 80, speed: 0.00072,
+    startAngle: 3.3, type: "ice",
   },
+  // Second orbit — Arid/Mars, small & medium-fast
   {
-    baseSize: 16, scale: 4, primary: "#D9534F", secondary: "#F0AD4E",
-    trailColor: "#D9534F", orbitRX: 340, orbitRY: 130, speed: 0.00028,
+    baseSize: 16, scale: 3, primary: "#D9534F", secondary: "#F0AD4E",
+    trailColor: "#D9534F", orbitRX: 340, orbitRY: 125, speed: 0.00038,
     startAngle: 2.1, type: "arid",
   },
+  // Third orbit — Terran/Earth, medium & medium-slow
   {
-    baseSize: 48, scale: 4, primary: "#6B5B95", secondary: "#FF7B25",
-    trailColor: "#6B5B95", orbitRX: 430, orbitRY: 160, speed: 0.00018,
-    startAngle: 4.0, type: "gas",
+    baseSize: 32, scale: 3, primary: "#45A29E", secondary: "#66FCF1",
+    trailColor: "#45A29E", orbitRX: 490, orbitRY: 178, speed: 0.00022,
+    startAngle: 0.5, type: "terran",
   },
+  // Outermost — Gas Giant with rings, large & slow
   {
-    baseSize: 12, scale: 4, primary: "#C5C6C7", secondary: "#FFFFFF",
-    trailColor: "#C5C6C7", orbitRX: 200, orbitRY: 75, speed: 0.00065,
-    startAngle: 3.3, type: "ice",
+    baseSize: 48, scale: 2.5, primary: "#6B5B95", secondary: "#FF7B25",
+    trailColor: "#6B5B95", orbitRX: 640, orbitRY: 230, speed: 0.00013,
+    startAngle: 4.0, type: "gas",
   },
 ]
 
@@ -294,7 +298,7 @@ export default function SpaceHero({ className, style }: { className?: string; st
     }))
 
     const logoImg = new Image()
-    logoImg.src = "/branding/sc-prints-logo-white.png"
+    logoImg.src = "/branding/sc-prints-logo-transparent.png"
 
     return {
       planets,
@@ -368,18 +372,16 @@ export default function SpaceHero({ className, style }: { className?: string; st
     let lastTs = performance.now()
     let elapsed = 0
 
-    // Wait for logo to load
-    if (state.logoImg && !state.logoImg.complete) {
-      state.logoImg.onload = () => {
-        // Logo target width = ~3.5× largest planet rendered size
-        const largestRendered = 48 * 4  // gas giant at 4x
-        state.logoW = largestRendered * 3.5
-        state.logoH = (state.logoImg!.naturalHeight / state.logoImg!.naturalWidth) * state.logoW
-      }
-    } else if (state.logoImg && state.logoImg.complete && state.logoW === 0) {
-      const largestRendered = 48 * 4
-      state.logoW = largestRendered * 3.5
+    // Logo: clamp to 30% of canvas width, max 320px
+    const calcLogoSize = () => {
+      if (!state.logoImg || state.logoImg.naturalWidth === 0) return
+      state.logoW = Math.min(w * 0.30, 320)
       state.logoH = (state.logoImg.naturalHeight / state.logoImg.naturalWidth) * state.logoW
+    }
+    if (state.logoImg && !state.logoImg.complete) {
+      state.logoImg.onload = calcLogoSize
+    } else {
+      calcLogoSize()
     }
 
     const tick = (ts: number) => {
@@ -403,6 +405,7 @@ export default function SpaceHero({ className, style }: { className?: string; st
         sceneCanvas.style.height = `${h}px`
         ctx.scale(dpr, dpr)
         drawStars(starsCanvas, w, h, dpr)
+        calcLogoSize()
       }
 
       const cx = w / 2
@@ -473,27 +476,26 @@ export default function SpaceHero({ className, style }: { className?: string; st
         const px = cx + Math.cos(planet.angle) * rx
         const py = cy + Math.sin(planet.angle) * ry
 
-        // Emit particles
+        // Emit particles — 3 per 40ms burst for a dense, visible wake
         planet.emitAccum += delta
-        const emitInterval = 40 // ms per particle
+        const emitInterval = 16 // ms per particle
         while (planet.emitAccum >= emitInterval) {
           planet.emitAccum -= emitInterval
-          if (planet.trail.length < 80) {
-            planet.trail.push({
-              x: px + randomBetween(-3, 3),
-              y: py + randomBetween(-3, 3),
-              life: randomBetween(800, 1500),
-              maxLife: 1500,
-              size: 3,
-              color: planet.def.trailColor,
-            })
+          const maxTrail = 200
+          const p: TrailParticle = {
+            x: px + randomBetween(-4, 4),
+            y: py + randomBetween(-4, 4),
+            life: randomBetween(1000, 2200),
+            maxLife: 2200,
+            size: 4,
+            color: planet.def.trailColor,
+          }
+          if (planet.trail.length < maxTrail) {
+            planet.trail.push(p)
           } else {
             // Recycle oldest
             const old = planet.trail.shift()!
-            old.x = px + randomBetween(-3, 3)
-            old.y = py + randomBetween(-3, 3)
-            old.life = randomBetween(800, 1500)
-            old.maxLife = 1500
+            Object.assign(old, p)
             planet.trail.push(old)
           }
         }
