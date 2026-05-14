@@ -17,9 +17,13 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
   stripePromise,
   children,
 }) => {
+  // `paymentMethodTypes` is only valid on the deferred-intent (`mode`) options
+  // variant. When passing `clientSecret`, the allowed methods are determined
+  // by the PaymentIntent created on the Medusa backend (which is already
+  // card-only via the Stripe provider config) — including it here breaks
+  // the TS build under newer @stripe/stripe-js types.
   const options: StripeElementsOptions = {
     clientSecret: paymentSession!.data?.client_secret as string | undefined,
-    paymentMethodTypes: ["card"],
   }
 
   if (!stripeKey) {
