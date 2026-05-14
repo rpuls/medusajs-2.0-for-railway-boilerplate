@@ -15,7 +15,7 @@ export const LISTING_CARD_POP = {
 
 /** Matches UGC masonry image zoom (`group` on ancestor). */
 export const LISTING_CARD_INNER_IMAGE_HOVER_CLASSES =
-  "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform group-hover:scale-[1.28]"
+  "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform group-hover:scale-[1.15]"
 
 /** Shell + catalogue shadow stack (beyond `shadow-elevation-card-hover`). */
 export const LISTING_CARD_SHELL_HOVER_SURFACE_CLASSES =
