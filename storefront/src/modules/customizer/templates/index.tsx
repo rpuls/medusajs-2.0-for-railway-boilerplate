@@ -830,6 +830,7 @@ export default function CustomizerTemplate({
       if (fallback) setScpPrintSizeId(fallback)
     }
   }, [allowedSizesForCurrentSide, scpPrintSizeId])
+  const pdpHasVariantOptions = (selectedProduct.variants?.length ?? 0) > 1
   /**
    * When the side only allows one size (hats → A6, short-sleeve sleeves → A6,
    * printed_tag → A6), there's no decision for the customer to make on step 3
@@ -841,12 +842,13 @@ export default function CustomizerTemplate({
    */
   useEffect(() => {
     if (!embedded) return
+    if (pdpHasVariantOptions && !pdpStep1Done) return
     if (allowedSizesForCurrentSide.length !== 1) return
     if (sizingDoneSides[currentSide] && scpPrintSizeChosen) return
     setScpPrintSizeChosen(true)
     setSizingDoneSides((prev) => ({ ...prev, [currentSide]: true as const }))
     setPdpStep((s) => (s > 3 ? s : 4))
-  }, [embedded, allowedSizesForCurrentSide, pdpStep3Done, scpPrintSizeChosen])
+  }, [embedded, pdpHasVariantOptions, pdpStep1Done, allowedSizesForCurrentSide, pdpStep3Done, scpPrintSizeChosen])
 
   /**
    * Mirror of the above but for step 2 (print location). When the product
@@ -856,11 +858,12 @@ export default function CustomizerTemplate({
    */
   useEffect(() => {
     if (!embedded) return
+    if (pdpHasVariantOptions && !pdpStep1Done) return
     if (allowedPrintSides.length !== 1) return
     if (pdpStep2Done) return
     setPdpStep2Done(true)
     setPdpStep((s) => (s > 2 ? s : 3))
-  }, [embedded, allowedPrintSides, pdpStep2Done])
+  }, [embedded, pdpHasVariantOptions, pdpStep1Done, allowedPrintSides, pdpStep2Done])
 
   // Show a brief nudge when the customer switches to a side with no artwork yet.
   useEffect(() => {
@@ -870,7 +873,6 @@ export default function CustomizerTemplate({
     // is past step 1 and the customer has actually switched sides.
     setShowSideNudge(!decoratedSides.includes(currentSide))
   }, [currentSide]) // eslint-disable-line react-hooks/exhaustive-deps
-  const pdpHasVariantOptions = (selectedProduct.variants?.length ?? 0) > 1
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
   const embedPdpQuantityStepNumber = showPdpLabeledOptionsStep ? 3 : 2
@@ -2866,9 +2868,9 @@ export default function CustomizerTemplate({
                     onDeleteUpload={(uploadId) =>
                       setSessionUploads((current) => current.filter((entry) => entry.id !== uploadId))
                     }
-                    enabled={!embedded || (pdpStep1Done && pdpStep3Done)}
+                    enabled={!embedded || ((!pdpHasVariantOptions || pdpStep1Done) && pdpStep3Done)}
                     disabledMessage={
-                      !pdpStep1Done
+                      pdpHasVariantOptions && !pdpStep1Done
                         ? {
                             title: "Customize first",
                             body: 'Click "Customize this product" on the right to start.',
