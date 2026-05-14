@@ -427,6 +427,8 @@ function ProductListingCardTiltLift({
     getReducedMotionServerSnapshot
   )
   const [pointerInside, setPointerInside] = useState(false)
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 })
+  const MAX_TILT = 3
 
   const cardRootRef = useRef<HTMLElement | null>(null)
   const [swatchPhotosActive, setSwatchPhotosActive] = useState(false)
@@ -444,10 +446,19 @@ function ProductListingCardTiltLift({
   const onPointerLeave = useCallback(() => {
     resetPreview()
     setPointerInside(false)
+    setTilt({ rx: 0, ry: 0 })
   }, [resetPreview])
 
   const onPointerEnter = useCallback(() => {
     setPointerInside(true)
+  }, [])
+
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (!cardRootRef.current) return
+    const rect = cardRootRef.current.getBoundingClientRect()
+    const nx = (e.clientX - rect.left) / rect.width - 0.5
+    const ny = (e.clientY - rect.top) / rect.height - 0.5
+    setTilt({ rx: -ny * MAX_TILT * 2, ry: nx * MAX_TILT * 2 })
   }, [])
 
   const content = (
@@ -492,13 +503,19 @@ function ProductListingCardTiltLift({
       data-testid="product-wrapper"
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
+      onPointerMove={onPointerMove}
+      style={{ transformPerspective: LISTING_CARD_POP.perspectivePx }}
       animate={{
         y: pointerInside ? -LISTING_CARD_POP.liftPx : 0,
         scale: pointerInside ? LISTING_CARD_POP.hoverScale : 1,
+        rotateX: tilt.rx,
+        rotateY: tilt.ry,
       }}
       transition={{
         y: liftSpring,
         scale: liftSpring,
+        rotateX: liftSpring,
+        rotateY: liftSpring,
       }}
       className={clx(
         "flex h-full w-full flex-col rounded-xl border border-ui-border-base bg-white p-4",
