@@ -210,34 +210,49 @@ async function buildItems(
   const lineItems: any[] = order.items ?? []
   if (!lineItems.length) return []
 
-  // Inventory lookup per SKU to determine which warehouse to ask for.
-  const skus = lineItems
-    .map((li) => li.variant_sku ?? li.metadata?.ascolour?.sku)
-    .filter((s): s is string => Boolean(s))
+  // Identify AS Colour line items first so we only look up inventory for them.
+  const ascolourLineItems = lineItems.filter((li) => {
+    const sku: string | undefined = li.variant_sku ?? li.metadata?.ascolour?.sku
+    if (!sku) return false
+    const meta = li.metadata ?? {}
+    return (
+      meta?.ascolour ||
+      meta?.source === "ascolour" ||
+      (typeof sku === "string" && /^\d{3,5}-/.test(sku))
+    )
+  })
 
-  const skuToInventory = new Map<string, any>()
-  for (const sku of new Set(skus)) {
+  // Inventory lookup per SKU using the list endpoint (same shape as the cron).
+  // The real AS Colour API returns one row per (sku, location) — the single-item
+  // endpoint GET /inventory/items/{sku} is unreliable; the list with skuFilter works.
+  const uniqueSkus = [
+    ...new Set(
+      ascolourLineItems.map(
+        (li) => (li.variant_sku ?? li.metadata?.ascolour?.sku) as string
+      )
+    ),
+  ]
+
+  const skuToInventoryRows = new Map<string, any[]>()
+  for (const sku of uniqueSkus) {
     try {
-      const inv = await ascolour.getClient().getInventoryItem(sku)
-      skuToInventory.set(sku, inv)
+      const resp = await ascolour.getClient().getInventoryItems({ skuFilter: sku, pageSize: 50 })
+      const rows: any[] = Array.isArray(resp)
+        ? resp
+        : (resp?.items ?? resp?.data ?? resp?.results ?? [])
+      // Filter to exact SKU match in case skuFilter does prefix matching.
+      skuToInventoryRows.set(sku, rows.filter((r: any) => r?.sku === sku))
     } catch {
       // Skip — caller may still pass overrideItems with explicit warehouse.
     }
   }
 
   const items: AsColourCreateOrderItem[] = []
-  for (const li of lineItems) {
-    const sku: string | undefined = li.variant_sku ?? li.metadata?.ascolour?.sku
-    if (!sku) continue
-    const meta = li.metadata ?? {}
-    const isAsColour =
-      meta?.ascolour ||
-      meta?.source === "ascolour" ||
-      (typeof sku === "string" && /^\d{3,5}-/.test(sku))
-    if (!isAsColour) continue
+  for (const li of ascolourLineItems) {
+    const sku: string = li.variant_sku ?? li.metadata?.ascolour?.sku
 
-    const inv = skuToInventory.get(sku)
-    const warehouse = ascolour.pickWarehouseForSku(inv)
+    const invRows = skuToInventoryRows.get(sku) ?? []
+    const warehouse = ascolour.pickWarehouseFromInventoryList(invRows)
     if (!warehouse) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
