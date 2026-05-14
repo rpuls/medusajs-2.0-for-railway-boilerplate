@@ -2881,6 +2881,36 @@ export default function CustomizerTemplate({
               </div>
             </div>
 
+            {embedded && pdpStep3Done && allowedPrintSides.length > 1 && (() => {
+              const undecoratedAllowed = allowedPrintSides.filter(
+                (s) => !decoratedSides.includes(s)
+              )
+              if (!undecoratedAllowed.length) return null
+              const nextSide = undecoratedAllowed[0]
+              const nextSideLabel =
+                nextSide === "left_sleeve" ? "Left Sleeve"
+                : nextSide === "right_sleeve" ? "Right Sleeve"
+                : nextSide === "printed_tag" ? "Printed Tag"
+                : nextSide.charAt(0).toUpperCase() + nextSide.slice(1)
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    switchSide(nextSide)
+                    setPdpStep2Done(true)
+                    setPdpStep(3)
+                  }}
+                  className="w-full rounded-xl border-2 border-dashed border-ui-border-strong bg-transparent px-4 py-3 text-left text-sm font-medium text-ui-fg-base transition-colors hover:border-ui-fg-base hover:bg-ui-bg-subtle"
+                >
+                  <span className="text-base leading-none mr-2" aria-hidden>+</span>
+                  Add print to another location
+                  <span className="ml-1.5 text-xs font-normal text-ui-fg-subtle">
+                    (e.g. {nextSideLabel})
+                  </span>
+                </button>
+              )
+            })()}
+
             {vectorizationRequested && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 flex items-start justify-between gap-3">
                 <div>
@@ -3192,12 +3222,14 @@ export default function CustomizerTemplate({
       done,
       onChange,
       badge,
+      active,
     }: {
       num: number
       title: string
       done: boolean
       onChange?: () => void
       badge?: string
+      active?: boolean
     }) => (
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -3205,13 +3237,15 @@ export default function CustomizerTemplate({
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
               done
                 ? "bg-emerald-100 text-emerald-700"
-                : "bg-ui-bg-base text-ui-fg-base ring-1 ring-ui-border-base"
+                : active
+                ? "bg-ui-fg-base text-white"
+                : "bg-ui-bg-base text-ui-fg-subtle ring-1 ring-ui-border-base"
             }`}
             aria-hidden
           >
             {done ? "✓" : num}
           </span>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-base truncate">
+          <h3 className={`text-sm font-semibold uppercase tracking-wide truncate ${active ? "text-ui-fg-base" : "text-ui-fg-base"}`}>
             {title}
           </h3>
           {badge && (
@@ -3241,30 +3275,41 @@ export default function CustomizerTemplate({
       title,
       hint,
       onClick,
+      isNext,
     }: {
       num: number
       title: string
       hint: string
       onClick: () => void
+      isNext?: boolean
     }) => (
       <button
         type="button"
         onClick={onClick}
-        className="w-full rounded-xl border border-dashed border-ui-border-base bg-ui-bg-subtle/40 p-4 text-left opacity-70 transition hover:border-ui-fg-base hover:bg-ui-bg-subtle hover:opacity-100"
+        className={`w-full rounded-xl border p-4 text-left transition ${
+          isNext
+            ? "border-ui-border-strong bg-ui-bg-subtle hover:border-ui-fg-base hover:bg-ui-bg-subtle hover:shadow-sm"
+            : "border-dashed border-ui-border-base bg-ui-bg-subtle/30 opacity-60 hover:border-ui-border-strong hover:opacity-90"
+        }`}
       >
         <div className="flex items-center gap-2">
           <span
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ui-bg-base text-[10px] font-semibold text-ui-fg-subtle ring-1 ring-ui-border-base"
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+              isNext
+                ? "bg-ui-bg-base text-ui-fg-base ring-1 ring-ui-border-strong"
+                : "bg-ui-bg-base text-ui-fg-muted ring-1 ring-ui-border-base"
+            }`}
             aria-hidden
           >
             {num}
           </span>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-subtle truncate">
+          <h3 className={`text-sm font-semibold uppercase tracking-wide truncate ${isNext ? "text-ui-fg-base" : "text-ui-fg-subtle"}`}>
             {title}
           </h3>
-          <span aria-hidden className="ml-auto text-ui-fg-muted">›</span>
+          {isNext && <span aria-hidden className="ml-auto text-xs font-medium text-ui-fg-interactive">Next →</span>}
+          {!isNext && <span aria-hidden className="ml-auto text-ui-fg-muted">›</span>}
         </div>
-        <p className="mt-1.5 pl-7 text-xs text-ui-fg-muted">{hint}</p>
+        <p className={`mt-1.5 pl-7 text-xs ${isNext ? "text-ui-fg-subtle" : "text-ui-fg-muted"}`}>{hint}</p>
       </button>
     )
 
@@ -3346,11 +3391,16 @@ export default function CustomizerTemplate({
 
           {/* Step 1 — Product options (color/etc.) */}
           {hasStep1 ? (
-            <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
+            <div className={`space-y-3 rounded-xl border p-4 ${
+              pdpStep === 1
+                ? "border-ui-fg-base bg-ui-bg-base shadow-sm"
+                : "border-ui-border-base bg-ui-bg-subtle/40"
+            }`}>
               <StepHeader
                 num={1}
                 title="Product options"
                 done={pdpStep1Done && pdpStep > 1}
+                active={pdpStep === 1}
                 onChange={() => setPdpStep(1)}
               />
               {pdpStep === 1 ? (
@@ -3439,11 +3489,16 @@ export default function CustomizerTemplate({
               const decoratedCount = decoratedAllowed.length
               const totalAllowed = allowedPrintSides.length
               return (
-                <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
+                <div className={`space-y-3 rounded-xl border p-4 ${
+                  pdpStep === 2
+                    ? "border-ui-fg-base bg-ui-bg-base shadow-sm"
+                    : "border-ui-border-base bg-ui-bg-subtle/40"
+                }`}>
                   <StepHeader
                     num={stepNum(2)}
                     title={decoratedCount > 0 ? "Add / change print positions" : "Print location"}
                     done={pdpStep2Done && pdpStep > 2}
+                    active={pdpStep === 2}
                     badge={pdpStep2Done && pdpStep > 2 ? sideLabel : undefined}
                     // Tabs are always visible — no "Change" button needed.
                   />
@@ -3499,16 +3554,22 @@ export default function CustomizerTemplate({
               title="Print location"
               hint="Pick where the artwork goes — front, back, sleeves, neck tag."
               onClick={() => setPdpStep(2)}
+              isNext={pdpStep === 1}
             />
           )}
 
           {/* Step 3 — Print size */}
           {pdpStep >= 3 ? (
-            <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
+            <div className={`space-y-3 rounded-xl border p-4 ${
+              pdpStep === 3
+                ? "border-ui-fg-base bg-ui-bg-base shadow-sm"
+                : "border-ui-border-base bg-ui-bg-subtle/40"
+            }`}>
               <StepHeader
                 num={stepNum(3)}
                 title="Print size"
                 done={currentSideSized && pdpStep > 3}
+                active={pdpStep === 3}
                 // Hide the "Change" link when the side only allows one size
                 // (hats, printed_tag, short-sleeve sleeves) — there's nothing
                 // to switch to, so the link would just bounce the customer
@@ -3603,14 +3664,15 @@ export default function CustomizerTemplate({
               title="Print size"
               hint="Choose A6, A4, A3 or oversize for each location."
               onClick={() => setPdpStep(3)}
+              isNext={pdpStep === 2}
             />
           )}
 
           {/* Step 4 — Quantities, notes & checkout */}
           {pdpStep >= 4 ? (
             <>
-              <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
-                <StepHeader num={stepNum(4)} title="Quantity & checkout" done={false} />
+              <div className="space-y-3 rounded-xl border border-ui-fg-base bg-ui-bg-base p-4 shadow-sm">
+                <StepHeader num={stepNum(4)} title="Quantity & checkout" done={false} active={true} />
                 {(() => {
                   const sideShortMap: Record<GarmentSide, string> = {
                     front: "Front",
@@ -3716,6 +3778,7 @@ export default function CustomizerTemplate({
               title="Quantity & checkout"
               hint="Set sizes, quantities and add to cart."
               onClick={() => setPdpStep(4)}
+              isNext={pdpStep === 3}
             />
           )}
         </div>
