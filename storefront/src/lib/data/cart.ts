@@ -478,6 +478,23 @@ export async function getScpCartAggregate(): Promise<ScpCartAggregate | null> {
 }
 
 /**
+ * Trigger a synchronous bulk-tier recompute on the backend. Call this after
+ * any cart mutation that goes through Medusa's vanilla endpoints (qty
+ * update, delete) so eligible-line `unit_price` stays aligned with the
+ * aggregated tier. Soft-fails: a recompute error never blocks the caller —
+ * the cart mutation itself already succeeded.
+ */
+async function recomputeScpCart(cartId: string): Promise<void> {
+  try {
+    await postJsonMedusa(`/store/carts/${cartId}/scp-recompute`, {})
+  } catch (error) {
+    // Recompute is value-add — never let it crash the calling action.
+    // eslint-disable-next-line no-console
+    console.warn("scp-recompute failed (non-fatal):", error)
+  }
+}
+
+/**
  * Server-priced customizable line (garment bulk tier + SCP print matrix). Prefer over `addToCart`
  * for fabric customizer / PDP placements that carry print artifacts.
  */
@@ -670,10 +687,13 @@ export async function updateLineItem({
 
   await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, await getAuthHeaders())
-    .then(() => {
-      revalidateTag("cart", "max")
-    })
     .catch(medusaError)
+  // Re-aggregate after the qty change so other eligible lines reflect the
+  // new tier (e.g. crossing the 50→100 boundary by bumping a line). Runs
+  // synchronously before revalidation so the cart refetch sees the new
+  // prices in the same request cycle.
+  await recomputeScpCart(cartId)
+  revalidateTag("cart", "max")
 }
 
 export async function deleteLineItem(lineId: string) {
@@ -688,10 +708,11 @@ export async function deleteLineItem(lineId: string) {
 
   await sdk.store.cart
     .deleteLineItem(cartId, lineId, await getAuthHeaders())
-    .then(() => {
-      revalidateTag("cart", "max")
-    })
     .catch(medusaError)
+  // After removing a line the aggregated tier may drop (e.g. 101 → 41 units
+  // moves the cart back to the 20-49 tier). Recompute synchronously so the
+  // cart UI sees the updated unit prices on the next fetch.
+  await recomputeScpCart(cartId)
   revalidateTag("cart", "max")
 }
 
