@@ -6,6 +6,17 @@ import React from "react"
 import { useTransitionRouter } from "next-view-transitions"
 
 const runPageTransition = () => {
+  // Reset scroll to the top of the new page. Next.js's router.push normally
+  // does this automatically with `scroll: true` (the default), but wrapping
+  // the push inside `document.startViewTransition` + `startTransition`
+  // (which next-view-transitions does internally) defers the scroll reset
+  // until the transition completes — by which point the user briefly sees
+  // the new page mounted at the previous scroll position. Doing it here
+  // (inside `transition.ready`) means the actual DOM scroll happens while
+  // the view-transition pseudo-elements still cover the page, so the user
+  // sees a clean transition that lands at the top.
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior })
+
   document.documentElement.animate(
     [
       { opacity: 1, transform: "translateY(0)" },
