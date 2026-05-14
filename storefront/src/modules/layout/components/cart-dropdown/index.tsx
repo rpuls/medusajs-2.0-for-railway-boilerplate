@@ -10,6 +10,7 @@ import { HttpTypes } from "@medusajs/types"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
 import LineItemPrice from "@modules/common/components/line-item-price"
+import AggregatedTierBanner from "@modules/cart/components/aggregated-tier-banner"
 import LineItemMockupPreview from "@modules/customizer/components/line-item-mockup-preview"
 import {
   getCustomizerMockupArtifacts,
@@ -195,6 +196,9 @@ const CartDropdown = ({
                   })()}
                 </div>
                 <div className="p-4 flex flex-col gap-y-4 text-small-regular">
+                  {cartState?.id ? (
+                    <AggregatedTierBanner cartId={cartState.id} variant="compact" />
+                  ) : null}
                   <div className="flex items-center justify-between">
                     <span className="text-ui-fg-base font-semibold">
                       Subtotal{" "}

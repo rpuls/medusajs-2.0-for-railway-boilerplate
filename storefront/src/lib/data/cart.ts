@@ -411,6 +411,72 @@ async function postJsonMedusa(path: string, body: Record<string, unknown>) {
   return parsed
 }
 
+async function getJsonMedusa(path: string): Promise<Record<string, unknown> | null> {
+  const envKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY?.trim()
+  let publishableKey = envKey
+  if (!publishableKey) {
+    try {
+      const keyRes = await fetch(`${MEDUSA_BACKEND_URL}/key-exchange`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      })
+      if (keyRes.ok) {
+        const parsed = (await keyRes.json()) as {
+          publishableApiKey?: string
+          publishable_api_key?: string
+        }
+        publishableKey =
+          parsed.publishableApiKey?.trim() || parsed.publishable_api_key?.trim() || ""
+      }
+    } catch {
+      publishableKey = ""
+    }
+  }
+  if (!publishableKey) return null
+
+  const headers: Record<string, string> = {
+    "x-publishable-api-key": publishableKey,
+  }
+  Object.assign(headers, await getAuthHeaders())
+
+  const res = await fetch(`${MEDUSA_BACKEND_URL}${path}`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  })
+
+  if (!res.ok) return null
+  try {
+    return (await res.json()) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+export type ScpCartAggregate = {
+  cart_id: string
+  eligible_quantity: number
+  excluded_quantity: number
+  active_tier: { min_quantity: number; max_quantity?: number } | null
+  next_tier: { min_quantity: number; max_quantity?: number } | null
+  units_to_next_tier: number
+  tiers: Array<{ min_quantity: number; max_quantity?: number }>
+}
+
+/**
+ * Read the cart's cross-cart bulk-tier aggregation snapshot. Powers the
+ * customizer pricing-panel projection and the cart-page banner. Returns
+ * null when no cart exists or the request fails — callers fall back to
+ * standalone per-product tier behavior.
+ */
+export async function getScpCartAggregate(): Promise<ScpCartAggregate | null> {
+  const cartId = await getCartId()
+  if (!cartId) return null
+  const result = await getJsonMedusa(`/store/carts/${cartId}/scp-aggregate`)
+  if (!result || typeof result !== "object") return null
+  return result as unknown as ScpCartAggregate
+}
+
 /**
  * Server-priced customizable line (garment bulk tier + SCP print matrix). Prefer over `addToCart`
  * for fabric customizer / PDP placements that carry print artifacts.

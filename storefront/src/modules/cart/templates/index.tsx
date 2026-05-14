@@ -1,5 +1,6 @@
 import ItemsTemplate from "./items"
 import Summary from "./summary"
+import AggregatedTierBanner from "../components/aggregated-tier-banner"
 import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@modules/common/components/divider"
@@ -24,6 +25,9 @@ const CartTemplate = ({
                   <Divider />
                 </>
               )}
+              {cart?.id ? (
+                <AggregatedTierBanner cartId={cart.id} variant="full" />
+              ) : null}
               <ItemsTemplate items={cart?.items} />
             </div>
             <div className="relative">

@@ -22,6 +22,7 @@ import {
   resolveGarmentUnitAmountMajor,
 } from "../../../../../lib/scp-resolve-garment-unit-price"
 import { getPostHog } from "../../../../../lib/posthog"
+import { recomputeScpCartPricing } from "../../../../../lib/recompute-scp-cart-pricing"
 
 const cartParamsSchema = z.object({
   id: z.string().min(1),
@@ -292,6 +293,24 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
     )
   }
 
+  // Cross-cart bulk-tier aggregation. The just-added line is priced at its
+  // own quantity above; this pass re-prices every eligible line (including
+  // the new one) based on the total cart quantity of bulk-eligible garments.
+  // Idempotent and loop-safe — see `lib/recompute-scp-cart-pricing.ts`.
+  let aggregationSummary: { aggregated_quantity: number; updates: number } | undefined
+  try {
+    const result = await recomputeScpCartPricing(cartId, req.scope)
+    aggregationSummary = {
+      aggregated_quantity: result.aggregated_quantity,
+      updates: result.updates.length,
+    }
+  } catch (aggError) {
+    // Aggregation is a value-add, not load-bearing for the add itself. Log
+    // and continue so a transient failure here doesn't break the cart add.
+    // eslint-disable-next-line no-console
+    console.error("recomputeScpCartPricing failed (non-fatal)", aggError)
+  }
+
   // We don't try to verify the line's `quantity` or `unit_price` value here.
   // Medusa returns those as BigNumber-shaped objects whose runtime structure
   // (`value` vs `numeric` vs raw decimal) varies — every parser we tried
@@ -324,5 +343,6 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
     line: {
       id: matchingItem.id ?? null,
     },
+    aggregation: aggregationSummary ?? null,
   })
 }

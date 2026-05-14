@@ -72,6 +72,14 @@ type PricingPanelProps = {
   onSaveDesign?: () => Promise<void>
   /** Whether the save-design action is currently running. */
   isSavingDesign?: boolean
+  /**
+   * Cross-cart bulk-tier aggregation projection. When set, the bulk-discount
+   * tier highlight reflects the *combined* cart quantity (existing eligible
+   * items + this in-progress design), not just this product's quantity. The
+   * "Add N more to save X/ea" hint also speaks to the aggregated baseline.
+   * Omit for the standalone (non-cart-aware) calculation.
+   */
+  aggregatedCartQuantity?: number
 }
 
 const formatMoney = (amount: number, currencyCode: string) =>
@@ -111,11 +119,26 @@ export default function PricingPanel({
   primaryCtaLoadingLabel,
   onSaveDesign,
   isSavingDesign = false,
+  aggregatedCartQuantity,
 }: PricingPanelProps) {
   const ctaLabel = primaryCtaLabel ?? "Add to cart"
   const ctaLoadingLabel = primaryCtaLoadingLabel ?? "Adding..."
   const quantity = sizes.reduce((total, entry) => total + entry.quantity, 0)
   const safeEstimatorQuantity = Math.max(1, quantity)
+  // Tier-highlight quantity: when the caller passes the cart's existing
+  // eligible total, we project the tier the customer will land on *after*
+  // this design is added (cart total + in-progress local quantity). If no
+  // cart data is available the table falls back to today's per-product
+  // behavior. NOTE: in edit-line mode this slightly overstates by the
+  // existing line's quantity (it's counted twice — once in the aggregate,
+  // once in the local size matrix). Acceptable for v1; the backend
+  // recompute settles the actual price on submit.
+  const cartAggregate =
+    typeof aggregatedCartQuantity === "number" && aggregatedCartQuantity >= 0
+      ? aggregatedCartQuantity
+      : 0
+  const tierHighlightQty = quantity + cartAggregate
+  const isAggregated = cartAggregate > 0
 
   const safeSides = Array.isArray(decoratedSides) ? decoratedSides.length : 0
 
@@ -219,7 +242,7 @@ export default function PricingPanel({
         (() => {
           const tiers = pricing.bulkPricingTiers
           const currentTierIdx = (() => {
-            const safeQty = Math.max(1, quantity)
+            const safeQty = Math.max(1, tierHighlightQty)
             const idx = tiers.findIndex(
               (t) =>
                 safeQty >= t.minQuantity &&
@@ -229,7 +252,9 @@ export default function PricingPanel({
           })()
           const currentTier = tiers[currentTierIdx]
           const nextTier = tiers[currentTierIdx + 1]
-          const unitsToNext = nextTier ? Math.max(0, nextTier.minQuantity - quantity) : 0
+          const unitsToNext = nextTier
+            ? Math.max(0, nextTier.minQuantity - tierHighlightQty)
+            : 0
           const savings =
             nextTier && currentTier
               ? Math.max(0, currentTier.amountCents - nextTier.amountCents)
@@ -240,15 +265,20 @@ export default function PricingPanel({
                 <p className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
                   Bulk discounts
                 </p>
-                {nextTier && unitsToNext > 0 && quantity > 0 ? (
+                {nextTier && unitsToNext > 0 && tierHighlightQty > 0 ? (
                   <p className="text-[11px] text-emerald-700">
-                    Add {unitsToNext} more to save {formatMoney(savings, currencyCode)}/ea
+                    Add {unitsToNext} more {isAggregated ? "across your cart " : ""}to save {formatMoney(savings, currencyCode)}/ea
                   </p>
                 ) : null}
               </div>
+              {isAggregated ? (
+                <p className="text-[11px] text-emerald-700">
+                  Including {cartAggregate} unit{cartAggregate === 1 ? "" : "s"} already in your cart, your projected tier is highlighted below.
+                </p>
+              ) : null}
               <ul className="grid grid-cols-1 gap-1 text-xs">
                 {tiers.map((tier, idx) => {
-                  const isCurrent = idx === currentTierIdx && quantity > 0
+                  const isCurrent = idx === currentTierIdx && tierHighlightQty > 0
                   return (
                     <li
                       key={`${tier.minQuantity}-${tier.maxQuantity ?? "max"}`}

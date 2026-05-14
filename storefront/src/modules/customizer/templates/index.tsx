@@ -1,6 +1,6 @@
 "use client"
 
-import { addScpLineItemToCartSafe, addToCartSafe, deleteLineItem, retrieveCart } from "@lib/data/cart"
+import { addScpLineItemToCartSafe, addToCartSafe, deleteLineItem, getScpCartAggregate, retrieveCart } from "@lib/data/cart"
 import { createMyDesign, getMyDesign } from "@lib/data/designs"
 import { getOrderLineCustomizerMetadata } from "@lib/data/orders"
 import CustomizerProductPicker, {
@@ -629,6 +629,13 @@ export default function CustomizerTemplate({
   })
   const [sizeMatrix, setSizeMatrix] = useState<SizeQuantity[]>([])
   const [sessionUploads, setSessionUploads] = useState<SessionUploadAsset[]>([])
+  // Cross-cart bulk-tier aggregation projection. When the customer already
+  // has eligible items in their cart, this number drives the green tier
+  // highlight in <PricingPanel/> so they see "you're heading into the 50-99
+  // tier with this design + your cart" instead of just this product's local
+  // quantity. Null until the first fetch resolves; passing `undefined` to
+  // PricingPanel disables the projection.
+  const [aggregatedCartQuantity, setAggregatedCartQuantity] = useState<number | undefined>(undefined)
   const [layoutVersion, setLayoutVersion] = useState(0)
   const [scpPrintSizeId, setScpPrintSizeId] = useState<ScpPrintSizeId>(DEFAULT_SCP_PRINT_SIZE_ID)
   // Tracks whether the customer has actively chosen a size in the picker.
@@ -2396,6 +2403,28 @@ export default function CustomizerTemplate({
     }
   }
 
+  // Refresh the cross-cart bulk-tier aggregate from the backend. Called on
+  // mount and after each successful add-to-cart so the tier highlight stays
+  // in lockstep with the cart. Soft-fails: a fetch error leaves the previous
+  // value in place so the customizer doesn't flicker between aggregated and
+  // standalone modes on a transient network hiccup.
+  const refreshAggregatedCartQuantity = async () => {
+    try {
+      const aggregate = await getScpCartAggregate()
+      setAggregatedCartQuantity(aggregate?.eligible_quantity ?? 0)
+    } catch {
+      // Soft-fail: leave previous value in place.
+    }
+  }
+
+  useEffect(() => {
+    void refreshAggregatedCartQuantity()
+    // Intentionally run once on mount. The aggregate doesn't change while
+    // the customizer is open — only on add-to-cart, which already invokes
+    // refreshAggregatedCartQuantity() inline below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const addCustomizedToCart = async () => {
     if (!selectedProduct || !selectedVariant || !countryCode) {
       setUploadError("Select a product and variant before adding to cart.")
@@ -2778,6 +2807,9 @@ export default function CustomizerTemplate({
       }
 
       setStatusMessage("Customized items were added to your cart.")
+      // Refresh the cross-cart aggregate so the tier highlight reflects the
+      // newly-added line on the next interaction.
+      void refreshAggregatedCartQuantity()
     } catch (error) {
       // Always log the full error to the browser console so the customer
       // (or whoever is debugging) can see the actual stack/message even
@@ -3047,6 +3079,7 @@ export default function CustomizerTemplate({
               allowedPrintSizesBySide={allowedSizesBySide}
               onSaveDesign={embedded ? undefined : saveCurrentDesign}
               isSavingDesign={isSavingDesign}
+              aggregatedCartQuantity={aggregatedCartQuantity}
             />
 
             <details className="group rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
@@ -3780,6 +3813,7 @@ export default function CustomizerTemplate({
                 hideHeader
                 primaryCtaLabel={editLineItemId ? "Update cart" : undefined}
                 primaryCtaLoadingLabel={editLineItemId ? "Updating..." : undefined}
+                aggregatedCartQuantity={aggregatedCartQuantity}
               />
               <div className="space-y-2 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
                 <label
