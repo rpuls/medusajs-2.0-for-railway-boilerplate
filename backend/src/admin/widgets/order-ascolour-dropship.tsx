@@ -79,7 +79,7 @@ const OrderAsColourDropshipWidget = ({ data }: DetailWidgetProps<AdminOrder>) =>
   }, [load])
 
   const previewItems = status?.preview?.items ?? []
-  const noItems = !loading && !status?.sent && previewItems.length === 0
+  const noItems = !loading && !status?.sent && previewItems.length === 0 && !status?.preview?.error
 
   const sendOrder = useCallback(async () => {
     if (!orderId) return
