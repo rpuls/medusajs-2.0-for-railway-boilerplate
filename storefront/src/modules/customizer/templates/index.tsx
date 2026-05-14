@@ -616,11 +616,12 @@ export default function CustomizerTemplate({
   const [pdpStep, setPdpStep] = useState<1 | 2 | 3 | 4>(1)
   const [pdpStep1Done, setPdpStep1Done] = useState(false)
   const [pdpStep2Done, setPdpStep2Done] = useState(false)
-  const [sizingDoneSides, setSizingDoneSides] = useState<Set<GarmentSide>>(new Set())
+  // Record<GarmentSide, true> avoids Set spread which requires es2015+ target.
+  const [sizingDoneSides, setSizingDoneSides] = useState<Partial<Record<GarmentSide, true>>>({})
   // pdpStep3Done: true once at least one side is sized — gates the upload panel
-  const pdpStep3Done = sizingDoneSides.size > 0
+  const pdpStep3Done = Object.keys(sizingDoneSides).length > 0
   // currentSideSized: true when the active side has a confirmed size — collapses Step 3
-  const currentSideSized = sizingDoneSides.has(currentSide)
+  const currentSideSized = !!sizingDoneSides[currentSide]
   // showSideNudge: brief banner when switching to an empty side in embedded mode
   const [showSideNudge, setShowSideNudge] = useState(false)
   // "Edit existing cart line" mode: when present, the customizer pre-fills from
@@ -814,9 +815,9 @@ export default function CustomizerTemplate({
   useEffect(() => {
     if (!embedded) return
     if (allowedSizesForCurrentSide.length !== 1) return
-    if (sizingDoneSides.has(currentSide) && scpPrintSizeChosen) return
+    if (sizingDoneSides[currentSide] && scpPrintSizeChosen) return
     setScpPrintSizeChosen(true)
-    setSizingDoneSides((prev) => new Set([...prev, currentSide]))
+    setSizingDoneSides((prev) => ({ ...prev, [currentSide]: true as const }))
     setPdpStep((s) => (s > 3 ? s : 4))
   }, [embedded, allowedSizesForCurrentSide, pdpStep3Done, scpPrintSizeChosen])
 
@@ -1211,7 +1212,9 @@ export default function CustomizerTemplate({
         // Drop user straight onto the final step so they can update qty / re-upload.
         setPdpStep1Done(true)
         setPdpStep2Done(true)
-        setSizingDoneSides(new Set(previousSides as GarmentSide[]))
+        setSizingDoneSides(
+          Object.fromEntries((previousSides as GarmentSide[]).map((s) => [s, true as const])) as Partial<Record<GarmentSide, true>>
+        )
         setPdpStep(4)
         setEditingHydrated(true)
       } catch {
@@ -1279,9 +1282,7 @@ export default function CustomizerTemplate({
         setScpPrintSizeChosen(true)
         // Mark all sides as sized so the wizard doesn't re-prompt for print
         // size when re-opening a previously saved/ordered design.
-        setSizingDoneSides(
-          new Set<GarmentSide>(["front", "back", "left_sleeve", "right_sleeve", "printed_tag"])
-        )
+        setSizingDoneSides({ front: true, back: true, left_sleeve: true, right_sleeve: true, printed_tag: true })
       }
     }
     if (pendingHydration.variantId) {
@@ -3477,7 +3478,7 @@ export default function CustomizerTemplate({
                       // Re-open Step 3 when switching to a location that hasn't
                       // been sized yet; single-size sides auto-advance immediately.
                       const newStep =
-                        pdpStep > 2 && !sizingDoneSides.has(side) ? 3
+                        pdpStep > 2 && !sizingDoneSides[side] ? 3
                         : pdpStep > 2 ? pdpStep
                         : 3
                       setPdpStep(newStep)
@@ -3553,7 +3554,7 @@ export default function CustomizerTemplate({
                           onClick={() => {
                             setScpPrintSizeId(opt.id)
                             setScpPrintSizeChosen(true)
-                            setSizingDoneSides((prev) => new Set([...prev, currentSide]))
+                            setSizingDoneSides((prev) => ({ ...prev, [currentSide]: true as const }))
                             setPdpStep((s) => (s > 3 ? s : 4))
                           }}
                           className={`flex flex-col items-start gap-0.5 rounded-lg border p-2.5 text-left transition-colors ${
