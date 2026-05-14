@@ -31,43 +31,20 @@ type DesignPreviewPopoverProps = {
   variantId: string
 }
 
-const composeMockup = async (
-  side: GarmentSide,
+/**
+ * Renders only the design objects onto a transparent canvas and returns a
+ * PNG data URL. The garment is rendered separately as a native <img> (no
+ * crossOrigin needed — many supplier CDNs lack CORS headers), overlaid via CSS.
+ */
+const composeDesignLayer = async (
   sideObjects: Record<string, unknown>[],
-  canvasDims: { width: number; height: number },
-  garmentUrl: string | null
+  canvasDims: { width: number; height: number }
 ): Promise<string | null> => {
   const w = Math.max(64, Math.round(canvasDims.width || 600))
   const h = Math.max(64, Math.round(canvasDims.height || 750))
   const sc = new (fabric as any).StaticCanvas(null, { width: w, height: h })
-  try {
-    if (garmentUrl) {
-      try {
-        const img = await (fabric as any).FabricImage.fromURL(garmentUrl, {
-          crossOrigin: "anonymous",
-        })
-        const naturalW = img.width ?? 1
-        const naturalH = img.height ?? 1
-        const scale = Math.max(w / naturalW, h / naturalH)
-        img.set({
-          left: w / 2,
-          top: h / 2,
-          originX: "center",
-          originY: "center",
-          scaleX: scale,
-          scaleY: scale,
-          selectable: false,
-        })
-        sc.backgroundImage = img
-      } catch {
-        // Garment image unavailable (CORS, network) — fall back to a plain bg
-        // so the artwork still renders in context.
-        sc.backgroundColor = "#f4f4f5"
-      }
-    } else {
-      sc.backgroundColor = "#f4f4f5"
-    }
 
+  try {
     if (sideObjects && sideObjects.length > 0) {
       // Fabric v7 returns a Promise; v5/v6 used a callback. Support both so we
       // don't deadlock on "Rendering…" if the runtime API differs.
@@ -110,7 +87,7 @@ export default function DesignPreviewPopover({
   variantId,
 }: DesignPreviewPopoverProps) {
   const [open, setOpen] = useState(false)
-  const [thumbs, setThumbs] = useState<Record<string, string>>({})
+  const [thumbs, setThumbs] = useState<Record<string, { designDataUrl: string; garmentUrl: string | null }>>({})
   const [busy, setBusy] = useState(false)
   const cacheRef = useRef<Map<string, string>>(new Map())
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -147,36 +124,31 @@ export default function DesignPreviewPopover({
     }
   }, [open])
 
-  // When opening (or sides change), generate any missing thumbnails.
+  // When opening (or sides change), generate any missing design-layer thumbnails.
   useEffect(() => {
     if (!open) return
     let cancelled = false
     ;(async () => {
       setBusy(true)
-      const next: Record<string, string> = {}
-      // Render in parallel; cache hits return immediately.
+      const next: Record<string, { designDataUrl: string; garmentUrl: string | null }> = {}
       const results = await Promise.all(
         decoratedSides.map(async (side) => {
           const cacheKey = `${side}:${layoutVersion}`
           const cached = cacheRef.current.get(cacheKey)
+          const garmentUrl = getGarmentUrlForSide(side)
           if (cached) {
-            return [side, cached] as const
+            return [side, { designDataUrl: cached, garmentUrl }] as const
           }
-          const dataUrl = await composeMockup(
-            side,
-            sideLayouts[side] ?? [],
-            canvasSize,
-            getGarmentUrlForSide(side)
-          )
+          const dataUrl = await composeDesignLayer(sideLayouts[side] ?? [], canvasSize)
           if (dataUrl) {
             cacheRef.current.set(cacheKey, dataUrl)
           }
-          return [side, dataUrl ?? ""] as const
+          return [side, { designDataUrl: dataUrl ?? "", garmentUrl }] as const
         })
       )
       if (cancelled) return
-      for (const [side, url] of results) {
-        if (url) next[side] = url
+      for (const [side, entry] of results) {
+        if (entry.designDataUrl) next[side] = entry
       }
       setThumbs(next)
       setBusy(false)
@@ -237,26 +209,41 @@ export default function DesignPreviewPopover({
           </div>
           <div className="grid grid-cols-2 gap-2 small:grid-cols-3">
             {decoratedSides.map((side) => {
-              const url = thumbs[side]
+              const thumb = thumbs[side]
               const isTag = side === "printed_tag"
+              const tagStyle = isTag
+                ? { transform: "scale(3.2)", transformOrigin: "50% 14%" as const }
+                : undefined
               return (
                 <div
                   key={side}
                   className="overflow-hidden rounded-lg border border-ui-border-base bg-ui-bg-subtle"
                 >
                   <div className="relative aspect-[4/5] w-full overflow-hidden">
-                    {url ? (
-                      <img
-                        src={url}
-                        alt={`${SIDE_LABEL[side]} preview`}
-                        className="h-full w-full object-cover transition-transform"
-                        draggable={false}
-                        style={
-                          isTag
-                            ? { transform: "scale(3.2)", transformOrigin: "50% 14%" }
-                            : undefined
-                        }
-                      />
+                    {thumb ? (
+                      <>
+                        {/* Garment layer: native <img> so any CDN URL loads without CORS headers */}
+                        {thumb.garmentUrl ? (
+                          <img
+                            src={thumb.garmentUrl}
+                            alt=""
+                            aria-hidden
+                            className="absolute inset-0 h-full w-full object-cover"
+                            draggable={false}
+                            style={tagStyle}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-ui-bg-subtle" aria-hidden />
+                        )}
+                        {/* Design layer: transparent PNG from canvas export */}
+                        <img
+                          src={thumb.designDataUrl}
+                          alt={`${SIDE_LABEL[side]} preview`}
+                          className="absolute inset-0 h-full w-full object-cover"
+                          draggable={false}
+                          style={tagStyle}
+                        />
+                      </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-[11px] text-ui-fg-subtle">
                         {busy ? "Rendering…" : "Preview unavailable"}
