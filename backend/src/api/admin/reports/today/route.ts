@@ -61,6 +61,12 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     })
   }
 
+  // DIAGNOSTIC — remove after confirming total unit
+  if (orders.length > 0) {
+    const o = orders[0]
+    logger.info?.(`[today:diag] order[0] total=${JSON.stringify(o.total)} subtotal=${JSON.stringify(o.subtotal)} items[0].unit_price=${JSON.stringify(o.items?.[0]?.unit_price)}`)
+  }
+
   const now = new Date()
   const todayStart = startOfDaySydney(now)
   const todayEnd = todayStart + 86_400_000
