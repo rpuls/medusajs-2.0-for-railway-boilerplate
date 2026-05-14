@@ -321,7 +321,11 @@ const parseGarmentImagesObject = (
     try {
       const parsed = JSON.parse(garmentImages) as Record<string, unknown>
       const all = Array.isArray(parsed.all) ? parsed.all : []
-      const raw = [parsed.front, parsed.back, ...all].filter(
+      const modelImage =
+        typeof parsed.model_image === "string" && parsed.model_image.length
+          ? parsed.model_image
+          : undefined
+      const raw = [modelImage, parsed.front, parsed.back, ...all].filter(
         (value): value is string => typeof value === "string" && value.length > 0
       )
       return {
@@ -340,7 +344,11 @@ const parseGarmentImagesObject = (
 
   const obj = garmentImages as Record<string, unknown>
   const all = Array.isArray(obj.all) ? obj.all : []
-  const raw = [obj.front, obj.back, ...all].filter(
+  const modelImage =
+    typeof obj.model_image === "string" && obj.model_image.length
+      ? obj.model_image
+      : undefined
+  const raw = [modelImage, obj.front, obj.back, ...all].filter(
     (value): value is string => typeof value === "string" && value.length > 0
   )
 

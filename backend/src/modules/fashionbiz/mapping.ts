@@ -118,7 +118,7 @@ const urlIsProductFlat = (url: string) => url.includes("_Product_")
  */
 export const buildGarmentImagesForColour = (
   colour: FashionBizColour
-): { front: string; back?: string; all: string[] } => {
+): { front: string; back?: string; model_image?: string; all: string[] } => {
   const sorted = sortImages(colour.images ?? [])
   const all = sorted.map((img) => img.https_attachment_url).filter(Boolean)
 
@@ -131,9 +131,12 @@ export const buildGarmentImagesForColour = (
     all.find(urlIsProductBack) ??   // e.g. P515MS_Product_Black_02_xxx.jpg
     undefined
 
+  const modelUrl = all.find((u) => u.includes("_Talent_")) ?? undefined
+
   return {
     front: frontUrl,
     ...(backUrl ? { back: backUrl } : {}),
+    ...(modelUrl ? { model_image: modelUrl } : {}),
     all,
   }
 }

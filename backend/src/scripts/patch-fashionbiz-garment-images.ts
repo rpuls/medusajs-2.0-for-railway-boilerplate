@@ -1,6 +1,7 @@
 /**
  * One-shot patch: write `garment_images` metadata to every FashionBiz variant
- * that is missing it. Derives the front/back/all URLs from the parent product's
+ * that is missing it, and update product thumbnails to prefer model photos.
+ * Derives the front/back/all/model_image URLs from the parent product's
  * existing image pool using the FashionBiz CDN naming convention:
  *
  *   {code}_Product_{colour}_{01|02}_{hash}.jpg  — flat garment
@@ -51,7 +52,7 @@ function urlMatchesColor(url: string, colorLabel: string): boolean {
 function buildGarmentImages(
   productUrls: string[],
   colorName: string
-): { front: string; back?: string; all: string[] } {
+): { front: string; back?: string; model_image?: string; all: string[] } {
   // Prefer colour-matched images; fall back to full pool if none match.
   let pool = productUrls.filter((u) => urlMatchesColor(u, colorName))
   if (!pool.length) pool = productUrls
@@ -67,8 +68,14 @@ function buildGarmentImages(
     sorted[0] ??
     ""
   const back = sorted.find(urlIsProductBack)
+  const modelUrl = sorted.find((u) => u.includes("_Talent_"))
 
-  return { front, ...(back ? { back } : {}), all: sorted }
+  return {
+    front,
+    ...(back ? { back } : {}),
+    ...(modelUrl ? { model_image: modelUrl } : {}),
+    all: sorted,
+  }
 }
 
 // ── Script entry point ────────────────────────────────────────────────────────
@@ -80,6 +87,7 @@ export default async function patchFashionBizGarmentImages({ container }: ExecAr
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const productModule = container.resolve(Modules.PRODUCT) as unknown as {
     updateProductVariants?: (id: string, data: { metadata?: Record<string, unknown> }) => Promise<unknown>
+    updateProducts?: (id: string, data: { thumbnail?: string }) => Promise<unknown>
   }
 
   if (typeof productModule.updateProductVariants !== "function") {
@@ -96,10 +104,12 @@ export default async function patchFashionBizGarmentImages({ container }: ExecAr
   let skipped = 0
   let noImages = 0
 
+  const thumbnailUpdates: Map<string, string> = new Map() // productId → model thumb URL
+
   while (true) {
     const { data: page } = await query.graph({
       entity: "product",
-      fields: ["id", "handle", "metadata", "images.url", "variants.id", "variants.metadata"],
+      fields: ["id", "handle", "thumbnail", "metadata", "images.url", "variants.id", "variants.metadata"],
       pagination: { take: PAGE_SIZE, skip: offset },
     })
 
@@ -119,6 +129,13 @@ export default async function patchFashionBizGarmentImages({ container }: ExecAr
         logger.warn(`  ${product.handle}: no product images — skipping all variants`)
         noImages++
         continue
+      }
+
+      // Collect thumbnail update if a model image exists for this product.
+      const firstModelUrl = productUrls.find((u) => u.includes("_Talent_"))
+      const currentThumb = (product as any).thumbnail as string | undefined
+      if (firstModelUrl && (force || !currentThumb?.includes("_Talent_"))) {
+        thumbnailUpdates.set(product.id, firstModelUrl)
       }
 
       for (const variant of product.variants ?? []) {
@@ -151,7 +168,7 @@ export default async function patchFashionBizGarmentImages({ container }: ExecAr
 
         if (dryRun) {
           logger.info(
-            `  [dry] ${product.handle} / ${colorName}: front=${garmentImages.front}, back=${garmentImages.back ?? "none"}, all=${garmentImages.all.length} urls`
+            `  [dry] ${product.handle} / ${colorName}: front=${garmentImages.front}, back=${garmentImages.back ?? "none"}, model_image=${garmentImages.model_image ?? "none"}, all=${garmentImages.all.length} urls`
           )
         } else {
           await productModule.updateProductVariants!(variant.id, {
@@ -167,5 +184,29 @@ export default async function patchFashionBizGarmentImages({ container }: ExecAr
 
   logger.info(
     `Done. Products scanned: ${totalProducts}, variants updated: ${updated}, skipped: ${skipped}, products without images: ${noImages}`
+  )
+
+  // ── Second pass: update product thumbnails to model photos ────────────────
+  logger.info(`Updating thumbnails for ${thumbnailUpdates.size} products...`)
+  let thumbUpdated = 0
+  let thumbSkipped = 0
+
+  for (const [productId, modelThumbUrl] of thumbnailUpdates) {
+    if (dryRun) {
+      logger.info(`  [dry] thumbnail: product ${productId} → ${modelThumbUrl}`)
+      thumbUpdated++
+      continue
+    }
+    if (typeof productModule.updateProducts === "function") {
+      await productModule.updateProducts(productId, { thumbnail: modelThumbUrl })
+      thumbUpdated++
+    } else {
+      logger.warn(`  product module lacks updateProducts — skipping thumbnail for ${productId}`)
+      thumbSkipped++
+    }
+  }
+
+  logger.info(
+    `Thumbnails updated: ${thumbUpdated}, skipped: ${thumbSkipped}`
   )
 }

@@ -298,7 +298,9 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
       if (!options.length) options.push({ title: "Default", values: ["Default"] })
 
       const productImages = collectImageUrls(product).map((url) => ({ url }))
-      const thumbnail = productImages[0]?.url
+      const thumbnail =
+        productImages.find((img) => img.url.includes("_Talent_"))?.url ??
+        productImages[0]?.url
 
       // One variant per (colour, size). The same SKU appearing twice in
       // the API (defensively) is skipped to keep Medusa happy.
