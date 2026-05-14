@@ -9,7 +9,10 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 import { setShippingMethod } from "@lib/data/cart"
-import { formatStoreCartShippingOptionPrice } from "@lib/util/shipping-option-price"
+import {
+  formatStoreCartShippingOptionPrice,
+  getStoreCartShippingOptionMinorAmount,
+} from "@lib/util/shipping-option-price"
 import { HttpTypes } from "@medusajs/types"
 
 type ShippingProps = {
@@ -137,16 +140,25 @@ const Shipping: React.FC<ShippingProps> = ({
             </p>
           )}
           <div className="pb-8">
-            <RadioGroup value={selectedShippingMethod?.id} onChange={set}>
+            <RadioGroup value={selectedShippingMethod?.id ?? ""} onChange={set}>
               {availableShippingMethods?.map((option) => {
+                const hasPrice =
+                  getStoreCartShippingOptionMinorAmount(
+                    option,
+                    cart?.currency_code
+                  ) !== null
                 return (
                   <RadioGroup.Option
                     key={option.id}
                     value={option.id}
+                    disabled={!hasPrice}
                     data-testid="delivery-option-radio"
                     className={clx(
-                      "mb-2 flex cursor-pointer items-center justify-between rounded-rounded border border-[rgba(26,26,46,0.14)] bg-[rgba(255,255,255,0.6)] px-6 py-4 text-small-regular transition-shadow hover:border-[rgba(26,26,46,0.22)] hover:shadow-md small:px-8",
+                      "mb-2 flex items-center justify-between rounded-rounded border border-[rgba(26,26,46,0.14)] bg-[rgba(255,255,255,0.6)] px-6 py-4 text-small-regular transition-shadow small:px-8",
                       {
+                        "cursor-pointer hover:border-[rgba(26,26,46,0.22)] hover:shadow-md":
+                          hasPrice,
+                        "cursor-not-allowed opacity-50": !hasPrice,
                         "border-[var(--brand-secondary)] ring-1 ring-[var(--brand-secondary)]/30":
                           option.id === selectedShippingMethod?.id,
                       }
@@ -162,12 +174,14 @@ const Shipping: React.FC<ShippingProps> = ({
                       )}
                     </div>
                     <span className="justify-self-end text-ui-fg-base">
-                      {formatStoreCartShippingOptionPrice(
-                        option,
-                        cart?.currency_code
-                      )}
+                      {hasPrice
+                        ? formatStoreCartShippingOptionPrice(
+                            option,
+                            cart?.currency_code
+                          )
+                        : "Unavailable"}
                       <span className="ml-1 text-xs font-normal text-ui-fg-subtle">
-                        ex GST
+                        {hasPrice ? "ex GST" : ""}
                       </span>
                     </span>
                   </RadioGroup.Option>

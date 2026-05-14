@@ -711,10 +711,18 @@ export async function setShippingMethod({
       await getAuthHeaders()
     )
     .then(() => {
-      revalidateTag("cart", "max")
-      revalidateTag("shipping", "max")
+      revalidateTag("cart")
+      revalidateTag("shipping")
     })
-    .catch(medusaError)
+    .catch((err) => {
+      console.error("[setShippingMethod] failed", {
+        cartId,
+        shippingMethodId,
+        message: err?.message,
+        status: err?.status,
+      })
+      return medusaError(err)
+    })
 }
 
 export async function initiatePaymentSession(
