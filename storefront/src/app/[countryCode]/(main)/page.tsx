@@ -12,58 +12,7 @@ import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import HomeCoreServicesLordicons from "@modules/home/components/home-core-services-lordicons"
 import HowOrderWorksSection from "@modules/home/components/how-order-works-section"
-import HomeParticleLogoHero from "@modules/home/components/home-particle-logo-hero"
-import type { NewmixLiveTuning } from "@modules/home/components/home-particle-logo-hero/newmix-live-tuning"
-import { WORDMARK_GRADIENT } from "@modules/common/lib/wordmark-gradient"
-
-/** Home-page particle hero tuning. Independent of the `/au/particle-flow` page so
- * editing one does not affect the other. Kept in sync with the flow page snapshot
- * but free to drift. */
-const V3_TUNING: Partial<NewmixLiveTuning> = {
-  radius: 45,
-  velSmoothing: 0.45,
-  sideSwirlForce: 12,
-  frontPush: 5.0,
-  backInward: 12,
-  falloffPower: 2.4,
-  trailFollowMs: 4000,
-  wakePace: 0.75,
-  wakePaceJitter: 0.18,
-  wakeLateralSpreadBmp: 3,
-  wakeReleaseStaggerMs: 200,
-  wakeBandSpreadBmp: 4,
-  wakeAlongStretchBmp: 20,
-  wakeDiffusionBmp: 0,
-  wakeDiffusionHz: 0.6,
-  wakeTimeOffsetMs: 0,
-  releaseVelocityKeep: 0.0,
-  exitVelocityBoostBmp: 0,
-  leadingEdgePullForce: 7,
-  friction: 0.95,
-  springStiffnessMult: 0.55,
-  homeSpringSuppress: 0.85,
-  homeReturnMs: 1500,
-  homeReturnCurveBmp: 90,
-  homeReturnDurationJitter: 0.7,
-  homeReturnDiffusionBmp: 0,
-  idleThresholdMs: 1200,
-  /** Knobs added after v3 — neutral / disabled so they don't perturb the v3-era behavior. */
-  trailingProbability: 1.0,
-  inDiskCarryFactor: 0.9,
-  motionGateSpeed: 2.5,
-  wakeBandTaperPower: 0.6,
-  coreEjectionForce: 5,
-  coreEjectionRadiusFrac: 0.50,
-  wakeAlphaMult: 1.0,
-  homeReturnSpring: 0.008,
-  homeReturnFriction: 0.93,
-  homeReturnGravity: 0.05,
-  vortexStrength: 6.0,
-  vortexOffsetBmp: 28,
-  vortexLagBmp: -6,
-  vortexRadiusBmp: 38,
-  vortexFalloffPower: 1.6,
-}
+import SpaceHero from "@modules/home/components/space-hero"
 import InstagramFeedStrip from "@modules/home/components/instagram-feed-strip"
 import ScrollingPictureBar from "@modules/home/components/scrolling-picture-bar"
 import ProductListingCard from "@modules/products/components/product-listing-card"
@@ -167,13 +116,7 @@ export default async function Home({
         />
 
         {/* 1. Hero */}
-        <HomeParticleLogoHero
-          interactionMode="newmix"
-          animatedParticleCap={55000}
-          newmixLiveTuning={V3_TUNING}
-          bgClassName="bg-ui-fg-base"
-          wordmarkGradient={WORDMARK_GRADIENT}
-        />
+        <SpaceHero style={{ height: "100vh" }} />
 
         {/* 2. Value props reassurance strip — immediately under hero */}
         <section className="overflow-hidden border-b border-ui-border-base bg-ui-bg-subtle py-4">
