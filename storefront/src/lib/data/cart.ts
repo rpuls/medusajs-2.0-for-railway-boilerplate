@@ -780,6 +780,31 @@ export async function enrichLineItems(
     }
   }) as HttpTypes.StoreCartLineItem[]
 
+  // Safeguard: check serialized size to catch regressions early.
+  // If enrichedItems exceed 5MB when serialized, the RSC serialization
+  // will likely fail when Next.js tries to send this to the client.
+  // Root cause: commit 6a66793 added experimental.serverActions.bodySizeLimit
+  // to 10mb to handle large carts. If this warning triggers frequently, the
+  // 10mb config may need to be increased further.
+  try {
+    const serialized = JSON.stringify(enrichedItems)
+    const sizeInBytes = Buffer.byteLength(serialized, "utf-8")
+    const sizeInMb = sizeInBytes / (1024 * 1024)
+
+    if (sizeInMb > 5) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[cart-serialization-warning] enrichLineItems returned ${lineItems.length} items ` +
+          `serializing to ${sizeInMb.toFixed(2)}MB (threshold: 5MB). ` +
+          `Cart page may hit RSC serialization limit (10MB). ` +
+          `If this occurs frequently, increase experimental.serverActions.bodySizeLimit in next.config.js. ` +
+          `Line count: ${lineItems.length}, Product count (unique): ${uniqueIds.length}`
+      )
+    }
+  } catch {
+    // Serialization check itself failed; continue anyway (don't break the cart)
+  }
+
   return enrichedItems
 }
 

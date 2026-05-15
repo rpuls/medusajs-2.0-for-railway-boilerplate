@@ -19,6 +19,26 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // ──────────────────────────────────────────────────────────────────
+  // Large cart serialization limit (commit 6a66793)
+  //
+  // Symptom: when a cart contains 100+ customized items (each with
+  // print metadata, pricing breakdowns, and design artifacts), the
+  // RSC serialization of enrichLineItems() can exceed the default 1MB
+  // limit, causing a silent serialization error and the cart page to
+  // render the error boundary ("Something went wrong loading your cart").
+  //
+  // Fix: raise bodySizeLimit to 10mb to accommodate carts that
+  // serialize enrichLineItems() with full CustomizerMetadata and
+  // embroidery metadata payloads. The enrichLineItems() function
+  // (src/lib/data/cart.ts) includes safeguard warnings when approaching
+  // the 5mb threshold to catch future regressions.
+  // ──────────────────────────────────────────────────────────────────
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   images: {
     /** Set NEXT_PUBLIC_UNOPTIMIZED_IMAGES=true to skip the image optimizer (debug / broken remote hosts). Default: optimized WebP/AVIF + sizing via `/_next/image`. */
     unoptimized: process.env.NEXT_PUBLIC_UNOPTIMIZED_IMAGES === "true",
