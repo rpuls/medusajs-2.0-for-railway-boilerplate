@@ -2,6 +2,8 @@ import {
   CUSTOMIZER_PRINT_NOTES_MAX_LENGTH,
   type CustomerOriginalFileRef,
   type CustomizerMetadata,
+  type DecorationMethod,
+  type EmbroideryConfig,
   type GarmentSide,
   type PricingBreakdown,
   type PrintSpec,
@@ -38,6 +40,16 @@ export type BuildCustomizerMetadataInput = {
   activeSide?: GarmentSide
   /** Per-image print specs (per-print pricing). Empty array → legacy side-level pricing. */
   prints?: PrintSpec[]
+  /**
+   * v3+: per-side decoration method. Sides not listed default to "print".
+   * Carry only the sides the customer explicitly configured.
+   */
+  sideDecorationMethods?: Partial<Record<GarmentSide, DecorationMethod>>
+  /**
+   * v3+: per-side embroidery config (mm dimensions, stitch count, fees).
+   * Carry only sides whose method is "embroidery".
+   */
+  sideEmbroideryConfigs?: Partial<Record<GarmentSide, EmbroideryConfig>>
 }
 
 /**
@@ -57,8 +69,23 @@ export function buildCustomizerMetadataBase(
       ? input.customerOriginalFiles
       : null
 
+  // If any side is configured for embroidery, bump the metadata version to 3
+  // so downstream code knows to look for sideDecorationMethods. v2 carts
+  // continue to write version: 2 (print-only) for cleaner audit trails.
+  const hasEmbroidery =
+    input.sideDecorationMethods &&
+    Object.values(input.sideDecorationMethods).some((m) => m === "embroidery")
+  const version: 2 | 3 = hasEmbroidery ? 3 : 2
+
+  const methodEntries = input.sideDecorationMethods
+    ? Object.entries(input.sideDecorationMethods).filter(([, v]) => Boolean(v))
+    : []
+  const embroideryEntries = input.sideEmbroideryConfigs
+    ? Object.entries(input.sideEmbroideryConfigs).filter(([, v]) => Boolean(v))
+    : []
+
   return {
-    version: 2,
+    version,
     type: "fabric_customizer",
     productId: input.productId,
     sideLayouts: DESIGN_SIDES.map((side) => ({
@@ -80,5 +107,24 @@ export function buildCustomizerMetadataBase(
     ...(input.requiresVectorization ? { requiresVectorization: true } : {}),
     ...(input.activeSide ? { activeSide: input.activeSide } : {}),
     ...(input.prints && input.prints.length > 0 ? { prints: input.prints } : {}),
+    ...(methodEntries.length > 0
+      ? { sideDecorationMethods: Object.fromEntries(methodEntries) as Partial<Record<GarmentSide, DecorationMethod>> }
+      : {}),
+    ...(embroideryEntries.length > 0
+      ? { sideEmbroideryConfigs: Object.fromEntries(embroideryEntries) as Partial<Record<GarmentSide, EmbroideryConfig>> }
+      : {}),
   }
+}
+
+/**
+ * Read the decoration method for a side, defaulting to "print" when the
+ * metadata is v2 (no method specified) or the side isn't explicitly listed.
+ * Use this everywhere instead of accessing the map directly so v2 metadata
+ * continues to read as all-print.
+ */
+export function getSideDecorationMethod(
+  metadata: Pick<CustomizerMetadata, "sideDecorationMethods"> | null | undefined,
+  side: GarmentSide
+): DecorationMethod {
+  return metadata?.sideDecorationMethods?.[side] ?? "print"
 }

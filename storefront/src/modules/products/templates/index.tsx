@@ -15,10 +15,8 @@ import PdpCustomizerBoundary from "@modules/products/components/pdp-customizer-b
 import DtfAutoBuilderTemplate, {
   isDtfAutoBuilderProduct,
 } from "@modules/products/templates/dtf-auto-builder-template"
-import EmbroideryOnlyProductTemplate from "@modules/products/templates/embroidery-only-template"
 import { DecorationEstimator } from "@modules/decoration/components"
 import { getEnabledDecorationMethods } from "@modules/decoration/lib/product"
-import { isBeanieGarmentProduct } from "@modules/products/lib/variant-options"
 import { HttpTypes } from "@medusajs/types"
 import { PrintPlacementProvider } from "@modules/products/context/print-placement-context"
 import { ProductOptionsProvider } from "@modules/products/context/product-options-context"
@@ -50,46 +48,14 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
     )
   }
 
-  // Beanies skip the print customizer entirely — embroidery is the only
-  // realistic decoration on a knit pull-on cap.
-  if (isBeanieGarmentProduct(product)) {
-    /** Render server-only slots HERE (parent is a server component) and
-     * pass them down. The embroidery template is "use client" and cannot
-     * import these directly without dragging the data layer's
-     * `"server-only"` modules into the client bundle. */
-    const embProductActions = (
-      <Suspense
-        fallback={
-          <ProductActions
-            disabled={true}
-            product={product}
-            region={region}
-            hideInlinePurchaseControls
-          />
-        }
-      >
-        <ProductActionsWrapper
-          id={product.id}
-          region={region}
-          hideInlinePurchaseControls
-        />
-      </Suspense>
-    )
-    const embRelatedProducts = (
-      <Suspense fallback={<SkeletonRelatedProducts />}>
-        <RelatedProducts product={product} countryCode={countryCode} />
-      </Suspense>
-    )
-    return (
-      <EmbroideryOnlyProductTemplate
-        product={product}
-        region={region}
-        countryCode={countryCode}
-        productActions={embProductActions}
-        relatedProducts={embRelatedProducts}
-      />
-    )
-  }
+  // NOTE: Beanies previously used a dedicated EmbroideryOnlyProductTemplate.
+  // As of the unified-decoration rework, all products (including beanies)
+  // route through the standard customizer below. The customizer surfaces a
+  // per-side decoration method picker (print | embroidery) so beanies can
+  // still be embroidery-only via their `allowedPrintSides` restriction
+  // (handled in customizer/templates/index.tsx). The legacy
+  // EmbroideryOnlyProductTemplate import is kept available for rollback
+  // but no longer reachable by the router.
 
   // The customizer flow is the only purchase path — blank garments cannot be
   // ordered directly. ProductActions renders a "Customize this product" CTA

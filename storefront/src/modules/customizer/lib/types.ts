@@ -89,8 +89,36 @@ export type CustomerOriginalFileRef = {
   mimeType: string
 }
 
+/**
+ * Decoration method per garment side. Default is "print" for backwards
+ * compatibility with v2 metadata (no method specified).
+ */
+export type DecorationMethod = "print" | "embroidery"
+
+/**
+ * Embroidery configuration for a single side. Captured when a side's
+ * decoration method is "embroidery" — stitch count drives pricing, mm
+ * dimensions drive the stitch estimate.
+ */
+export type EmbroideryConfig = {
+  side: GarmentSide
+  widthMm: number
+  heightMm: number
+  stitchCount: number
+  digitizingFee: number
+  /** Optional notes from AI estimator (e.g. complexity, range, hints). */
+  aiNotes?: string
+  /** Whether the customer accepted the digitizing fee for this side. */
+  includeDigitizingFee?: boolean
+}
+
 export type CustomizerMetadata = {
-  version: 2
+  /**
+   * Schema version. v2 = print-only (legacy). v3 = supports per-side
+   * decoration method (print or embroidery) via sideDecorationMethods.
+   * v2 metadata reads as all-print on the new flow for backwards compat.
+   */
+  version: 2 | 3
   type: "fabric_customizer"
   productId: string
   variantId: string
@@ -125,6 +153,18 @@ export type CustomizerMetadata = {
    * working through the side-level fallback in pricing/cart code.
    */
   prints?: PrintSpec[]
+  /**
+   * v3+: per-side decoration method. When absent (v2 metadata), all sides
+   * default to "print". Each decorated side maps to either "print" or
+   * "embroidery"; mixed orders carry both, e.g. front=embroidery, back=print.
+   */
+  sideDecorationMethods?: Partial<Record<GarmentSide, DecorationMethod>>
+  /**
+   * v3+: embroidery configuration for sides whose method is "embroidery".
+   * Keyed by side. Absent when no side uses embroidery. The stitchCount +
+   * dimensions on each entry drive backend pricing for embroidery costs.
+   */
+  sideEmbroideryConfigs?: Partial<Record<GarmentSide, EmbroideryConfig>>
 }
 
 /**
