@@ -57,12 +57,12 @@ export const NODE_STYLE: Record<NodeKind, NodeStyle> = {
     labelHighlightColor: "#ede9fe",
   },
   tag: {
-    fill: "#0f766e",
-    highlightFill: "#2dd4bf",
-    stroke: "#14b8a6",
+    fill: "#78350f",
+    highlightFill: "#fbbf24",
+    stroke: "#b45309",
     baseRadius: 5.5,
-    labelColor: "#5eead4",
-    labelHighlightColor: "#ccfbf1",
+    labelColor: "#d97706",
+    labelHighlightColor: "#fef3c7",
   },
   product: {
     fill: "#94a3b8",
@@ -86,8 +86,8 @@ export function nodeRadius(kind: NodeKind, productCount?: number): number {
   return base + Math.min(8, Math.log2(productCount + 1))
 }
 
-/** Default link color: faint cool grey so the web recedes into the background. */
-export const LINK_COLOR = "rgba(148, 163, 184, 0.25)"
+/** Default link color: visible cool grey so the web structure reads clearly. */
+export const LINK_COLOR = "rgba(148, 163, 184, 0.4)"
 /** Link color when the link touches the hovered/selected/search-matched node. */
 export const LINK_COLOR_HIGHLIGHT = "rgba(147, 197, 253, 0.95)"
 /** Link color for links that are neither active nor adjacent to the focus. */

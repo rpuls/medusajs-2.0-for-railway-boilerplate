@@ -319,27 +319,27 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
       }
 
       /**
-       * Brand nodes render their `logoSrc` on a white pill inside the circle
-       * when the image is loaded. Drawing the logo on a solid white fill keeps
-       * dark-on-transparent logos (e.g. American Apparel wordmark) legible
-       * regardless of the background. Falls back to the flat highlight color
-       * while the image is still loading or when the brand has no logo.
+       * Brand nodes render their logo directly, clipped to a circle with no
+       * background disc. The logo floats on the canvas — dark logos read fine
+       * against the dark canvas background, and the ring stroke defines the
+       * node boundary clearly. Falls back to the flat fill color while the
+       * image is still loading or when the brand has no logo.
        */
       if (node.kind === "brand" && node.logoSrc) {
         const logo = getImage(node.logoSrc)
         if (logo) {
           const r = radius + 2
+
+          // Clip logo to circle — transparent background, no white disc.
           ctx.save()
           ctx.globalAlpha = alpha
-          // White disc backing so the logo reads on any canvas background.
-          ctx.fillStyle = "#ffffff"
           ctx.beginPath()
           ctx.arc(x, y, r, 0, Math.PI * 2)
-          ctx.fill()
+          ctx.clip()
 
-          // Fit the logo inside the disc while preserving aspect ratio. Pad a
-          // little so the glyph doesn't touch the circle edge.
-          const pad = r * 0.25
+          // Fit the logo inside the circle while preserving aspect ratio.
+          // Pad a little so the glyph doesn't touch the circle edge.
+          const pad = r * 0.22
           const maxW = (r - pad) * 2
           const maxH = (r - pad) * 2
           const ratio = logo.width / Math.max(1, logo.height)
@@ -352,6 +352,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
           ctx.drawImage(logo, x - drawW / 2, y - drawH / 2, drawW, drawH)
           ctx.restore()
 
+          // Ring — thicker and more colourful when in focus.
           ctx.save()
           ctx.globalAlpha = alpha
           ctx.strokeStyle = isPrimary
@@ -359,7 +360,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
             : inFocus
             ? style.highlightFill
             : style.stroke
-          ctx.lineWidth = isPrimary ? 2.5 : inFocus ? 1.75 : 1
+          ctx.lineWidth = isPrimary ? 3 : inFocus ? 2 : 1.25
           ctx.beginPath()
           ctx.arc(x, y, r + 0.5, 0, Math.PI * 2)
           ctx.stroke()
@@ -479,11 +480,36 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
 
   const linkWidth = useCallback(
     (link: RenderLink) => {
-      if (!hasFocus) return 0.6
+      if (!hasFocus) return 0.8
       const sourceId = resolveLinkId(link.source)
       const targetId = resolveLinkId(link.target)
-      if (focusIds?.has(sourceId) && focusIds?.has(targetId)) return 1.4
+      if (focusIds?.has(sourceId) && focusIds?.has(targetId)) return 1.6
       return 0.4
+    },
+    [hasFocus, focusIds, resolveLinkId]
+  )
+
+  /**
+   * Emit flowing particles along links that are part of the active highlight
+   * neighbourhood. Particles give links a sense of direction and make the
+   * selected subgraph feel alive without adding visual clutter at rest.
+   */
+  const linkDirectionalParticles = useCallback(
+    (link: RenderLink) => {
+      if (!hasFocus) return 0
+      const sourceId = resolveLinkId(link.source)
+      const targetId = resolveLinkId(link.target)
+      return focusIds?.has(sourceId) && focusIds?.has(targetId) ? 4 : 0
+    },
+    [hasFocus, focusIds, resolveLinkId]
+  )
+
+  const linkDirectionalParticleWidth = useCallback(
+    (link: RenderLink) => {
+      if (!hasFocus) return 0
+      const sourceId = resolveLinkId(link.source)
+      const targetId = resolveLinkId(link.target)
+      return focusIds?.has(sourceId) && focusIds?.has(targetId) ? 2 : 0
     },
     [hasFocus, focusIds, resolveLinkId]
   )
@@ -629,6 +655,11 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
           nodePointerAreaPaint={nodePointerAreaPaint}
           linkColor={linkColor}
           linkWidth={linkWidth}
+          linkCurvature={0.12}
+          linkDirectionalParticles={linkDirectionalParticles}
+          linkDirectionalParticleWidth={linkDirectionalParticleWidth}
+          linkDirectionalParticleColor={() => LINK_COLOR_HIGHLIGHT}
+          linkDirectionalParticleSpeed={0.004}
           cooldownTicks={cooldownTicks}
           onEngineStop={onEngineStop}
           onNodeClick={handleNodeClick}
