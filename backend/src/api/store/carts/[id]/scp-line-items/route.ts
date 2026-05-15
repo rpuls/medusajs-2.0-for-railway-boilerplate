@@ -18,6 +18,11 @@ import {
   type ScpPrintSizeId,
 } from "../../../../../lib/scp-dtf-print-pricing"
 import {
+  EMBROIDERY_PRICING_VERSION,
+  MAX_AUTO_PRICED_STITCHES,
+  calculateEmbroideryUnitPriceMajor,
+} from "../../../../../lib/embroidery-pricing"
+import {
   RemoteJoinerGraphLike,
   resolveGarmentUnitAmountMajor,
 } from "../../../../../lib/scp-resolve-garment-unit-price"
@@ -152,18 +157,100 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
 
   const tierIndex = resolveScpTierIndexForQuantity(quantity)
   const decoratedLocations = decoratedLocationsFromLineMetadata(mergedMetadata)
+
+  // Read per-side decoration methods (v3 schema). v2 metadata has no
+  // entries, so all sides default to "print" — preserves legacy behaviour.
+  const customizerDesignForMethods =
+    typeof mergedMetadata.customizerDesign === "object" &&
+    mergedMetadata.customizerDesign !== null
+      ? (mergedMetadata.customizerDesign as Record<string, unknown>)
+      : {}
+  const sideDecorationMethods =
+    typeof customizerDesignForMethods.sideDecorationMethods === "object" &&
+    customizerDesignForMethods.sideDecorationMethods !== null
+      ? (customizerDesignForMethods.sideDecorationMethods as Record<string, string>)
+      : {}
+  const sideEmbroideryConfigs =
+    typeof customizerDesignForMethods.sideEmbroideryConfigs === "object" &&
+    customizerDesignForMethods.sideEmbroideryConfigs !== null
+      ? (customizerDesignForMethods.sideEmbroideryConfigs as Record<
+          string,
+          { stitchCount?: number; includeDigitizingFee?: boolean }
+        >)
+      : {}
+
+  const printSides = decoratedSides.filter(
+    (side) => (sideDecorationMethods[side] ?? "print") === "print"
+  )
+  const embroiderySides = decoratedSides.filter(
+    (side) => sideDecorationMethods[side] === "embroidery"
+  )
+
+  // Print pricing: only count print-method sides toward the SCP totals.
+  // When per-print locations exist, filter to the print sides; otherwise
+  // fall back to side-level totals across the print sides.
+  const printLocations = decoratedLocations.filter((loc) => {
+    const side = (loc as { side?: string }).side
+    return !side || (sideDecorationMethods[side] ?? "print") === "print"
+  })
   const printTotalMajor =
-    decoratedLocations.length > 0
+    printSides.length === 0
+      ? 0
+      : printLocations.length > 0
       ? scpPrintTotalMajorFromLocations({
           selectedPrintSizeId: printSizeId,
           tierIndex,
-          locations: decoratedLocations,
+          locations: printLocations,
         })
       : scpPrintTotalMajorPerGarmentForSides({
           selectedPrintSizeId: printSizeId,
           tierIndex,
-          decoratedSides,
+          decoratedSides: printSides,
         })
+
+  // Embroidery pricing: sum per-side embroidery decoration costs (each
+  // amortises its own digitizing fee across the order quantity). Sides
+  // whose stitchCount exceeds MAX_AUTO_PRICED_STITCHES are skipped here
+  // — production team will manually quote them (POA).
+  let embroideryTotalMajor = 0
+  const embroideryBreakdown: Array<{
+    side: string
+    stitchCount: number
+    unitDecorationMajor: number
+    digitizingFeeMajor: number
+    unitPriceMajor: number
+    requiresQuote: boolean
+  }> = []
+  for (const side of embroiderySides) {
+    const cfg = sideEmbroideryConfigs[side]
+    const stitchCount = Math.max(0, Math.floor(cfg?.stitchCount ?? 0))
+    if (stitchCount <= 0) continue
+    if (stitchCount > MAX_AUTO_PRICED_STITCHES) {
+      embroideryBreakdown.push({
+        side,
+        stitchCount,
+        unitDecorationMajor: 0,
+        digitizingFeeMajor: 0,
+        unitPriceMajor: 0,
+        requiresQuote: true,
+      })
+      continue
+    }
+    const result = calculateEmbroideryUnitPriceMajor({
+      stitchCount,
+      quantity,
+      includeDigitizing: cfg?.includeDigitizingFee !== false,
+    })
+    embroideryTotalMajor += result.unitPriceMajor
+    embroideryBreakdown.push({
+      side,
+      stitchCount,
+      unitDecorationMajor: result.unitDecorationMajor,
+      digitizingFeeMajor: result.digitizingFeeMajor,
+      unitPriceMajor: result.unitPriceMajor,
+      requiresQuote: false,
+    })
+  }
 
   const garmentMajor = await resolveGarmentUnitAmountMajor({
     query,
@@ -179,7 +266,11 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
   })
 
   const round2 = (n: number) => Math.round(n * 100) / 100
-  const unitPriceMajor = round2(Math.max(0, garmentMajor) + Math.max(0, printTotalMajor))
+  const unitPriceMajor = round2(
+    Math.max(0, garmentMajor) +
+      Math.max(0, printTotalMajor) +
+      Math.max(0, embroideryTotalMajor)
+  )
 
   const customizerDesignRaw = mergedMetadata.customizerDesign
   const customizerDesign =
@@ -196,16 +287,22 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
     pricing: {
       ...pricingExisting,
       server: {
-        mode: "scp_dtf",
+        mode: embroiderySides.length > 0 ? "scp_dtf_mixed" : "scp_dtf",
         version: SCP_PRINT_PRICING_VERSION,
+        embroidery_version:
+          embroiderySides.length > 0 ? EMBROIDERY_PRICING_VERSION : undefined,
         print_size_id: printSizeId,
         tier_index: tierIndex,
         quantity_tier_label: SCP_BLANK_ALIGNED_QUANTITY_TIERS[tierIndex]?.label ?? null,
         decorated_sides: decoratedSides.length,
         decorated_side_keys: decoratedSides,
         decorated_locations: decoratedLocations,
+        print_side_keys: printSides,
+        embroidery_side_keys: embroiderySides,
         garment_unit_major: garmentMajor,
         print_total_major_per_garment: printTotalMajor,
+        embroidery_total_major_per_garment: embroideryTotalMajor,
+        embroidery_breakdown: embroideryBreakdown,
         unit_price_major: unitPriceMajor,
       },
     },
