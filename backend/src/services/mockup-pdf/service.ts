@@ -351,7 +351,7 @@ export async function generateMockupPdf(
 
   const [magentaLogoFull, magentaLogoWatermark] = await Promise.all([
     makeMagentaLogo(rawLogoBuf, 100, 1.0),
-    makeMagentaLogo(rawLogoBuf, 300, 0.10),
+    makeMagentaLogo(rawLogoBuf, 500, 0.10),
   ])
 
   return buildPdf({ jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, magentaLogoFull, magentaLogoWatermark })
@@ -428,7 +428,7 @@ function buildPdf(params: {
       const imgW = 250
 
       // Watermark: centred in image band, drawn first so garment images render on top
-      const wmSize = 300
+      const wmSize = 500
       const wmX = ML + (usableW - wmSize) / 2
       const wmY = imgY + (imgH - wmSize) / 2
       doc.image(magentaLogoWatermark, wmX, wmY, { width: wmSize, height: wmSize })
