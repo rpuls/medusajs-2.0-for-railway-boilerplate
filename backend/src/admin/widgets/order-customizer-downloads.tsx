@@ -1,7 +1,7 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
-import { Badge, Container, Heading, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Text } from "@medusajs/ui"
 import { useCallback, useEffect, useState } from "react"
 
 function adminCustomizerDownloadPath(orderId: string) {
@@ -50,6 +50,36 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
   const [payload, setPayload] = useState<DownloadPayload | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+
+  const downloadMockupPdf = useCallback(async () => {
+    if (!orderId) return
+    setPdfLoading(true)
+    setPdfError(null)
+    try {
+      const res = await fetch(`/admin/orders/${orderId}/mockup-pdf`, {
+        credentials: "include",
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string }
+        throw new Error(body?.message || `HTTP ${res.status}`)
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `artwork-approval-${data?.display_id ?? orderId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : "Failed to generate PDF")
+    } finally {
+      setPdfLoading(false)
+    }
+  }, [orderId, data?.display_id])
 
   const load = useCallback(async () => {
     if (!orderId) {
@@ -93,6 +123,21 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
           <Text size="small" className="text-ui-fg-subtle mt-1">
             Customer uploads (exact file), rendered print PNG, and garment mockup from order metadata.
           </Text>
+        </div>
+        <div className="flex flex-col items-end gap-y-1">
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={downloadMockupPdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? "Generating…" : "Download Mockup PDF"}
+          </Button>
+          {pdfError ? (
+            <Text size="xsmall" className="text-ui-fg-error">
+              {pdfError}
+            </Text>
+          ) : null}
         </div>
       </div>
 

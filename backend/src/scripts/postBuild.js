@@ -31,9 +31,17 @@ if (fs.existsSync(patchesSrc)) {
   fs.cpSync(patchesSrc, patchesDest, { recursive: true });
 }
 
+// Copy src/assets/ (fonts, images) so they are available in the compiled server
+const assetsSrc = path.join(process.cwd(), 'src', 'assets');
+const assetsDest = path.join(MEDUSA_SERVER_PATH, 'src', 'assets');
+if (fs.existsSync(assetsSrc)) {
+  fs.cpSync(assetsSrc, assetsDest, { recursive: true });
+  console.log('Copied src/assets/ to .medusa/server/src/assets/');
+}
+
 // Install dependencies
 console.log('Installing dependencies in .medusa/server...');
-execSync('pnpm i --prod --frozen-lockfile', { 
+execSync('pnpm i --prod --frozen-lockfile', {
   cwd: MEDUSA_SERVER_PATH,
   stdio: 'inherit'
 });
