@@ -4,9 +4,11 @@ import { XMark } from "@medusajs/icons"
 import React from "react"
 
 import Help from "@modules/order/components/help"
+import InvoiceDownloadButton from "@modules/order/components/invoice-download-button"
 import Items from "@modules/order/components/items"
 import OrderDetails from "@modules/order/components/order-details"
 import OrderSummary from "@modules/order/components/order-summary"
+import OrderWatchers from "@modules/order/components/order-watchers"
 import ProductionStageTracker from "@modules/order/components/production-stage-tracker"
 import ReorderActions from "@modules/order/components/reorder-actions"
 import ShippingDetails from "@modules/order/components/shipping-details"
@@ -23,15 +25,18 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
 }) => {
   return (
     <div className="flex flex-col justify-center gap-y-4">
-      <div className="flex gap-2 justify-between items-center">
+      <div className="flex gap-2 justify-between items-center flex-wrap">
         <h1 className="text-2xl-semi">Order details</h1>
-        <LocalizedClientLink
-          href="/account/orders"
-          className="flex gap-2 items-center text-ui-fg-subtle hover:text-ui-fg-base"
-          data-testid="back-to-overview-button"
-        >
-          <XMark /> Back to overview
-        </LocalizedClientLink>
+        <div className="flex items-center gap-3">
+          <InvoiceDownloadButton orderId={order.id} />
+          <LocalizedClientLink
+            href="/account/orders"
+            className="flex gap-2 items-center text-ui-fg-subtle hover:text-ui-fg-base"
+            data-testid="back-to-overview-button"
+          >
+            <XMark /> Back to overview
+          </LocalizedClientLink>
+        </div>
       </div>
       <div
         className="flex flex-col gap-4 h-full bg-white w-full"
@@ -40,6 +45,7 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
         <OrderDetails order={order} showStatus />
         <ProductionStageTracker order={order} />
         <ReorderActions order={order} />
+        <OrderWatchers orderId={order.id} />
         <Items items={order.items} />
         <ShippingDetails order={order} />
         <TrackingList order={order} />

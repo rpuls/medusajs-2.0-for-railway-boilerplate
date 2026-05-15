@@ -6,6 +6,8 @@ import {
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
 import { tagUrl } from "../lib/email-utm"
+import { orderInboxAddress } from "../lib/order-inbox-alias"
+import { readWatchers } from "../lib/order-watchers"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 import {
   PRODUCTION_STAGE_EVENT,
@@ -100,27 +102,34 @@ export default async function orderProductionStageChangedHandler({
     ? { url: latestPhoto.url as string, caption: latestPhoto.caption ?? null }
     : null
 
+  const watchers = readWatchers(orderMeta).filter(
+    (w) => w.toLowerCase() !== String(order.email).toLowerCase()
+  )
+  const recipients = [order.email, ...watchers]
+
   try {
-    await notificationModuleService.createNotifications({
-      to: order.email,
-      channel: "email",
-      template: EmailTemplates.ORDER_PRODUCTION_STAGE,
-      data: {
-        emailOptions: {
-          replyTo: SUPPORT_REPLY_TO_EMAIL,
-          subject: subjectForStage(data.to_stage, displayId),
+    for (const recipient of recipients) {
+      await notificationModuleService.createNotifications({
+        to: recipient,
+        channel: "email",
+        template: EmailTemplates.ORDER_PRODUCTION_STAGE,
+        data: {
+          emailOptions: {
+            replyTo: orderInboxAddress(data.order_id) ?? SUPPORT_REPLY_TO_EMAIL,
+            subject: subjectForStage(data.to_stage, displayId),
+          },
+          order,
+          stage: data.to_stage,
+          customerFirstName: firstName,
+          productionPhoto,
+          portalUrl: tagUrl(buildPortalUrl(data.order_id), {
+            medium: "transactional",
+            campaign: `production_stage_${data.to_stage}`,
+            content: "view_order",
+          }),
         },
-        order,
-        stage: data.to_stage,
-        customerFirstName: firstName,
-        productionPhoto,
-        portalUrl: tagUrl(buildPortalUrl(data.order_id), {
-          medium: "transactional",
-          campaign: `production_stage_${data.to_stage}`,
-          content: "view_order",
-        }),
-      },
-    })
+      })
+    }
   } catch (error) {
     logger.error(
       `${PRODUCTION_STAGE_EVENT}: failed to send stage email (${data.to_stage}) for order ${data.order_id}: ${

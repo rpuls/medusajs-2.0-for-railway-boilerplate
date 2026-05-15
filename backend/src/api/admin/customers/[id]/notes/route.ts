@@ -14,7 +14,14 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     const { data } = await query.graph({
       entity: "customer_note",
-      fields: ["id", "body", "pinned", "created_by", "created_at"],
+      fields: [
+        "id",
+        "body",
+        "pinned",
+        "snooze_until",
+        "created_by",
+        "created_at",
+      ],
       filters: { customer_id: customerId },
       pagination: { take: 200, skip: 0, order: { created_at: "DESC" } },
     })
@@ -46,11 +53,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
   const actor = (req as any).auth_context?.actor_id ?? null
   const service = req.scope.resolve(ADMIN_WORKSPACE_MODULE) as any
+  let snoozeUntil: Date | null = null
+  if (typeof body.snooze_until === "string" && body.snooze_until.length > 0) {
+    const parsed = new Date(body.snooze_until)
+    if (Number.isFinite(parsed.getTime())) snoozeUntil = parsed
+  }
   try {
     const created = await service.createCustomerNotes({
       customer_id: customerId,
       body: body.body.trim(),
       pinned: body.pinned === true,
+      snooze_until: snoozeUntil,
       created_by: actor,
     })
     return res.status(201).json({ note: created })

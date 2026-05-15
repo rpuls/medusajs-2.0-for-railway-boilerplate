@@ -39,6 +39,12 @@ function setManualCors(req: MedusaRequest, res: MedusaResponse) {
   res.setHeader("Access-Control-Allow-Credentials", "true")
 }
 
+const moodBoardImageSchema = z.object({
+  filename: z.string().min(1).max(200),
+  mime_type: z.string().min(1).max(80),
+  data_base64: z.string().min(1),
+})
+
 const bodySchema = z.object({
   email: z.string().min(3),
   contact_name: z.string().max(120).optional(),
@@ -57,6 +63,10 @@ const bodySchema = z.object({
     )
     .max(50)
     .optional(),
+  /** Up to 5 inspiration images uploaded as data URLs. The route
+   *  uploads them via the file module and stores the resulting URLs
+   *  on the quote's metadata.mood_board_urls. */
+  mood_board: z.array(moodBoardImageSchema).max(5).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
@@ -96,6 +106,28 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     total: null,
   }))
 
+  // ---- Mood board uploads ----
+  const moodBoardUrls: string[] = []
+  if (parsed.mood_board?.length) {
+    try {
+      const fileModuleService = req.scope.resolve(Modules.FILE) as any
+      for (const img of parsed.mood_board) {
+        if (!img.mime_type.startsWith("image/")) continue
+        const base64 = img.data_base64.replace(/^data:[^;]+;base64,/, "")
+        const buf = Buffer.from(base64, "base64")
+        if (buf.byteLength > 8 * 1024 * 1024) continue // 8 MB ceiling
+        const safeName = `mood-board/${publicId}/${Date.now()}-${img.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+        const [uploaded] = await fileModuleService.createFiles([
+          { filename: safeName, mimeType: img.mime_type, content: base64 },
+        ])
+        if (uploaded?.url) moodBoardUrls.push(uploaded.url)
+      }
+    } catch (err) {
+      console.error("Mood board upload failed", err)
+      // Soft-fail — the quote should still create even if uploads fail.
+    }
+  }
+
   const [quote] = await quoteService.createQuotes([
     {
       public_id: publicId,
@@ -108,7 +140,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       subject: parsed.subject ?? null,
       message: parsed.message,
       line_items: { items: lineItems },
-      metadata: parsed.metadata ?? {},
+      metadata: {
+        ...(parsed.metadata ?? {}),
+        ...(moodBoardUrls.length ? { mood_board_urls: moodBoardUrls } : {}),
+      },
     },
   ])
 

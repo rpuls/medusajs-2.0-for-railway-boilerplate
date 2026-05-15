@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState } from "react"
+import { useId, useRef, useState } from "react"
 
 const PRINTING_TYPES = [
   { value: "", label: "Select printing type" },
@@ -31,6 +31,29 @@ type ByoInquiryFormProps = {
   className?: string
 }
 
+type MoodBoardImage = {
+  id: string
+  filename: string
+  mime_type: string
+  data_base64: string
+  preview_url: string
+}
+
+const MAX_MOOD_BOARD = 5
+const MAX_FILE_BYTES = 8 * 1024 * 1024
+
+const fileToDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => {
+      const v = r.result
+      if (typeof v === "string") resolve(v)
+      else reject(new Error("FileReader returned non-string result"))
+    }
+    r.onerror = reject
+    r.readAsDataURL(file)
+  })
+
 export default function ByoInquiryForm({ id, className = "" }: ByoInquiryFormProps) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -38,7 +61,39 @@ export default function ByoInquiryForm({ id, className = "" }: ByoInquiryFormPro
   const [printingOther, setPrintingOther] = useState("")
   const [garmentOther, setGarmentOther] = useState("")
   const [selectedGarments, setSelectedGarments] = useState<Set<string>>(() => new Set())
+  const [moodBoard, setMoodBoard] = useState<MoodBoardImage[]>([])
+  const moodInputRef = useRef<HTMLInputElement | null>(null)
   const formTitleId = useId()
+
+  const addImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const next: MoodBoardImage[] = []
+    for (const file of Array.from(files)) {
+      if (moodBoard.length + next.length >= MAX_MOOD_BOARD) break
+      if (!file.type.startsWith("image/")) continue
+      if (file.size > MAX_FILE_BYTES) {
+        alert(`${file.name} is larger than 8 MB — skipping.`)
+        continue
+      }
+      try {
+        const dataUrl = await fileToDataUrl(file)
+        next.push({
+          id: `${Date.now()}-${file.name}`,
+          filename: file.name,
+          mime_type: file.type,
+          data_base64: dataUrl,
+          preview_url: dataUrl,
+        })
+      } catch {
+        // skip
+      }
+    }
+    if (next.length > 0) setMoodBoard((prev) => [...prev, ...next])
+    if (moodInputRef.current) moodInputRef.current.value = ""
+  }
+
+  const removeImage = (id: string) =>
+    setMoodBoard((prev) => prev.filter((m) => m.id !== id))
 
   const inputClass =
     "w-full rounded-lg border border-[var(--brand-primary)]/35 bg-white px-3 py-2.5 text-sm text-ui-fg-base placeholder:text-ui-fg-muted/80 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
@@ -108,16 +163,22 @@ export default function ByoInquiryForm({ id, className = "" }: ByoInquiryFormPro
       return
     }
 
+    const contactName = `${first} ${last}`.trim() || null
     const payload = {
-      first_name: first || null,
-      last_name: last || null,
       email,
+      contact_name: contactName,
       subject: BYO_SUBJECT,
       message: buildMessage(userMessage),
+      source: "byo" as const,
+      mood_board: moodBoard.map((m) => ({
+        filename: m.filename,
+        mime_type: m.mime_type,
+        data_base64: m.data_base64,
+      })),
     }
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -129,6 +190,7 @@ export default function ByoInquiryForm({ id, className = "" }: ByoInquiryFormPro
         setPrintingOther("")
         setGarmentOther("")
         setSelectedGarments(new Set())
+        setMoodBoard([])
       } else {
         const body = await response.json().catch(() => null)
         alert(
@@ -318,6 +380,51 @@ export default function ByoInquiryForm({ id, className = "" }: ByoInquiryFormPro
           required
           className={`${inputClass} resize-y`}
         />
+      </div>
+
+      <div>
+        <label className={labelClass}>
+          Mood board (optional, up to {MAX_MOOD_BOARD} images)
+        </label>
+        <p className="mb-2 text-xs text-ui-fg-subtle">
+          Drop in Pinterest screenshots, brand references, or photos of what
+          you&apos;re going for. Faster quotes, fewer rounds of back-and-forth.
+        </p>
+        <div className="flex flex-wrap items-start gap-2">
+          {moodBoard.map((m) => (
+            <div
+              key={m.id}
+              className="relative h-20 w-20 overflow-hidden rounded-md border border-[var(--brand-primary)]/20 bg-ui-bg-subtle"
+            >
+              <img
+                src={m.preview_url}
+                alt={m.filename}
+                className="h-full w-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => removeImage(m.id)}
+                className="absolute right-0 top-0 m-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white hover:bg-black/80"
+                aria-label={`Remove ${m.filename}`}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {moodBoard.length < MAX_MOOD_BOARD ? (
+            <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-md border border-dashed border-[var(--brand-primary)]/40 text-xs text-ui-fg-subtle hover:bg-ui-bg-subtle">
+              + Add
+              <input
+                ref={moodInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => addImages(e.target.files)}
+                className="hidden"
+              />
+            </label>
+          ) : null}
+        </div>
       </div>
 
       <button

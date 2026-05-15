@@ -291,6 +291,37 @@ export const CROSS_SELL_MAX_PER_PRODUCT = parseIntEnv(
   5
 )
 
+/**
+ * Stale-order alerts: daily cron stamps `metadata.is_stale = true` on
+ * orders whose current production stage hasn't advanced in
+ * STALE_ORDER_THRESHOLD_DAYS days. Admin shows a red badge. Optional
+ * Slack webhook posts a digest of newly-stale orders.
+ */
+export const STALE_ORDER_ALERTS_ENABLED =
+  String(process.env.STALE_ORDER_ALERTS_ENABLED).toLowerCase() === "true"
+export const STALE_ORDER_THRESHOLD_DAYS = parseIntEnv(
+  process.env.STALE_ORDER_THRESHOLD_DAYS,
+  3
+)
+export const SLACK_PRODUCTION_WEBHOOK_URL =
+  process.env.SLACK_PRODUCTION_WEBHOOK_URL
+
+/**
+ * Per-order inbound email aliases. When set, transactional emails for
+ * an order use `inbox+ord<order-id>@${ORDER_INBOX_DOMAIN}` as their
+ * Reply-To. Customer replies land at that alias, which (with a DNS
+ * MX → inbound-email provider config) hits the
+ * /hooks/inbound-email webhook and gets attached to the order's
+ * timeline as an order_comment.
+ *
+ * Without the env var, replyTo falls back to SUPPORT_REPLY_TO_EMAIL.
+ *
+ * INBOUND_EMAIL_SECRET is a shared secret the provider sends in a
+ * header so the webhook can reject unauthorised inbound traffic.
+ */
+export const ORDER_INBOX_DOMAIN = process.env.ORDER_INBOX_DOMAIN
+export const INBOUND_EMAIL_SECRET = process.env.INBOUND_EMAIL_SECRET
+
 /** If set, GET /key-exchange requires header x-medusa-key-exchange-secret (same value). */
 export const KEY_EXCHANGE_SECRET = process.env.KEY_EXCHANGE_SECRET
 

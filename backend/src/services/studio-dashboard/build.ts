@@ -10,6 +10,7 @@ export type StudioRow = {
     | "first_timers"
     | "outstanding_quotes"
     | "low_nps"
+    | "snoozes_due"
   customer_id: string | null
   email: string
   display_name: string
@@ -214,6 +215,61 @@ export async function buildStudioDashboard(
     lowNps = []
   }
 
+  // ---- Snoozes due (customer notes whose snooze_until has passed) ----
+  let snoozesDue: StudioRow[] = []
+  try {
+    const { data: notes } = await query.graph({
+      entity: "customer_note",
+      fields: ["id", "customer_id", "body", "snooze_until", "created_by"],
+      pagination: { take: 500, skip: 0 },
+    })
+    const due = ((notes as any[]) ?? []).filter((n) => {
+      if (!n?.snooze_until) return false
+      const ts = Date.parse(n.snooze_until as string)
+      return Number.isFinite(ts) && ts <= now.getTime()
+    })
+    if (due.length > 0) {
+      const customerIds = Array.from(
+        new Set(
+          due
+            .map((n) => n?.customer_id)
+            .filter((id): id is string => typeof id === "string")
+        )
+      )
+      const { data: customers } = await query.graph({
+        entity: "customer",
+        fields: ["id", "email", "first_name", "last_name"],
+        filters: { id: customerIds },
+        pagination: { take: customerIds.length, skip: 0 },
+      })
+      const customerById = new Map<string, any>()
+      for (const c of (customers as any[]) ?? []) {
+        customerById.set(c.id as string, c)
+      }
+      for (const n of due) {
+        const c = customerById.get(n.customer_id as string)
+        if (!c) continue
+        const name =
+          [c.first_name, c.last_name]
+            .filter((s: string | null) => typeof s === "string" && s.length > 0)
+            .join(" ") || c.email
+        const bodyPreview = (n.body as string).slice(0, 80) + ((n.body as string).length > 80 ? "…" : "")
+        snoozesDue.push({
+          bucket: "snoozes_due",
+          customer_id: n.customer_id as string,
+          email: c.email ?? "",
+          display_name: name,
+          detail: bodyPreview,
+          href: `/app/customers/${n.customer_id}`,
+          signal_at: n.snooze_until as string,
+        })
+      }
+    }
+    snoozesDue.sort((a, b) => (a.signal_at < b.signal_at ? -1 : 1))
+  } catch {
+    snoozesDue = []
+  }
+
   return [
     {
       key: "vip_dormant",
@@ -242,6 +298,13 @@ export async function buildStudioDashboard(
       description:
         "Customers who rated 1 or 2 in the last 30 days. Reach out before they churn quietly.",
       rows: lowNps.slice(0, 20),
+    },
+    {
+      key: "snoozes_due",
+      label: "Snooze follow-ups due",
+      description:
+        "Customer notes you snoozed for later — the snooze window has passed.",
+      rows: snoozesDue.slice(0, 20),
     },
   ]
 }

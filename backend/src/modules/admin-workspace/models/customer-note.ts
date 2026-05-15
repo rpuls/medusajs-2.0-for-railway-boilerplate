@@ -14,8 +14,12 @@ const CustomerNote = model
     customer_id: model.text(),
     body: model.text(),
     pinned: model.boolean().default(false),
+    /** Optional follow-up reminder. While `snooze_until` is in the
+     *  future the note is dimmed in the UI; once the date passes the
+     *  Studio dashboard surfaces it as a "snooze due" task. */
+    snooze_until: model.dateTime().nullable(),
     created_by: model.text().nullable(),
   })
-  .indexes([{ on: ["customer_id"] }])
+  .indexes([{ on: ["customer_id"] }, { on: ["snooze_until"] }])
 
 export default CustomerNote

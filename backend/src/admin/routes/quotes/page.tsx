@@ -38,6 +38,7 @@ type Quote = {
       total?: number | null
     }>
   }
+  metadata?: Record<string, unknown> | null
   created_at: string
 }
 
@@ -265,16 +266,35 @@ function QuoteDetail({
     setDraftEstimate(quote.total_estimate ? String(quote.total_estimate) : "")
   }, [quote.id])
 
+  const copyAcceptLink = async () => {
+    try {
+      const res = await fetch(`/admin/quotes/${quote.id}/accept-link`, {
+        credentials: "include",
+      })
+      const json = (await res.json()) as { url?: string }
+      if (!json.url) throw new Error("Server returned no URL")
+      await navigator.clipboard.writeText(json.url)
+      toast.success("Customer accept link copied to clipboard")
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to copy link")
+    }
+  }
+
   return (
     <div className="flex flex-col gap-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-x-2 flex-wrap">
         <div>
           <Heading level="h2">{quote.public_id}</Heading>
           <Text size="xsmall" className="text-ui-fg-muted">
             {quote.email} · created {fmtDate(quote.created_at)} · source {quote.source}
           </Text>
         </div>
-        <Badge color={STATUS_COLORS[quote.status]}>{STATUS_LABELS[quote.status]}</Badge>
+        <div className="flex items-center gap-x-2">
+          <Button size="small" variant="secondary" onClick={copyAcceptLink}>
+            Copy customer accept link
+          </Button>
+          <Badge color={STATUS_COLORS[quote.status]}>{STATUS_LABELS[quote.status]}</Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 small:grid-cols-2 gap-3">
@@ -343,6 +363,29 @@ function QuoteDetail({
           }
         />
       </div>
+
+      {Array.isArray(quote.metadata?.mood_board_urls) &&
+      (quote.metadata!.mood_board_urls as unknown[]).length > 0 ? (
+        <div>
+          <Heading level="h3" className="text-base">Mood board</Heading>
+          <Text size="xsmall" className="text-ui-fg-muted mt-1 mb-2">
+            Reference images the customer attached with their quote request.
+          </Text>
+          <div className="flex flex-wrap gap-2">
+            {(quote.metadata!.mood_board_urls as string[]).map((url, idx) => (
+              <a
+                key={idx}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="block h-24 w-24 overflow-hidden rounded-md border border-ui-border-base bg-ui-bg-subtle"
+              >
+                <img src={url} alt="" className="h-full w-full object-cover" />
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div>
         <Heading level="h3" className="text-base">Line items</Heading>

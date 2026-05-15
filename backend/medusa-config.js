@@ -267,6 +267,14 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/lookbook",
+    },
+
+    {
+      resolve: "./src/modules/organisation",
+    },
+
+    {
       resolve: "./src/modules/brand",
     },
 

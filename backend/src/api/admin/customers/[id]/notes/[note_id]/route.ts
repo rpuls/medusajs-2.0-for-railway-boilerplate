@@ -13,6 +13,12 @@ export async function PATCH(req: MedusaRequest, res: MedusaResponse) {
   const update: Record<string, unknown> = {}
   if (typeof body.body === "string") update.body = body.body.trim()
   if (typeof body.pinned === "boolean") update.pinned = body.pinned
+  if (body.snooze_until === null) {
+    update.snooze_until = null
+  } else if (typeof body.snooze_until === "string" && body.snooze_until.length > 0) {
+    const parsed = new Date(body.snooze_until)
+    if (Number.isFinite(parsed.getTime())) update.snooze_until = parsed
+  }
   const service = req.scope.resolve(ADMIN_WORKSPACE_MODULE) as any
   try {
     const updated = await service.updateCustomerNotes(noteId, update)
