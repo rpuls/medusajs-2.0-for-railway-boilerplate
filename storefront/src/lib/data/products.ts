@@ -35,7 +35,7 @@ function productBrandMatchesClientFilter(
  * (id, name, handle, parent_id) so the storefront filter and PDP can read it directly.
  */
 const STORE_PRODUCT_FIELDS =
-  "+metadata,+type,+weight,*variants.calculated_price,*variants.options,+variants.metadata,+variants.sku,+variants.weight,+tags,*brand"
+  "+metadata,+type,+weight,*variants.calculated_price,*variants.options,+variants.metadata,+variants.sku,+variants.weight,+variants.manage_inventory,+variants.allow_backorder,+variants.inventory_quantity,+tags,*brand"
 
 /**
  * Next.js Data Cache: tag for on-demand `revalidateTag("products", "max")`, plus a max age so catalog

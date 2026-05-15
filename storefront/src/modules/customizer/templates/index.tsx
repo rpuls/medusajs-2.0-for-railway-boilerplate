@@ -44,6 +44,10 @@ import { uploadCustomerOriginalUnchanged } from "@modules/customizer/lib/upload-
 import { extractCartDesigns, filterByKind } from "@lib/util/cart-decorations"
 import { sanitizeCartAddError } from "@lib/util/sanitize-cart-error"
 import {
+  getVariantStockState,
+  type VariantStockState,
+} from "@modules/products/lib/variant-stock"
+import {
   BulkPricingTier,
   CUSTOMIZER_PRINT_NOTES_MAX_LENGTH,
   CustomizerMetadata,
@@ -354,6 +358,33 @@ const uniqueSizesForVariant = (
     return [{ size: "Default", quantity: 0 }]
   }
   return sortApparelSizeLabels(sizes).map((size) => ({ size, quantity: 0 }))
+}
+
+/**
+ * Mirror of `uniqueSizesForVariant` that returns the actual variant per
+ * size value, so callers can look up inventory state. Uses the same
+ * non-size option matching so colour-locked size pickers resolve to the
+ * variant that would actually be added to the cart.
+ */
+const variantBySizeForReference = (
+  product: HttpTypes.StoreProduct,
+  reference: HttpTypes.StoreProductVariant
+): Map<string, HttpTypes.StoreProductVariant> => {
+  const sizeOption = getSizeOption(product)
+  const basePool = (product.variants ?? []).filter((v) =>
+    variantMatchesNonSizeOptions(v, product, reference)
+  )
+  const pricedPool = basePool.filter((variant) => variantHasConfiguredPrice(variant))
+  const pool = pricedPool.length ? pricedPool : basePool
+  const map = new Map<string, HttpTypes.StoreProductVariant>()
+  for (const v of pool) {
+    const sizeValue = sizeOption
+      ? (v.options?.find((e) => e.option_id === sizeOption.id)?.value ?? "")
+      : (v.title ?? "Default")
+    if (!sizeValue || map.has(sizeValue)) continue
+    map.set(sizeValue, v)
+  }
+  return map
 }
 
 const uniqueOptionValues = (product: HttpTypes.StoreProduct, optionId: string): string[] => {
@@ -933,6 +964,28 @@ export default function CustomizerTemplate({
       selectedProduct?.variants?.[0],
     [activeVariantId, selectedProduct]
   )
+
+  /**
+   * Per-size stock state for the size matrix in <PricingPanel/>. Keyed by
+   * size value, recomputed when the colour-selected variant changes (because
+   * each colour has its own SKUs and therefore its own per-size stock). The
+   * `requestedQuantity` per size is fed in so we can flag entries where the
+   * customer is asking for more than is currently in stock, not just zero.
+   */
+  const stockBySize = useMemo(() => {
+    if (!selectedProduct || !selectedVariant) return {}
+    const variantMap = variantBySizeForReference(selectedProduct, selectedVariant)
+    const requestedBySize = new Map(
+      sizeMatrix.map((entry) => [entry.size, entry.quantity])
+    )
+    const result: Record<string, VariantStockState> = {}
+    Array.from(variantMap.entries()).forEach(([size, variant]) => {
+      result[size] = getVariantStockState(variant, {
+        requestedQuantity: requestedBySize.get(size) ?? 0,
+      })
+    })
+    return result
+  }, [selectedProduct, selectedVariant, sizeMatrix])
 
   const flyImageSrcForAddToCart = useMemo(
     () => resolvePdpFlyImageSrc(selectedProduct, selectedVariant),
@@ -3151,6 +3204,7 @@ export default function CustomizerTemplate({
               onSaveDesign={embedded ? undefined : saveCurrentDesign}
               isSavingDesign={isSavingDesign}
               aggregatedCartQuantity={aggregatedCartQuantity}
+              stockBySize={stockBySize}
             />
 
             <details className="group rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
@@ -3960,6 +4014,7 @@ export default function CustomizerTemplate({
                 primaryCtaLabel={editLineItemId ? "Update cart" : undefined}
                 primaryCtaLoadingLabel={editLineItemId ? "Updating..." : undefined}
                 aggregatedCartQuantity={aggregatedCartQuantity}
+                stockBySize={stockBySize}
               />
               <div className="space-y-2 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
                 <label
