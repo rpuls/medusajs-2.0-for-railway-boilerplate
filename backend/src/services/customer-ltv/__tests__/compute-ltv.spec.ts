@@ -120,6 +120,47 @@ describe("computeCustomerLtv", () => {
     expect(result.order_count).toBe(2)
   })
 
+  test("unwraps Medusa BigNumber totals (`{ numeric, raw: { value } }`)", () => {
+    const result = computeCustomerLtv(
+      [
+        {
+          total: { numeric: 267.85, raw: { value: "267.85" } } as any,
+          currency_code: "aud",
+          created_at: "2026-05-01T00:00:00Z",
+        },
+        {
+          total: { numeric: 478.28, raw: { value: "478.28" } } as any,
+          currency_code: "aud",
+          created_at: "2026-05-02T00:00:00Z",
+        },
+      ],
+      { now }
+    )
+    expect(result.lifetime_value).toBeCloseTo(746.13, 2)
+    expect(result.order_count).toBe(2)
+    expect(result.currency_code).toBe("aud")
+  })
+
+  test("unwraps the simpler `{ value: string }` BigNumber shape", () => {
+    const result = computeCustomerLtv(
+      [
+        {
+          total: { value: "100.00" } as any,
+          currency_code: "aud",
+          created_at: "2026-05-01T00:00:00Z",
+        },
+        {
+          total: { value: "200.00" } as any,
+          currency_code: "aud",
+          created_at: "2026-05-02T00:00:00Z",
+        },
+      ],
+      { now }
+    )
+    expect(result.lifetime_value).toBe(300)
+    expect(result.order_count).toBe(2)
+  })
+
   test("days_since_last is clamped to >= 0 even if last_order_at is in the future", () => {
     const result = computeCustomerLtv(
       [
