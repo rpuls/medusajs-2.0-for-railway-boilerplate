@@ -302,35 +302,43 @@ a.checkout-nav-link--subtle:hover {
 
 /* --- View Transitions API Extension --- */
 
-/* We disable the browser's default cross-fade animation so that 
-   the custom GSAP/Web Animations logic in our NavLink component 
+/* We disable the browser's default cross-fade animation so that
+   the custom GSAP/Web Animations logic in our NavLink component
    can take full control of the transition.
+   pointer-events: none on all pseudo-elements prevents the top-layer
+   snapshots from swallowing clicks on the nav/search/account buttons
+   while the transition is in-flight.
 */
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none !important;
+  pointer-events: none;
 }
 
 ::view-transition-group(root) {
   z-index: auto !important;
+  pointer-events: none;
 }
 
 ::view-transition-image-pair(root) {
   isolation: isolate;
   will-change: transform, opacity, clip-path;
   z-index: 1;
+  pointer-events: none;
 }
 
 /* Keeps the incoming page correctly layered during the slide animation */
 ::view-transition-new(root) {
   z-index: 10000;
   animation: none !important;
+  pointer-events: none;
 }
 
 ::view-transition-old(root) {
   z-index: 10000;
   animation: none !important;
+  pointer-events: none;
 }
 
 /* --- Custom “How to order” SVG icon motion --- */
