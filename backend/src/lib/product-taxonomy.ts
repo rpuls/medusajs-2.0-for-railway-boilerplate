@@ -69,6 +69,7 @@ export const PRODUCT_TYPE_ALIASES: Record<string, string> = {
   // Singlets / Tanks
   "singlet": "Singlets / Tanks",
   "singlets": "Singlets / Tanks",
+  "singlets / tanks": "Singlets / Tanks",
   "tank": "Singlets / Tanks",
   "tanks": "Singlets / Tanks",
   "tank top": "Singlets / Tanks",
@@ -218,6 +219,8 @@ export const TAG_ALIASES: Record<string, string> = {
   "hospitality": "Hospitality",
   "construction": "Construction",
   "industrial": "Industrial",
+  "industrial-workwear": "Industrial", // merge into the canonical Industrial tag
+  "industrial workwear": "Industrial",
   // Safety
   "hi-vis": "Hi-Vis",
   "hi vis": "Hi-Vis",
@@ -298,6 +301,36 @@ const GARBAGE_TAG_VALUES = new Set<string>([
   "-",
 ])
 
+// Supplier-specific values we explicitly drop because they're either:
+//   - internal range/collection groupings that don't help cross-supplier filtering
+//     (e.g. FashionBiz "Collection Sports", overlaps with our "Sports" tag)
+//   - product-line/model names that are meaningless without the supplier context
+//     (e.g. "Camden" is a FashionBiz shirt style; not useful as a Medusa tag)
+//   - garment-category labels for products outside our canonical type list
+//     (e.g. "Biz Separates" — those products get product_type set manually)
+const DROP_TAG_VALUES = new Set<string>([
+  // FashionBiz Biz Collection internal range groupings
+  "collection mix and match",
+  "collection sports",
+  "collection business",
+  "collection hospitality",
+  "collection education",
+  "collection promotion",
+  "collection retail",
+  "collection automotive",
+  "collection care",
+  // FashionBiz model/style range names
+  "camden",
+  "city",
+  "memphis",
+  "aston",
+  "charlie",
+  "focus",
+  // FashionBiz internal garment-category labels (not in our canonical type list)
+  "biz separates",
+  "separates",
+])
+
 /**
  * Set of lowercase tag values that should be treated as garment-type indicators
  * (i.e. inputs to product_type derivation). When `normalizeTags` sees one of
@@ -350,6 +383,8 @@ export function normalizeProductType(
  * Silently dropped:
  *   - null/empty values
  *   - garbage placeholders (e.g. "TO BE FILLED IN", "N/A")
+ *   - explicit drop list (supplier-internal range names, model names, etc.
+ *     — see DROP_TAG_VALUES)
  *   - exact garment-type indicators (anything in PRODUCT_TYPE_ALIASES) —
  *     these belong in product_type, not as tags
  *   - compound tags whose tokens contain a garment-type indicator
@@ -371,6 +406,7 @@ export function normalizeTags(
     const trimmed = raw.trim()
     const key = trimmed.toLowerCase()
     if (GARBAGE_TAG_VALUES.has(key)) continue
+    if (DROP_TAG_VALUES.has(key)) continue
     if (garmentTypeKeys.has(key)) continue
     // Token-based filter: drop multi-word tags that contain a garment-type
     // token. "Clearance" alone passes; "Clearance Tees" doesn't.
