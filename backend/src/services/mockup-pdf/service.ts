@@ -166,6 +166,7 @@ interface PageData {
   frontMockupBuf: Buffer | null
   backMockupBuf: Buffer | null
   sizes: SizeQuantity[]
+  printNotes: string | null
 }
 
 function formatDate(d: Date | string): string {
@@ -249,12 +250,17 @@ function buildPageData(
     canonical?.product_title ?? canonical?.title ?? "Product"
   )
 
+  const rawNotes = (rawDesign as Record<string, unknown> | null)?.printNotes
+  const printNotes =
+    typeof rawNotes === "string" && rawNotes.trim() ? rawNotes.trim() : null
+
   return {
     productTitle,
     printSizeLabel,
     frontMockupBuf: frontBuf,
     backMockupBuf: backBuf,
     sizes: sortSizes(sizes),
+    printNotes,
   }
 }
 
@@ -383,7 +389,7 @@ function buildPdf(params: {
     const usableW = PW - ML - MR // ~535pt
 
     for (const page of pages) {
-      const { productTitle, printSizeLabel, frontMockupBuf, backMockupBuf, sizes } = page
+      const { productTitle, printSizeLabel, frontMockupBuf, backMockupBuf, sizes, printNotes } = page
 
       doc.addPage()
 
@@ -482,8 +488,33 @@ function buildPdf(params: {
         .fillColor("#333333")
         .text(DISCLAIMER, ML + boxPad, disclaimerY + boxPad, { width: disclaimerTextW })
 
+      // ── CUSTOMER NOTES BOX (only if notes are present) ───────────────────────
+      let notesBoxH = 0
+      const notesY = disclaimerY + disclaimerH + 10
+      if (printNotes) {
+        const notesTextW = usableW - boxPad * 2
+        doc.font("PJS").fontSize(8)
+        notesBoxH =
+          doc.heightOfString(printNotes, { width: notesTextW - 55 }) + boxPad * 2
+
+        doc.roundedRect(ML, notesY, usableW, notesBoxH, 4).fill("#fff7ed")
+        doc
+          .font("PJS-Bold")
+          .fontSize(8)
+          .fillColor("#92400e")
+          .text("Customer Notes:  ", ML + boxPad, notesY + boxPad, {
+            continued: true,
+            lineBreak: false,
+          })
+        doc
+          .font("PJS")
+          .fontSize(8)
+          .fillColor("#78350f")
+          .text(printNotes, { width: notesTextW - 55 })
+      }
+
       // ── ORDER QUANTITIES BOX ──────────────────────────────────────────────────
-      const qtyY = disclaimerY + disclaimerH + 10
+      const qtyY = notesY + (printNotes ? notesBoxH + 10 : 0)
       const qtyLineH = 14
       const qtyTitleH = 18
       const qtyProductH = 16
@@ -496,7 +527,7 @@ function buildPdf(params: {
         .font("PJS-Bold")
         .fontSize(11)
         .fillColor("#000000")
-        .text("Order Quantities & Sizing", ML + boxPad, qy)
+        .text("Order Sizes and Quantities", ML + boxPad, qy)
       qy += qtyTitleH
 
       doc
