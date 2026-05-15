@@ -112,6 +112,11 @@ export default async function Footer() {
                 </LocalizedClientLink>
               </li>
               <li>
+                <LocalizedClientLink href="/jungle-scene" className="hover:text-ui-fg-base">
+                  Jungle scene
+                </LocalizedClientLink>
+              </li>
+              <li>
                 <LocalizedClientLink href="/test/animation-widgets" className="hover:text-ui-fg-base">
                   Animation widgets lab
                 </LocalizedClientLink>
