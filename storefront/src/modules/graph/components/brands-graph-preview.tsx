@@ -31,6 +31,8 @@ export function BrandsGraphPreview({ summary }: Props) {
         root: true,
         category: false,
         product: false,
+        type: false,
+        tag: false,
       }),
     [summary]
   )
