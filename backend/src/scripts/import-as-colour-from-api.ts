@@ -256,10 +256,13 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
     const productImages: { url: string }[] = []
     const seen = new Set<string>()
     for (const img of images as any[]) {
-      // Prefer the largest non-zoom render. AS Colour returns urlStandard
-      // (~386px), urlThumbnail (~220px), urlTiny (~44px), urlZoom (~1280px).
-      // urlZoom is the print-quality master; urlStandard is the catalog tile.
-      const url = img.urlStandard || img.urlZoom || img.urlThumbnail || img.urlTiny
+      // AS Colour returns four sizes per image: urlZoom (~1280px),
+      // urlStandard (~386px), urlThumbnail (~220px), urlTiny (~44px).
+      // Prefer urlZoom — the storefront PDP hero renders at ~50vw (often
+      // 512–960px on desktop, more on retina), and urlStandard is below
+      // that on most viewports so Next.js downsamples a too-small source
+      // and the image looks soft.
+      const url = img.urlZoom || img.urlStandard || img.urlThumbnail || img.urlTiny
       if (url && !seen.has(url)) {
         seen.add(url)
         productImages.push({ url })

@@ -197,7 +197,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       const productImages: { url: string }[] = []
       const seen = new Set<string>()
       for (const img of images as any[]) {
-        const url = img.urlStandard || img.urlZoom || img.urlThumbnail || img.urlTiny
+        // Prefer urlZoom (~1280px) over urlStandard (~386px); see
+        // import-as-colour-from-api.ts for the rationale. Keep in sync.
+        const url = img.urlZoom || img.urlStandard || img.urlThumbnail || img.urlTiny
         if (url && !seen.has(url)) {
           seen.add(url)
           productImages.push({ url })
