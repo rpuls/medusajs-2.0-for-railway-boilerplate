@@ -345,12 +345,12 @@ const HelpPage = () => {
             <Heading level="h3" className="text-base mb-2">
               The deeper docs
             </Heading>
-            <ul className="list-disc pl-5">
+            <ul className="list-disc pl-5 space-y-1">
               <li>
-                <code>Docs/STAFF_GUIDE.md</code> — full version of this page with more detail per section.
+                <a href="/app/system-map" className="underline font-medium">System map</a> — interactive diagram of every service, module, event bus, cron, and how they connect. Live in the admin.
               </li>
               <li>
-                <code>Docs/BACKEND_FLOW.md</code> — the technical "how data moves through the system" map with diagrams.
+                <code>Docs/STAFF_GUIDE.md</code> — full version of this page with more detail per section.
               </li>
               <li>
                 <code>CLAUDE.md</code> — repo-root developer guide.
