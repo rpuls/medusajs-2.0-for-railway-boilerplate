@@ -95,12 +95,47 @@ function extractEmbroideryFromMetadata(
   return { placement, stitchCount }
 }
 
+type CustomerOriginalFile = {
+  url?: unknown
+  fileName?: unknown
+}
+
+function extractCustomizerOriginals(
+  metadata: Record<string, unknown>
+): Array<{ url: string; name: string | null; notes: string | null }> {
+  const design = metadata.customizerDesign as
+    | Record<string, unknown>
+    | undefined
+  if (!design || typeof design !== "object") return []
+  const files = design.customerOriginalFiles
+  if (!Array.isArray(files)) return []
+
+  const notes =
+    typeof design.printNotes === "string" && design.printNotes.trim()
+      ? design.printNotes
+      : null
+
+  const out: Array<{ url: string; name: string | null; notes: string | null }> = []
+  for (const f of files as CustomerOriginalFile[]) {
+    const url = typeof f?.url === "string" ? f.url.trim() : ""
+    if (!url) continue
+    const name = typeof f?.fileName === "string" ? f.fileName : null
+    out.push({ url, name, notes })
+  }
+  return out
+}
+
 /**
  * Walk a cart payload and return one entry per *unique* reusable design.
  *
  * Designs are deduplicated by their decoration fingerprint — multiple bundle
  * lines that share the same artwork/notes appear once, and a customer who
  * adds the same embroidery to two garments doesn't see two identical entries.
+ *
+ * Handles three line-item shapes:
+ *  - Bundle wizard lines (metadata.artwork_url + metadata.printNotes)
+ *  - Customizer lines (metadata.customizerDesign.customerOriginalFiles[])
+ *  - Embroidery lines (metadata.decorationDesign)
  */
 export function extractCartDesigns(cart: unknown): CartDesignSource[] {
   const items = (cart as { items?: RawCartItem[] } | null)?.items ?? []
@@ -109,6 +144,48 @@ export function extractCartDesigns(cart: unknown): CartDesignSource[] {
   for (const raw of items) {
     const meta = raw.metadata ?? {}
 
+    const bundleTitle =
+      typeof meta.bundle_title === "string" ? meta.bundle_title : null
+
+    const embroidery = extractEmbroideryFromMetadata(meta)
+    if (embroidery) {
+      out.push({
+        lineItemId: raw.id ?? "",
+        productTitle: raw.product_title ?? "Item",
+        variantTitle: raw.variant_title ?? null,
+        thumbnail: raw.thumbnail ?? null,
+        kind: "embroidery",
+        artworkUrl: null,
+        decorationNotes: null,
+        bundleTitle,
+        embroidery,
+      })
+      continue
+    }
+
+    // Customizer line — emit one entry per uploaded original file so the
+    // customer can pick a specific logo when they've layered multiple on
+    // the same garment.
+    const customizerOriginals = extractCustomizerOriginals(meta)
+    if (customizerOriginals.length > 0) {
+      for (const file of customizerOriginals) {
+        out.push({
+          lineItemId: raw.id ?? "",
+          productTitle: file.name ?? raw.product_title ?? "Item",
+          variantTitle: raw.variant_title ?? null,
+          thumbnail: raw.thumbnail ?? null,
+          kind: "artwork",
+          artworkUrl: file.url,
+          decorationNotes: file.notes,
+          bundleTitle,
+          embroidery: null,
+        })
+      }
+      continue
+    }
+
+    // Bundle wizard line (or any flow that stuck a top-level artwork_url
+    // / printNotes on the line).
     const artworkUrl =
       typeof meta.artwork_url === "string" && meta.artwork_url.trim()
         ? meta.artwork_url
@@ -117,21 +194,19 @@ export function extractCartDesigns(cart: unknown): CartDesignSource[] {
       typeof meta.printNotes === "string" && meta.printNotes.trim()
         ? meta.printNotes
         : null
-    const embroidery = extractEmbroideryFromMetadata(meta)
 
-    if (!artworkUrl && !decorationNotes && !embroidery) continue
+    if (!artworkUrl && !decorationNotes) continue
 
     out.push({
       lineItemId: raw.id ?? "",
       productTitle: raw.product_title ?? "Item",
       variantTitle: raw.variant_title ?? null,
       thumbnail: raw.thumbnail ?? null,
-      kind: embroidery ? "embroidery" : artworkUrl ? "artwork" : "notes-only",
+      kind: artworkUrl ? "artwork" : "notes-only",
       artworkUrl,
       decorationNotes,
-      bundleTitle:
-        typeof meta.bundle_title === "string" ? meta.bundle_title : null,
-      embroidery,
+      bundleTitle,
+      embroidery: null,
     })
   }
 
