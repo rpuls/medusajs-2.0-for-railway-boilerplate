@@ -149,11 +149,14 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   for (const entry of priceList) {
     const price = Number(entry.price)
     if (!entry.sku || !Number.isFinite(price)) continue
-    // AS Colour's pricelist returns multiple rows per SKU (one per
-    // quantity-break tier). The 1-pack tier — the price SC Prints pays
-    // when buying single units — is always the most expensive of those
-    // rows. Keep the max so the tier we pick is deterministic across
-    // runs, not "whichever page happened to come last".
+    // As of 2026-05-15 AS Colour's /catalog/pricelist returns exactly one
+    // row per SKU (verified via probe-ascolour-pricelist.ts: 10,784 rows,
+    // 10,784 unique SKUs). The max-vs-prev check is order-independent
+    // insurance in case they ever switch to multiple rows per SKU (e.g.
+    // quantity-break tiers) — the 1-pack tier would then always be the
+    // most expensive, which is the price SC Prints actually pays for
+    // single units. If you see multiple rows per SKU in the wild, run
+    // the probe again and confirm before relying on this branch.
     const prev = costBySku.get(entry.sku)
     if (prev === undefined || price > prev) {
       costBySku.set(entry.sku, price)
