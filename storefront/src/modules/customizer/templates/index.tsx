@@ -51,10 +51,14 @@ import {
   BulkPricingTier,
   CUSTOMIZER_PRINT_NOTES_MAX_LENGTH,
   CustomizerMetadata,
+  DecorationMethod,
+  EmbroideryConfig,
   GarmentSide,
   PrintSpec,
   SizeQuantity,
 } from "@modules/customizer/lib/types"
+import DecorationMethodPicker from "@modules/customizer/components/decoration-method-picker"
+import EmbroiderySideConfig from "@modules/customizer/components/embroidery-side-config"
 import {
   canvasPxToApproxCm,
   printSpecsToPricingSpecs,
@@ -699,6 +703,27 @@ export default function CustomizerTemplate({
   const pdpStep3Done = Object.keys(sizingDoneSides).length > 0
   // currentSideSized: true when the active side has a confirmed size — collapses Step 3
   const currentSideSized = !!sizingDoneSides[currentSide]
+  /**
+   * Per-side decoration method (print | embroidery). Missing entries default
+   * to "print" via getSideDecorationMethod() at read time. Stored as
+   * Partial<Record> so only customer-touched sides take up metadata payload.
+   * v3 schema field — see CustomizerMetadata.sideDecorationMethods.
+   */
+  const [sideDecorationMethods, setSideDecorationMethods] = useState<
+    Partial<Record<GarmentSide, DecorationMethod>>
+  >({})
+  /**
+   * Per-side embroidery config (mm dimensions + stitch count). Only populated
+   * for sides whose method is "embroidery". v3 schema field — see
+   * CustomizerMetadata.sideEmbroideryConfigs.
+   */
+  const [sideEmbroideryConfigs, setSideEmbroideryConfigs] = useState<
+    Partial<Record<GarmentSide, EmbroideryConfig>>
+  >({})
+  /** True if any side currently uses embroidery — affects pricing + cart route choice. */
+  const hasEmbroiderySide = Object.values(sideDecorationMethods).some(
+    (m) => m === "embroidery"
+  )
   // showSideNudge: brief banner when switching to an empty side in embedded mode
   const [showSideNudge, setShowSideNudge] = useState(false)
   // "Edit existing cart line" mode: when present, the customizer pre-fills from
@@ -1421,6 +1446,16 @@ export default function CustomizerTemplate({
     if (pendingHydration.variantId) {
       const variantExists = product.variants?.some((v) => v.id === pendingHydration.variantId)
       if (variantExists) setActiveVariantId(pendingHydration.variantId)
+    }
+
+    // Restore per-side decoration methods (v3 schema). v2 metadata has no
+    // entries so all sides default to "print" via getSideDecorationMethod()
+    // — no explicit restore needed in that case.
+    if (pendingHydration.sideDecorationMethods) {
+      setSideDecorationMethods(pendingHydration.sideDecorationMethods)
+    }
+    if (pendingHydration.sideEmbroideryConfigs) {
+      setSideEmbroideryConfigs(pendingHydration.sideEmbroideryConfigs)
     }
 
     // Restore manual size overrides so a re-edit of a saved/ordered design
@@ -2514,6 +2549,8 @@ export default function CustomizerTemplate({
           })(),
           activeSide: currentSideRef.current,
           prints: printSpecs,
+          sideDecorationMethods,
+          sideEmbroideryConfigs,
         }),
         variantId: selectedVariant.id,
       }
@@ -2737,6 +2774,8 @@ export default function CustomizerTemplate({
         requiresVectorization: vectorizationRequested,
         activeSide: currentSideRef.current,
         prints: printSpecs,
+        sideDecorationMethods,
+        sideEmbroideryConfigs,
       })
 
       const resolvedQuantities =
@@ -3147,6 +3186,30 @@ export default function CustomizerTemplate({
               <p className="text-xs text-ui-fg-subtle">
                 Switch sides to place art on the front, back, or sleeves. Each side is saved separately.
               </p>
+              <DecorationMethodPicker
+                side={currentSide}
+                value={sideDecorationMethods[currentSide] ?? "print"}
+                onChange={(side, method) => {
+                  setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
+                  // Clean up embroidery config when switching back to print
+                  if (method === "print") {
+                    setSideEmbroideryConfigs((prev) => {
+                      const next = { ...prev }
+                      delete next[side]
+                      return next
+                    })
+                  }
+                }}
+              />
+              {sideDecorationMethods[currentSide] === "embroidery" ? (
+                <EmbroiderySideConfig
+                  side={currentSide}
+                  value={sideEmbroideryConfigs[currentSide]}
+                  onChange={(side, next) => {
+                    setSideEmbroideryConfigs((prev) => ({ ...prev, [side]: next }))
+                  }}
+                />
+              ) : null}
             </div>
 
             <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
@@ -3816,6 +3879,33 @@ export default function CustomizerTemplate({
                           more spots — each location is priced separately.
                         </p>
                       )}
+                      {pdpStep === 2 ? (
+                        <>
+                          <DecorationMethodPicker
+                            side={currentSide}
+                            value={sideDecorationMethods[currentSide] ?? "print"}
+                            onChange={(side, method) => {
+                              setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
+                              if (method === "print") {
+                                setSideEmbroideryConfigs((prev) => {
+                                  const next = { ...prev }
+                                  delete next[side]
+                                  return next
+                                })
+                              }
+                            }}
+                          />
+                          {sideDecorationMethods[currentSide] === "embroidery" ? (
+                            <EmbroiderySideConfig
+                              side={currentSide}
+                              value={sideEmbroideryConfigs[currentSide]}
+                              onChange={(side, next) => {
+                                setSideEmbroideryConfigs((prev) => ({ ...prev, [side]: next }))
+                              }}
+                            />
+                          ) : null}
+                        </>
+                      ) : null}
                     </>
                   ) : null}
                 </motion.div>
