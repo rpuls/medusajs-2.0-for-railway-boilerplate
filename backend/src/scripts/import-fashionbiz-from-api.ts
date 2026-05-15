@@ -56,6 +56,12 @@ import {
   titleCase,
 } from "../modules/fashionbiz/mapping"
 import { BRAND_MODULE } from "../modules/brand"
+import { classifyFashionBizProduct } from "../lib/product-taxonomy"
+import {
+  fetchAllProductTypes,
+  fetchAllProductTags,
+  applyTypeAndTagsToProduct,
+} from "../lib/product-type-tag-sync"
 
 const PRICE_CURRENCY_CODE = "aud"
 const FASHIONBIZ_LOCATION_NAME = "FashionBiz Warehouse"
@@ -212,6 +218,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
     slug: string
     productPayload: any
     colourNames: string[]
+    fashionBizProduct: FashionBizProduct
   }
   const toCreate: any[] = []
   const created: CreatedProductContext[] = []
@@ -404,6 +411,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
         slug: product.slug,
         productPayload,
         colourNames: Array.from(colourNames),
+        fashionBizProduct: product,
       })
     }
   }
@@ -433,7 +441,45 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
   const createdProducts = (result as any[]) ?? []
   logger.info(`Created ${createdProducts.length} products.`)
 
-  // 5b. Link each created product to the right Brand. We rebuild the
+  // 5b. Assign product_type and tags via taxonomy normalization.
+  {
+    const productModule = container.resolve(Modules.PRODUCT) as any
+    const typeCache = await fetchAllProductTypes(productModule)
+    const tagCache = await fetchAllProductTags(productModule)
+    const unknownTaxonomy: string[] = []
+
+    const fbByHandle = new Map<string, FashionBizProduct>()
+    for (const ctx of created) {
+      fbByHandle.set(ctx.productPayload.handle, ctx.fashionBizProduct)
+    }
+
+    let typeTagOk = 0
+    let typeTagFail = 0
+    for (const p of createdProducts) {
+      const fbProduct = fbByHandle.get((p as any).handle)
+      if (!fbProduct) continue
+      const { productType, tags } = classifyFashionBizProduct(fbProduct, unknownTaxonomy)
+      if (!productType && !tags.length) continue
+      try {
+        await applyTypeAndTagsToProduct({
+          productModule,
+          productId: (p as any).id,
+          productType,
+          tags,
+          typeCache,
+          tagCache,
+        })
+        typeTagOk++
+      } catch (err: any) {
+        typeTagFail++
+        logger.warn(`Failed to set type/tags for ${(p as any).handle}: ${err?.message ?? err}`)
+      }
+    }
+    for (const msg of unknownTaxonomy) logger.warn(`[taxonomy] ${msg}`)
+    logger.info(`Type/tag sync: ${typeTagOk} ok, ${typeTagFail} failed.`)
+  }
+
+  // 5c. Link each created product to the right Brand. We rebuild the
   // brand-id-by-handle map keyed by Medusa product handle so we don't
   // depend on creation order.
   const link = container.resolve(ContainerRegistrationKeys.LINK) as any
@@ -468,7 +514,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
   }
   logger.info(`Linked ${linkOk} product(s) to brand (${linkFail} failed).`)
 
-  // 5c. Force-patch garment_images on created variants.
+  // 5d. Force-patch garment_images on created variants.
   // When Medusa restores a soft-deleted product (same handle), it keeps the
   // original variants and their old metadata, ignoring the new payload.
   // Querying by SKU and patching any variant missing garment_images ensures

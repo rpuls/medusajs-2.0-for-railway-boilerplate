@@ -23,6 +23,12 @@ import {
   type TierMoneyMinor,
 } from "../utils/bulk-tier-prices"
 import { BRAND_MODULE } from "../modules/brand"
+import { classifyAsColourProduct } from "../lib/product-taxonomy"
+import {
+  fetchAllProductTypes,
+  fetchAllProductTags,
+  applyTypeAndTagsToProduct,
+} from "../lib/product-type-tag-sync"
 
 /**
  * Convert the major-unit retail PriceLadder (built from the supplier cost via
@@ -227,6 +233,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   // 4. Build product create payloads
   const toCreate: any[] = []
   const skuToInventory: { sku: string; styleCode: string }[] = []
+  const handleToAsColourProduct = new Map<string, AsColourProduct>()
 
   for (const { product, variants, images } of enriched) {
     const handle = handleForStyle(product)
@@ -337,6 +344,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
       ? titleCase(cleanedName)
       : `AS Colour ${product.styleCode}`
 
+    handleToAsColourProduct.set(handle, product)
     toCreate.push({
       title,
       handle,
@@ -357,6 +365,9 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
         ascolour: {
           styleCode: product.styleCode,
           lastSync: new Date().toISOString(),
+          category: product.category ?? null,
+          gender: (product as any).gender ?? null,
+          fit: (product as any).fit ?? null,
         },
       },
     })
@@ -379,7 +390,40 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   const createdProducts = (result as any[]) ?? []
   logger.info(`Created ${createdProducts.length} products.`)
 
-  // 5b. Link each new product to the AS Colour Brand entity via the
+  // 5b. Assign product_type and tags via taxonomy normalization.
+  {
+    const productModule = container.resolve(Modules.PRODUCT) as any
+    const typeCache = await fetchAllProductTypes(productModule)
+    const tagCache = await fetchAllProductTags(productModule)
+    const unknownTaxonomy: string[] = []
+
+    let typeTagOk = 0
+    let typeTagFail = 0
+    for (const p of createdProducts) {
+      const asColourProduct = handleToAsColourProduct.get((p as any).handle)
+      if (!asColourProduct) continue
+      const { productType, tags } = classifyAsColourProduct(asColourProduct, unknownTaxonomy)
+      if (!productType && !tags.length) continue
+      try {
+        await applyTypeAndTagsToProduct({
+          productModule,
+          productId: (p as any).id,
+          productType,
+          tags,
+          typeCache,
+          tagCache,
+        })
+        typeTagOk++
+      } catch (err: any) {
+        typeTagFail++
+        logger.warn(`Failed to set type/tags for ${(p as any).handle}: ${err?.message ?? err}`)
+      }
+    }
+    for (const msg of unknownTaxonomy) logger.warn(`[taxonomy] ${msg}`)
+    logger.info(`Type/tag sync: ${typeTagOk} ok, ${typeTagFail} failed.`)
+  }
+
+  // 5c. Link each new product to the AS Colour Brand entity via the
   // product↔brand Module Link (defined in src/links/product-brand.ts).
   // The link is symmetric (no isList) — a brand can be linked to many
   // products, but the (product_id, brand_id) tuple must be unique.
