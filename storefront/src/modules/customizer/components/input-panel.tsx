@@ -14,6 +14,16 @@ type InputPanelProps = {
   /** When provided, each upload tile shows a bin icon that removes it from "My uploads" after confirmation. */
   onDeleteUpload?: (uploadId: string) => void
   /**
+   * Designs the customer has already attached to other cart line items
+   * (typically via the bundle wizard). When supplied, the panel surfaces a
+   * "From your cart" section that lets the customer drop an existing
+   * artwork onto this view without re-uploading. Resolves the URL → file
+   * via `onAddCartDesign` so the rest of the upload pipeline (EXIF
+   * normalisation, MinIO archive, canvas add) is reused unchanged.
+   */
+  cartDesigns?: Array<{ id: string; name: string; url: string }>
+  onAddCartDesign?: (design: { id: string; name: string; url: string }) => Promise<void>
+  /**
    * When false, the panel hides the uploader, "My uploads", and Remove button
    * behind a placeholder telling the customer which wizard step to finish
    * first. When undefined, the panel is fully enabled (back-compat for the
@@ -34,6 +44,8 @@ export default function InputPanel({
   onRemoveSelectedImage,
   canRemoveImage,
   onDeleteUpload,
+  cartDesigns,
+  onAddCartDesign,
   enabled = true,
   disabledMessage,
   className,
@@ -44,6 +56,17 @@ export default function InputPanel({
   const [letterSpacing, setLetterSpacing] = useState(0)
   const [arcRadius, setArcRadius] = useState(120)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [addingCartDesignId, setAddingCartDesignId] = useState<string | null>(null)
+
+  const handleCartDesignClick = async (design: { id: string; name: string; url: string }) => {
+    if (!onAddCartDesign) return
+    setAddingCartDesignId(design.id)
+    try {
+      await onAddCartDesign(design)
+    } finally {
+      setAddingCartDesignId(null)
+    }
+  }
 
   const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -73,6 +96,37 @@ export default function InputPanel({
             {disabledMessage?.body ??
               "Pick your colour, print location, and print size on the right. Once that's done, you can upload artwork here."}
           </p>
+        </div>
+      ) : null}
+
+      {enabled && cartDesigns && cartDesigns.length > 0 && onAddCartDesign ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs font-medium text-ui-fg-subtle">From your cart</label>
+            <span className="text-[11px] text-ui-fg-subtle">Reuse without uploading</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {cartDesigns.map((design) => {
+              const busy = addingCartDesignId === design.id
+              return (
+                <button
+                  key={design.id}
+                  type="button"
+                  onClick={() => handleCartDesignClick(design)}
+                  disabled={Boolean(addingCartDesignId)}
+                  className="group relative block overflow-hidden rounded-md border border-ui-border-base bg-ui-bg-subtle text-left hover:border-ui-fg-subtle disabled:opacity-50"
+                  title={`Add ${design.name} to this view`}
+                >
+                  <div className="aspect-square w-full overflow-hidden bg-white">
+                    <img src={design.url} alt={design.name} className="h-full w-full object-contain" />
+                  </div>
+                  <p className="truncate px-1.5 py-1 text-[11px] text-ui-fg-subtle group-hover:text-ui-fg-base">
+                    {busy ? "Adding…" : design.name}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
         </div>
       ) : null}
 

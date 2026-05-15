@@ -41,6 +41,7 @@ import {
 import { getDisplayUnitMinorForVariant } from "@lib/util/get-product-price"
 import { sanitizeCustomizerDesignForCart } from "@modules/customizer/lib/sanitize-cart-metadata"
 import { uploadCustomerOriginalUnchanged } from "@modules/customizer/lib/upload-customer-original"
+import { extractCartDesigns, filterByKind } from "@lib/util/cart-decorations"
 import {
   BulkPricingTier,
   CUSTOMIZER_PRINT_NOTES_MAX_LENGTH,
@@ -632,6 +633,13 @@ export default function CustomizerTemplate({
   })
   const [sizeMatrix, setSizeMatrix] = useState<SizeQuantity[]>([])
   const [sessionUploads, setSessionUploads] = useState<SessionUploadAsset[]>([])
+  // Designs the customer has already attached to other cart items (typically
+  // via the bundle wizard). Loaded once on mount; populates the InputPanel's
+  // "From your cart" section so they can drop an existing artwork into the
+  // canvas without re-uploading. Populated only when there's something to show.
+  const [cartArtworkDesigns, setCartArtworkDesigns] = useState<
+    Array<{ id: string; name: string; url: string }>
+  >([])
   // Cross-cart bulk-tier aggregation projection. When the customer already
   // has eligible items in their cart, this number drives the green tier
   // highlight in <PricingPanel/> so they see "you're heading into the 50-99
@@ -706,6 +714,30 @@ export default function CustomizerTemplate({
   useEffect(() => {
     effectivePrintSizeIdRef.current = effectivePrintSizeIdForArea
   }, [effectivePrintSizeIdForArea])
+
+  // Load any artwork the customer has already attached to other cart items
+  // (e.g. via the bundle wizard) so the InputPanel can offer a one-click
+  // "reuse this design here too" option. Runs once on mount; we don't
+  // re-fetch on cart mutations because the customer is actively building
+  // a design — surprising them with new tiles mid-edit would be jarring.
+  useEffect(() => {
+    let cancelled = false
+    void retrieveCart().then((cart) => {
+      if (cancelled || !cart) return
+      const designs = filterByKind(extractCartDesigns(cart), ["artwork"])
+      const tiles = designs
+        .filter((d) => d.artworkUrl)
+        .map((d, i) => ({
+          id: d.lineItemId || `cart-design-${i}`,
+          name: d.bundleTitle ?? d.productTitle,
+          url: d.artworkUrl as string,
+        }))
+      if (tiles.length > 0) setCartArtworkDesigns(tiles)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // When the effective print size shrinks (or the customer picks a smaller
   // size after placing artwork), enforce the new max scale on every existing
@@ -1864,6 +1896,50 @@ export default function CustomizerTemplate({
     }
   }
 
+  /**
+   * "From your cart" tile click — fetch the artwork from MinIO, wrap it as
+   * a File, and run it through the standard upload pipeline. Reusing
+   * `handleUploadFile` means we get the same dedupe/normalisation/MinIO
+   * archive/canvas-add path as a fresh upload, so the artwork lands in
+   * `sessionUploads` and behaves identically afterwards. The trade-off
+   * is one extra MinIO write per reuse — fine for a manual customer
+   * action.
+   */
+  const handleAddCartDesignFromCart = async (design: {
+    id: string
+    name: string
+    url: string
+  }) => {
+    setUploadError(null)
+    try {
+      const response = await fetch(design.url, { mode: "cors" })
+      if (!response.ok) {
+        throw new Error(`Could not fetch artwork (HTTP ${response.status})`)
+      }
+      const blob = await response.blob()
+      // Infer a usable filename from the URL (strip query string + path).
+      const urlPath = (() => {
+        try {
+          return new URL(design.url).pathname
+        } catch {
+          return design.url
+        }
+      })()
+      const inferredName =
+        urlPath.split("/").pop() || design.name || "cart-artwork"
+      const file = new File([blob], inferredName, {
+        type: blob.type || "image/png",
+      })
+      await handleUploadFile(file)
+    } catch (error) {
+      setUploadError(
+        error instanceof Error
+          ? error.message
+          : "Could not add that artwork from your cart."
+      )
+    }
+  }
+
   const handleReuseUpload = async (uploadId: string) => {
     const asset = sessionUploads.find((entry) => entry.id === uploadId)
     if (!asset) {
@@ -2911,6 +2987,8 @@ export default function CustomizerTemplate({
                       type: entry.type,
                     }))}
                     onReuseUpload={handleReuseUpload}
+                    cartDesigns={cartArtworkDesigns}
+                    onAddCartDesign={handleAddCartDesignFromCart}
                     onAddText={handleAddText}
                     onAddCurvedText={handleAddCurvedText}
                     onRemoveSelectedImage={removeSelectedImage}
