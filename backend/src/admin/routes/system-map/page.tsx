@@ -20,10 +20,90 @@ const loadMermaid = (): Promise<MermaidAPI> => {
     const api = mod.default as MermaidAPI
     api.initialize({
       startOnLoad: false,
-      theme: "default",
+      theme: "base",
       securityLevel: "loose",
-      flowchart: { useMaxWidth: true, htmlLabels: true },
-      sequence: { useMaxWidth: true },
+      themeVariables: {
+        // Foundation
+        background: "#ffffff",
+        mainBkg: "#f8fafc",
+        nodeBkg: "#f8fafc",
+        nodeBorder: "#e2e8f0",
+        clusterBkg: "#f8fafc",
+        clusterBorder: "#e2e8f0",
+        titleColor: "#0f172a",
+
+        // Primary nodes — violet tint
+        primaryColor: "#f5f3ff",
+        primaryTextColor: "#1e293b",
+        primaryBorderColor: "#8b5cf6",
+
+        // Secondary nodes — slate
+        secondaryColor: "#f1f5f9",
+        secondaryTextColor: "#475569",
+        secondaryBorderColor: "#94a3b8",
+
+        // Tertiary nodes — amber (external services)
+        tertiaryColor: "#fffbeb",
+        tertiaryTextColor: "#92400e",
+        tertiaryBorderColor: "#f59e0b",
+
+        // Edges & labels
+        lineColor: "#94a3b8",
+        edgeLabelBackground: "#f8fafc",
+        textColor: "#334155",
+
+        // Typography
+        fontFamily: 'Inter, "system-ui", -apple-system, sans-serif',
+        fontSize: "13px",
+
+        // Sequence diagrams
+        actorBkg: "#f5f3ff",
+        actorBorder: "#8b5cf6",
+        actorTextColor: "#1e293b",
+        actorLineColor: "#e2e8f0",
+        signalColor: "#64748b",
+        signalTextColor: "#334155",
+        noteBkgColor: "#fefce8",
+        noteTextColor: "#713f12",
+        noteBorderColor: "#fbbf24",
+        activationBkgColor: "#ede9fe",
+        activationBorderColor: "#8b5cf6",
+        sequenceNumberColor: "#ffffff",
+        labelBoxBkgColor: "#f5f3ff",
+        labelBoxBorderColor: "#8b5cf6",
+        labelTextColor: "#1e293b",
+        loopTextColor: "#1e293b",
+
+        // State diagrams
+        labelColor: "#1e293b",
+        altBackground: "#f1f5f9",
+        compositeBackground: "#f8fafc",
+        compositeBorder: "#e2e8f0",
+        compositeTitleBackground: "#ede9fe",
+
+        // Gantt
+        gridColor: "#e2e8f0",
+        section0: "#f5f3ff",
+        section1: "#f8fafc",
+        sectionBkgColor: "#f5f3ff",
+        altSectionBkgColor: "#f8fafc",
+        sectionBkgColor2: "#f5f3ff",
+        taskBkgColor: "#8b5cf6",
+        taskBorderColor: "#7c3aed",
+        taskTextColor: "#ffffff",
+        taskTextLightColor: "#ffffff",
+        taskTextOutsideColor: "#334155",
+        taskTextClickableColor: "#334155",
+        activeTaskBkgColor: "#6d28d9",
+        activeTaskBorderColor: "#5b21b6",
+        doneTaskBkgColor: "#c4b5fd",
+        doneTaskBorderColor: "#8b5cf6",
+        critBkgColor: "#fecaca",
+        critBorderColor: "#ef4444",
+        todayLineColor: "#ef4444",
+      },
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" },
+      sequence: { useMaxWidth: true, mirrorActors: false },
     })
     _m = api
     return api
@@ -56,7 +136,7 @@ const MermaidDiagram = ({ chart }: { chart: string }) => {
         Diagram render error — {err}
       </div>
     )
-  return <div ref={ref} className="overflow-x-auto py-2 [&_svg]:max-w-full" />
+  return <div ref={ref} className="overflow-x-auto [&_svg]:max-w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:h-auto" />
 }
 
 // ─── Section definitions ───────────────────────────────────────────────────────
@@ -840,18 +920,19 @@ const SystemMapPage = () => {
           </ul>
         </nav>
 
-        <div className="p-6 flex flex-col gap-y-10">
+        <div className="p-6 flex flex-col gap-y-12">
           {SECTIONS.map((s) => (
             <section key={s.id} id={s.id} className="scroll-mt-24">
-              <Heading level="h2" className="mb-3">
+              <Heading level="h2" className="mb-1 text-ui-fg-base">
                 {s.title}
               </Heading>
+              <div className="mb-4 h-px bg-ui-border-base" />
               {s.diagram && (
-                <div className="rounded-lg border border-ui-border-base bg-white p-4">
+                <div className="rounded-xl border border-ui-border-base bg-white p-6 shadow-sm overflow-hidden">
                   <MermaidDiagram chart={s.diagram} />
                 </div>
               )}
-              {s.body && <div className="mt-3">{s.body}</div>}
+              {s.body && <div className="mt-4">{s.body}</div>}
             </section>
           ))}
         </div>
