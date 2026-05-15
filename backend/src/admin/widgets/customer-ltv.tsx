@@ -2,6 +2,7 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Badge, Button, Container, Heading, Text, toast } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 
 type LtvResponse = {
@@ -109,7 +110,23 @@ const CustomerLtvWidget = ({ data: customer }: { data: { id: string } }) => {
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
-        <Heading level="h2">Lifetime value</Heading>
+        <Heading level="h2" className="flex items-center">
+          Lifetime value
+          <HelpTooltip
+            text={{
+              title: "Lifetime value (LTV)",
+              body: "Cumulative revenue this customer has generated across every non-cancelled order. Recomputed live each time you open the page.",
+              bullets: [
+                "Lifetime value: sum of order totals (excluding cancelled).",
+                "Orders: count of non-cancelled orders. Authorized-but-not-fulfilled orders count.",
+                "Avg order: LTV ÷ orders.",
+                "Last order: whole days since the most recent order's created_at.",
+                "Suggest VIP appears once LTV crosses the LTV_VIP_THRESHOLD_AUD env (default $1,500) and the customer doesn't already hold a 'VIP' tag.",
+                "Mixed currency: if a customer has orders in different currencies the dominant one wins; non-dominant totals are dropped from the sum.",
+              ],
+            }}
+          />
+        </Heading>
         {ltv?.mixed_currency_truncated ? (
           <Badge color="orange">Mixed currency — showing dominant</Badge>
         ) : null}

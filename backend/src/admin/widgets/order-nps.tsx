@@ -1,6 +1,7 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 
 type OrderMeta = {
@@ -32,7 +33,22 @@ const OrderNpsWidget = ({
   return (
     <Container className="p-0">
       <div className="px-6 py-4 flex items-center justify-between">
-        <Heading level="h2">NPS</Heading>
+        <Heading level="h2" className="flex items-center">
+          NPS
+          <HelpTooltip
+            text={{
+              title: "Net Promoter Score for this order",
+              body: "1-5 rating submitted by the customer via the post-delivery NPS email. The email goes out NPS_REQUEST_DAYS_AFTER_DELIVERED days after this order's production stage transitions to 'delivered' (default 14 days).",
+              bullets: [
+                "Score 1-2 (red): unhappy customer — surface in Studio's 'recent low NPS' bucket and reach out.",
+                "Score 3 (orange): neutral — worth a follow-up if pattern repeats.",
+                "Score 4-5 (blue/green): happy customer — consider asking for a public review.",
+                "Request-sent date shown when the email has fired but no response came back.",
+                "Capture path is HMAC-signed so customers can't tamper with the score by tweaking the URL.",
+              ],
+            }}
+          />
+        </Heading>
         {score ? <Badge color={BADGE[score] ?? "blue"}>{score} / 5</Badge> : null}
       </div>
       <div className="px-6 pb-4 flex flex-col gap-y-2">

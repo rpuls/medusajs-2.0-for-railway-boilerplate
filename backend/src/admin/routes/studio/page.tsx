@@ -9,6 +9,8 @@ import {
 } from "@medusajs/ui"
 import { useCallback, useEffect, useState } from "react"
 
+import { HelpTooltip } from "../../components/reports/help-tooltip"
+
 type StudioRow = {
   bucket: string
   customer_id: string | null
@@ -51,7 +53,23 @@ const StudioPage = () => {
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <div>
-          <Heading level="h1">Studio</Heading>
+          <Heading level="h1" className="flex items-center">
+            Studio
+            <HelpTooltip
+              text={{
+                title: "Studio",
+                body: "A daily action list aggregated from data already in the system. Computed live each time you open the page — no cron, no caching. Designed to surface the customers and quotes most worth a personal touch today.",
+                bullets: [
+                  "VIPs who've gone quiet: tagged VIP with no order in 60+ days. A short call or hand-written email keeps the relationship warm before they drift to a competitor.",
+                  "Notable first-time orders: significant first orders in the last 14 days (threshold = LTV_VIP_THRESHOLD_AUD ÷ 2). Hand-written thank-yous convert better than automated win-back later.",
+                  "Quotes waiting on you: open quotes with no activity in 3+ days. Either bring them home or mark lost so the pipeline stays accurate.",
+                  "Recent low NPS scores: customers who rated 1 or 2 in the last 30 days. Reach out before they churn quietly.",
+                  "Each row clicks through to the underlying customer, order, or quote.",
+                  "Top 20 per bucket — refresh by reloading the page.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="xsmall" className="text-ui-fg-muted">
             Customers and quotes worth your attention today.
           </Text>

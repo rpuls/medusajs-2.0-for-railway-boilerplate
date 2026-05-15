@@ -1,6 +1,7 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 
 type AppliedPerk = { perk: string; granted_by_tag: string }
@@ -23,7 +24,20 @@ const OrderAppliedPerksWidget = ({
   return (
     <Container className="p-0">
       <div className="px-6 py-4 flex items-center justify-between">
-        <Heading level="h2">Customer perks</Heading>
+        <Heading level="h2" className="flex items-center">
+          Customer perks
+          <HelpTooltip
+            text={{
+              title: "Customer perks",
+              body: "Tier perks the customer was entitled to at the moment they placed this order. Snapshotted at order placement so subsequent tag changes don't retroactively grant or revoke the perk.",
+              bullets: [
+                "Free shipping: customer holds a tag listed in the FREE_SHIPPING_TAGS env (default: VIP, Wholesale). Apply the discount via Order Edit before marking shipped.",
+                "Granted by tag shows which tag triggered the perk — useful when a customer has multiple tags.",
+                "If a perk is missing here, double-check the customer's tags on their detail page.",
+              ],
+            }}
+          />
+        </Heading>
         <Badge color="orange">Action required</Badge>
       </div>
       <div className="px-6 pb-4 flex flex-col gap-y-2">

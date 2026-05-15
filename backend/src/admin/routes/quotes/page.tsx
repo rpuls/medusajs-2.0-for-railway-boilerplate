@@ -14,6 +14,8 @@ import {
 } from "@medusajs/ui"
 import { useCallback, useEffect, useState } from "react"
 
+import { HelpTooltip } from "../../components/reports/help-tooltip"
+
 type Quote = {
   id: string
   public_id: string
@@ -141,7 +143,24 @@ const QuotesPage = () => {
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
-        <Heading level="h1">Quotes</Heading>
+        <Heading level="h1" className="flex items-center">
+          Quotes
+          <HelpTooltip
+            text={{
+              title: "Quote pipeline",
+              body: "Every inbound quote request — from the BYO form, the contact form, or an admin-created lead — lands here. Move quotes left-to-right through the pipeline and the timeline records every step.",
+              bullets: [
+                "New: just arrived. Triage and either start quoting or assign to staff.",
+                "Quoted: you've sent the customer a price. Waiting on them.",
+                "Accepted: customer agreed — convert to a real order via Draft Order or your usual flow.",
+                "Lost / Expired: closed without conversion. Useful for win-rate reporting later.",
+                "Public ID (Q-XXXXX) is the customer-safe identifier — use it in emails so internal IDs stay private.",
+                "Assigned to: staff email. Drives the 'Quotes waiting on you' bucket on the Studio dashboard.",
+                "Line items + total estimate are operator-edited freeform JSON — used as the quote's working draft before it becomes a real order.",
+              ],
+            }}
+          />
+        </Heading>
         <Badge color="blue">{quotes.length} shown</Badge>
       </div>
 
