@@ -1,4 +1,4 @@
-import { Text, Section, Hr, Button } from '@react-email/components'
+import { Text, Section, Hr, Button, Img } from '@react-email/components'
 import * as React from 'react'
 import { Base } from './base'
 import { OrderDTO } from '@medusajs/framework/types'
@@ -16,6 +16,13 @@ export interface OrderProductionStageTemplateProps {
   customerFirstName?: string | null
   /** Optional URL deep-linking to the customer's order portal page. */
   portalUrl?: string | null
+  /** Optional production photo to surface in this email (typically
+   *  the most recently uploaded). Adds visual proof that the job is
+   *  actually in the building. */
+  productionPhoto?: {
+    url: string
+    caption?: string | null
+  } | null
   /** Optional internal note from the staff member who changed the stage. Not shown to customer. */
   preview?: string
 }
@@ -87,7 +94,7 @@ export function subjectForStage(
 
 export const OrderProductionStageTemplate: React.FC<OrderProductionStageTemplateProps> & {
   PreviewProps: OrderProductionStageTemplateProps
-} = ({ order, stage, customerFirstName, portalUrl, preview }) => {
+} = ({ order, stage, customerFirstName, portalUrl, productionPhoto, preview }) => {
   const copy = stageCopy[stage]
   const firstName = customerFirstName?.trim() || 'there'
   const heading = copy?.heading ?? PRODUCTION_STAGE_LABEL[stage]
@@ -121,6 +128,32 @@ export const OrderProductionStageTemplate: React.FC<OrderProductionStageTemplate
             <strong>{PRODUCTION_STAGE_LABEL[stage]}</strong>.
           </Text>
         )}
+
+        {productionPhoto?.url ? (
+          <Section style={{ margin: '20px 0', textAlign: 'center' }}>
+            <Img
+              src={productionPhoto.url}
+              alt={productionPhoto.caption ?? 'Production photo'}
+              style={{
+                maxWidth: '100%',
+                borderRadius: '6px',
+                margin: '0 auto',
+              }}
+            />
+            {productionPhoto.caption ? (
+              <Text
+                style={{
+                  margin: '8px 0 0',
+                  fontSize: '13px',
+                  color: '#555',
+                  fontStyle: 'italic',
+                }}
+              >
+                {productionPhoto.caption}
+              </Text>
+            ) : null}
+          </Section>
+        ) : null}
 
         <Text style={{ margin: '0 0 15px' }}>
           Order reference: <strong>{order.display_id}</strong>

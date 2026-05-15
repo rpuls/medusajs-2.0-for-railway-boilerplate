@@ -3,6 +3,7 @@ import React, { Suspense } from "react"
 import FrequentlyBoughtTogether from "@modules/products/components/frequently-bought-together"
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
+import ProductionEtaStrip from "@modules/products/components/production-eta-strip"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
@@ -132,6 +133,9 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                 asideSlot={
                   <>
                     <ProductInfo product={product} />
+                    <Suspense fallback={null}>
+                      <ProductionEtaStrip />
+                    </Suspense>
                     {(() => {
                       const methods = getEnabledDecorationMethods(product)
                       return methods.length > 0 ? (

@@ -255,6 +255,18 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/production-reject",
+    },
+
+    {
+      resolve: "./src/modules/print-recipe",
+    },
+
+    {
+      resolve: "./src/modules/group-order",
+    },
+
+    {
       resolve: "./src/modules/brand",
     },
 

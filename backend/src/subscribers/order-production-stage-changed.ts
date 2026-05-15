@@ -79,6 +79,27 @@ export default async function orderProductionStageChangedHandler({
   const displayId = (order as { display_id?: string | number }).display_id ?? data.order_id
   const firstName = order.shipping_address?.first_name ?? null
 
+  // If staff have uploaded production photos, surface the most recent
+  // one in the email — turns the stage-change update into a "here's
+  // what your gear looks like" moment. Photos are optional; emails
+  // still go out fine without them.
+  const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
+  const photos = Array.isArray(orderMeta.production_photos)
+    ? (orderMeta.production_photos as Array<{
+        url?: string
+        caption?: string | null
+        uploaded_at?: string
+      }>)
+    : []
+  const latestPhoto = photos
+    .filter((p) => typeof p?.url === "string" && p.url.length > 0)
+    .sort((a, b) =>
+      (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
+    )[0]
+  const productionPhoto = latestPhoto
+    ? { url: latestPhoto.url as string, caption: latestPhoto.caption ?? null }
+    : null
+
   try {
     await notificationModuleService.createNotifications({
       to: order.email,
@@ -92,6 +113,7 @@ export default async function orderProductionStageChangedHandler({
         order,
         stage: data.to_stage,
         customerFirstName: firstName,
+        productionPhoto,
         portalUrl: tagUrl(buildPortalUrl(data.order_id), {
           medium: "transactional",
           campaign: `production_stage_${data.to_stage}`,
