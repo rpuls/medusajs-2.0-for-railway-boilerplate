@@ -1,15 +1,48 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import StitchEstimator from "./stitch-estimator"
+import { PRICE_LEVELS } from "../lib/pricing"
 import type { EmbroideryDesign, EmbroideryPlacement } from "../lib/types"
 import { placementCount as resolvePlacementCount } from "../lib/types"
 import {
   addEmbroideryLineItemToCartSafe,
+  retrieveCart,
 } from "@lib/data/cart"
 import { buildEmbroideryMetadata } from "@modules/embroidery/lib/metadata"
 import type { DecorationDesign } from "@modules/decoration/lib/types"
+import {
+  extractCartDesigns,
+  filterByKind,
+  type CartDesignSource,
+} from "@lib/util/cart-decorations"
+
+/** Build a minimal EmbroideryDesign for re-seeding the StitchEstimator. */
+function buildReusedInitialDesign(
+  stitchCount: number
+): EmbroideryDesign {
+  const level = PRICE_LEVELS[0]
+  return {
+    type: "artwork",
+    stitchCount,
+    artwork: { manualStitchCount: stitchCount },
+    pricing: {
+      level,
+      stitchCount,
+      quantity: 1,
+      effectiveQuantity: 1,
+      appliedTier: level.quantityTiers[0],
+      unitDecorationPrice: 0,
+      decorationSubtotal: 0,
+      digitizingFee: 0,
+      total: 0,
+      belowMinimum: false,
+      consolidatedQuantity: false,
+      requiresQuote: false,
+    },
+  }
+}
 
 type EmbroideryPanelProps = {
   /**
@@ -69,6 +102,38 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
   const [placement, setPlacement] = useState<EmbroideryPlacement>(
     availablePlacements?.[0] ?? "front"
   )
+
+  // "Reuse design from cart" wiring: load cart-side embroideries on mount,
+  // then let the customer pick one to pre-fill stitch count + placement +
+  // quantity. The StitchEstimator is uncontrolled so we bump `reuseKey` to
+  // force remount with a fresh `initialDesign` whenever a pick happens.
+  const [cartDesigns, setCartDesigns] = useState<CartDesignSource[]>([])
+  const [reuseKey, setReuseKey] = useState(0)
+  const [reusedInitialDesign, setReusedInitialDesign] =
+    useState<EmbroideryDesign | null>(null)
+  const [reusedFrom, setReusedFrom] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  useEffect(() => {
+    void retrieveCart().then((cart) => {
+      if (!cart) return
+      setCartDesigns(filterByKind(extractCartDesigns(cart), ["embroidery"]))
+    })
+  }, [])
+
+  const handleReuseDesign = (source: CartDesignSource) => {
+    if (!source.embroidery) return
+    const placementMatch = (availablePlacements ?? []).includes(
+      source.embroidery.placement
+    )
+      ? source.embroidery.placement
+      : (availablePlacements?.[0] ?? source.embroidery.placement)
+    setPlacement(placementMatch)
+    setReusedInitialDesign(buildReusedInitialDesign(source.embroidery.stitchCount))
+    setReuseKey((k) => k + 1)
+    setReusedFrom(source.bundleTitle ?? source.productTitle)
+    setPickerOpen(false)
+  }
 
   const showPlacementPicker = (availablePlacements?.length ?? 0) > 0
   const placementMultiplier = resolvePlacementCount(placement)
@@ -165,6 +230,99 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Reuse design from cart — only renders when the customer already has
+          embroidery items in their cart. Picking one pre-fills stitch count
+          and placement so they don't have to estimate twice. */}
+      {cartDesigns.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-ui-border-base bg-ui-bg-subtle/40 p-3">
+          {!pickerOpen ? (
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
+                  Reuse a design from your cart
+                </p>
+                <p className="text-[11px] text-ui-fg-subtle mt-0.5">
+                  Apply the same logo settings you&apos;ve already configured on another item.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="shrink-0 rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-1.5 text-xs font-semibold text-ui-fg-base hover:bg-ui-bg-subtle"
+              >
+                Browse →
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
+                  Pick a design to reuse
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(false)}
+                  className="text-[11px] text-ui-fg-muted hover:text-ui-fg-base"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {cartDesigns.map((source) => (
+                  <button
+                    key={source.lineItemId}
+                    type="button"
+                    onClick={() => handleReuseDesign(source)}
+                    className="flex items-center gap-2.5 rounded-md border border-ui-border-base bg-ui-bg-base p-2.5 text-left hover:border-ui-border-interactive hover:bg-ui-bg-subtle transition"
+                  >
+                    {source.thumbnail ? (
+                      <img
+                        src={source.thumbnail}
+                        alt=""
+                        className="h-10 w-10 shrink-0 rounded-md border border-ui-border-base bg-white object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ui-border-base bg-ui-bg-subtle text-base">
+                        🪡
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-ui-fg-base truncate">
+                        {source.bundleTitle ?? source.productTitle}
+                      </p>
+                      {source.embroidery ? (
+                        <p className="text-[11px] text-ui-fg-muted">
+                          {source.embroidery.stitchCount.toLocaleString()} stitches · {source.embroidery.placement}
+                        </p>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {reusedFrom ? (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-ui-border-base bg-ui-bg-subtle/60 px-3 py-2 text-xs">
+          <span className="text-ui-fg-base">
+            ✓ Reusing design from <strong>{reusedFrom}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setReusedFrom(null)
+              setReusedInitialDesign(null)
+              setReuseKey((k) => k + 1)
+            }}
+            className="text-ui-fg-muted hover:text-ui-fg-base"
+          >
+            Reset
+          </button>
+        </div>
+      ) : null}
+
       {showPlacementPicker && availablePlacements ? (
         <div className="flex flex-col gap-2 rounded-lg border border-ui-border-base bg-ui-bg-subtle/40 p-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
@@ -210,6 +368,8 @@ const EmbroideryPanel: React.FC<EmbroideryPanelProps> = ({
         />
       </label>
       <StitchEstimator
+        key={reuseKey}
+        initialDesign={reusedInitialDesign}
         quantity={quantity}
         onDesignChange={handleDesignChange}
         placementCount={placementMultiplier}
