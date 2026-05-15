@@ -2,15 +2,14 @@
 
 import React, { useEffect, useRef, useCallback } from "react"
 
-// ─── Palette ────────────────────────────────────────────────────────────────
+// ─── Palette (sky + cliff + water — environment that stays code-based) ───────
 const SKY_TOP = "#3F6F94"
 const SKY_MID = "#8FB3CC"
 const SKY_HORIZON = "#E6CFAF"
 const MOUNTAIN_FAR = "#6E8294"
 const MOUNTAIN_NEAR = "#4A5867"
-const CANOPY_DARK = "#1A2E1C"
-const CANOPY_MID = "#274229"
-const CANOPY_HILITE = "#3F6A3A"
+const CANOPY_DARK = "#152418"
+const CANOPY_MID = "#1F3B25"
 const CLIFF_BASE = "#5A4F45"
 const CLIFF_HILITE = "#7A6E60"
 const CLIFF_SHADOW = "#3A312A"
@@ -22,20 +21,9 @@ const WATER_FOAM = "#E0F2F4"
 const WATERFALL_LIGHT = "#CFEAEF"
 const WATERFALL_MID = "#8AC3CE"
 const WATERFALL_DEEP = "#4F8C99"
-const BRACHIO_DARK = "#3E541F"
-const BRACHIO_MID = "#6E8A3F"
-const BRACHIO_LIGHT = "#A4C062"
-const BRACHIO_BELLY = "#C9D38C"
-const BRACHIO_EYE = "#161A0E"
-const TRIC_BACK = "#5A3920"
-const TRIC_BODY = "#7A4F2C"
-const TRIC_BELLY = "#9C7048"
-const TRIC_FRILL = "#A87A50"
-const TRIC_HORN = "#E6D5B0"
-const TRIC_EYE = "#1A0E08"
-const PTERO_BODY = "#3F2E22"
-const PTERO_WING = "#5A4232"
-const PTERO_BEAK = "#A88656"
+const SAND_BASE = "#D4B886"
+const SAND_LITE = "#E6CDA5"
+const SAND_SHADOW = "#9C7E4F"
 const STONE_BASE = "#9C918A"
 const STONE_SHADOW = "#5A524D"
 const STONE_HILITE = "#BCB0A8"
@@ -44,56 +32,102 @@ const STONE_CRACK = "#3A332C"
 const STONE_CARVE = "#3F362E"
 const STONE_CARVE_HILITE = "#BCB0A8"
 
+// ─── Asset URLs ──────────────────────────────────────────────────────────────
+// All files come from itch.io packs the user installed locally:
+//  - dino-characters/* — arks "Dino Characters" (CC-BY 4.0). Each PNG is a 576x24 sheet,
+//    24 frames of 24x24 each. Frames 0-3 are Idle, 4-9 are Move/Run, the rest aren't used.
+//  - forest/* — Anokolisa "Legacy Fantasy: High Forest" (free, commercial OK).
+//  - palms/* — ToffeeCraft "Forest Nature Pack" free tier (cacti, grasses, rocks — no palms in free tier).
+const ASSETS = {
+  bg: "/jungle-scene/forest/background.png",
+  trees: "/jungle-scene/forest/green-trees.png",
+  bushes: "/jungle-scene/forest/tree-assets.png",
+  rocks: "/jungle-scene/forest/rocks.png",
+  plants: "/jungle-scene/palms/nature-pack.png",
+  dinoGreen: "/jungle-scene/dino-characters/dino-green.png",
+  dinoYellow: "/jungle-scene/dino-characters/dino-yellow.png",
+} as const
+type AssetKey = keyof typeof ASSETS
+type AssetMap = Record<AssetKey, HTMLImageElement>
+
+// ─── Dino sprite-sheet layout ────────────────────────────────────────────────
+const DINO_FRAME_W = 24
+const DINO_FRAME_H = 24
+const DINO_IDLE_FRAMES = [0, 1, 2, 3]
+const DINO_WALK_FRAMES = [4, 5, 6, 7, 8, 9]
+const DINO_IDLE_FRAME_MS = 200
+const DINO_WALK_FRAME_MS = 110
+const DINO_WALK_SPEED_PX_PER_MS = 0.045
+
+// ─── Source rectangles in environment sprite sheets ──────────────────────────
+// Hand-picked from inspecting each sheet. Each tuple is [x, y, w, h] in source pixels.
+// Trees — green-trees.png (1344x1200). 8 columns × 4 rows of variants. We pick a handful
+// at slightly varied source rects to give visual variety.
+const TREE_VARIANTS: Array<[number, number, number, number]> = [
+  [0, 0, 168, 400],     // top-left bushy tree
+  [168, 0, 168, 400],   // top-left bushy tree 2
+  [336, 0, 168, 400],   // dense dark tree
+  [840, 0, 168, 400],   // mid-row tree
+  [0, 400, 168, 400],   // mid-row bushy
+]
+// Bushes/foliage — tree-assets.png (336x400). Right column has bush silhouettes.
+const BUSH_VARIANTS: Array<[number, number, number, number]> = [
+  [200, 50, 130, 70],   // top bush
+  [200, 160, 130, 75],  // mid bush
+  [200, 240, 130, 80],  // larger bush
+  [200, 320, 130, 70],  // bottom bush
+]
+// Rocks — rocks.png (288x336). Large rocks at top, smaller mid.
+const ROCK_VARIANTS: Array<[number, number, number, number]> = [
+  [0, 0, 100, 110],     // big boulder top-left
+  [110, 10, 80, 90],    // medium boulder
+  [195, 20, 50, 70],    // smaller rock
+  [0, 110, 90, 70],     // mossy boulder
+  [105, 110, 70, 60],   // mossy mid
+]
+// Plants — nature-pack.png (512x384). Cacti on left, grasses middle, smaller plants.
+const PLANT_VARIANTS: Array<[number, number, number, number]> = [
+  [10, 10, 70, 100],    // tall cactus
+  [85, 10, 65, 100],    // second cactus
+  [160, 30, 95, 90],    // grass cluster
+  [260, 30, 85, 90],    // wide grass
+  [350, 30, 70, 90],    // small flowering cactus
+]
+
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface Cloud {
-  x: number; y: number; scale: number; speed: number; seed: number
-}
-
-interface Pterodactyl {
-  x: number; y: number; baseY: number; vx: number; phase: number; freq: number
-  amplitude: number; flapMs: number; flapFrame: 0 | 1; active: boolean; flipped: boolean
-  scale: number
-}
-
 interface MistParticle {
   x: number; y: number; vx: number; vy: number; life: number; maxLife: number; size: number
 }
 
-interface TricState {
-  x: number; baseY: number; dir: 1 | -1; mode: "walk" | "pause"
-  modeMs: number; stepMs: number; frame: 0 | 1 | 2 | 3
-  patrolMinX: number; patrolMaxX: number; scale: number
-}
-
-interface BrachioState {
-  x: number; y: number; scale: number
-  cycleMs: number  // 0..CYCLE_LEN, looped
+interface DinoState {
+  spriteKey: "dinoGreen" | "dinoYellow"
+  x: number          // center x in canvas pixels
+  baseY: number      // foot anchor (ground line)
+  scale: number      // render multiplier on the 24x24 base sprite
+  dir: 1 | -1        // 1 = facing right (native), -1 = mirrored
+  mode: "idle" | "walk"
+  modeMs: number
+  frameMs: number
+  frame: number      // current sprite-sheet column (0..23)
+  patrolMinX: number
+  patrolMaxX: number
+  nextDecisionMs: number
 }
 
 interface SceneState {
-  clouds: Cloud[]
-  pterodactyls: Pterodactyl[]
-  nextPteroMs: number
+  dinos: DinoState[]
   mist: MistParticle[]
-  brachio: BrachioState
-  trics: TricState[]
-  brachioBodySprite: HTMLCanvasElement | null
-  tricSprites: HTMLCanvasElement[] | null
-  pteroSprites: HTMLCanvasElement[] | null
   shimmerMs: number
   shimmerFrame: number
   waterfallMs: number
-  cloudSprites: HTMLCanvasElement[] | null
+  riverY: number
   waterfallBaseX: number
   waterfallBaseY: number
-  waterfallTopY: number
   waterfallSlotW: number
-  riverY: number
 }
 
-// ─── Random / colour helpers ─────────────────────────────────────────────────
+// ─── Random / colour helpers ────────────────────────────────────────────────
 const rand = (min: number, max: number) => min + Math.random() * (max - min)
-const randi = (min: number, max: number) => Math.floor(rand(min, max))
 
 function mulberry32(seed: number) {
   let s = seed >>> 0
@@ -117,287 +151,101 @@ function lerpRgb(a: [number, number, number], b: [number, number, number], t: nu
   return `rgb(${r},${g},${bl})`
 }
 
-// Filled disc on a pixel grid (matches SpaceHero's circleFill style).
-function pixelDisc(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, color: string) {
-  ctx.fillStyle = color
-  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
-    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-      const dx = x - cx + 0.5, dy = y - cy + 0.5
-      if (dx * dx + dy * dy <= r * r) ctx.fillRect(x, y, 1, 1)
-    }
+// ─── Image loader ────────────────────────────────────────────────────────────
+function loadAllAssets(): Promise<AssetMap> {
+  const entries = Object.entries(ASSETS) as Array<[AssetKey, string]>
+  return Promise.all(entries.map(([key, url]) => new Promise<[AssetKey, HTMLImageElement]>((resolve, reject) => {
+    const img = new Image()
+    img.decoding = "async"
+    img.onload = () => resolve([key, img])
+    img.onerror = () => reject(new Error(`Failed to load ${url}`))
+    img.src = url
+  }))).then(pairs => Object.fromEntries(pairs) as AssetMap)
 }
 
-function pixelEllipse(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, color: string) {
-  ctx.fillStyle = color
-  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
-    for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-      const dx = (x - cx + 0.5) / rx, dy = (y - cy + 0.5) / ry
-      if (dx * dx + dy * dy <= 1) ctx.fillRect(x, y, 1, 1)
-    }
-}
-
-// ─── Cloud sprite ────────────────────────────────────────────────────────────
-function makeCloud(seed: number, baseScale: number): HTMLCanvasElement {
-  const rng = mulberry32(seed)
-  const W = Math.floor(28 * baseScale), H = Math.floor(10 * baseScale)
-  const c = document.createElement("canvas"); c.width = W; c.height = H
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  // Body — 3-5 overlapping pixel discs
-  const blobs = 3 + Math.floor(rng() * 3)
-  for (let i = 0; i < blobs; i++) {
-    const bx = (W * (0.15 + 0.7 * (i / Math.max(1, blobs - 1))))
-    const by = H * (0.55 + rng() * 0.2)
-    const br = (2 + rng() * 2.5) * baseScale
-    pixelDisc(ctx, bx, by, br, "rgba(255,255,255,0.85)")
-  }
-  // Soft shadow underside (one pixel band)
-  for (let x = 0; x < W; x++) {
-    for (let y = 0; y < H; y++) {
-      const i = (y * W + x) * 4
-      const data = ctx.getImageData(x, y, 1, 1).data
-      if (data[3] > 0) {
-        // mark only the bottom-most lit pixel as shadow
-        const below = ctx.getImageData(x, y + 1, 1, 1).data
-        if (below[3] === 0 && y > H * 0.55) {
-          ctx.fillStyle = "rgba(180,200,210,0.55)"; ctx.fillRect(x, y, 1, 1)
-        }
-        break
-      }
-    }
-  }
-  return c
-}
-
-// ─── Pterodactyl sprite (2-frame flap) ───────────────────────────────────────
-function makePterodactylFrame(frame: 0 | 1, scale: number): HTMLCanvasElement {
-  // Right-facing. Frame 0 = wings up; frame 1 = wings down.
-  // Base resolution 18x10. Body horizontal, head/beak on the right, wings span up/down.
-  const BW = 18, BH = 10
-  const c = document.createElement("canvas")
-  c.width = BW * scale; c.height = BH * scale
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  const px = (x: number, y: number, w: number, h: number, color: string) => {
-    ctx.fillStyle = color
-    ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
-  }
-  // Body (horizontal line)
-  px(5, 5, 8, 1, PTERO_BODY)
-  px(6, 4, 6, 1, PTERO_BODY)
-  px(7, 6, 4, 1, PTERO_BODY)
-  // Head + beak on right
-  px(12, 4, 2, 2, PTERO_BODY)
-  px(14, 5, 3, 1, PTERO_BEAK)
-  px(13, 3, 1, 1, PTERO_BODY) // crest
-  // Tail nub on left
-  px(4, 5, 1, 1, PTERO_BODY)
-  // Wings
-  if (frame === 0) {
-    // Wings up: 'V' shape rising from body
-    px(7, 3, 2, 1, PTERO_WING)
-    px(6, 2, 2, 1, PTERO_WING)
-    px(5, 1, 2, 1, PTERO_WING)
-    px(4, 0, 2, 1, PTERO_WING)
-    px(10, 3, 2, 1, PTERO_WING)
-    px(11, 2, 2, 1, PTERO_WING)
-    px(12, 1, 2, 1, PTERO_WING)
-    // outer hand bumps
-    px(3, 0, 1, 1, PTERO_BODY)
-    px(13, 1, 1, 1, PTERO_BODY)
+// ─── Dino animation ──────────────────────────────────────────────────────────
+function drawDino(ctx: CanvasRenderingContext2D, state: DinoState, sheet: HTMLImageElement) {
+  const sx = state.frame * DINO_FRAME_W
+  const dw = DINO_FRAME_W * state.scale
+  const dh = DINO_FRAME_H * state.scale
+  const dx = Math.round(state.x - dw / 2)
+  const dy = Math.round(state.baseY - dh)
+  ctx.imageSmoothingEnabled = false
+  if (state.dir === -1) {
+    ctx.save()
+    ctx.translate(dx + dw, dy)
+    ctx.scale(-1, 1)
+    ctx.drawImage(sheet, sx, 0, DINO_FRAME_W, DINO_FRAME_H, 0, 0, dw, dh)
+    ctx.restore()
   } else {
-    // Wings down: outstretched, slightly arched
-    px(2, 4, 3, 1, PTERO_WING)
-    px(4, 5, 1, 1, PTERO_WING)
-    px(0, 5, 2, 1, PTERO_WING)
-    px(11, 5, 3, 1, PTERO_WING)
-    px(14, 6, 2, 1, PTERO_WING)
-    px(16, 5, 2, 1, PTERO_WING)
+    ctx.drawImage(sheet, sx, 0, DINO_FRAME_W, DINO_FRAME_H, dx, dy, dw, dh)
   }
-  // Eye
-  px(14, 4, 1, 1, "#FFFFFF")
-  return c
 }
 
-// ─── Triceratops sprite (4-frame walk cycle) ─────────────────────────────────
-// Right-facing. Base 28x14. Two pairs of legs alternate.
-function makeTriceratopsFrame(frame: 0 | 1 | 2 | 3, scale: number): HTMLCanvasElement {
-  const BW = 28, BH = 14
-  const c = document.createElement("canvas")
-  c.width = BW * scale; c.height = BH * scale
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  const px = (x: number, y: number, w: number, h: number, color: string) => {
-    ctx.fillStyle = color
-    ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
-  }
-  // Body silhouette — rounded brick
-  px(4, 6, 18, 4, TRIC_BODY)
-  px(5, 5, 16, 1, TRIC_BACK)
-  px(5, 10, 16, 1, TRIC_BELLY)
-  px(6, 11, 14, 1, TRIC_BELLY)
-  // Rear & nose taper
-  px(3, 7, 1, 2, TRIC_BODY)
-  // Head on right with frill
-  px(22, 5, 3, 5, TRIC_BODY)
-  px(23, 4, 2, 1, TRIC_BACK)
-  // Frill
-  px(19, 3, 2, 3, TRIC_FRILL)
-  px(20, 2, 2, 2, TRIC_FRILL)
-  px(21, 4, 1, 2, TRIC_FRILL)
-  // Horns: 2 brow horns + 1 nose
-  px(24, 5, 1, 2, TRIC_HORN)  // brow horn 1
-  px(22, 4, 1, 2, TRIC_HORN)  // brow horn 2
-  px(25, 8, 1, 1, TRIC_HORN)  // nose horn
-  // Eye
-  px(23, 6, 1, 1, TRIC_EYE)
-  // Tail
-  px(2, 7, 2, 1, TRIC_BODY)
-  px(1, 7, 1, 1, TRIC_BACK)
-
-  // Legs — 4 legs total, animated. Phase A = legs 0/2 forward, legs 1/3 back. Phase B = opposite.
-  // Frames 0..3: A-step, A-mid, B-step, B-mid. Mid frames raise one leg.
-  const legColor = TRIC_BACK
-  if (frame === 0) {
-    // Front-left forward, back-right forward
-    px(7, 12, 2, 2, legColor)
-    px(11, 11, 2, 3, legColor)  // raised
-    px(15, 12, 2, 2, legColor)
-    px(19, 11, 2, 3, legColor)  // raised
-  } else if (frame === 1) {
-    px(8, 12, 2, 2, legColor)
-    px(12, 12, 2, 2, legColor)
-    px(16, 12, 2, 2, legColor)
-    px(20, 12, 2, 2, legColor)
-  } else if (frame === 2) {
-    px(7, 11, 2, 3, legColor)
-    px(11, 12, 2, 2, legColor)
-    px(15, 11, 2, 3, legColor)
-    px(19, 12, 2, 2, legColor)
+function updateDino(state: DinoState, dt: number) {
+  state.modeMs += dt
+  state.frameMs += dt
+  if (state.mode === "walk") {
+    state.x += state.dir * DINO_WALK_SPEED_PX_PER_MS * dt
+    if (state.frameMs >= DINO_WALK_FRAME_MS) {
+      state.frameMs -= DINO_WALK_FRAME_MS
+      const idx = DINO_WALK_FRAMES.indexOf(state.frame)
+      state.frame = DINO_WALK_FRAMES[(idx >= 0 ? idx + 1 : 1) % DINO_WALK_FRAMES.length]
+    }
+    if (state.x >= state.patrolMaxX) {
+      state.x = state.patrolMaxX; state.dir = -1; transitionToIdle(state)
+    } else if (state.x <= state.patrolMinX) {
+      state.x = state.patrolMinX; state.dir = 1; transitionToIdle(state)
+    } else if (state.modeMs >= state.nextDecisionMs) {
+      transitionToIdle(state)
+    }
   } else {
-    px(8, 12, 2, 2, legColor)
-    px(12, 12, 2, 2, legColor)
-    px(16, 12, 2, 2, legColor)
-    px(20, 12, 2, 2, legColor)
+    if (state.frameMs >= DINO_IDLE_FRAME_MS) {
+      state.frameMs -= DINO_IDLE_FRAME_MS
+      const idx = DINO_IDLE_FRAMES.indexOf(state.frame)
+      state.frame = DINO_IDLE_FRAMES[(idx >= 0 ? idx + 1 : 1) % DINO_IDLE_FRAMES.length]
+    }
+    if (state.modeMs >= state.nextDecisionMs) {
+      state.mode = "walk"
+      state.modeMs = 0
+      state.frameMs = 0
+      state.frame = DINO_WALK_FRAMES[0]
+      state.nextDecisionMs = 2500 + Math.random() * 3000
+    }
   }
-  return c
 }
 
-// ─── Brachiosaurus body sprite (static — neck is drawn per-frame) ───────────
-function makeBrachioBody(scale: number): HTMLCanvasElement {
-  // Side-view, neck attach point is the upper-right shoulder area.
-  // Body is partially submerged → legs are short, mostly hidden below the waterline.
-  const BW = 44, BH = 18
-  const c = document.createElement("canvas")
-  c.width = BW * scale; c.height = BH * scale
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  const px = (x: number, y: number, w: number, h: number, color: string) => {
-    ctx.fillStyle = color
-    ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
-  }
-
-  // Belly / lower body (slightly lighter — picks up sky reflection from water)
-  px(5, 13, 30, 2, BRACHIO_BELLY)
-  // Main body
-  px(4, 8, 32, 5, BRACHIO_MID)
-  // Back arch
-  px(7, 6, 26, 2, BRACHIO_DARK)
-  px(10, 5, 20, 1, BRACHIO_DARK)
-  // Lighter side highlight
-  px(6, 11, 28, 1, BRACHIO_LIGHT)
-  // Tail tapers to the left
-  px(2, 9, 3, 3, BRACHIO_MID)
-  px(0, 10, 3, 2, BRACHIO_MID)
-  px(0, 11, 2, 1, BRACHIO_DARK)
-  px(4, 12, 1, 1, BRACHIO_DARK)
-  // Shoulder bump where neck attaches (upper-right of body)
-  px(31, 4, 4, 3, BRACHIO_DARK)
-  px(33, 3, 2, 1, BRACHIO_DARK)
-  // Hind-leg stubs under waterline (will be mostly hidden by river)
-  px(8, 15, 2, 3, BRACHIO_DARK)
-  px(12, 15, 2, 3, BRACHIO_DARK)
-  px(26, 15, 2, 3, BRACHIO_DARK)
-  px(30, 15, 2, 3, BRACHIO_DARK)
-  return c
+function transitionToIdle(state: DinoState) {
+  state.mode = "idle"
+  state.modeMs = 0
+  state.frameMs = 0
+  state.frame = DINO_IDLE_FRAMES[0]
+  state.nextDecisionMs = 1800 + Math.random() * 2500
 }
 
-// Brachio neck + head drawn each frame because the neck bend angle changes.
-function drawBrachioNeck(
-  ctx: CanvasRenderingContext2D,
-  shoulderX: number,
-  shoulderY: number,
-  scale: number,
-  cyclePhase: number  // 0..1
+// ─── Sprite stamping helpers ─────────────────────────────────────────────────
+// Stamp a source rect from a sprite sheet onto the destination, sized to a target height
+// and positioned at (cx, baseY) — the foot anchor.
+function stampSprite(
+  ctx: CanvasRenderingContext2D, sheet: HTMLImageElement,
+  src: [number, number, number, number], cx: number, baseY: number, targetH: number, flipH = false
 ) {
-  // Cycle phases (normalised 0..1):
-  // 0.00 – 0.30  : idle, neck straight up
-  // 0.30 – 0.42  : lowering (sweep down)
-  // 0.42 – 0.58  : drinking (head low + small bob)
-  // 0.58 – 0.70  : rising (sweep up)
-  // 0.70 – 1.00  : idle straight up
-  const ANGLE_UP = -Math.PI / 2 + 0.10        // ~ straight up, very slight lean right
-  const ANGLE_DOWN = Math.PI * 0.20            // pointing down-right
-  let baseAngle = ANGLE_UP
-  let drinkBob = 0
-  if (cyclePhase < 0.30) baseAngle = ANGLE_UP
-  else if (cyclePhase < 0.42) {
-    const t = (cyclePhase - 0.30) / 0.12
-    baseAngle = ANGLE_UP + (ANGLE_DOWN - ANGLE_UP) * t
-  } else if (cyclePhase < 0.58) {
-    baseAngle = ANGLE_DOWN
-    drinkBob = Math.sin((cyclePhase - 0.42) / 0.16 * Math.PI * 3) * 0.4 * scale
-  } else if (cyclePhase < 0.70) {
-    const t = (cyclePhase - 0.58) / 0.12
-    baseAngle = ANGLE_DOWN + (ANGLE_UP - ANGLE_DOWN) * t
+  const [sx, sy, sw, sh] = src
+  const scale = targetH / sh
+  const dw = sw * scale
+  const dh = sh * scale
+  const dx = Math.round(cx - dw / 2)
+  const dy = Math.round(baseY - dh)
+  ctx.imageSmoothingEnabled = false
+  if (flipH) {
+    ctx.save()
+    ctx.translate(dx + dw, dy)
+    ctx.scale(-1, 1)
+    ctx.drawImage(sheet, sx, sy, sw, sh, 0, 0, dw, dh)
+    ctx.restore()
+  } else {
+    ctx.drawImage(sheet, sx, sy, sw, sh, dx, dy, dw, dh)
   }
-
-  // Chain of segments — 6 segments. Each segment introduces a slight curve so the neck
-  // arcs gracefully rather than being a straight stick.
-  const SEGMENTS = 6
-  const segLen = 4.5 * scale
-  // Per-segment curl: stronger when neck is going down (drinking).
-  const downness = Math.max(0, Math.min(1, (baseAngle - ANGLE_UP) / (ANGLE_DOWN - ANGLE_UP)))
-  const segDelta = -0.08 + downness * 0.18  // up: slight back-curl; down: arching forward
-  let cx = shoulderX, cy = shoulderY, angle = baseAngle
-  const points: [number, number][] = [[cx, cy]]
-  for (let i = 0; i < SEGMENTS; i++) {
-    angle += segDelta * 0.4
-    cx += Math.cos(angle) * segLen
-    cy += Math.sin(angle) * segLen
-    points.push([cx, cy])
-  }
-  const [headX, headY] = points[points.length - 1]
-
-  // Draw the neck as thick pixel-line segments — fattest near shoulder, slimmer near head.
-  const thickness = (i: number) => Math.max(1, Math.round((1.6 - i * 0.13) * scale))
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x1, y1] = points[i], [x2, y2] = points[i + 1]
-    const steps = Math.max(2, Math.ceil(Math.hypot(x2 - x1, y2 - y1)))
-    const th = thickness(i)
-    ctx.fillStyle = i === 0 ? BRACHIO_DARK : BRACHIO_MID
-    for (let s = 0; s <= steps; s++) {
-      const px = Math.round(x1 + (x2 - x1) * (s / steps))
-      const py = Math.round(y1 + (y2 - y1) * (s / steps))
-      ctx.fillRect(px - Math.floor(th / 2), py - Math.floor(th / 2), th, th)
-    }
-    // 1-pixel highlight on the back-of-neck edge (upper-left side)
-    ctx.fillStyle = BRACHIO_LIGHT
-    for (let s = 0; s <= steps; s++) {
-      const px = Math.round(x1 + (x2 - x1) * (s / steps))
-      const py = Math.round(y1 + (y2 - y1) * (s / steps))
-      ctx.fillRect(px - Math.floor(th / 2) - 1, py - Math.floor(th / 2), 1, th)
-    }
-  }
-
-  // Head (right-leaning teardrop)
-  const headAngle = angle + 0.15
-  const hx = headX + Math.cos(headAngle) * scale * 1.5
-  const hy = headY + Math.sin(headAngle) * scale * 1.5 + drinkBob
-  pixelEllipse(ctx, hx, hy, scale * 1.8, scale * 1.2, BRACHIO_MID)
-  pixelEllipse(ctx, hx, hy - scale * 0.4, scale * 1.5, scale * 0.8, BRACHIO_DARK)
-  // Eye
-  ctx.fillStyle = BRACHIO_EYE
-  ctx.fillRect(Math.round(hx + scale * 0.5), Math.round(hy - scale * 0.2), Math.max(1, Math.round(scale * 0.4)), Math.max(1, Math.round(scale * 0.4)))
-  // Tiny mouth highlight
-  ctx.fillStyle = BRACHIO_BELLY
-  ctx.fillRect(Math.round(hx + scale * 1.0), Math.round(hy + scale * 0.3), Math.max(1, Math.round(scale * 0.5)), Math.max(1, Math.round(scale * 0.2)))
 }
 
 // ─── Stone monument with carved "SC PRINTS" ──────────────────────────────────
@@ -410,39 +258,28 @@ function makeMonument(scale: number): HTMLCanvasElement {
     ctx.fillStyle = color
     ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
   }
-
-  // Base ground / pedestal (wider than monument)
+  // Base ground / pedestal
   px(2, 43, 80, 5, "#3A2E20")
   px(0, 45, 84, 3, "#241B12")
-
   // Pedestal slab
   px(6, 39, 72, 5, STONE_SHADOW)
   px(6, 38, 72, 1, STONE_BASE)
   px(6, 36, 72, 2, STONE_BASE)
   px(5, 39, 1, 5, STONE_SHADOW)
   px(78, 39, 1, 5, STONE_SHADOW)
-
-  // Main monument block — chiselled trapezoid
-  // Outer silhouette
+  // Main block
   const monL = 10, monR = 74, monTop = 6, monBot = 36
-  // Fill base
   px(monL, monTop + 2, monR - monL, monBot - monTop - 2, STONE_BASE)
-  // Slope-top: chip away corners
   px(monL, monTop, 2, 2, STONE_SHADOW)
   px(monR - 2, monTop, 2, 2, STONE_SHADOW)
   px(monL + 2, monTop, monR - monL - 4, 2, STONE_BASE)
-  // Highlight on top edge (sun-lit)
   px(monL + 2, monTop, monR - monL - 4, 1, STONE_HILITE)
   px(monL + 1, monTop + 1, 1, 1, STONE_HILITE)
   px(monR - 2, monTop + 1, 1, 1, STONE_HILITE)
-  // Highlight on left edge
   px(monL, monTop + 2, 1, monBot - monTop - 2, STONE_HILITE)
-  // Shadow on right edge
   px(monR - 1, monTop + 2, 1, monBot - monTop - 2, STONE_SHADOW)
-  // Shadow on bottom edge
   px(monL, monBot - 1, monR - monL, 1, STONE_SHADOW)
-
-  // Weathering: cracks
+  // Cracks
   const rng = mulberry32(7311)
   for (let i = 0; i < 5; i++) {
     let cx = Math.floor(monL + 2 + rng() * (monR - monL - 4))
@@ -455,7 +292,7 @@ function makeMonument(scale: number): HTMLCanvasElement {
       if (cx < monL + 1 || cx > monR - 2 || cy > monBot - 2) break
     }
   }
-  // Moss patches (mostly on the left side and bottom)
+  // Moss
   const mossPatches: [number, number, number, number][] = [
     [monL + 1, monBot - 4, 3, 2],
     [monL + 6, monBot - 3, 5, 2],
@@ -464,18 +301,14 @@ function makeMonument(scale: number): HTMLCanvasElement {
     [monR - 10, monBot - 3, 6, 2],
     [monR - 4, monBot - 7, 2, 3],
   ]
-  for (const [mx, my, mw, mh] of mossPatches) {
-    px(mx, my, mw, mh, STONE_MOSS)
-  }
+  for (const [mx, my, mw, mh] of mossPatches) px(mx, my, mw, mh, STONE_MOSS)
 
-  // Carved "SC PRINTS" via text rasterization onto an offscreen canvas.
-  // Sample at 1px-per-pixel of the design grid, then bake into the monument.
+  // Carved "SC PRINTS" — rasterize text + stamp each pixel into the monument.
   const TEXT = "SC PRINTS"
   const tcanvas = document.createElement("canvas")
   tcanvas.width = 200; tcanvas.height = 24
   const tctx = tcanvas.getContext("2d")!
   tctx.imageSmoothingEnabled = false
-  // Use a bold sans font — the pixel grid will chunk it appropriately.
   tctx.fillStyle = "#FFFFFF"
   tctx.font = "bold 10px monospace"
   tctx.textBaseline = "top"
@@ -483,27 +316,19 @@ function makeMonument(scale: number): HTMLCanvasElement {
   const metrics = tctx.measureText(TEXT)
   const textW = Math.min(200, Math.ceil(metrics.width))
   const textH = 10
-  // Center the text in its sample area
   tctx.fillText(TEXT, 0, 0)
   const data = tctx.getImageData(0, 0, textW, textH).data
-
-  // Place text within the monument, centered horizontally, slightly above center vertically.
   const monW = monR - monL
   const monH = monBot - monTop
-  // Compute design-grid offset so text fits comfortably within an inset frame.
   const insetX = 4, insetY = 10
   const availW = monW - insetX * 2
   const availH = monH - insetY - 8
-  // We render the text 1:1 from the sample (no scaling) — chunky pixel font.
   const tx0 = monL + insetX + Math.floor((availW - textW) / 2)
   const ty0 = monTop + insetY + Math.floor((availH - textH) / 2)
   for (let y = 0; y < textH; y++) {
     for (let x = 0; x < textW; x++) {
       if (data[(y * textW + x) * 4 + 3] > 80) {
-        // Recessed pixel — darker than the surrounding stone.
         px(tx0 + x, ty0 + y, 1, 1, STONE_CARVE)
-        // 1px highlight on the top edge of each carved pixel to give a chiselled look.
-        // Only if the pixel above this one was not also carved.
         if (y === 0 || data[((y - 1) * textW + x) * 4 + 3] <= 80) {
           px(tx0 + x, ty0 + y - 1, 1, 1, STONE_CARVE_HILITE)
         }
@@ -513,8 +338,11 @@ function makeMonument(scale: number): HTMLCanvasElement {
   return c
 }
 
-// ─── Backdrop painter (sky, mountains, canopy, cliff, monument, river base) ──
-function paintBackdrop(canvas: HTMLCanvasElement, w: number, h: number, dpr: number, monumentSprite: HTMLCanvasElement | null) {
+// ─── Backdrop painter ────────────────────────────────────────────────────────
+function paintBackdrop(
+  canvas: HTMLCanvasElement, w: number, h: number, dpr: number,
+  assets: AssetMap, monumentSprite: HTMLCanvasElement
+) {
   canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr)
   canvas.style.width = `${w}px`; canvas.style.height = `${h}px`
   const ctx = canvas.getContext("2d")!
@@ -522,36 +350,52 @@ function paintBackdrop(canvas: HTMLCanvasElement, w: number, h: number, dpr: num
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
   const riverY = Math.floor(h * 0.62)
+
+  // 1. Sky gradient + the cloudy Background.png stretched across the upper half.
   const skyTopRgb = hexToRgb(SKY_TOP)
   const skyMidRgb = hexToRgb(SKY_MID)
   const skyHorizonRgb = hexToRgb(SKY_HORIZON)
-
-  // Sky gradient — chunky bands of ~3px each so it stays pixelly.
-  const BAND = 3
-  for (let y = 0; y < riverY; y += BAND) {
+  for (let y = 0; y < riverY; y += 3) {
     const t = y / Math.max(1, riverY - 1)
-    let color: string
-    if (t < 0.5) color = lerpRgb(skyTopRgb, skyMidRgb, t / 0.5)
-    else color = lerpRgb(skyMidRgb, skyHorizonRgb, (t - 0.5) / 0.5)
+    const color = t < 0.5
+      ? lerpRgb(skyTopRgb, skyMidRgb, t / 0.5)
+      : lerpRgb(skyMidRgb, skyHorizonRgb, (t - 0.5) / 0.5)
     ctx.fillStyle = color
-    ctx.fillRect(0, y, w, BAND)
+    ctx.fillRect(0, y, w, 3)
   }
+  // Background.png drifts as a soft cloud band over the gradient (drawn at reduced alpha
+  // so the sky colour bleeds through).
+  ctx.save()
+  ctx.globalAlpha = 0.55
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(assets.bg, 0, 0, w, Math.floor(h * 0.4))
+  ctx.restore()
 
-  // Far mountains — softer / lighter
+  // 2. Distant mountains (code-based silhouettes for depth)
   drawMountainLayer(ctx, w, riverY, riverY - Math.floor(h * 0.08), Math.floor(h * 0.18), MOUNTAIN_FAR, 1733)
-  // Near mountains — darker, closer to horizon
   drawMountainLayer(ctx, w, riverY, riverY - Math.floor(h * 0.04), Math.floor(h * 0.13), MOUNTAIN_NEAR, 9421)
 
-  // Jungle canopy silhouette — lumpy treeline below the mountains, behind the cliff
-  drawCanopy(ctx, w, h, riverY)
+  // 3. Trees from green-trees.png scattered in midground — these are the "jungle"
+  //    canopy now. We size them to ~70-110% of riverY so they tower above the water.
+  const treeRng = mulberry32(31337)
+  const treeTargetH = Math.floor(riverY * 0.95)
+  const treeCount = 4 + Math.floor(w / 220)
+  for (let i = 0; i < treeCount; i++) {
+    const variant = TREE_VARIANTS[Math.floor(treeRng() * TREE_VARIANTS.length)]
+    // Spread trees across width but bias toward edges (more density at sides, less centred)
+    const u = treeRng()
+    const x = Math.floor(w * (u < 0.5 ? u * 0.4 : 0.6 + (u - 0.5) * 0.8))
+    const flip = treeRng() < 0.5
+    const heightVar = treeTargetH * (0.6 + treeRng() * 0.4)
+    stampSprite(ctx, assets.trees, variant, x, riverY + 2, heightVar, flip)
+  }
 
-  // Cliff face & waterfall slot — central
+  // 4. Cliff face + waterfall slot (code-based — no sprite for this)
   drawCliff(ctx, w, h, riverY)
 
-  // River base teal
+  // 5. River base
   ctx.fillStyle = WATER_DEEP
   ctx.fillRect(0, riverY, w, h - riverY)
-  // River gradient bands toward the bottom (subtle, 2-3 colour stops)
   const waterMidRgb = hexToRgb(WATER_MID)
   const waterDeepRgb = hexToRgb(WATER_DEEP)
   for (let y = riverY; y < h; y += 2) {
@@ -561,28 +405,66 @@ function paintBackdrop(canvas: HTMLCanvasElement, w: number, h: number, dpr: num
     ctx.fillRect(0, y, w, 2)
   }
 
-  // Riverbank — a thin line of foam/wet sand at the river edge
+  // 6. Sandy riverbank — chunky 3px wet-sand strip at the river's top edge
+  for (let x = 0; x < w; x++) {
+    const ripple = ((x * 7) % 11) / 11
+    ctx.fillStyle = ripple < 0.5 ? SAND_BASE : SAND_LITE
+    ctx.fillRect(x, riverY, 1, 1)
+    ctx.fillStyle = SAND_SHADOW
+    ctx.fillRect(x, riverY + 1, 1, 1)
+  }
   ctx.fillStyle = WATER_FOAM
-  for (let x = 0; x < w; x += 4) {
-    const dip = (x * 0.07 % 3 < 1) ? 1 : 0
-    ctx.fillRect(x, riverY + dip, 3, 1)
+  for (let x = 0; x < w; x += 5) {
+    const dip = ((x * 0.13) % 2 < 1) ? 0 : 1
+    ctx.fillRect(x, riverY - dip, 2, 1)
   }
-  // Riverbank foreground rocks (right side, foreground)
-  drawForegroundRocks(ctx, w, h, riverY)
 
-  // Monument — placed on the right riverbank in the foreground
-  if (monumentSprite) {
-    const mw = monumentSprite.width
-    const mh = monumentSprite.height
-    // Center horizontally on right ~85% of width, but clamp so the monument never
-    // overflows the right edge on narrow viewports.
-    const targetCenter = w * 0.82
-    const halfW = mw / 2
-    const mxRaw = targetCenter - halfW
-    const mx = Math.round(Math.min(Math.max(mxRaw, 4), w - mw - 4))
-    const my = Math.round(h - mh - 4)
-    ctx.drawImage(monumentSprite, mx, my)
+  // 7. Foreground rocks scattered along the bottom
+  const rockRng = mulberry32(7777)
+  const rockCount = Math.max(3, Math.floor(w / 180))
+  const rockTargetH = Math.max(28, Math.floor(h * 0.10))
+  for (let i = 0; i < rockCount; i++) {
+    const variant = ROCK_VARIANTS[Math.floor(rockRng() * ROCK_VARIANTS.length)]
+    const x = Math.floor(rockRng() * w * 0.95) + Math.floor(w * 0.025)
+    const flip = rockRng() < 0.5
+    const heightVar = rockTargetH * (0.7 + rockRng() * 0.6)
+    stampSprite(ctx, assets.rocks, variant, x, h - 2, heightVar, flip)
   }
+
+  // 8. Foreground bushes (left + right edges)
+  const bushRng = mulberry32(54321)
+  const bushTargetH = Math.max(36, Math.floor(h * 0.14))
+  const bushCount = Math.max(4, Math.floor(w / 140))
+  for (let i = 0; i < bushCount; i++) {
+    const variant = BUSH_VARIANTS[Math.floor(bushRng() * BUSH_VARIANTS.length)]
+    // Skip the centre 35% so bushes don't cover the monument area
+    let x = Math.floor(bushRng() * w)
+    if (x > w * 0.55 && x < w * 0.78) x = Math.floor(x - w * 0.25)
+    const flip = bushRng() < 0.5
+    const heightVar = bushTargetH * (0.7 + bushRng() * 0.5)
+    stampSprite(ctx, assets.bushes, variant, x, h - 4 + Math.floor(bushRng() * 6), heightVar, flip)
+  }
+
+  // 9. Plants/cacti/grass tufts from the nature pack — sparse decorative touches
+  const plantRng = mulberry32(88888)
+  const plantTargetH = Math.max(22, Math.floor(h * 0.10))
+  const plantCount = Math.max(3, Math.floor(w / 160))
+  for (let i = 0; i < plantCount; i++) {
+    const variant = PLANT_VARIANTS[Math.floor(plantRng() * PLANT_VARIANTS.length)]
+    const x = Math.floor(plantRng() * w * 0.95) + Math.floor(w * 0.025)
+    const heightVar = plantTargetH * (0.75 + plantRng() * 0.5)
+    stampSprite(ctx, assets.plants, variant, x, h - 2, heightVar, plantRng() < 0.5)
+  }
+
+  // 10. Monument — placed on the right riverbank in the foreground
+  const mw = monumentSprite.width
+  const mh = monumentSprite.height
+  const targetCenter = w * 0.84
+  const halfW = mw / 2
+  const mxRaw = targetCenter - halfW
+  const mx = Math.round(Math.min(Math.max(mxRaw, 4), w - mw - 4))
+  const my = Math.round(h - mh - 4)
+  ctx.drawImage(monumentSprite, mx, my)
 }
 
 function drawMountainLayer(
@@ -590,7 +472,6 @@ function drawMountainLayer(
   color: string, seed: number
 ) {
   const rng = mulberry32(seed)
-  // Build a ridge as a coarse sampled array, then fill below it.
   const ridge: number[] = []
   const samples = Math.ceil(w / 3) + 1
   for (let i = 0; i < samples; i++) {
@@ -610,58 +491,16 @@ function drawMountainLayer(
     const y = Math.floor(ridge[i0] * (1 - tt) + ridge[i1] * tt)
     ctx.fillRect(x, y, 1, Math.max(0, baseY - y))
   }
-  // Soft horizon haze underneath the ridge
-  ctx.fillStyle = `${color}88`
-  for (let x = 0; x < w; x++) {
-    const fi = (x / w) * (samples - 1)
-    const y = Math.floor(ridge[Math.floor(fi)])
-    ctx.fillRect(x, y - 1, 1, 1)
-  }
-}
-
-function drawCanopy(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number) {
-  // Lumpy dark-green skyline. Two passes — back (darker) and a foreground accent.
-  const baseY = riverY
-  const canopyTopBaseY = Math.floor(riverY - h * 0.08)
-  const rng = mulberry32(31337)
-  // Pass 1 — broad canopy fill
-  ctx.fillStyle = CANOPY_DARK
-  for (let x = 0; x < w; x++) {
-    const t = x / w
-    const lump =
-      Math.sin(t * 14 + 1.3) * 0.55 +
-      Math.sin(t * 31 + 0.7) * 0.30 +
-      Math.sin(t * 53 + 2.1) * 0.15
-    const noise = (rng() - 0.5) * 0.3
-    const top = Math.floor(canopyTopBaseY - lump * h * 0.04 - noise * h * 0.02)
-    ctx.fillRect(x, top, 1, baseY - top)
-  }
-  // Pass 2 — sparse highlight bumps (CANOPY_MID and CANOPY_HILITE)
-  const rng2 = mulberry32(31338)
-  ctx.fillStyle = CANOPY_MID
-  for (let i = 0; i < Math.floor(w / 18); i++) {
-    const bx = rng2() * w
-    const by = canopyTopBaseY - rng2() * h * 0.03
-    const r = 2 + rng2() * 3
-    pixelDisc(ctx, bx, by, r, CANOPY_MID)
-  }
-  for (let i = 0; i < Math.floor(w / 36); i++) {
-    const bx = rng2() * w
-    const by = canopyTopBaseY - rng2() * h * 0.02
-    pixelDisc(ctx, bx, by, 1.4, CANOPY_HILITE)
-  }
 }
 
 function drawCliff(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number) {
   const cliffTopY = Math.floor(h * 0.08)
   const cliffBotY = riverY
-  const cliffWidth = Math.floor(w * 0.42)
+  const cliffWidth = Math.floor(w * 0.36)
   const cliffX = Math.floor(w * 0.55 - cliffWidth / 2)
-  const slotW = Math.max(8, Math.floor(cliffWidth * 0.16))
+  const slotW = Math.max(10, Math.floor(cliffWidth * 0.18))
   const slotX = cliffX + Math.floor(cliffWidth / 2) - Math.floor(slotW / 2)
 
-  // Sky-side: the cliff doesn't fill a clean rectangle — it juts up with a ragged top edge.
-  // We'll compute a top edge with two ridges (left of slot and right of slot).
   const rng = mulberry32(2024)
   const buildEdge = (x0: number, x1: number, peakOffset: number): number[] => {
     const arr: number[] = []
@@ -676,7 +515,6 @@ function drawCliff(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: 
   const leftEdge = buildEdge(cliffX, slotX - 1, Math.floor(h * 0.05))
   const rightEdge = buildEdge(slotX + slotW, cliffX + cliffWidth, Math.floor(h * 0.05))
 
-  // Fill cliff mass
   ctx.fillStyle = CLIFF_BASE
   for (let x = cliffX; x < slotX; x++) {
     const yTop = leftEdge[x - cliffX]
@@ -686,17 +524,13 @@ function drawCliff(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: 
     const yTop = rightEdge[x - (slotX + slotW)]
     ctx.fillRect(x, yTop, 1, cliffBotY - yTop)
   }
-
-  // Slot (recessed) — darker stone in the gap
   ctx.fillStyle = CLIFF_SHADOW
   ctx.fillRect(slotX, cliffTopY + 2, slotW, cliffBotY - cliffTopY - 2)
-  // Slot walls — 1px highlight on the left, 1px shadow on the right
   ctx.fillStyle = CLIFF_HILITE
   ctx.fillRect(slotX, cliffTopY + 2, 1, cliffBotY - cliffTopY - 2)
   ctx.fillStyle = CLIFF_CRACK
   ctx.fillRect(slotX + slotW - 1, cliffTopY + 2, 1, cliffBotY - cliffTopY - 2)
 
-  // Texture: vertical cracks + horizontal striations
   const rng2 = mulberry32(4096)
   for (let i = 0; i < Math.floor(cliffWidth / 4); i++) {
     const cx = cliffX + Math.floor(rng2() * cliffWidth)
@@ -714,8 +548,6 @@ function drawCliff(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: 
     ctx.fillStyle = CLIFF_HILITE
     ctx.fillRect(cx, cy, len, 1)
   }
-
-  // Sun-lit top edge on the left ridge
   ctx.fillStyle = CLIFF_HILITE
   for (let x = cliffX; x < slotX; x++) {
     ctx.fillRect(x, leftEdge[x - cliffX], 1, 1)
@@ -726,60 +558,36 @@ function drawCliff(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: 
   }
 }
 
-function drawForegroundRocks(ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number) {
-  // A few rocks scattered along the riverbank edge (foreground)
-  const rng = mulberry32(7777)
-  const rockY = h - 6
-  for (let i = 0; i < Math.floor(w / 80); i++) {
-    const rx = rng() * w
-    const rw = 6 + rng() * 10
-    const rh = 3 + rng() * 4
-    pixelEllipse(ctx, rx, rockY, rw, rh, "#4A403A")
-    pixelEllipse(ctx, rx - 1, rockY - 1, rw - 2, rh - 1, "#6A5F58")
-    // tiny moss
-    if (rng() > 0.5) {
-      ctx.fillStyle = STONE_MOSS
-      ctx.fillRect(Math.round(rx - 2), Math.round(rockY - rh + 1), 3, 1)
-    }
-  }
-}
-
 // ─── Per-frame animated overlays ─────────────────────────────────────────────
 function drawWaterfall(
-  ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number,
-  scrollMs: number
+  ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number, scrollMs: number
 ) {
-  // Compute the slot the cliff exposed
   const cliffTopY = Math.floor(h * 0.08)
-  const cliffWidth = Math.floor(w * 0.42)
+  const cliffWidth = Math.floor(w * 0.36)
   const cliffX = Math.floor(w * 0.55 - cliffWidth / 2)
-  const slotW = Math.max(8, Math.floor(cliffWidth * 0.16))
+  const slotW = Math.max(10, Math.floor(cliffWidth * 0.18))
   const slotX = cliffX + Math.floor(cliffWidth / 2) - Math.floor(slotW / 2)
   const fallTop = cliffTopY + 2
-  const fallBot = riverY + 2  // overshoot slightly into the river
+  const fallBot = riverY + 2
 
-  // 3 vertical pixel "streams" scrolling at slightly different rates so the texture
-  // never reads as a single tiled pattern.
   const streamCount = Math.max(3, Math.floor(slotW / 3))
   const scrollPeriod = 24
   for (let s = 0; s < streamCount; s++) {
     const t = s / Math.max(1, streamCount - 1)
     const streamX = slotX + 1 + Math.floor(t * (slotW - 2))
-    const streamW = 1
     const rate = 0.18 + (s % 3) * 0.04
     const yOff = (scrollMs * rate) % scrollPeriod
     for (let y = fallTop; y < fallBot; y++) {
       const phase = ((y + yOff) % scrollPeriod) / scrollPeriod
-      let color: string
-      if (phase < 0.20) color = WATERFALL_LIGHT
-      else if (phase < 0.45) color = WATERFALL_MID
-      else if (phase < 0.75) color = WATERFALL_DEEP
-      else color = WATERFALL_MID
-      ctx.fillStyle = color
-      ctx.fillRect(streamX, y, streamW, 1)
+      ctx.fillStyle =
+        phase < 0.20 ? WATERFALL_LIGHT
+        : phase < 0.45 ? WATERFALL_MID
+        : phase < 0.75 ? WATERFALL_DEEP
+        : WATERFALL_MID
+      ctx.fillRect(streamX, y, 1, 1)
     }
   }
-  // Foam pool at the base
+  // Foam pool at base
   ctx.fillStyle = WATER_FOAM
   for (let x = slotX - 2; x < slotX + slotW + 2; x++) {
     const dy = ((scrollMs * 0.01) + x * 0.37) % 2
@@ -795,7 +603,6 @@ function drawWaterfall(
 function drawRiverShimmer(
   ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number, frame: number
 ) {
-  // Deterministic shimmer positions, toggled per frame
   const rng = mulberry32(20251115)
   const count = Math.floor(w / 12)
   for (let i = 0; i < count; i++) {
@@ -813,87 +620,6 @@ function drawRiverShimmer(
   }
 }
 
-function drawBrachiosaurus(
-  ctx: CanvasRenderingContext2D, state: BrachioState, body: HTMLCanvasElement, riverY: number
-) {
-  const { x, y, scale } = state
-  const cyclePhase = (state.cycleMs / 10000) % 1
-  const bw = body.width, bh = body.height
-  // Body draw position — anchor body horizontally at x, with waterline at y.
-  // Body image is 44x18 at the requested scale; we want the lower belly (~y=14) at waterline.
-  const drawX = Math.round(x - bw / 2)
-  const drawY = Math.round(y - bh * (14 / 18))
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(body, drawX, drawY)
-  // Waterline wash — paint a soft horizontal band of WATER_MID over the brachio's
-  // lower body so it reads as "in the water".
-  ctx.save()
-  ctx.globalAlpha = 0.55
-  ctx.fillStyle = WATER_MID
-  ctx.fillRect(drawX, riverY - 1, bw, bh - (riverY - drawY))
-  ctx.restore()
-
-  // Neck attaches at the body's right shoulder (design coords 33, 4 in the 44x18 sprite).
-  const shoulderX = drawX + Math.round((33 / 44) * bw)
-  const shoulderY = drawY + Math.round((4 / 18) * bh)
-  drawBrachioNeck(ctx, shoulderX, shoulderY, scale, cyclePhase)
-}
-
-function drawTriceratops(
-  ctx: CanvasRenderingContext2D, state: TricState, sprites: HTMLCanvasElement[]
-) {
-  const sprite = sprites[state.frame]
-  const sw = sprite.width, sh = sprite.height
-  ctx.save()
-  ctx.imageSmoothingEnabled = false
-  if (state.dir === -1) {
-    // Walking left → flip horizontally
-    ctx.translate(Math.round(state.x), Math.round(state.baseY - sh))
-    ctx.scale(-1, 1)
-    ctx.drawImage(sprite, -sw, 0)
-  } else {
-    ctx.drawImage(sprite, Math.round(state.x - sw / 2), Math.round(state.baseY - sh))
-  }
-  ctx.restore()
-}
-
-function drawPterodactyl(
-  ctx: CanvasRenderingContext2D, p: Pterodactyl, sprites: HTMLCanvasElement[]
-) {
-  const sprite = sprites[p.flapFrame]
-  const sw = sprite.width, sh = sprite.height
-  ctx.save()
-  ctx.imageSmoothingEnabled = false
-  if (p.flipped) {
-    ctx.translate(Math.round(p.x + sw / 2), Math.round(p.y))
-    ctx.scale(-1, 1)
-    ctx.drawImage(sprite, -sw / 2, -sh / 2)
-  } else {
-    ctx.drawImage(sprite, Math.round(p.x - sw / 2), Math.round(p.y - sh / 2))
-  }
-  ctx.restore()
-}
-
-function spawnPterodactyl(w: number, h: number, scale: number): Pterodactyl {
-  const fromRight = Math.random() > 0.5
-  const baseY = rand(h * 0.10, h * 0.35)
-  const speed = rand(0.06, 0.12)
-  return {
-    x: fromRight ? w + 40 : -40,
-    y: baseY,
-    baseY,
-    vx: fromRight ? -speed : speed,
-    phase: rand(0, Math.PI * 2),
-    freq: rand(0.0008, 0.0015),
-    amplitude: rand(h * 0.015, h * 0.04),
-    flapMs: 0,
-    flapFrame: 0,
-    active: true,
-    flipped: fromRight,
-    scale,
-  }
-}
-
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function JungleScene({
   className,
@@ -906,107 +632,93 @@ export default function JungleScene({
   const sceneRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const stateRef = useRef<SceneState | null>(null)
+  const assetsRef = useRef<AssetMap | null>(null)
+  const monumentRef = useRef<HTMLCanvasElement | null>(null)
   const pausedRef = useRef(false)
   const reducedMotionRef = useRef(false)
   const lastSizeRef = useRef<{ w: number; h: number; dpr: number }>({ w: 0, h: 0, dpr: 1 })
 
-  const initScene = useCallback((h: number): SceneState => {
-    const dinoScale = Math.max(2, Math.round(h / 110))
-    const tricScale = Math.max(2, Math.round(h / 130))
-    const pteroScale = Math.max(2, Math.round(h / 140))
-    return {
-      clouds: [],
-      pterodactyls: [],
-      nextPteroMs: rand(2000, 6000),
-      mist: [],
-      brachio: { x: 0, y: 0, scale: dinoScale, cycleMs: 0 },
-      trics: [],
-      brachioBodySprite: makeBrachioBody(dinoScale),
-      tricSprites: [
-        makeTriceratopsFrame(0, tricScale),
-        makeTriceratopsFrame(1, tricScale),
-        makeTriceratopsFrame(2, tricScale),
-        makeTriceratopsFrame(3, tricScale),
-      ],
-      pteroSprites: [
-        makePterodactylFrame(0, pteroScale),
-        makePterodactylFrame(1, pteroScale),
-      ],
-      shimmerMs: 0,
-      shimmerFrame: 0,
-      waterfallMs: 0,
-      cloudSprites: null,
-      waterfallBaseX: 0,
-      waterfallBaseY: 0,
-      waterfallTopY: 0,
-      waterfallSlotW: 0,
-      riverY: 0,
-    }
-  }, [])
+  const initScene = useCallback((): SceneState => ({
+    dinos: [],
+    mist: [],
+    shimmerMs: 0,
+    shimmerFrame: 0,
+    waterfallMs: 0,
+    riverY: 0,
+    waterfallBaseX: 0,
+    waterfallBaseY: 0,
+    waterfallSlotW: 0,
+  }), [])
 
   const layoutScene = useCallback((state: SceneState, w: number, h: number) => {
     const riverY = Math.floor(h * 0.62)
-    const cliffWidth = Math.floor(w * 0.42)
+    const cliffWidth = Math.floor(w * 0.36)
     const cliffX = Math.floor(w * 0.55 - cliffWidth / 2)
-    const slotW = Math.max(8, Math.floor(cliffWidth * 0.16))
+    const slotW = Math.max(10, Math.floor(cliffWidth * 0.18))
     const slotX = cliffX + Math.floor(cliffWidth / 2) - Math.floor(slotW / 2)
     state.riverY = riverY
-    state.waterfallTopY = Math.floor(h * 0.08) + 2
     state.waterfallBaseX = slotX + slotW / 2
     state.waterfallBaseY = riverY + 2
     state.waterfallSlotW = slotW
-    // Brachiosaurus position: left of the cliff, body slightly above the river.
-    state.brachio.x = Math.floor(w * 0.27)
-    state.brachio.y = riverY + 4
-    // Triceratops patrol along the foreground bottom
-    if (state.trics.length === 0) {
-      const tricScale = state.tricSprites?.[0].height ?? 28
-      state.trics.push({
-        x: Math.floor(w * 0.62),
-        baseY: h - 4,
+
+    // Dino 1 — bigger green vita near the riverbank, between waterfall base and left edge
+    // Dino 2 — smaller yellow tard patrolling the foreground bottom, right of center
+    const bigScale = Math.max(3, Math.round(h / 90))
+    const smallScale = Math.max(2, Math.round(h / 110))
+    if (state.dinos.length === 0) {
+      const dinoBigPatrolMin = Math.floor(w * 0.12)
+      const dinoBigPatrolMax = Math.floor(w * 0.34)
+      state.dinos.push({
+        spriteKey: "dinoGreen",
+        x: (dinoBigPatrolMin + dinoBigPatrolMax) / 2,
+        baseY: riverY + 2 * bigScale,
+        scale: bigScale,
         dir: 1,
+        mode: "idle",
+        modeMs: 0,
+        frameMs: 0,
+        frame: 0,
+        patrolMinX: dinoBigPatrolMin,
+        patrolMaxX: dinoBigPatrolMax,
+        nextDecisionMs: 1800 + Math.random() * 2500,
+      })
+      const dinoSmallPatrolMin = Math.floor(w * 0.42)
+      const dinoSmallPatrolMax = Math.floor(w * 0.72)
+      state.dinos.push({
+        spriteKey: "dinoYellow",
+        x: (dinoSmallPatrolMin + dinoSmallPatrolMax) / 2,
+        baseY: h - 4,
+        scale: smallScale,
+        dir: -1,
         mode: "walk",
         modeMs: 0,
-        stepMs: 0,
-        frame: 0,
-        patrolMinX: Math.floor(w * 0.50),
-        patrolMaxX: Math.floor(w * 0.72),
-        scale: tricScale,
+        frameMs: 0,
+        frame: DINO_WALK_FRAMES[0],
+        patrolMinX: dinoSmallPatrolMin,
+        patrolMaxX: dinoSmallPatrolMax,
+        nextDecisionMs: 2500 + Math.random() * 3000,
       })
     } else {
-      const t = state.trics[0]
-      t.baseY = h - 4
-      t.patrolMinX = Math.floor(w * 0.50)
-      t.patrolMaxX = Math.floor(w * 0.72)
-      t.x = Math.max(t.patrolMinX, Math.min(t.patrolMaxX, t.x))
-    }
-    // Clouds — populate initially
-    if (state.clouds.length === 0) {
-      const cloudCount = 3 + Math.floor(w / 600)
-      const cloudBaseScale = Math.max(1, Math.round(h / 180))
-      state.cloudSprites = [
-        makeCloud(11, cloudBaseScale),
-        makeCloud(23, cloudBaseScale),
-        makeCloud(37, cloudBaseScale * 0.8),
-        makeCloud(51, cloudBaseScale * 1.1),
-        makeCloud(67, cloudBaseScale * 0.9),
-      ]
-      for (let i = 0; i < cloudCount; i++) {
-        state.clouds.push({
-          x: rand(0, w),
-          y: rand(h * 0.05, h * 0.32),
-          scale: rand(0.8, 1.3),
-          speed: rand(0.005, 0.018),
-          seed: i % (state.cloudSprites?.length ?? 1),
-        })
-      }
+      // Resize-time update — re-clamp patrol ranges + baselines, keep modes
+      state.dinos[0].scale = bigScale
+      state.dinos[0].baseY = riverY + 2 * bigScale
+      state.dinos[0].patrolMinX = Math.floor(w * 0.12)
+      state.dinos[0].patrolMaxX = Math.floor(w * 0.34)
+      state.dinos[0].x = Math.max(state.dinos[0].patrolMinX, Math.min(state.dinos[0].patrolMaxX, state.dinos[0].x))
+      state.dinos[1].scale = smallScale
+      state.dinos[1].baseY = h - 4
+      state.dinos[1].patrolMinX = Math.floor(w * 0.42)
+      state.dinos[1].patrolMaxX = Math.floor(w * 0.72)
+      state.dinos[1].x = Math.max(state.dinos[1].patrolMinX, Math.min(state.dinos[1].patrolMaxX, state.dinos[1].x))
     }
   }, [])
 
   const runLoop = useCallback(() => {
     const backdrop = backdropRef.current
     const scene = sceneRef.current
-    if (!backdrop || !scene) return
+    const assets = assetsRef.current
+    const monument = monumentRef.current
+    if (!backdrop || !scene || !assets || !monument) return
     const ctx = scene.getContext("2d")
     if (!ctx) return
 
@@ -1016,7 +728,7 @@ export default function JungleScene({
       const h = parent?.clientHeight ?? window.innerHeight
       const dpr = Math.min(2, window.devicePixelRatio || 1)
       const last = lastSizeRef.current
-      if (w === last.w && h === last.h && dpr === last.dpr) return { w, h, dpr, changed: false }
+      if (w === last.w && h === last.h && dpr === last.dpr) return { w, h, dpr }
       lastSizeRef.current = { w, h, dpr }
       scene.width = Math.round(w * dpr); scene.height = Math.round(h * dpr)
       scene.style.width = `${w}px`; scene.style.height = `${h}px`
@@ -1024,38 +736,18 @@ export default function JungleScene({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const state = stateRef.current
       if (state) {
-        // Rebuild sprites for the new height so they stay pixel-crisp at the new scale
-        const newDinoScale = Math.max(2, Math.round(h / 110))
-        const newTricScale = Math.max(2, Math.round(h / 130))
-        const newPteroScale = Math.max(2, Math.round(h / 140))
-        if (newDinoScale !== state.brachio.scale) {
-          state.brachio.scale = newDinoScale
-          state.brachioBodySprite = makeBrachioBody(newDinoScale)
-        }
-        state.tricSprites = [
-          makeTriceratopsFrame(0, newTricScale),
-          makeTriceratopsFrame(1, newTricScale),
-          makeTriceratopsFrame(2, newTricScale),
-          makeTriceratopsFrame(3, newTricScale),
-        ]
-        state.pteroSprites = [
-          makePterodactylFrame(0, newPteroScale),
-          makePterodactylFrame(1, newPteroScale),
-        ]
         layoutScene(state, w, h)
-        // Rebuild backdrop with a freshly-sized monument
         const monumentScale = Math.max(1, Math.round(h / 110))
-        const monument = makeMonument(monumentScale)
-        paintBackdrop(backdrop, w, h, dpr, monument)
+        monumentRef.current = makeMonument(monumentScale)
+        paintBackdrop(backdrop, w, h, dpr, assets, monumentRef.current)
       }
-      return { w, h, dpr, changed: true }
+      return { w, h, dpr }
     }
 
-    let { w, h, dpr } = resizeIfNeeded()
+    let { w, h } = resizeIfNeeded()
 
     if (reducedMotionRef.current) {
-      // Single static frame: draw the scene once and stop.
-      drawAnimatedLayer(ctx, w, h, stateRef.current!, /*motionless*/ true, 0, 0, 0)
+      drawAnimatedLayer(ctx, w, h, stateRef.current!, assets, true, 600, 0)
       return
     }
 
@@ -1066,7 +758,7 @@ export default function JungleScene({
       last = ts
 
       const r = resizeIfNeeded()
-      w = r.w; h = r.h; dpr = r.dpr
+      w = r.w; h = r.h
 
       const state = stateRef.current
       if (!state) return
@@ -1077,61 +769,11 @@ export default function JungleScene({
         state.shimmerFrame = (state.shimmerFrame + 1) % 4
       }
       state.waterfallMs += delta
-      state.brachio.cycleMs = (state.brachio.cycleMs + delta) % 10000
 
-      // Clouds drift right (with wrap)
-      for (const c of state.clouds) {
-        c.x += c.speed * delta
-        const sprite = state.cloudSprites?.[c.seed]
-        const sw = (sprite?.width ?? 60) * c.scale
-        if (c.x > w + sw) c.x = -sw
-      }
+      // Dinos
+      for (const d of state.dinos) updateDino(d, delta)
 
-      // Pterodactyl spawn timer
-      state.nextPteroMs -= delta
-      const activePtero = state.pterodactyls.filter(p => p.active).length
-      if (state.nextPteroMs <= 0 && activePtero < 2) {
-        state.pterodactyls.push(spawnPterodactyl(w, h, Math.max(2, Math.round(h / 140))))
-        state.nextPteroMs = rand(8000, 15000)
-      } else if (state.nextPteroMs <= 0) {
-        state.nextPteroMs = rand(3000, 6000)
-      }
-      // Update + cull pterodactyls
-      for (const p of state.pterodactyls) {
-        if (!p.active) continue
-        p.x += p.vx * delta
-        p.y = p.baseY + Math.sin(state.waterfallMs * p.freq + p.phase) * p.amplitude
-        p.flapMs += delta
-        if (p.flapMs > 150) { p.flapMs = 0; p.flapFrame = p.flapFrame === 0 ? 1 : 0 }
-        const margin = (state.pteroSprites?.[0].width ?? 40) + 30
-        if (p.x < -margin || p.x > w + margin) p.active = false
-      }
-      // Free up references to inactive pterodactyls (cap at 6 stored)
-      state.pterodactyls = state.pterodactyls.filter(p => p.active).slice(0, 6)
-
-      // Triceratops state machine
-      const tric = state.trics[0]
-      if (tric) {
-        tric.modeMs += delta
-        if (tric.mode === "walk") {
-          tric.x += tric.dir * 0.05 * delta
-          tric.stepMs += delta
-          if (tric.stepMs > 150) { tric.stepMs = 0; tric.frame = ((tric.frame + 1) % 4) as 0 | 1 | 2 | 3 }
-          if (tric.x >= tric.patrolMaxX || tric.x <= tric.patrolMinX) {
-            tric.mode = "pause"; tric.modeMs = 0
-          } else if (tric.modeMs > 4500) {
-            tric.mode = "pause"; tric.modeMs = 0
-          }
-        } else {
-          tric.frame = 1
-          if (tric.modeMs > 2000) {
-            tric.mode = "walk"; tric.modeMs = 0
-            tric.dir = (tric.x >= tric.patrolMaxX ? -1 : tric.x <= tric.patrolMinX ? 1 : (tric.dir === 1 ? -1 : 1))
-          }
-        }
-      }
-
-      // Mist particles — spawn 0-2 per frame at base of waterfall
+      // Mist particles at the waterfall base
       const spawnCount = Math.random() < 0.7 ? (Math.random() < 0.4 ? 2 : 1) : 0
       for (let i = 0; i < spawnCount; i++) {
         if (state.mist.length >= 100) break
@@ -1154,7 +796,7 @@ export default function JungleScene({
         if (m.life <= 0) state.mist.splice(i, 1)
       }
 
-      drawAnimatedLayer(ctx, w, h, state, false, delta, state.waterfallMs, state.shimmerFrame)
+      drawAnimatedLayer(ctx, w, h, state, assets, false, state.waterfallMs, state.shimmerFrame)
 
       rafRef.current = requestAnimationFrame(tick)
     }
@@ -1166,18 +808,25 @@ export default function JungleScene({
     const scene = sceneRef.current
     if (!backdrop || !scene) return
 
-    // Respect reduced motion
     if (typeof window !== "undefined" && window.matchMedia) {
       const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
       reducedMotionRef.current = mq.matches
     }
 
-    // Initial size
-    const parent = scene.parentElement
-    const w = parent?.clientWidth ?? window.innerWidth
-    const h = parent?.clientHeight ?? window.innerHeight
-    stateRef.current = initScene(h)
-    layoutScene(stateRef.current, w, h)
+    let cancelled = false
+    loadAllAssets().then(assets => {
+      if (cancelled) return
+      assetsRef.current = assets
+      stateRef.current = initScene()
+      const parent = scene.parentElement
+      const w = parent?.clientWidth ?? window.innerWidth
+      const h = parent?.clientHeight ?? window.innerHeight
+      layoutScene(stateRef.current, w, h)
+      monumentRef.current = makeMonument(Math.max(1, Math.round(h / 110)))
+      runLoop()
+    }).catch(err => {
+      console.error("JungleScene: failed to load sprite assets", err)
+    })
 
     const observer = new IntersectionObserver(
       ([entry]) => { pausedRef.current = !entry.isIntersecting },
@@ -1185,9 +834,8 @@ export default function JungleScene({
     )
     observer.observe(scene)
 
-    runLoop()
-
     return () => {
+      cancelled = true
       cancelAnimationFrame(rafRef.current)
       observer.disconnect()
     }
@@ -1212,49 +860,24 @@ export default function JungleScene({
   )
 }
 
-// ─── Per-tick draw — everything that moves ───────────────────────────────────
 function drawAnimatedLayer(
-  ctx: CanvasRenderingContext2D, w: number, h: number, state: SceneState,
-  motionless: boolean, _delta: number, waterfallMs: number, shimmerFrame: number
+  ctx: CanvasRenderingContext2D, w: number, h: number, state: SceneState, assets: AssetMap,
+  motionless: boolean, waterfallMs: number, shimmerFrame: number
 ) {
   ctx.clearRect(0, 0, w, h)
   ctx.imageSmoothingEnabled = false
 
-  // Clouds (background of moving layer)
-  if (state.cloudSprites) {
-    for (const c of state.clouds) {
-      const sprite = state.cloudSprites[c.seed]
-      if (!sprite) continue
-      const sw = sprite.width * c.scale, sh = sprite.height * c.scale
-      ctx.drawImage(sprite, Math.round(c.x), Math.round(c.y), sw, sh)
-    }
-  }
-
-  // Waterfall water (centred slot)
   drawWaterfall(ctx, w, h, state.riverY, motionless ? 600 : waterfallMs)
-
-  // River shimmer overlay
   drawRiverShimmer(ctx, w, h, state.riverY, shimmerFrame)
 
-  // Brachiosaurus
-  if (state.brachioBodySprite) {
-    drawBrachiosaurus(ctx, state.brachio, state.brachioBodySprite, state.riverY)
+  // Dinos (drawn in front of waterfall + river, behind mist)
+  for (const dino of state.dinos) {
+    const sheet = assets[dino.spriteKey]
+    if (!sheet) continue
+    drawDino(ctx, dino, sheet)
   }
 
-  // Triceratops (foreground)
-  if (state.tricSprites && state.trics[0]) {
-    drawTriceratops(ctx, state.trics[0], state.tricSprites)
-  }
-
-  // Pterodactyls (sky)
-  if (state.pteroSprites) {
-    for (const p of state.pterodactyls) {
-      if (!p.active) continue
-      drawPterodactyl(ctx, p, state.pteroSprites)
-    }
-  }
-
-  // Mist particles (above the water at base of fall)
+  // Mist particles last
   for (const m of state.mist) {
     const lifeT = m.life / m.maxLife
     const alpha = Math.max(0, Math.min(1, lifeT)) * 0.7
