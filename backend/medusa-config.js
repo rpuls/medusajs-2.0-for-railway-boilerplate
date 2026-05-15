@@ -271,6 +271,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/bundles",
+    },
+
+    {
       resolve: "./src/modules/search-log",
     },
 
