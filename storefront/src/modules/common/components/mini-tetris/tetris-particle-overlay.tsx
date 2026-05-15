@@ -26,11 +26,11 @@ const AMBIENT_PER_CELL = 400
 /** Burst pool capacity (transient one-shot particles for lock/clear effects). */
 const MAX_BURST_PARTICLES = 6000
 /** Particles spawned per cell when the active piece locks. */
-const LOCK_BURST_PER_CELL = 36
+const LOCK_BURST_PER_CELL = 22
 /** Particles spawned per cell when a line is cleared. */
-const CLEAR_BURST_PER_CELL = 60
+const CLEAR_BURST_PER_CELL = 38
 /** Burst lifetime (ms). */
-const BURST_LIFE_MS = 1100
+const BURST_LIFE_MS = 1700
 /** Spring stiffness pulling ambient particles back to home each frame. Low spring +
  * high friction = particles linger after being pushed, leaving glowing wakes. */
 const HOME_SPRING = 0.028
@@ -41,12 +41,12 @@ const OBSTACLE_RADIUS_CELLS = 0.65
 /** Force magnitude pushing particles out of filled cells. */
 const OBSTACLE_FORCE = 4.2
 /** Burst initial speed (CSS px / frame). */
-const LOCK_BURST_SPEED = 7
-const CLEAR_BURST_SPEED = 10
+const LOCK_BURST_SPEED = 4.5
+const CLEAR_BURST_SPEED = 6.5
 /** Active-piece movement transition (ms). 480 splits the difference: ease-out
  * means the block snaps most of the way in ~120ms (player input feels
  * responsive), and the long settle keeps natural drops fluid edge-to-edge. */
-const PIECE_TRANSITION_MS = 480
+const PIECE_TRANSITION_MS = 560
 /** Cap on visual lag distance (in cells). Hard drops would otherwise leave a
  * 20-cell trail; we clamp so it caps out at ~1 cell of smoothing slack at rest.
  * Velocity-coupled clamp scales this up during fast moves (see pieceMotion logic). */
@@ -65,33 +65,33 @@ const BLOCK_FRINGE_HALF_FRAC = 0.55
  * Pushes particles radially outward with amplitude that decays with distance. */
 const RIPPLE_SPEED = 6
 const RIPPLE_BAND_HALF = 24
-const RIPPLE_AMPLITUDE = 11
-const RIPPLE_AMPLITUDE_DECAY = 0.99
+const RIPPLE_AMPLITUDE = 7
+const RIPPLE_AMPLITUDE_DECAY = 0.992
 const RIPPLE_MIN_AMPLITUDE = 0.2
 /** CSS-px half-width of the visible glowing wave-front drawn into pixBuf. Higher
  * = thicker, softer ring. */
-const RIPPLE_RING_HALF_PX = 5
+const RIPPLE_RING_HALF_PX = 7
 /** Upward bias for ripple — water drops mostly affect the surface above impact. */
 const RIPPLE_UPWARD_BIAS = 1.4
 /** Line-clear flash: horizontal stripe over the cleared row that fades over time. */
-const FLASH_LIFE_MS = 480
+const FLASH_LIFE_MS = 820
 /** Excitement decay per frame (multiplicative). Lower = longer-lingering glow
  * trails behind moving blocks. 0.985 gives ~3-second visible afterglow. */
-const EXCITEMENT_DECAY = 0.985
+const EXCITEMENT_DECAY = 0.991
 /** Ambient particle base alpha at rest (0-1). Quiet field at rest, brightens to
  * full white when pushed (via excitement). */
 const AMBIENT_BASE_ALPHA = 0.72
 /** Vignette darkness at canvas corners (0 = no vignette, 1 = corners fully dark). */
-const VIGNETTE_STRENGTH = 0.5
+const VIGNETTE_STRENGTH = 0.62
 /** Extra vignette bias toward the top of the board (where the playfield is
  * usually empty) so the eye is drawn toward the action. */
-const VIGNETTE_TOP_BIAS = 0.25
+const VIGNETTE_TOP_BIAS = 0.35
 /** Locked-block "breathing": tiny time-based jitter so locked blobs feel alive
  * instead of frozen. Amplitude in CSS px. */
-const LOCKED_BREATHE_PX = 0.8
+const LOCKED_BREATHE_PX = 1.2
 /** Lock-impact white anticipation flash drawn over the lock cells for a brief
  * window before the ripple starts. */
-const LOCK_FLASH_LIFE_MS = 110
+const LOCK_FLASH_LIFE_MS = 180
 /** Field directional drift: each ambient particle's home oscillates in a small
  * circular orbit defined by its noise-derived drift angle. Reads as gentle
  * flowing texture on top of the spring physics. */
@@ -99,8 +99,8 @@ const FIELD_DRIFT_PX = 1.6
 const FIELD_DRIFT_RATE = 0.0008
 /** Rotation animation: when the player rotates the piece, briefly scale-pulse
  * it. Reads as a deliberate punctuation, not an instant teleport. */
-const ROTATION_PULSE_MS = 220
-const ROTATION_PULSE_SCALE = 0.18
+const ROTATION_PULSE_MS = 320
+const ROTATION_PULSE_SCALE = 0.12
 /** Velocity-coupled effects: piece velocity (cells/frame, smoothed) is captured
  * at lock time and used to scale ripple amplitude + the lock burst. Faster
  * impacts produce stronger ripples. */
@@ -111,12 +111,12 @@ const LINE_CLEAR_FALL_IMPULSE = 5
 /** Wave upward speed (CSS px / frame) — negative because canvas Y is downward. */
 const WAVE_SPEED = -9
 /** Wave amplitude (impulse strength at band centre). */
-const WAVE_STRENGTH = 4
+const WAVE_STRENGTH = 2.6
 /** Decay of wave strength per frame. Wave dies before reaching the top edge if
  * board is short — and amplitude tapers naturally. */
-const WAVE_DECAY = 0.985
+const WAVE_DECAY = 0.99
 /** Half-height of the wave's effect band (CSS px). Wider band = larger ripple. */
-const WAVE_BAND_HALF = 22
+const WAVE_BAND_HALF = 30
 
 /** ============================================================
  * Velocity field — Stam-style fluid grid that drives organic
@@ -136,7 +136,7 @@ const FIELD_RESOLUTION = 24
 const FIELD_RIDE_STRENGTH = 0.06
 /** Energy lost per second when nothing is depositing. ~0.55 = settles in
  * 3-4 seconds, matches Newmix's pacing. */
-const FIELD_DECAY_PER_SEC = 0.55
+const FIELD_DECAY_PER_SEC = 0.42
 /** Lateral diffusion per frame — cells bleed energy to 4 neighbours. */
 const FIELD_DIFFUSION = 0.05
 /** Pressure projection strength (Stam fluid solver). 0.4 = clean curls. */
@@ -147,7 +147,7 @@ const FIELD_PRESSURE_ITERS = 1
 
 /** Lock event — outward radial blast at lock centroid. */
 const LOCK_FIELD_BLAST_RADIUS_CSS = 60
-const LOCK_FIELD_BLAST_MAGNITUDE = 6
+const LOCK_FIELD_BLAST_MAGNITUDE = 3.5
 /** Line clear — downward + outward energy on cleared row. */
 const CLEAR_FIELD_DOWN_MAGNITUDE = 3.5
 const CLEAR_FIELD_OUTWARD_MAGNITUDE = 5
@@ -157,7 +157,7 @@ const ROTATION_FIELD_SPIN_MAGNITUDE = 4
 /** Hard drop — vertical streak deposit along the column the piece
  * traveled. Triggered when a lock event registers a drop > 3 cells. */
 const HARDDROP_MIN_CELLS = 3
-const HARDDROP_FIELD_STREAK_MAGNITUDE = 7
+const HARDDROP_FIELD_STREAK_MAGNITUDE = 4.5
 const HARDDROP_FIELD_STREAK_RADIUS_CSS = 16
 /** Soft fall / piece-following wake. Subtle; deposited every frame the
  * piece is moving. */
@@ -165,7 +165,7 @@ const FALL_FIELD_WAKE_MAGNITUDE = 0.6
 /** Side movement — lateral impulse at the piece's leading edge. */
 const SIDE_FIELD_PUSH_MAGNITUDE = 1.6
 /** Game-over fizzle — strong upward burst when the player loses. */
-const GAMEOVER_FIELD_UP_MAGNITUDE = 8
+const GAMEOVER_FIELD_UP_MAGNITUDE = 5.5
 
 /** Curl-noise micro-turbulence on burst particles. Cheap (~6 sin/cos
  * per burst per frame), gives sparks an organic swirl rather than
@@ -203,6 +203,9 @@ type Burst = {
   lifeMs: number
 }
 
+type ClearKind = "single" | "double" | "triple" | "tetris"
+type Phase = "intro" | "playing" | "over"
+
 type Props = {
   containerRef: React.RefObject<HTMLDivElement | null>
   display: Display
@@ -210,6 +213,13 @@ type Props = {
   active: Active | null
   lines: number
   gameOver: boolean
+  /** Cells of the ghost piece (landing position). Null while intro/over or
+   * when the active piece is already at its landing. */
+  ghostCells: { bx: number; by: number; t: number }[] | null
+  phase: Phase
+  level: number
+  lastClearKind: ClearKind | null
+  lastClearAt: number
 }
 
 /** Deterministic hash → 0..1, stable per (a, b). */
@@ -227,17 +237,46 @@ export default function TetrisParticleOverlay({
   active,
   lines,
   gameOver,
+  ghostCells,
+  phase,
+  level,
+  lastClearKind,
+  lastClearAt,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const propsRef = useRef({ display, board, active, lines, gameOver })
-  propsRef.current = { display, board, active, lines, gameOver }
+  const propsRef = useRef({
+    display,
+    board,
+    active,
+    lines,
+    gameOver,
+    ghostCells,
+    phase,
+    level,
+    lastClearKind,
+    lastClearAt,
+  })
+  propsRef.current = {
+    display,
+    board,
+    active,
+    lines,
+    gameOver,
+    ghostCells,
+    phase,
+    level,
+    lastClearKind,
+    lastClearAt,
+  }
   const prevRef = useRef<{
     display: Display
     board: Board
     active: Active | null
     lines: number
     gameOver: boolean
-  }>({ display, board, active, lines, gameOver })
+    level: number
+    lastClearAt: number
+  }>({ display, board, active, lines, gameOver, level, lastClearAt })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -703,11 +742,38 @@ export default function TetrisParticleOverlay({
       pixBuf = imageData.data
       buildAmbient()
       rebuildField()
+      // Invalidate the DOF blur scratch canvas; it'll be rebuilt lazily on
+      // the next game-over frame with the new dimensions.
+      dofCanvas = null
+      dofCtx = null
     }
 
     layoutCanvas()
     const ro = new ResizeObserver(() => layoutCanvas())
     ro.observe(container)
+
+    /** Cinematic effect triggers. Each becomes >= 0 when its event fires and
+     * the per-frame envelope reads back to drive vignette / decay / overlay
+     * intensity. They expire by elapsed-time check, no explicit reset needed
+     * other than gameOverAt which must clear on restart (gameOver flips back). */
+    let levelUpAt = -1
+    let chapterSweepAt = -1
+    let gameOverAt = -1
+    /** Quarter-resolution scratch canvas used for the depth-of-field blur on
+     * game-over. Created lazily on first need; invalidated by layoutCanvas. */
+    let dofCanvas: HTMLCanvasElement | null = null
+    let dofCtx: CanvasRenderingContext2D | null = null
+    /** Time-driven amounts (recomputed per frame in tick). Used by inner loops
+     * that previously read the constants directly. */
+    let currentExcitementDecay = EXCITEMENT_DECAY
+    let currentVignetteStrength = VIGNETTE_STRENGTH
+
+    const LEVEL_UP_MS = 1400
+    const CHAPTER_SWEEP_MS = 900
+    const DOF_FADE_MS = 1200
+    const GHOST_PULSE_HZ = 0.55
+    const GHOST_ALPHA_BASE = 0.14
+    const GHOST_ALPHA_RANGE = 0.08
 
     let raf = 0
     const tick = () => {
@@ -720,7 +786,46 @@ export default function TetrisParticleOverlay({
       const { display: dispNow, board: brdNow, active: actNow, lines: linesNow } =
         propsRef.current
       const gameOverNow = propsRef.current.gameOver
+      const levelNow = propsRef.current.level
+      const lastClearKindNow = propsRef.current.lastClearKind
+      const lastClearAtNow = propsRef.current.lastClearAt
+      const ghostCellsNow = propsRef.current.ghostCells
+      const phaseNow = propsRef.current.phase
       const prev = prevRef.current
+
+      /** Level-up: detect via prev.level vs propsRef.current.level. The 1400ms
+       * envelope below deepens vignette + extends excitement-decay so the field
+       * blooms slowly. Reset on restart is implicit — levels go back to 1 via
+       * the reducer, and the envelope expires by timestamp. */
+      if (levelNow > prev.level) {
+        levelUpAt = now
+      }
+      /** Tetris-grade clear: only the "tetris" kind triggers the chapter sweep.
+       * Doubles/triples/singles use the per-row flash + retuned wave already
+       * built into the pipeline above. */
+      if (
+        lastClearAtNow > prev.lastClearAt &&
+        lastClearKindNow === "tetris"
+      ) {
+        chapterSweepAt = now
+      }
+      /** Game-over fresh trigger / restart reset. */
+      if (gameOverNow && !prev.gameOver) {
+        gameOverAt = now
+      } else if (!gameOverNow && prev.gameOver) {
+        gameOverAt = -1
+      }
+
+      /** Per-frame envelopes: cosine-bell over the lifetime of each event. */
+      let levelUpAmount = 0
+      if (levelUpAt >= 0 && now - levelUpAt < LEVEL_UP_MS) {
+        const t = (now - levelUpAt) / LEVEL_UP_MS
+        levelUpAmount = Math.sin(t * Math.PI)
+      } else if (levelUpAt >= 0) {
+        levelUpAt = -1
+      }
+      currentVignetteStrength = VIGNETTE_STRENGTH + 0.16 * levelUpAmount
+      currentExcitementDecay = EXCITEMENT_DECAY + 0.006 * levelUpAmount
 
       /** Drain any time-delayed actions whose `runAt` has passed. Used by the
        * staggered line-clear sequence below. */
@@ -1405,7 +1510,7 @@ export default function TetrisParticleOverlay({
       const driftPhase = now * FIELD_DRIFT_RATE
       const fieldRideOn = field != null && FIELD_RIDE_STRENGTH > 0
       for (let i = 0; i < TOTAL_AMBIENT; i++) {
-        amb.excitement[i] = amb.excitement[i]! * EXCITEMENT_DECAY
+        amb.excitement[i] = amb.excitement[i]! * currentExcitementDecay
         /** Per-particle drift: each particle's effective home oscillates in a
          * small circular orbit. Phase offset varies per particle (noise-derived)
          * so neighbours flow in correlated but not identical directions. */
@@ -1710,7 +1815,7 @@ export default function TetrisParticleOverlay({
          * portion of the playfield where the locked stack sits. */
         const topBias =
           py < vignCy ? (1 - py / vignCy) * VIGNETTE_TOP_BIAS : 0
-        const vignMul = Math.max(0.2, 1 - dV * VIGNETTE_STRENGTH - topBias)
+        const vignMul = Math.max(0.2, 1 - dV * currentVignetteStrength - topBias)
         const finalMul = restMul * densMul * vignMul
         const off = (py * PW + px) * 4
         pixBuf[off] = (r * finalMul) | 0
@@ -2038,12 +2143,111 @@ export default function TetrisParticleOverlay({
 
       ctx.putImageData(imageData, 0, 0)
 
+      /** =================== Ghost-piece outline ===================
+       * Drawn AFTER putImageData via the 2D ctx so the stroked outline doesn't
+       * fight with the dense pixel-buffer writes above. A thin sinusoidal pulse
+       * keeps the ghost feeling alive without competing with the active piece. */
+      if (
+        ghostCellsNow != null &&
+        ghostCellsNow.length > 0 &&
+        phaseNow === "playing"
+      ) {
+        const pulse = 0.5 + 0.5 * Math.sin(now * 0.001 * GHOST_PULSE_HZ * Math.PI * 2)
+        const alpha = GHOST_ALPHA_BASE + GHOST_ALPHA_RANGE * pulse
+        ctx.save()
+        ctx.lineWidth = 1.5 * dpr
+        const halfW = sizeState.cellW * 0.5
+        const halfH = sizeState.cellH * 0.5
+        const inset = 1.5
+        for (let gi = 0; gi < ghostCellsNow.length; gi++) {
+          const gc = ghostCellsNow[gi]!
+          const c = cellCentre(gc.bx, gc.by)
+          const rgb = PIECE_RGB[gc.t] ?? [255, 255, 255]
+          ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`
+          ctx.strokeRect(
+            (c.x - halfW + inset) * dpr,
+            (c.y - halfH + inset) * dpr,
+            (sizeState.cellW - 2 * inset) * dpr,
+            (sizeState.cellH - 2 * inset) * dpr
+          )
+        }
+        ctx.restore()
+      }
+
+      /** =================== Tetris "chapter sweep" ===================
+       * Soft white band sweeps bottom→top over CHAPTER_SWEEP_MS for tetris
+       * clears only. Screen-blended so it adds bloom rather than overpainting,
+       * vertical gradient so the band tapers softly at top + bottom edges. */
+      if (chapterSweepAt >= 0) {
+        const elapsed = now - chapterSweepAt
+        if (elapsed < CHAPTER_SWEEP_MS) {
+          const t = elapsed / CHAPTER_SWEEP_MS
+          const eased = -(Math.cos(Math.PI * t) - 1) / 2
+          const Hpx = canvas.height
+          const Wpx = canvas.width
+          const bandY = Hpx * (1 - eased)
+          const bandH = Hpx * 0.18
+          ctx.save()
+          ctx.globalCompositeOperation = "screen"
+          const grad = ctx.createLinearGradient(
+            0,
+            bandY - bandH / 2,
+            0,
+            bandY + bandH / 2
+          )
+          grad.addColorStop(0, "rgba(255,255,255,0)")
+          grad.addColorStop(0.5, "rgba(255,255,255,0.14)")
+          grad.addColorStop(1, "rgba(255,255,255,0)")
+          ctx.fillStyle = grad
+          ctx.fillRect(0, bandY - bandH / 2, Wpx, bandH)
+          ctx.restore()
+        } else {
+          chapterSweepAt = -1
+        }
+      }
+
+      /** =================== Game-over depth-of-field ===================
+       * When the game ends, fade in a soft blur of the canvas onto itself over
+       * DOF_FADE_MS, then hold steady forever. We blur into a 1/4-resolution
+       * scratch canvas (cheap), then composite the upscaled blur on top of the
+       * sharp render. Reaches max opacity of 0.55 — preserves enough detail to
+       * read the final field, while feeling dreamy/cinematic. */
+      if (gameOverNow && gameOverAt >= 0) {
+        const elapsed = now - gameOverAt
+        const t = Math.min(1, elapsed / DOF_FADE_MS)
+        const blurAlpha = (1 - Math.pow(1 - t, 3)) * 0.55
+        if (blurAlpha > 0.02) {
+          const dW = Math.max(2, (canvas.width / 4) | 0)
+          const dH = Math.max(2, (canvas.height / 4) | 0)
+          if (!dofCanvas || dofCanvas.width !== dW || dofCanvas.height !== dH) {
+            dofCanvas = document.createElement("canvas")
+            dofCanvas.width = dW
+            dofCanvas.height = dH
+            dofCtx = dofCanvas.getContext("2d")
+          }
+          if (dofCtx && dofCanvas) {
+            dofCtx.globalCompositeOperation = "copy"
+            dofCtx.filter = "blur(2px)"
+            dofCtx.drawImage(canvas, 0, 0, dW, dH)
+            dofCtx.filter = "none"
+            ctx.save()
+            ctx.globalAlpha = blurAlpha
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = "high"
+            ctx.drawImage(dofCanvas, 0, 0, canvas.width, canvas.height)
+            ctx.restore()
+          }
+        }
+      }
+
       prevRef.current = {
         display: dispNow,
         board: brdNow,
         active: actNow,
         lines: linesNow,
         gameOver: propsRef.current.gameOver,
+        level: levelNow,
+        lastClearAt: lastClearAtNow,
       }
     }
 
