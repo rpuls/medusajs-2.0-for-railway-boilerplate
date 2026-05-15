@@ -14,6 +14,7 @@ import {
 } from "@medusajs/ui"
 import { ArrowPath, Plus, PencilSquare, Trash, ShoppingCart } from "@medusajs/icons"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { HelpTooltip } from "../../components/reports/help-tooltip"
 import { slugifyBundleHandle } from "../../lib/bundle-handle"
 
 type BundleItem = {
@@ -532,7 +533,23 @@ const BundlesPage = () => {
     <div className="flex flex-col gap-y-4">
       <Container className="flex items-start justify-between">
         <div>
-          <Heading level="h1">Bundles</Heading>
+          <Heading level="h1" className="flex items-center">
+            Bundles
+            <HelpTooltip
+              text={{
+                title: "Bundles",
+                body: "Pre-configured uniform packs (e.g. Site Ready Starter Pack, Full Crew Bundle) that appear on the storefront /bundles page. Each bundle guides customers through a step-by-step wizard: pick colours and sizes per item, upload artwork, leave decoration notes, then add the whole pack to cart.",
+                bullets: [
+                  "Title + handle: The handle becomes the URL (/bundles/[handle]) — avoid changing after launch.",
+                  "Subtitle: The angle/pitch shown in quotes on the bundle page (e.g. \"Everything your new tradie needs, sorted before their first day.\").",
+                  "Crew multiplier: Set the label (e.g. \"How many crew members?\") to make the wizard ask for a number and multiply all item quantities by it. Leave blank for fixed packs.",
+                  "Items: Each item is a Medusa product (referenced by handle), the per-unit quantity, and the decoration type. The label is what the customer sees.",
+                  "Status: Inactive bundles are hidden from the storefront but kept here for editing.",
+                  "Cart lines: When a customer checks out a bundle, each garment is a separate cart line tagged with bundle_id and decoration notes for staff to follow up on pricing.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle mt-1">
             Pre-configured uniform packs shown on the storefront /bundles page.
             Each bundle guides customers through a step-by-step configuration

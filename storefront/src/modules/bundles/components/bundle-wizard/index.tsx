@@ -1,8 +1,8 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
-import { addToCartSafe } from "@lib/data/cart"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { addToCartSafe, retrieveCart } from "@lib/data/cart"
 import { uploadCustomerOriginalUnchanged } from "@modules/customizer/lib/upload-customer-original"
 import type {
   BundleItem,
@@ -10,6 +10,64 @@ import type {
   BundleProductVariant,
   BundleWithProducts,
 } from "@lib/data/bundles"
+
+// ---------------------------------------------------------------------------
+// Cart design reuse
+// ---------------------------------------------------------------------------
+
+type CartDesign = {
+  lineItemId: string
+  productTitle: string
+  variantTitle: string | null
+  thumbnail: string | null
+  artworkUrl: string | null
+  decorationNotes: string | null
+  bundleTitle: string | null
+}
+
+function extractCartDesigns(cart: unknown): CartDesign[] {
+  const items = (cart as { items?: unknown[] } | null)?.items ?? []
+  const designs: CartDesign[] = []
+  for (const raw of items) {
+    const item = raw as {
+      id?: string
+      product_title?: string | null
+      variant_title?: string | null
+      thumbnail?: string | null
+      metadata?: Record<string, unknown> | null
+    }
+    const meta = item.metadata ?? {}
+    const artworkUrl =
+      typeof meta.artwork_url === "string" && meta.artwork_url.trim()
+        ? meta.artwork_url
+        : null
+    const printNotes =
+      typeof meta.printNotes === "string" && meta.printNotes.trim()
+        ? meta.printNotes
+        : null
+    if (!artworkUrl && !printNotes) continue
+    designs.push({
+      lineItemId: item.id ?? "",
+      productTitle: item.product_title ?? "Item",
+      variantTitle: item.variant_title ?? null,
+      thumbnail: item.thumbnail ?? null,
+      artworkUrl,
+      decorationNotes: printNotes,
+      bundleTitle:
+        typeof meta.bundle_title === "string" ? meta.bundle_title : null,
+    })
+  }
+  // Deduplicate by artwork URL — multiple bundle lines often share one upload
+  const seen = new Set<string>()
+  const unique: CartDesign[] = []
+  for (const d of designs) {
+    const key = `${d.artworkUrl ?? ""}|${d.decorationNotes ?? ""}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(d)
+  }
+  return unique
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -152,6 +210,9 @@ export default function BundleWizard({
   const [uploading, setUploading] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
   const [cartError, setCartError] = useState<string | null>(null)
+  const [cartDesigns, setCartDesigns] = useState<CartDesign[]>([])
+  const [loadedCart, setLoadedCart] = useState(false)
+  const [reusedFrom, setReusedFrom] = useState<string | null>(null)
 
   const overviewStep = 0
   const reviewStep = TOTAL_STEPS - 1
@@ -206,6 +267,7 @@ export default function BundleWizard({
 
   const handleArtworkUpload = async (file: File) => {
     setArtworkFile(file)
+    setReusedFrom(null)
     setUploading(true)
     try {
       const url = await uploadCustomerOriginalUnchanged(file)
@@ -214,6 +276,26 @@ export default function BundleWizard({
       setUploading(false)
     }
   }
+
+  const handleReuseDesign = (design: CartDesign) => {
+    setArtworkUrl(design.artworkUrl)
+    setArtworkFile(null)
+    if (design.decorationNotes) {
+      setDecorationNotes(design.decorationNotes)
+    }
+    setReusedFrom(design.bundleTitle ?? design.productTitle)
+  }
+
+  // Load cart designs when entering the artwork step
+  const artworkStepIndex = items.length + 1
+  useEffect(() => {
+    if (step !== artworkStepIndex || loadedCart) return
+    setLoadedCart(true)
+    void retrieveCart().then((cart) => {
+      if (!cart) return
+      setCartDesigns(extractCartDesigns(cart))
+    })
+  }, [step, artworkStepIndex, loadedCart])
 
   const handleAddToCart = async () => {
     setAddingToCart(true)
@@ -337,8 +419,11 @@ export default function BundleWizard({
           artworkUrl={artworkUrl}
           decorationNotes={decorationNotes}
           uploading={uploading}
+          cartDesigns={cartDesigns}
+          reusedFrom={reusedFrom}
           onFileChange={handleArtworkUpload}
           onNotesChange={setDecorationNotes}
+          onReuseDesign={handleReuseDesign}
           onBack={() => setStep((s) => s - 1)}
           onNext={() => setStep((s) => s + 1)}
         />
@@ -598,8 +683,11 @@ function ArtworkStep({
   artworkUrl,
   decorationNotes,
   uploading,
+  cartDesigns,
+  reusedFrom,
   onFileChange,
   onNotesChange,
+  onReuseDesign,
   onBack,
   onNext,
 }: {
@@ -607,20 +695,107 @@ function ArtworkStep({
   artworkUrl: string | null
   decorationNotes: string
   uploading: boolean
+  cartDesigns: CartDesign[]
+  reusedFrom: string | null
   onFileChange: (file: File) => void
   onNotesChange: (v: string) => void
+  onReuseDesign: (design: CartDesign) => void
   onBack: () => void
   onNext: () => void
 }) {
+  const [showCartPicker, setShowCartPicker] = useState(false)
+
   return (
     <div className="flex flex-col gap-y-6">
       <h2 className="text-xl font-semibold text-ui-fg-base">
         Artwork &amp; decoration notes
       </h2>
 
+      {/* Reuse design from cart */}
+      {cartDesigns.length > 0 ? (
+        <div className="rounded-xl border border-ui-border-base bg-ui-bg-subtle p-4">
+          {!showCartPicker ? (
+            <div className="flex items-center justify-between gap-x-3">
+              <div>
+                <p className="text-sm font-medium text-ui-fg-base">
+                  Already have a design in your cart?
+                </p>
+                <p className="text-xs text-ui-fg-muted mt-0.5">
+                  Reuse it for this pack instead of uploading again.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCartPicker(true)}
+                className="shrink-0 rounded-full border border-ui-border-base bg-ui-bg-base px-4 py-1.5 text-xs font-medium text-ui-fg-base hover:bg-ui-bg-subtle-hover"
+              >
+                Browse →
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-ui-fg-base">
+                  Pick a design to reuse
+                </p>
+                <button
+                  onClick={() => setShowCartPicker(false)}
+                  className="text-xs text-ui-fg-muted hover:text-ui-fg-base"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="flex flex-col gap-y-2">
+                {cartDesigns.map((design) => (
+                  <button
+                    key={design.lineItemId}
+                    onClick={() => {
+                      onReuseDesign(design)
+                      setShowCartPicker(false)
+                    }}
+                    className="flex items-center gap-x-3 rounded-lg border border-ui-border-base bg-ui-bg-base p-3 text-left hover:border-ui-border-interactive hover:bg-ui-bg-subtle-hover transition"
+                  >
+                    {design.artworkUrl ? (
+                      <img
+                        src={design.artworkUrl}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-md border border-ui-border-base bg-white object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-ui-border-base bg-ui-bg-subtle text-lg">
+                        📝
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-ui-fg-base truncate">
+                        {design.bundleTitle ?? design.productTitle}
+                      </p>
+                      {design.decorationNotes ? (
+                        <p className="text-xs text-ui-fg-muted line-clamp-1">
+                          {design.decorationNotes}
+                        </p>
+                      ) : design.artworkUrl ? (
+                        <p className="text-xs text-ui-fg-muted">Artwork only</p>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {reusedFrom ? (
+        <div className="flex items-center gap-x-2 rounded-lg border border-ui-border-base bg-ui-bg-subtle px-3 py-2">
+          <span className="text-sm text-ui-fg-base">
+            ✓ Reusing design from <strong>{reusedFrom}</strong>
+          </span>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-y-2">
         <p className="text-sm font-medium text-ui-fg-base">
-          Upload your logo or artwork <span className="font-normal text-ui-fg-muted">(optional — you can send it later)</span>
+          {cartDesigns.length > 0 ? "Or upload" : "Upload"} your logo or artwork <span className="font-normal text-ui-fg-muted">(optional — you can send it later)</span>
         </p>
         <label className="flex cursor-pointer flex-col items-center justify-center gap-y-2 rounded-xl border-2 border-dashed border-ui-border-base bg-ui-bg-subtle p-8 transition hover:border-ui-border-interactive">
           <input
