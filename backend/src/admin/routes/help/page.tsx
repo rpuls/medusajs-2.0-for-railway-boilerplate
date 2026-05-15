@@ -101,13 +101,19 @@ const SECTIONS: Section[] = [
     id: "production",
     title: "Production tooling",
     body: (
-      <ul className="list-disc pl-5 text-sm space-y-1">
-        <li><strong>Production calendar</strong> (<a href="/app/production-calendar" className="underline">/app/production-calendar</a>) — Gantt-style view of in-flight orders vs deadlines. Red bars = stale.</li>
-        <li><strong>Print queue</strong> (<a href="/app/print-queue" className="underline">/app/print-queue</a>) — today&apos;s in-production orders grouped by ink/decoration so operators run similar setups back-to-back. Stale orders float to the top.</li>
-        <li><strong>Print recipes</strong> (<a href="/app/print-recipes" className="underline">/app/print-recipes</a>) — reusable settings library. Capture &amp; link to orders so operators have the right setup.</li>
-        <li><strong>Rejects</strong> (<a href="/app/production-rejects" className="underline">/app/production-rejects</a>) — waste report by reason + supplier brand over any date range.</li>
-        <li><strong>Lookbook</strong> (<a href="/app/lookbook" className="underline">/app/lookbook</a>) — curated photos of past jobs rendered at /lookbook for social proof.</li>
-      </ul>
+      <>
+        <Text size="small" className="text-ui-fg-subtle mb-2">
+          All production tools live under <a href="/app/production" className="underline">Production</a> (<code>/app/production</code>) as tabs.
+        </Text>
+        <ul className="list-disc pl-5 text-sm space-y-1">
+          <li><strong>Dashboard tab</strong> — live kanban/list/calendar of every in-flight order with stage, decoration method, and stale flag. The main daily view.</li>
+          <li><strong>Print queue tab</strong> — today&apos;s in-production orders grouped by ink/decoration so operators run similar setups back-to-back. Stale orders float to the top.</li>
+          <li><strong>Print recipes tab</strong> — reusable settings library. Capture &amp; link to orders so operators have the right setup.</li>
+          <li><strong>Production calendar tab</strong> — Gantt-style view of in-flight orders vs deadlines. Red bars = stale.</li>
+          <li><strong>Rejects tab</strong> — waste report by reason + supplier brand over any date range.</li>
+          <li><strong>Lookbook</strong> (<a href="/app/lookbook" className="underline">/app/lookbook</a>) — curated photos of past jobs rendered at /lookbook for social proof. Still its own sidebar entry.</li>
+        </ul>
+      </>
     ),
   },
   {
@@ -116,7 +122,7 @@ const SECTIONS: Section[] = [
     body: (
       <>
         <Text>
-          <a href="/app/print-queue" className="underline">/app/print-queue</a> — auto-buckets every <strong>in-production</strong> order by decoration method + ink colours so the press is set up once per bucket instead of per order.
+          <a href="/app/production" className="underline">Production → Print queue tab</a> — auto-buckets every <strong>in-production</strong> order by decoration method + ink colours so the press is set up once per bucket instead of per order.
         </Text>
         <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
           <li><strong>How buckets are formed</strong> — orders with identical (method, colours) signatures group together. e.g. <code>screen_print · black,white</code> is one bucket, <code>screen_print · black,red</code> is another.</li>
@@ -235,12 +241,12 @@ const SECTIONS: Section[] = [
         <div><strong>Mark a customer tax-exempt</strong> Customer detail → Tax status</div>
         <div><strong>Tag a customer VIP</strong> Customer detail → Tags</div>
         <div><strong>Generate accept link for a quote</strong> Quote detail → top right</div>
-        <div><strong>Plan the week</strong> <a href="/app/production-calendar" className="underline">/app/production-calendar</a></div>
-        <div><strong>Group today&apos;s press setups</strong> <a href="/app/print-queue" className="underline">/app/print-queue</a></div>
+        <div><strong>Plan the week</strong> <a href="/app/production" className="underline">Production → Production calendar tab</a></div>
+        <div><strong>Group today&apos;s press setups</strong> <a href="/app/production" className="underline">Production → Print queue tab</a></div>
         <div><strong>Auto-write a product description</strong> Product detail → Generate description widget</div>
         <div><strong>Log a reject</strong> Order detail → Rejects/spoilage</div>
         <div><strong>Photo of the press</strong> Order detail → Production photos</div>
-        <div><strong>Save settings that worked</strong> <a href="/app/print-recipes" className="underline">/app/print-recipes</a></div>
+        <div><strong>Save settings that worked</strong> <a href="/app/production" className="underline">Production → Print recipes tab</a></div>
         <div><strong>Add an order watcher</strong> Order detail → Watchers</div>
         <div><strong>Set deposit + balance</strong> Order detail → Deposit &amp; balance</div>
         <div><strong>Add a school as an org</strong> <a href="/app/organisations" className="underline">/app/organisations</a></div>
