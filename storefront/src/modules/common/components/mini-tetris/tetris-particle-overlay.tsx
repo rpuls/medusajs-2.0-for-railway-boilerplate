@@ -719,6 +719,21 @@ export default function TetrisParticleOverlay({
       return out
     }
 
+    /** Cinematic effect triggers. Each becomes >= 0 when its event fires and
+     * the per-frame envelope reads back to drive vignette / decay / overlay
+     * intensity. They expire by elapsed-time check, no explicit reset needed
+     * other than gameOverAt which must clear on restart (gameOver flips back).
+     * Declared before layoutCanvas because it captures dofCanvas/dofCtx in its
+     * closure; Turbopack's TDZ analysis rejects late let-after-use even when
+     * the actual call site is correctly ordered. */
+    let levelUpAt = -1
+    let chapterSweepAt = -1
+    let gameOverAt = -1
+    /** Quarter-resolution scratch canvas used for the depth-of-field blur on
+     * game-over. Created lazily on first need; invalidated by layoutCanvas. */
+    let dofCanvas: HTMLCanvasElement | null = null
+    let dofCtx: CanvasRenderingContext2D | null = null
+
     const layoutCanvas = () => {
       const rect = container.getBoundingClientRect()
       /** Defensive: skip layout while the container hasn't been measured yet. The
@@ -751,18 +766,6 @@ export default function TetrisParticleOverlay({
     layoutCanvas()
     const ro = new ResizeObserver(() => layoutCanvas())
     ro.observe(container)
-
-    /** Cinematic effect triggers. Each becomes >= 0 when its event fires and
-     * the per-frame envelope reads back to drive vignette / decay / overlay
-     * intensity. They expire by elapsed-time check, no explicit reset needed
-     * other than gameOverAt which must clear on restart (gameOver flips back). */
-    let levelUpAt = -1
-    let chapterSweepAt = -1
-    let gameOverAt = -1
-    /** Quarter-resolution scratch canvas used for the depth-of-field blur on
-     * game-over. Created lazily on first need; invalidated by layoutCanvas. */
-    let dofCanvas: HTMLCanvasElement | null = null
-    let dofCtx: CanvasRenderingContext2D | null = null
     /** Time-driven amounts (recomputed per frame in tick). Used by inner loops
      * that previously read the constants directly. */
     let currentExcitementDecay = EXCITEMENT_DECAY
