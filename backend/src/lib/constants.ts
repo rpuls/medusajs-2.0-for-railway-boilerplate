@@ -322,6 +322,29 @@ export const SLACK_PRODUCTION_WEBHOOK_URL =
 export const ORDER_INBOX_DOMAIN = process.env.ORDER_INBOX_DOMAIN
 export const INBOUND_EMAIL_SECRET = process.env.INBOUND_EMAIL_SECRET
 
+/**
+ * AI copy generation (product descriptions etc). Provider-agnostic:
+ * set AI_PROVIDER + the corresponding API key. The route returns 503
+ * when no provider is configured so the admin widget can show a
+ * "configure an AI provider to use this" hint instead of crashing.
+ *
+ *   AI_PROVIDER=openai      → uses OPENAI_API_KEY + OPENAI_MODEL (default: gpt-4o-mini)
+ *   AI_PROVIDER=anthropic   → uses ANTHROPIC_API_KEY + ANTHROPIC_MODEL (default: claude-haiku-4-5)
+ *
+ * AI_REQUEST_TIMEOUT_MS bounds per-request latency so a slow provider
+ * doesn't lock up a staff member's admin session.
+ */
+export const AI_PROVIDER =
+  (process.env.AI_PROVIDER ?? "openai").toLowerCase() as "openai" | "anthropic"
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini"
+export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5"
+export const AI_REQUEST_TIMEOUT_MS = parseIntEnv(
+  process.env.AI_REQUEST_TIMEOUT_MS,
+  30000
+)
+
 /** If set, GET /key-exchange requires header x-medusa-key-exchange-secret (same value). */
 export const KEY_EXCHANGE_SECRET = process.env.KEY_EXCHANGE_SECRET
 

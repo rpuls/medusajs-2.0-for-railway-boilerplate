@@ -151,21 +151,29 @@ const DesignsGrid = ({ designs }: Props) => {
                 <p className="text-xs text-ui-fg-subtle">
                   Updated {formatDate(design.updated_at)}
                 </p>
-                <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                <div className="mt-auto pt-2 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <LocalizedClientLink
+                      href={editHref}
+                      className="inline-flex items-center justify-center rounded-md bg-[var(--brand-primary)] text-white px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                    >
+                      Edit / re-order
+                    </LocalizedClientLink>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(design.id)}
+                      disabled={isBusy}
+                      className="text-xs text-ui-fg-subtle hover:text-red-600 disabled:opacity-60"
+                    >
+                      {isBusy ? "Working…" : "Delete"}
+                    </button>
+                  </div>
                   <LocalizedClientLink
-                    href={editHref}
-                    className="inline-flex items-center justify-center rounded-md bg-[var(--brand-primary)] text-white px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                    href={`/account/designs/${design.id}/group-order`}
+                    className="inline-flex items-center justify-center rounded-md border border-ui-border-base bg-white px-3 py-1.5 text-xs font-medium text-[var(--brand-primary)] hover:bg-ui-bg-subtle"
                   >
-                    Edit / re-order
+                    Use for a group order
                   </LocalizedClientLink>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(design.id)}
-                    disabled={isBusy}
-                    className="text-xs text-ui-fg-subtle hover:text-red-600 disabled:opacity-60"
-                  >
-                    {isBusy ? "Working…" : "Delete"}
-                  </button>
                 </div>
               </div>
             </li>

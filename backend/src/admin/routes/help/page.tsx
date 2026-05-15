@@ -103,10 +103,73 @@ const SECTIONS: Section[] = [
     body: (
       <ul className="list-disc pl-5 text-sm space-y-1">
         <li><strong>Production calendar</strong> (<a href="/app/production-calendar" className="underline">/app/production-calendar</a>) — Gantt-style view of in-flight orders vs deadlines. Red bars = stale.</li>
+        <li><strong>Print queue</strong> (<a href="/app/print-queue" className="underline">/app/print-queue</a>) — today&apos;s in-production orders grouped by ink/decoration so operators run similar setups back-to-back. Stale orders float to the top.</li>
         <li><strong>Print recipes</strong> (<a href="/app/print-recipes" className="underline">/app/print-recipes</a>) — reusable settings library. Capture &amp; link to orders so operators have the right setup.</li>
         <li><strong>Rejects</strong> (<a href="/app/production-rejects" className="underline">/app/production-rejects</a>) — waste report by reason + supplier brand over any date range.</li>
         <li><strong>Lookbook</strong> (<a href="/app/lookbook" className="underline">/app/lookbook</a>) — curated photos of past jobs rendered at /lookbook for social proof.</li>
       </ul>
+    ),
+  },
+  {
+    id: "print-queue",
+    title: "Print queue optimiser",
+    body: (
+      <>
+        <Text>
+          <a href="/app/print-queue" className="underline">/app/print-queue</a> — auto-buckets every <strong>in-production</strong> order by decoration method + ink colours so the press is set up once per bucket instead of per order.
+        </Text>
+        <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
+          <li><strong>How buckets are formed</strong> — orders with identical (method, colours) signatures group together. e.g. <code>screen_print · black,white</code> is one bucket, <code>screen_print · black,red</code> is another.</li>
+          <li><strong>Bucket order</strong> — buckets with stale orders surface first, then largest-units-first, then alphabetical by signature. Stops you forgetting overdue jobs while chasing the easy wins.</li>
+          <li><strong>Within a bucket</strong> — stale → earliest deadline → FIFO. Click any row to jump to the order.</li>
+          <li><strong>Multi-method orders</strong> — an order that&apos;s screen-printed AND embroidered shows up in both buckets. Run the press once for the screen-print bucket, the machine once for embroidery.</li>
+          <li><strong>What feeds it</strong> — reads <code>metadata.customizerDesign.prints[].method/inks/colours</code> on each cart line. Orders without customizer metadata still appear under <code>unknown</code> bucket so nothing is invisible.</li>
+        </ul>
+        <Text size="xsmall" className="text-ui-fg-muted mt-2">
+          Live computation, no caching. Refresh the page to pick up stage advances / new orders.
+        </Text>
+      </>
+    ),
+  },
+  {
+    id: "ai-description",
+    title: "AI product descriptions",
+    body: (
+      <>
+        <Text>
+          Product detail → <strong>Generate product description</strong> widget. Click <em>Generate drafts</em> and the LLM returns 3-5 short variants in SC PRINTS voice — pick one, edit if needed, click <em>Apply</em> to write it onto the product.
+        </Text>
+        <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Optional hint</strong> — tell it "lean into the heavyweight cotton" or "highlight that it&apos;s WRAS certified" and it&apos;ll bias the drafts.</li>
+          <li><strong>Inputs it sees</strong> — title, current handle, brand, product type, tags, variant options (sizes/colours), and a safe whitelist of metadata. It never sees SKU, cost, or supplier code.</li>
+          <li><strong>Drafts are editable</strong> — change anything before clicking Apply. The Apply step calls the standard product update route so the new copy flows through subscribers/analytics.</li>
+          <li><strong>Provider</strong> — controlled by env (<code>AI_PROVIDER=openai|anthropic</code>). If no key is configured, the widget shows a clear "not configured" message instead of failing silently.</li>
+        </ul>
+        <Text size="xsmall" className="text-ui-fg-muted mt-2">
+          Use cases: filling in legacy product copy in bulk, generating SEO-friendly descriptions for newly-imported supplier products, refreshing tired listings.
+        </Text>
+      </>
+    ),
+  },
+  {
+    id: "group-orders",
+    title: "Group orders (customer-driven)",
+    body: (
+      <>
+        <Text>
+          Customers can now spin up a group order from any saved design without contacting us first.
+        </Text>
+        <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Customer flow</strong> — /account/designs → "Use for a group order" → fill title/deadline → share the link with their team. Teammates submit name + size at the public page. Owner converts to cart when ready.</li>
+          <li><strong>Public page is safe</strong> — shows design thumbnail + product preview only. Source files, MinIO URLs, and full customizer metadata are stripped before responding.</li>
+          <li><strong>Convert to cart</strong> — owner clicks Convert; backend matches each participant&apos;s size_label to a real variant on the base product, builds one cart with one line per match, attaches <code>customizerDesign</code> metadata so production sees the artwork. Unmatched sizes are reported as <em>skipped</em> for the owner to resolve.</li>
+          <li><strong>Idempotent</strong> — clicking Convert twice returns the same cart, doesn&apos;t create a second one.</li>
+          <li><strong>If the design&apos;s base product was deleted</strong> — the owner gets a clear "pick a new base product" error rather than a half-built cart.</li>
+        </ul>
+        <Text size="xsmall" className="text-ui-fg-muted mt-2">
+          What changed for staff: nothing day-to-day. Group orders show up as carts → orders like anything else; the only difference is the <code>group_order_id</code> stamped on order metadata for traceability.
+        </Text>
+      </>
     ),
   },
   {
@@ -173,6 +236,8 @@ const SECTIONS: Section[] = [
         <div><strong>Tag a customer VIP</strong> Customer detail → Tags</div>
         <div><strong>Generate accept link for a quote</strong> Quote detail → top right</div>
         <div><strong>Plan the week</strong> <a href="/app/production-calendar" className="underline">/app/production-calendar</a></div>
+        <div><strong>Group today&apos;s press setups</strong> <a href="/app/print-queue" className="underline">/app/print-queue</a></div>
+        <div><strong>Auto-write a product description</strong> Product detail → Generate description widget</div>
         <div><strong>Log a reject</strong> Order detail → Rejects/spoilage</div>
         <div><strong>Photo of the press</strong> Order detail → Production photos</div>
         <div><strong>Save settings that worked</strong> <a href="/app/print-recipes" className="underline">/app/print-recipes</a></div>

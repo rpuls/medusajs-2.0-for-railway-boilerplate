@@ -438,6 +438,165 @@ flowchart LR
 
 ---
 
+## Group order → cart conversion
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Coach (customer)
+    participant SF as Storefront
+    participant BE as Backend
+    participant P as Participant (parent / player)
+
+    C->>SF: Save a design in customizer
+    C->>SF: /account/designs → "Use for a group order"
+    SF->>BE: POST /store/group-orders { base_design_id, base_product_id, ... }
+    BE-->>SF: { public_token }
+    SF-->>C: Share link
+
+    Note over C,P: Coach distributes share link
+
+    P->>SF: GET /group-order/[token]
+    SF->>BE: GET /store/group-orders/[token]
+    BE-->>SF: { group_order, design_preview, product_preview, participants }
+    SF-->>P: Render design + product preview + size picker (sized by real variants)
+
+    P->>SF: Submit name + size + qty
+    SF->>BE: POST /store/group-orders/[token]/participants
+    BE-->>SF: { participant }
+
+    Note over C: Coach closes the group order
+
+    C->>SF: /account/group-orders → Convert to cart
+    SF->>BE: POST /store/customers/me/group-orders/[id]/convert-to-cart
+    BE->>BE: For each participant:<br/>match size_label → variant_id
+    BE->>BE: createCartWorkflow + addToCartWorkflow per matched line
+    BE->>BE: Stamp group_order.status=converted + cart_id
+    BE-->>SF: { cart_id, lines_added, skipped: [...] }
+
+    C->>SF: Review skipped + open /cart
+    SF->>BE: Checkout via standard Stripe flow
+```
+
+Convert-to-cart edge cases:
+
+- **0 participants** → 400, "Add at least one participant".
+- **No base product** → 400, "Add a base product".
+- **Base product no longer exists** → 404.
+- **No size matches** → 400 with the full skipped list so the coach can fix sizes.
+- **Some matches, some misses** → cart is built, skipped list returned (success path).
+- **Already converted** → returns existing cart_id, doesn't double-build.
+- **Caller isn't the owner** → 404 (don't leak existence).
+
+---
+
+## AI description generator
+
+```mermaid
+flowchart LR
+    subgraph IN[Admin product detail]
+        ADMIN[Admin clicks Generate]
+        HINT[Optional hint]
+    end
+
+    subgraph BACKEND_AI[Backend]
+        ROUTE[POST /admin/products/:id/generate-description]
+        CTX[ProductContext]
+        PROMPT[Pure prompt builder]
+        SVC[generateProductDescriptions]
+    end
+
+    subgraph EXT[External LLM]
+        OPENAI[OpenAI Chat Completions]
+        ANTHROPIC[Anthropic Messages API]
+    end
+
+    PARSE[parseDescriptionResponse]
+    DRAFTS[3 drafts: Short / Standard / Detailed]
+
+    ADMIN --> ROUTE
+    HINT --> ROUTE
+    ROUTE --> CTX
+    CTX --> PROMPT
+    PROMPT --> SVC
+    SVC -- AI_PROVIDER=openai --> OPENAI
+    SVC -- AI_PROVIDER=anthropic --> ANTHROPIC
+    OPENAI --> PARSE
+    ANTHROPIC --> PARSE
+    PARSE --> DRAFTS
+    DRAFTS --> ADMIN
+
+    classDef ext fill:#fef3c7,stroke:#92400e;
+    class OPENAI,ANTHROPIC ext;
+```
+
+Pure separation: `prompt.ts` (build + parse) has zero network dependency and is tested with literal fixtures (16 unit tests). `generate.ts` adds provider dispatch + timeout + error normalisation. The route adds context-gathering + status-code mapping.
+
+Failure modes returned to the admin:
+
+| Code | Error | What the widget shows |
+| --- | --- | --- |
+| 503 | `not_configured` | "AI provider not configured. Set AI_PROVIDER + the matching API key…" |
+| 504 | `timeout` | "Provider took too long — try again." |
+| 429 | `rate_limited` | "Provider rate-limited us — try again shortly." |
+| 502 | `upstream` | Provider's error message (truncated). |
+| 502 | `empty` | "Model responded but no drafts parseable — try a different hint." |
+
+Never sends pricing, SKUs, or stock to the LLM. Only safe-keyed metadata (`fabric_blend`, `gsm`, `fit`, `neckline`, `season`, `country_of_origin`, `care_instructions`, `decoration_methods`).
+
+---
+
+## Print queue optimiser
+
+```mermaid
+flowchart TB
+    subgraph IN[Inputs]
+        ORDERS[(In-flight orders<br/>received → in_production)]
+        LINES[Line item metadata<br/>customizerDesign / decorationDesign]
+        META[Order metadata<br/>decoration_method, ink_colours, deadline_at, is_stale]
+        RECIPES[(Linked print_recipe ids)]
+    end
+
+    subgraph PIPE[Get queue]
+        SPLIT[Split each order into N jobs<br/>one per decoration method]
+        EXTRACT[Extract method + colours from line items<br/>fall back to order metadata]
+    end
+
+    subgraph PURE[Pure buildPrintQueue]
+        SIG[colourSignature:<br/>lowercase + sorted + dedupe]
+        BUCKETS[Bucket jobs by &lt;method, colours&gt;]
+        SORT_J[Sort within bucket:<br/>stale → deadline asc → FIFO]
+        SORT_B[Sort buckets:<br/>has_stale → total_units desc → alphabetical]
+    end
+
+    OUT[(Ordered batches rendered<br/>at /app/print-queue)]
+
+    ORDERS --> EXTRACT
+    LINES --> EXTRACT
+    META --> EXTRACT
+    EXTRACT --> SPLIT
+    SPLIT --> SIG
+    RECIPES --> BUCKETS
+    SIG --> BUCKETS
+    BUCKETS --> SORT_J
+    SORT_J --> SORT_B
+    SORT_B --> OUT
+```
+
+Pure compute (16 unit tests). Container wrapper pulls inputs and feeds them in. The route just returns the buckets — no DB writes, no caching layer.
+
+Edge-case handling in the pure function:
+
+- Empty / null input → empty output.
+- Malformed jobs (no order_id, no method) → silently dropped.
+- Same colour set in different order / case → same bucket.
+- Order with multiple techniques → appears in multiple buckets (deliberate).
+- Null / invalid deadlines → sorted to end-of-bucket.
+- Tied buckets → alphabetical tiebreaker, deterministic output.
+- Identical inputs in different order → identical output (re-run safe).
+
+---
+
 ## External services touched
 
 | Service | Purpose | Auth | Where configured |
@@ -453,6 +612,7 @@ flowchart LR
 | **FashionBiz API** | Supplier garment catalog + inventory | `FASHIONBIZ_*` | `backend/src/modules/fashionbiz/` |
 | **Google Search Console + GA4 admin** | SEO reporting | `GOOGLE_SERVICE_ACCOUNT_JSON` | `backend/src/services/seo-analytics/` |
 | **Crisp / Tidio** | Live chat | `NEXT_PUBLIC_CRISP_WEBSITE_ID` or `NEXT_PUBLIC_TIDIO_PUBLIC_KEY` | storefront layout |
+| **OpenAI / Anthropic** (optional) | AI product description generator | `AI_PROVIDER` + `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` | `backend/src/services/ai-copy/` |
 | **Slack** (optional) | Production-floor alerts | `SLACK_PRODUCTION_WEBHOOK_URL` | `backend/src/services/stale-orders/scan.ts` |
 | **Postmark / SendGrid / Resend inbound** (optional) | Customer email replies → order comments | `ORDER_INBOX_DOMAIN` + `INBOUND_EMAIL_SECRET` + DNS MX | `backend/src/api/hooks/inbound-email/` |
 | **Meilisearch** | Catalog search | `MEILISEARCH_HOST` | Medusa search plugin |
@@ -504,6 +664,9 @@ Quick lookup for "I want to read / change the code for…":
 | Quote → cart conversion | `backend/src/api/store/quotes/[id]/accept/route.ts` |
 | Cross-sell recommendations | `backend/src/services/cross-sell-recommendations/` |
 | Production ETA | `backend/src/services/production-eta/` |
+| Print queue optimiser | `backend/src/services/print-queue/build.ts` (+ `get-queue.ts`) |
+| AI description generator | `backend/src/services/ai-copy/prompt.ts` + `generate.ts` |
+| Group order convert-to-cart | `backend/src/api/store/customers/me/group-orders/[id]/convert-to-cart/route.ts` |
 | Stale-order scan | `backend/src/services/stale-orders/scan.ts` |
 | Order timeline aggregator | `backend/src/services/order-timeline/build.ts` |
 | Customer journey aggregator | `backend/src/services/customer-journey/build.ts` |

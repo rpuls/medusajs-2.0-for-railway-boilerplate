@@ -7,10 +7,21 @@ import { joinGroupOrder } from "@lib/data/group-order"
 
 const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"]
 
-const JoinForm = ({ token }: { token: string }) => {
+const JoinForm = ({
+  token,
+  sizeOptions,
+}: {
+  token: string
+  sizeOptions?: string[]
+}) => {
   const router = useRouter()
+  // When the group order has a real base product, drive the size
+  // picker from its actual variants so participants can only pick
+  // sizes that exist on the garment.
+  const sizes =
+    sizeOptions && sizeOptions.length > 0 ? sizeOptions : COMMON_SIZES
   const [name, setName] = useState("")
-  const [size, setSize] = useState("M")
+  const [size, setSize] = useState(() => sizes.includes("M") ? "M" : sizes[0])
   const [quantity, setQuantity] = useState("1")
   const [playerNumber, setPlayerNumber] = useState("")
   const [notes, setNotes] = useState("")
@@ -90,7 +101,7 @@ const JoinForm = ({ token }: { token: string }) => {
             onChange={(e) => setSize(e.target.value)}
             className="mt-1 block w-full rounded-md border border-ui-border-base bg-white px-3 py-2 text-sm shadow-sm focus:border-[var(--brand-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-secondary)]"
           >
-            {COMMON_SIZES.map((s) => (
+            {sizes.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>

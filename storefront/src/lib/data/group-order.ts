@@ -31,13 +31,32 @@ export type GroupOrderParticipant = {
   created_at: string
 }
 
+export type GroupOrderDesignPreview = {
+  name: string | null
+  thumbnail_url: string | null
+}
+
+export type GroupOrderProductPreview = {
+  title: string | null
+  handle: string | null
+  thumbnail: string | null
+  available_sizes: string[]
+}
+
+export type GroupOrderPublicPayload = {
+  group_order: GroupOrder
+  participants: GroupOrderParticipant[]
+  design_preview: GroupOrderDesignPreview | null
+  product_preview: GroupOrderProductPreview | null
+}
+
 export async function getGroupOrderByToken(
   token: string
-): Promise<{ group_order: GroupOrder; participants: GroupOrderParticipant[] } | null> {
+): Promise<GroupOrderPublicPayload | null> {
   try {
     return (await sdk.client.fetch(
       `/store/group-orders/${encodeURIComponent(token)}`
-    )) as { group_order: GroupOrder; participants: GroupOrderParticipant[] }
+    )) as GroupOrderPublicPayload
   } catch {
     return null
   }
@@ -109,6 +128,46 @@ export async function listMyGroupOrders(): Promise<GroupOrder[]> {
     return res.group_orders ?? []
   } catch {
     return []
+  }
+}
+
+export type ConvertResult = {
+  cart_id: string
+  lines_added: number
+  skipped: Array<{
+    participant_id: string
+    name: string
+    size_label: string
+    quantity: number
+    reason?: string
+  }>
+  already_converted?: boolean
+}
+
+export async function convertGroupOrderToCart(
+  id: string
+): Promise<{ ok: true; result: ConvertResult } | { ok: false; error: string; skipped?: ConvertResult["skipped"] }> {
+  const headers = await getAuthHeaders()
+  if (!("authorization" in headers)) {
+    return { ok: false, error: "Sign in required." }
+  }
+  try {
+    const res = (await sdk.client.fetch(
+      `/store/customers/me/group-orders/${encodeURIComponent(id)}/convert-to-cart`,
+      { method: "POST", headers, body: {} }
+    )) as ConvertResult
+    return { ok: true, result: res }
+  } catch (err: any) {
+    // The SDK throws on non-2xx; try to surface the skipped list.
+    const skipped = (err?.body?.skipped ?? err?.skipped) as
+      | ConvertResult["skipped"]
+      | undefined
+    return {
+      ok: false,
+      error:
+        err?.body?.detail ?? err?.body?.error ?? err?.message ?? "Convert failed.",
+      ...(skipped ? { skipped } : {}),
+    }
   }
 }
 
