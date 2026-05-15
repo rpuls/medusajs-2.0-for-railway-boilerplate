@@ -186,7 +186,7 @@ export default function PricingPanel({
   )
 
   return (
-    <div className="space-y-4 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
+    <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-3">
       {hideHeader ? null : (
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-base">

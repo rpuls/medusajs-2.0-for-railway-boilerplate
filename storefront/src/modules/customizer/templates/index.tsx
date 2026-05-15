@@ -3516,10 +3516,10 @@ export default function CustomizerTemplate({
           )}
           {editorColumn}
         </div>
-        <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto transition-[grid-column] duration-300 ease-in-out ${
+        <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-2 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto transition-[grid-column] duration-300 ease-in-out ${
           isCustomizing ? "lg:col-span-5" : "lg:col-span-3"
         }`}>
-          <div className="space-y-1 border-b border-ui-border-base pb-4">
+          <div className="space-y-1 border-b border-ui-border-base pb-3">
             <p className="text-xl font-semibold text-ui-fg-base">Customize and checkout</p>
             <p className="text-xs text-ui-fg-subtle">
               We'll guide you through each step.
@@ -3661,54 +3661,61 @@ export default function CustomizerTemplate({
                     // Tabs are always visible — no "Change" button needed.
                   />
 
-                  {decoratedCount > 0 ? (
-                    <div className="space-y-1.5 rounded-lg bg-emerald-50/70 px-2.5 py-2 ring-1 ring-emerald-200">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
-                        Artwork added on {decoratedCount} of {totalAllowed} location
-                        {totalAllowed === 1 ? "" : "s"}
-                      </p>
-                      <ul className="flex flex-wrap gap-1">
-                        {decoratedAllowed.map((s) => (
-                          <li
-                            key={s}
-                            className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-900 ring-1 ring-emerald-200"
-                          >
-                            <span aria-hidden>✓</span>
-                            {sideLabelMap[s]}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
+                  {/* At Step 4 collapse to just the header — saves vertical space.
+                      "Change" on the header lets the customer jump back to pick
+                      a different location. */}
+                  {pdpStep < 4 ? (
+                    <>
+                      {decoratedCount > 0 ? (
+                        <div className="space-y-1.5 rounded-lg bg-emerald-50/70 px-2.5 py-2 ring-1 ring-emerald-200">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+                            Artwork added on {decoratedCount} of {totalAllowed} location
+                            {totalAllowed === 1 ? "" : "s"}
+                          </p>
+                          <ul className="flex flex-wrap gap-1">
+                            {decoratedAllowed.map((s) => (
+                              <li
+                                key={s}
+                                className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-900 ring-1 ring-emerald-200"
+                              >
+                                <span aria-hidden>✓</span>
+                                {sideLabelMap[s]}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
 
-                  <SideSelector
-                    currentSide={currentSide}
-                    allowedSides={allowedPrintSides}
-                    decoratedSides={decoratedSides}
-                    onSelectSide={(side) => {
-                      switchSide(side)
-                      setPdpStep2Done(true)
-                      // Re-open Step 3 when switching to a location that hasn't
-                      // been sized yet; single-size sides auto-advance immediately.
-                      const newStep =
-                        pdpStep > 2 && !sizingDoneSides[side] ? 3
-                        : pdpStep > 2 ? pdpStep
-                        : 3
-                      setPdpStep(newStep)
-                      // Clear the shared "size chosen" flag when moving to an
-                      // unsized location so the size picker doesn't pre-select
-                      // the previous side's choice.
-                      if (!sizingDoneSides[side]) {
-                        setScpPrintSizeChosen(false)
-                      }
-                    }}
-                  />
-                  {pdpStep === 2 && (
-                    <p className="text-xs text-ui-fg-subtle">
-                      Pick a location, then add artwork in the design preview. Repeat to print on
-                      more spots — each location is priced separately.
-                    </p>
-                  )}
+                      <SideSelector
+                        currentSide={currentSide}
+                        allowedSides={allowedPrintSides}
+                        decoratedSides={decoratedSides}
+                        onSelectSide={(side) => {
+                          switchSide(side)
+                          setPdpStep2Done(true)
+                          // Re-open Step 3 when switching to a location that hasn't
+                          // been sized yet; single-size sides auto-advance immediately.
+                          const newStep =
+                            pdpStep > 2 && !sizingDoneSides[side] ? 3
+                            : pdpStep > 2 ? pdpStep
+                            : 3
+                          setPdpStep(newStep)
+                          // Clear the shared "size chosen" flag when moving to an
+                          // unsized location so the size picker doesn't pre-select
+                          // the previous side's choice.
+                          if (!sizingDoneSides[side]) {
+                            setScpPrintSizeChosen(false)
+                          }
+                        }}
+                      />
+                      {pdpStep === 2 && (
+                        <p className="text-xs text-ui-fg-subtle">
+                          Pick a location, then add artwork in the design preview. Repeat to print on
+                          more spots — each location is priced separately.
+                        </p>
+                      )}
+                    </>
+                  ) : null}
                 </motion.div>
               )
             })()
@@ -3726,7 +3733,7 @@ export default function CustomizerTemplate({
               Step 2 (Print location) and Step 3 (Print size). Same gate as
               before: only show once at least one location has been sized
               and there is an unused side left. */}
-          {embedded && pdpStep3Done && allowedPrintSides.length > 1 && (() => {
+          {embedded && pdpStep3Done && pdpStep < 4 && allowedPrintSides.length > 1 && (() => {
             const undecoratedAllowed = allowedPrintSides.filter(
               (s) => !decoratedSides.includes(s)
             )
