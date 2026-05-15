@@ -47,6 +47,11 @@ import {
   NpsRequestEmail,
   isNpsRequestData,
 } from './nps-request'
+import {
+  ARTWORK_APPROVAL,
+  ArtworkApprovalEmail,
+  isArtworkApprovalData,
+} from './artwork-approval'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -60,6 +65,7 @@ export const EmailTemplates = {
   WINBACK,
   THRESHOLD_ALERT,
   NPS_REQUEST,
+  ARTWORK_APPROVAL,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -165,6 +171,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <NpsRequestEmail {...data} />
 
+    case EmailTemplates.ARTWORK_APPROVAL:
+      if (!isArtworkApprovalData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.ARTWORK_APPROVAL}"`
+        )
+      }
+      return <ArtworkApprovalEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -183,4 +198,5 @@ export {
   WinbackEmail,
   ThresholdAlertEmail,
   NpsRequestEmail,
+  ArtworkApprovalEmail,
 }
