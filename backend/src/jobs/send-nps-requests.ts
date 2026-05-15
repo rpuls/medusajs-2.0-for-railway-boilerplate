@@ -1,8 +1,8 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 import { NPS_REQUESTS_ENABLED } from "../lib/constants"
 import { sendNpsRequests } from "../services/nps-requests/send-requests"
+import { withJobContext, getContextLogger } from "../lib/job-context-wrapper"
 
 /**
  * Daily NPS-request pass at 22:00 UTC (~08:00 AEST). Asks for a
@@ -11,8 +11,8 @@ import { sendNpsRequests } from "../services/nps-requests/send-requests"
  * `NPS_REQUESTS_ENABLED=true` — keeps the customer mailbox safe in
  * environments where dry-run hasn't been validated yet.
  */
-export default async function sendNpsRequestsJob(container: MedusaContainer) {
-  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+const handler = async function sendNpsRequestsJob(container: MedusaContainer) {
+  const logger = getContextLogger(container)
   if (!NPS_REQUESTS_ENABLED) {
     logger.info("send-nps-requests: NPS_REQUESTS_ENABLED not 'true' — skipping.")
     return
@@ -26,6 +26,8 @@ export default async function sendNpsRequestsJob(container: MedusaContainer) {
     logger.error(`send-nps-requests: ${err?.message ?? err}`)
   }
 }
+
+export default withJobContext(handler)
 
 export const config = {
   name: "send-nps-requests",

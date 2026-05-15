@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getOrCreateRequestId } from "@lib/request-context"
 
 function getBackendBaseUrl() {
   const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
@@ -13,7 +14,8 @@ function getBackendBaseUrl() {
 async function postContact(
   endpoint: string,
   payload: unknown,
-  publishableKey?: string
+  publishableKey?: string,
+  requestId?: string
 ) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -21,6 +23,10 @@ async function postContact(
 
   if (publishableKey) {
     headers["x-publishable-api-key"] = publishableKey
+  }
+
+  if (requestId) {
+    headers["x-request-id"] = requestId
   }
 
   return fetch(endpoint, {
@@ -36,11 +42,13 @@ export async function POST(req: NextRequest) {
     const payload = await req.json()
     const backendBaseUrl = getBackendBaseUrl()
     const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+    const requestId = await getOrCreateRequestId()
 
     let response = await postContact(
       `${backendBaseUrl}/contact`,
       payload,
-      publishableKey
+      publishableKey,
+      requestId
     )
 
     // Compatibility fallback for older backends exposing /store/contact.
@@ -48,7 +56,8 @@ export async function POST(req: NextRequest) {
       response = await postContact(
         `${backendBaseUrl}/store/contact`,
         payload,
-        publishableKey
+        publishableKey,
+        requestId
       )
     }
 

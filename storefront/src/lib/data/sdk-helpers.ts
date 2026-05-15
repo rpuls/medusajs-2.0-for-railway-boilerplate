@@ -3,6 +3,7 @@ import "server-only"
 import type { ClientHeaders } from "@medusajs/js-sdk"
 
 import { getAuthHeaders } from "./cookies"
+import { getOrCreateRequestId } from "../request-context"
 
 /**
  * Tiny adapter layer between this app's async cookie reader and the Medusa SDK's
@@ -19,7 +20,8 @@ import { getAuthHeaders } from "./cookies"
 /** Auth header bag, awaited. Empty when the customer isn't signed in. */
 export async function awaitedAuthHeaders(): Promise<ClientHeaders> {
   const auth = await getAuthHeaders()
-  return auth as ClientHeaders
+  const requestId = await getOrCreateRequestId()
+  return { ...auth, "x-request-id": requestId } as ClientHeaders
 }
 
 type NextCacheConfig = {
@@ -35,7 +37,8 @@ type NextCacheConfig = {
  */
 export async function authedNextHeaders(next: NextCacheConfig): Promise<ClientHeaders> {
   const auth = await getAuthHeaders()
-  return { next, ...auth } as unknown as ClientHeaders
+  const requestId = await getOrCreateRequestId()
+  return { next, ...auth, "x-request-id": requestId } as unknown as ClientHeaders
 }
 
 /** Same as `authedNextHeaders` but for unauthenticated calls (e.g. catalog). */

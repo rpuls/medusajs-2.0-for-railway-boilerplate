@@ -6,6 +6,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 import { ASCOLOUR_MODULE } from "../modules/ascolour"
 import AsColourService from "../modules/ascolour/service"
+import { withJobContext, getContextLogger } from "../lib/job-context-wrapper"
 
 const AS_COLOUR_LOCATION_NAME = "AS Colour Warehouse"
 const CHECKPOINT_KEY = "ascolour:inventory:lastSync"
@@ -16,8 +17,8 @@ const CHECKPOINT_KEY = "ascolour:inventory:lastSync"
  *
  * Falls back to a full sync the first time it runs (no checkpoint yet).
  */
-export default async function syncAsColourInventory(container: MedusaContainer) {
-  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+const handler = async function syncAsColourInventory(container: MedusaContainer) {
+  const logger = getContextLogger(container)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
   let ascolour: AsColourService
@@ -145,6 +146,8 @@ async function writeCheckpoint(container: MedusaContainer, value: string) {
     // Cache module not available — sync will fall back to full each run.
   }
 }
+
+export default withJobContext(handler)
 
 export const config = {
   name: "sync-ascolour-inventory",

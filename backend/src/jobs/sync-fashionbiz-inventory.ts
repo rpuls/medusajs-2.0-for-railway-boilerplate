@@ -7,6 +7,7 @@ import {
 import { FASHIONBIZ_MODULE } from "../modules/fashionbiz"
 import FashionBizService from "../modules/fashionbiz/service"
 import { FashionBizBrandSlug } from "../modules/fashionbiz/types"
+import { withJobContext, getContextLogger } from "../lib/job-context-wrapper"
 
 const FASHIONBIZ_LOCATION_NAME = "FashionBiz Warehouse"
 const CHECKPOINT_KEY = "fashionbiz:inventory:lastSync"
@@ -24,8 +25,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  * Runs at 04:00 UTC = ~14:00–15:00 AEDT — off-peak for both AU customers
  * and (assumed) FashionBiz API capacity.
  */
-export default async function syncFashionBizInventory(container: MedusaContainer) {
-  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+const handler = async function syncFashionBizInventory(container: MedusaContainer) {
+  const logger = getContextLogger(container)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
   let fashionbiz: FashionBizService
@@ -199,6 +200,8 @@ async function writeCheckpoint(container: MedusaContainer, value: string) {
     // Cache module not available — checkpoint is monitoring-only, safe to skip.
   }
 }
+
+export default withJobContext(handler)
 
 export const config = {
   name: "sync-fashionbiz-inventory",

@@ -6,6 +6,10 @@ import { CheckoutPage } from "./checkout-page"
 import { OrderPage } from "./order-page"
 import { ProductPage } from "./product-page"
 import { StorePage } from "./store-page"
+import type { APISpyFixture } from "./api-spy"
+import { setupAPISpy } from "./api-spy"
+import type { ConsoleCaptureFixture } from "./console-capture"
+import { setupConsoleCapture } from "./console-capture"
 
 export const fixtures = base.extend<{
   resetDatabaseFixture: void
@@ -15,10 +19,22 @@ export const fixtures = base.extend<{
   orderPage: OrderPage
   productPage: ProductPage
   storePage: StorePage
+  apiLogs: APISpyFixture["apiLogs"]
+  consoleLogs: ConsoleCaptureFixture["consoleLogs"]
 }>({
-  page: async ({ page }, use) => {
+  page: async ({ page, apiLogs, consoleLogs }, use) => {
+    await setupAPISpy(page, apiLogs)
+    await setupConsoleCapture(page, consoleLogs)
     await page.goto("/")
     use(page)
+  },
+  apiLogs: async ({}, use) => {
+    const logs: any[] = []
+    await use(logs)
+  },
+  consoleLogs: async ({}, use) => {
+    const logs: any[] = []
+    await use(logs)
   },
   resetDatabaseFixture: [
     async function ({}, use) {
