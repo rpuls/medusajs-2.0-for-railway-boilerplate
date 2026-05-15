@@ -5,10 +5,12 @@ import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import { BeginCheckoutTracker } from "@modules/checkout/components/begin-checkout-tracker"
+import PerksBanner from "@modules/checkout/components/perks-banner"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 import { applyDisplayPriceCorrectionToCart } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
+import { getCustomerPerks } from "@lib/data/perks"
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -32,6 +34,7 @@ const fetchCart = async () => {
 export default async function Checkout() {
   const cart = await fetchCart()
   const customer = await getCustomer()
+  const perks = await getCustomerPerks()
 
   return (
     <div className="content-container py-8 small:py-10 pb-14">
@@ -48,6 +51,9 @@ export default async function Checkout() {
           rest of SC Prints.
         </p>
       </div>
+
+      <PerksBanner perks={perks.perks} />
+
 
       <div className="grid grid-cols-1 gap-8 small:grid-cols-[1fr_min(100%,400px)] small:gap-x-10 small:items-start">
         <div className="rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-5 shadow-[0_4px_40px_rgba(26,26,46,0.08)] backdrop-blur-sm small:p-8">

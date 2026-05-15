@@ -42,6 +42,11 @@ import {
   ThresholdAlertEmail,
   isThresholdAlertData,
 } from './threshold-alert'
+import {
+  NPS_REQUEST,
+  NpsRequestEmail,
+  isNpsRequestData,
+} from './nps-request'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -54,6 +59,7 @@ export const EmailTemplates = {
   REORDER_REMINDER,
   WINBACK,
   THRESHOLD_ALERT,
+  NPS_REQUEST,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -150,6 +156,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <ThresholdAlertEmail {...data} />
 
+    case EmailTemplates.NPS_REQUEST:
+      if (!isNpsRequestData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.NPS_REQUEST}"`
+        )
+      }
+      return <NpsRequestEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -167,4 +182,5 @@ export {
   ReorderReminderEmail,
   WinbackEmail,
   ThresholdAlertEmail,
+  NpsRequestEmail,
 }
