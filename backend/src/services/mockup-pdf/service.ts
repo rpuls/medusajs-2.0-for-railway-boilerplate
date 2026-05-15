@@ -1,6 +1,39 @@
 import fs from "fs"
 import path from "path"
 import PDFDocument from "pdfkit"
+import sharp from "sharp"
+
+// Brand magenta: #ff2e63
+const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
+
+async function makeMagentaLogo(
+  logoBuf: Buffer,
+  size: number,
+  opacity: number
+): Promise<Buffer> {
+  // Resize to square target
+  const resized = await sharp(logoBuf)
+    .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const { data, info } = resized
+  const pixels = info.width * info.height
+  const out = Buffer.alloc(pixels * 4)
+
+  for (let i = 0; i < pixels; i++) {
+    const a = data[i * 4 + 3]
+    out[i * 4 + 0] = BRAND_MAGENTA.r
+    out[i * 4 + 1] = BRAND_MAGENTA.g
+    out[i * 4 + 2] = BRAND_MAGENTA.b
+    out[i * 4 + 3] = Math.round(a * opacity)
+  }
+
+  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .png()
+    .toBuffer()
+}
 
 const ASSETS_DIR = path.join(__dirname, "../../assets")
 const FONTS_DIR = path.join(ASSETS_DIR, "fonts")
@@ -234,11 +267,16 @@ export async function generateMockupPdf(
   const boldFontBuf = fs.readFileSync(
     path.join(FONTS_DIR, "PlusJakartaSans-Bold.woff")
   )
-  const logoImageBuf = fs.readFileSync(
+  const rawLogoBuf = fs.readFileSync(
     path.join(IMAGES_DIR, "sc-prints-logo.png")
   )
 
-  return buildPdf({ jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, logoImageBuf })
+  const [magentaLogoFull, magentaLogoWatermark] = await Promise.all([
+    makeMagentaLogo(rawLogoBuf, 100, 1.0),
+    makeMagentaLogo(rawLogoBuf, 300, 0.10),
+  ])
+
+  return buildPdf({ jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, magentaLogoFull, magentaLogoWatermark })
 }
 
 function buildPdf(params: {
@@ -248,10 +286,11 @@ function buildPdf(params: {
   pages: PageData[]
   regularFontBuf: Buffer
   boldFontBuf: Buffer
-  logoImageBuf: Buffer
+  magentaLogoFull: Buffer
+  magentaLogoWatermark: Buffer
 }): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const { jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, logoImageBuf } =
+    const { jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, magentaLogoFull, magentaLogoWatermark } =
       params
 
     const doc = new PDFDocument({ size: "A4", autoFirstPage: false })
@@ -296,19 +335,25 @@ function buildPdf(params: {
         textY += 20
       }
 
-      // SC Prints logo — top right
-      const logoW = 100
-      const logoH = 100
-      doc.image(logoImageBuf, PW - MR - logoW, MT, {
+      // SC Prints logo — top right, magenta
+      const logoW = 90
+      const logoH = 90
+      doc.image(magentaLogoFull, PW - MR - logoW, MT, {
         width: logoW,
         height: logoH,
         fit: [logoW, logoH],
       })
 
       // ── MOCKUP IMAGES ────────────────────────────────────────────────────────
-      const imgY = MT + 118
-      const imgH = 285
-      const imgW = 245
+      const imgY = MT + 108
+      const imgH = 300
+      const imgW = 250
+
+      // Watermark: centred in image band, drawn first so garment images render on top
+      const wmSize = 300
+      const wmX = ML + (usableW - wmSize) / 2
+      const wmY = imgY + (imgH - wmSize) / 2
+      doc.image(magentaLogoWatermark, wmX, wmY, { width: wmSize, height: wmSize })
 
       if (frontMockupBuf && backMockupBuf) {
         const gap = usableW - imgW * 2
