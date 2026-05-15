@@ -3568,6 +3568,54 @@ export default function CustomizerTemplate({
               Now designing <strong className="mx-0.5">{sideLabel}</strong> — upload artwork in the panel below.
             </div>
           )}
+
+          {/* Above-canvas "Add print to another location" — visible whenever
+              there are unused sides. Disabled (greyed) until the customer has
+              both placed artwork on the canvas and selected a print size. */}
+          {isCustomizing && allowedPrintSides.length > 1 && (() => {
+            const undecoratedAllowed = allowedPrintSides.filter(
+              (s) => !decoratedSides.includes(s)
+            )
+            if (!undecoratedAllowed.length) return null
+            const nextUndecoratedSide = undecoratedAllowed[0]
+            const nextUndecoratedLabel =
+              nextUndecoratedSide === "left_sleeve" ? "Left Sleeve"
+              : nextUndecoratedSide === "right_sleeve" ? "Right Sleeve"
+              : nextUndecoratedSide === "printed_tag" ? "Printed Tag"
+              : nextUndecoratedSide.charAt(0).toUpperCase() + nextUndecoratedSide.slice(1)
+            const canAddLocation =
+              pdpStep3Done &&
+              decoratedSides.filter((s) => allowedPrintSides.includes(s)).length > 0
+            return (
+              <button
+                type="button"
+                disabled={!canAddLocation}
+                title={
+                  !canAddLocation
+                    ? "Add artwork and select a print size first"
+                    : undefined
+                }
+                onClick={() => {
+                  if (!canAddLocation) return
+                  switchSide(nextUndecoratedSide)
+                  setPdpStep2Done(true)
+                  setPdpStep(3)
+                  setScpPrintSizeChosen(false)
+                }}
+                className={`w-full rounded-xl border-2 border-dashed px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+                  canAddLocation
+                    ? "border-fuchsia-500 text-ui-fg-base hover:border-fuchsia-600 hover:bg-fuchsia-50"
+                    : "cursor-not-allowed border-ui-border-base text-ui-fg-muted opacity-40"
+                }`}
+              >
+                + Add print to another location
+                <span className="ml-1.5 text-xs font-normal opacity-70">
+                  (e.g. {nextUndecoratedLabel})
+                </span>
+              </button>
+            )
+          })()}
+
           {editorColumn}
         </div>
         <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-2 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto transition-[grid-column] duration-300 ease-in-out ${
