@@ -22,20 +22,28 @@ const WATER_FOAM = "#E0F2F4"
 const WATERFALL_LIGHT = "#CFEAEF"
 const WATERFALL_MID = "#8AC3CE"
 const WATERFALL_DEEP = "#4F8C99"
-const BRACHIO_DARK = "#3E541F"
-const BRACHIO_MID = "#6E8A3F"
-const BRACHIO_LIGHT = "#A4C062"
-const BRACHIO_BELLY = "#C9D38C"
-const BRACHIO_EYE = "#161A0E"
-const TRIC_BACK = "#5A3920"
-const TRIC_BODY = "#7A4F2C"
-const TRIC_BELLY = "#9C7048"
-const TRIC_FRILL = "#A87A50"
-const TRIC_HORN = "#E6D5B0"
-const TRIC_EYE = "#1A0E08"
-const PTERO_BODY = "#3F2E22"
-const PTERO_WING = "#5A4232"
-const PTERO_BEAK = "#A88656"
+// Brachiosaurus — cute baby-sauropod palette (chunky outline + 4 shades + belly + glint)
+const BRACHIO_OUTLINE = "#152812"
+const BRACHIO_DARK = "#2A4A1F"
+const BRACHIO_MID = "#5B8736"
+const BRACHIO_LIGHT = "#8FB552"
+const BRACHIO_BELLY = "#D5E089"
+// Triceratops — orange T-Rex inspired (chunky outline + 4 shades + belly + horn)
+const TRIC_OUTLINE = "#2A180A"
+const TRIC_DARK = "#5A3920"
+const TRIC_MID = "#A86A35"
+const TRIC_LIGHT = "#D78843"
+const TRIC_BELLY = "#F5C28A"
+const TRIC_HORN = "#F0E0B0"
+const TRIC_HORN_DK = "#A89060"
+// Pterodactyl — dark brown with warm highlights
+const PTERO_OUTLINE = "#1F0F08"
+const PTERO_DARK = "#3F2E22"
+const PTERO_MID = "#7A5037"
+const PTERO_LIGHT = "#B07A4F"
+const PTERO_BEAK = "#E8C374"
+// Eye highlights — shared
+const EYE_GLINT = "#FFFFFF"
 const STONE_BASE = "#9C918A"
 const STONE_SHADOW = "#5A524D"
 const STONE_HILITE = "#BCB0A8"
@@ -136,6 +144,43 @@ function pixelEllipse(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx:
     }
 }
 
+// Render an ASCII-pixel-art template to a canvas context at (x,y), each char = `scale` pixels.
+// Characters not present in the palette (e.g. `.` or space) are treated as transparent.
+function drawTemplate(
+  ctx: CanvasRenderingContext2D,
+  template: string[],
+  palette: Record<string, string>,
+  x: number,
+  y: number,
+  scale: number
+) {
+  for (let r = 0; r < template.length; r++) {
+    const row = template[r]
+    for (let c = 0; c < row.length; c++) {
+      const color = palette[row[c]]
+      if (!color) continue
+      ctx.fillStyle = color
+      ctx.fillRect(x + c * scale, y + r * scale, scale, scale)
+    }
+  }
+}
+
+function makeTemplateSprite(
+  template: string[],
+  palette: Record<string, string>,
+  scale: number
+): HTMLCanvasElement {
+  const cols = template.reduce((m, r) => Math.max(m, r.length), 0)
+  const rows = template.length
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(1, cols * scale)
+  canvas.height = Math.max(1, rows * scale)
+  const ctx = canvas.getContext("2d")!
+  ctx.imageSmoothingEnabled = false
+  drawTemplate(ctx, template, palette, 0, 0, scale)
+  return canvas
+}
+
 // ─── Cloud sprite ────────────────────────────────────────────────────────────
 function makeCloud(seed: number, baseScale: number): HTMLCanvasElement {
   const rng = mulberry32(seed)
@@ -169,156 +214,157 @@ function makeCloud(seed: number, baseScale: number): HTMLCanvasElement {
 }
 
 // ─── Pterodactyl sprite (2-frame flap) ───────────────────────────────────────
+// Right-facing. Chunky black outline + 3 brown shades + cream beak + white eye glint.
+const PTERO_PALETTE: Record<string, string> = {
+  o: PTERO_OUTLINE,
+  D: PTERO_DARK,
+  M: PTERO_MID,
+  L: PTERO_LIGHT,
+  B: PTERO_BEAK,
+  E: EYE_GLINT,
+}
+// 18w x 9h base. The far-left "tail" pixel is the rear; head/beak is on the right.
+const PTERO_TPL_UP: string[] = [
+  ".o..............o.",
+  ".oMo..........oMo.",
+  "..oMMo......oMMo..",
+  "...oMMo....oMMo...",
+  "....oMMooooMMo.oo.",
+  ".....oDLLDDLooEoBo",
+  ".....oDDDDDDLBBBo.",
+  "......oMMDDLLBo...",
+  ".......oooooo.....",
+]
+const PTERO_TPL_DOWN: string[] = [
+  "..................",
+  "..................",
+  ".o..............o.",
+  ".oMo..........oMo.",
+  ".oMMooooooooooMMoo",
+  ".oMLLDDLLDDLLDLEoB",
+  "..oMDDDDDDDDDDLBBo",
+  "...oooMMDDLLBBBoo.",
+  "......ooooooooo...",
+]
 function makePterodactylFrame(frame: 0 | 1, scale: number): HTMLCanvasElement {
-  // Right-facing. Frame 0 = wings up; frame 1 = wings down.
-  // Base resolution 18x10. Body horizontal, head/beak on the right, wings span up/down.
-  const BW = 18, BH = 10
-  const c = document.createElement("canvas")
-  c.width = BW * scale; c.height = BH * scale
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  const px = (x: number, y: number, w: number, h: number, color: string) => {
-    ctx.fillStyle = color
-    ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
-  }
-  // Body (horizontal line)
-  px(5, 5, 8, 1, PTERO_BODY)
-  px(6, 4, 6, 1, PTERO_BODY)
-  px(7, 6, 4, 1, PTERO_BODY)
-  // Head + beak on right
-  px(12, 4, 2, 2, PTERO_BODY)
-  px(14, 5, 3, 1, PTERO_BEAK)
-  px(13, 3, 1, 1, PTERO_BODY) // crest
-  // Tail nub on left
-  px(4, 5, 1, 1, PTERO_BODY)
-  // Wings
-  if (frame === 0) {
-    // Wings up: 'V' shape rising from body
-    px(7, 3, 2, 1, PTERO_WING)
-    px(6, 2, 2, 1, PTERO_WING)
-    px(5, 1, 2, 1, PTERO_WING)
-    px(4, 0, 2, 1, PTERO_WING)
-    px(10, 3, 2, 1, PTERO_WING)
-    px(11, 2, 2, 1, PTERO_WING)
-    px(12, 1, 2, 1, PTERO_WING)
-    // outer hand bumps
-    px(3, 0, 1, 1, PTERO_BODY)
-    px(13, 1, 1, 1, PTERO_BODY)
-  } else {
-    // Wings down: outstretched, slightly arched
-    px(2, 4, 3, 1, PTERO_WING)
-    px(4, 5, 1, 1, PTERO_WING)
-    px(0, 5, 2, 1, PTERO_WING)
-    px(11, 5, 3, 1, PTERO_WING)
-    px(14, 6, 2, 1, PTERO_WING)
-    px(16, 5, 2, 1, PTERO_WING)
-  }
-  // Eye
-  px(14, 4, 1, 1, "#FFFFFF")
-  return c
+  return makeTemplateSprite(frame === 0 ? PTERO_TPL_UP : PTERO_TPL_DOWN, PTERO_PALETTE, scale)
 }
 
 // ─── Triceratops sprite (4-frame walk cycle) ─────────────────────────────────
-// Right-facing. Base 28x14. Two pairs of legs alternate.
+// Right-facing. Chunky black outline + 3 orange-brown shades + cream horn + belly.
+const TRIC_PALETTE: Record<string, string> = {
+  o: TRIC_OUTLINE,
+  D: TRIC_DARK,
+  M: TRIC_MID,
+  L: TRIC_LIGHT,
+  B: TRIC_BELLY,
+  F: TRIC_DARK,   // frill (uses dark shade for that "bony plate" look)
+  H: TRIC_HORN,
+  h: TRIC_HORN_DK,
+  E: EYE_GLINT,
+}
+// Base 30w x 17h. Head + frill + horns occupy the right third; tail on the left.
+const TRIC_TORSO: string[] = [
+  "..........................oo..",
+  "..........................oHo.",
+  "......oooooooo............oHo.",
+  ".....oDDDDDDDDoo.........oHHo.",
+  "....oDFFFFFFFFFDoooooooooFFo..",
+  "....oDFFFFFFFFFFDDDDDDDDDFFo..",
+  "....oDMMMMMMMFFFFMMMMMMMMFFo..",
+  "....oMLLLLLLLLFFFLLLLLLLLMFFo.",
+  "....oMLBBLLLLLLLLLLLLLLLLLLFo.",
+  "....oMLBBLLLLLLLLLLLLLLLLLLEoh",
+  "....oMLLLLLLLLLLLLLLLLLLLLLMhh",
+  "....oMMLLLLLLLLLLLLLLLLLLLLMhh",
+  ".....oDMMMMMMMMMMMMMMMMMMMMMo.",
+  ".....oooMMM.MMM..MMM.MMMoooo..",
+  "........???.???..???.???......",
+  "........???.???..???.???......",
+  "........???.???..???.???......",
+]
+// Leg-pose chars: 'M' = filled leg pixel (rendered with TRIC_DARK in a second pass),
+// '.' = transparent. Top of the leg is row 0, foot is row 2.
+const LEG_POSES = {
+  raised: ["MMM", "M.M", "M.M"],
+  planted: ["MMM", "M.M", "MMM"],
+} as const
 function makeTriceratopsFrame(frame: 0 | 1 | 2 | 3, scale: number): HTMLCanvasElement {
-  const BW = 28, BH = 14
-  const c = document.createElement("canvas")
-  c.width = BW * scale; c.height = BH * scale
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  const px = (x: number, y: number, w: number, h: number, color: string) => {
-    ctx.fillStyle = color
-    ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
+  const template = TRIC_TORSO.map(row => row)
+  const lifted: [boolean, boolean, boolean, boolean] =
+    frame === 0 ? [false, true, true, false]
+    : frame === 2 ? [true, false, false, true]
+    : [false, false, false, false]
+  const LEG_COLS = [8, 12, 17, 21]
+  const LEG_TOP_ROW = 14
+  for (let leg = 0; leg < 4; leg++) {
+    const pose = lifted[leg] ? LEG_POSES.raised : LEG_POSES.planted
+    const col = LEG_COLS[leg]
+    for (let r = 0; r < 3; r++) {
+      const targetRow = LEG_TOP_ROW + r
+      const before = template[targetRow].slice(0, col)
+      const after = template[targetRow].slice(col + 3)
+      template[targetRow] = before + pose[r] + after
+    }
   }
-  // Body silhouette — rounded brick
-  px(4, 6, 18, 4, TRIC_BODY)
-  px(5, 5, 16, 1, TRIC_BACK)
-  px(5, 10, 16, 1, TRIC_BELLY)
-  px(6, 11, 14, 1, TRIC_BELLY)
-  // Rear & nose taper
-  px(3, 7, 1, 2, TRIC_BODY)
-  // Head on right with frill
-  px(22, 5, 3, 5, TRIC_BODY)
-  px(23, 4, 2, 1, TRIC_BACK)
-  // Frill
-  px(19, 3, 2, 3, TRIC_FRILL)
-  px(20, 2, 2, 2, TRIC_FRILL)
-  px(21, 4, 1, 2, TRIC_FRILL)
-  // Horns: 2 brow horns + 1 nose
-  px(24, 5, 1, 2, TRIC_HORN)  // brow horn 1
-  px(22, 4, 1, 2, TRIC_HORN)  // brow horn 2
-  px(25, 8, 1, 1, TRIC_HORN)  // nose horn
-  // Eye
-  px(23, 6, 1, 1, TRIC_EYE)
-  // Tail
-  px(2, 7, 2, 1, TRIC_BODY)
-  px(1, 7, 1, 1, TRIC_BACK)
-
-  // Legs — 4 legs total, animated. Phase A = legs 0/2 forward, legs 1/3 back. Phase B = opposite.
-  // Frames 0..3: A-step, A-mid, B-step, B-mid. Mid frames raise one leg.
-  const legColor = TRIC_BACK
-  if (frame === 0) {
-    // Front-left forward, back-right forward
-    px(7, 12, 2, 2, legColor)
-    px(11, 11, 2, 3, legColor)  // raised
-    px(15, 12, 2, 2, legColor)
-    px(19, 11, 2, 3, legColor)  // raised
-  } else if (frame === 1) {
-    px(8, 12, 2, 2, legColor)
-    px(12, 12, 2, 2, legColor)
-    px(16, 12, 2, 2, legColor)
-    px(20, 12, 2, 2, legColor)
-  } else if (frame === 2) {
-    px(7, 11, 2, 3, legColor)
-    px(11, 12, 2, 2, legColor)
-    px(15, 11, 2, 3, legColor)
-    px(19, 12, 2, 2, legColor)
-  } else {
-    px(8, 12, 2, 2, legColor)
-    px(12, 12, 2, 2, legColor)
-    px(16, 12, 2, 2, legColor)
-    px(20, 12, 2, 2, legColor)
+  const canvas = makeTemplateSprite(template, TRIC_PALETTE, scale)
+  const ctx = canvas.getContext("2d")!
+  ctx.imageSmoothingEnabled = false
+  // Second pass — paint legs in TRIC_DARK so they read as shadowed against the body.
+  for (let leg = 0; leg < 4; leg++) {
+    const col = LEG_COLS[leg]
+    const pose = lifted[leg] ? LEG_POSES.raised : LEG_POSES.planted
+    for (let r = 0; r < 3; r++) {
+      const ch = pose[r]
+      for (let i = 0; i < ch.length; i++) {
+        if (ch[i] === "M") {
+          ctx.fillStyle = TRIC_DARK
+          ctx.fillRect((col + i) * scale, (LEG_TOP_ROW + r) * scale, scale, scale)
+        }
+      }
+    }
   }
-  return c
+  return canvas
 }
 
 // ─── Brachiosaurus body sprite (static — neck is drawn per-frame) ───────────
+// Right-facing. Chunky black outline + 3 green shades + bright belly spots.
+// Body is partially submerged → legs are short stubs at the bottom; the river overlay
+// covers the lower portion at draw time.
+const BRACHIO_PALETTE: Record<string, string> = {
+  o: BRACHIO_OUTLINE,
+  D: BRACHIO_DARK,
+  M: BRACHIO_MID,
+  L: BRACHIO_LIGHT,
+  B: BRACHIO_BELLY,
+}
+// Base 38w x 17h. Neck attaches at the top-right "shoulder bump" (cols 33-34, rows 0-3).
+const BRACHIO_BODY_TPL: string[] = [
+  ".................................oo..",
+  "................................oMMo.",
+  "................................oMMo.",
+  "................................oMMo.",
+  ".......ooooooooooooooooooooooooooMMo.",
+  "......oDDDDDDDDDDDDDDDDDDDDDDDDDDDMo.",
+  ".....oDDMMMMMMMMMMMMMMMMMMMMMMMMMMMo.",
+  "....oDDMLLLLLLLLLLLLLLLLLLLLLLLLLLLMo",
+  "...oDMLLLLLLLLLLLLLLLLLLLLLLLLLLLLLMo",
+  "..oDMLBBBLLLLLBBBLLLLLBBBLLLLLLLLLLMo",
+  "..oDMLBBBLLLLLBBBLLLLLBBBLLLLLLLLLLMo",
+  "..oDMMLLLLLLLLLLLLLLLLLLLLLLLLLLLLMMo",
+  "...oDDMMMMMMMMMMMMMMMMMMMMMMMMMMMMMo.",
+  "....ooooMMM.MMM........MMM.MMMoooo...",
+  "........oo..oo..........oo..oo.......",
+  "........o....o..........o....o.......",
+  "........oooooo..........oooooo.......",
+]
 function makeBrachioBody(scale: number): HTMLCanvasElement {
-  // Side-view, neck attach point is the upper-right shoulder area.
-  // Body is partially submerged → legs are short, mostly hidden below the waterline.
-  const BW = 44, BH = 18
-  const c = document.createElement("canvas")
-  c.width = BW * scale; c.height = BH * scale
-  const ctx = c.getContext("2d")!; ctx.imageSmoothingEnabled = false
-  const px = (x: number, y: number, w: number, h: number, color: string) => {
-    ctx.fillStyle = color
-    ctx.fillRect(x * scale, y * scale, w * scale, h * scale)
-  }
-
-  // Belly / lower body (slightly lighter — picks up sky reflection from water)
-  px(5, 13, 30, 2, BRACHIO_BELLY)
-  // Main body
-  px(4, 8, 32, 5, BRACHIO_MID)
-  // Back arch
-  px(7, 6, 26, 2, BRACHIO_DARK)
-  px(10, 5, 20, 1, BRACHIO_DARK)
-  // Lighter side highlight
-  px(6, 11, 28, 1, BRACHIO_LIGHT)
-  // Tail tapers to the left
-  px(2, 9, 3, 3, BRACHIO_MID)
-  px(0, 10, 3, 2, BRACHIO_MID)
-  px(0, 11, 2, 1, BRACHIO_DARK)
-  px(4, 12, 1, 1, BRACHIO_DARK)
-  // Shoulder bump where neck attaches (upper-right of body)
-  px(31, 4, 4, 3, BRACHIO_DARK)
-  px(33, 3, 2, 1, BRACHIO_DARK)
-  // Hind-leg stubs under waterline (will be mostly hidden by river)
-  px(8, 15, 2, 3, BRACHIO_DARK)
-  px(12, 15, 2, 3, BRACHIO_DARK)
-  px(26, 15, 2, 3, BRACHIO_DARK)
-  px(30, 15, 2, 3, BRACHIO_DARK)
-  return c
+  return makeTemplateSprite(BRACHIO_BODY_TPL, BRACHIO_PALETTE, scale)
 }
 
 // Brachio neck + head drawn each frame because the neck bend angle changes.
+// Three-pass rendering: outline (thickness+2 in BRACHIO_OUTLINE), fill (BRACHIO_MID),
+// then a 1px upper-edge highlight (BRACHIO_LIGHT).
 function drawBrachioNeck(
   ctx: CanvasRenderingContext2D,
   shoulderX: number,
@@ -326,14 +372,8 @@ function drawBrachioNeck(
   scale: number,
   cyclePhase: number  // 0..1
 ) {
-  // Cycle phases (normalised 0..1):
-  // 0.00 – 0.30  : idle, neck straight up
-  // 0.30 – 0.42  : lowering (sweep down)
-  // 0.42 – 0.58  : drinking (head low + small bob)
-  // 0.58 – 0.70  : rising (sweep up)
-  // 0.70 – 1.00  : idle straight up
-  const ANGLE_UP = -Math.PI / 2 + 0.10        // ~ straight up, very slight lean right
-  const ANGLE_DOWN = Math.PI * 0.20            // pointing down-right
+  const ANGLE_UP = -Math.PI / 2 + 0.10
+  const ANGLE_DOWN = Math.PI * 0.20
   let baseAngle = ANGLE_UP
   let drinkBob = 0
   if (cyclePhase < 0.30) baseAngle = ANGLE_UP
@@ -348,13 +388,10 @@ function drawBrachioNeck(
     baseAngle = ANGLE_DOWN + (ANGLE_UP - ANGLE_DOWN) * t
   }
 
-  // Chain of segments — 6 segments. Each segment introduces a slight curve so the neck
-  // arcs gracefully rather than being a straight stick.
   const SEGMENTS = 6
   const segLen = 4.5 * scale
-  // Per-segment curl: stronger when neck is going down (drinking).
   const downness = Math.max(0, Math.min(1, (baseAngle - ANGLE_UP) / (ANGLE_DOWN - ANGLE_UP)))
-  const segDelta = -0.08 + downness * 0.18  // up: slight back-curl; down: arching forward
+  const segDelta = -0.08 + downness * 0.18
   let cx = shoulderX, cy = shoulderY, angle = baseAngle
   const points: [number, number][] = [[cx, cy]]
   for (let i = 0; i < SEGMENTS; i++) {
@@ -365,39 +402,59 @@ function drawBrachioNeck(
   }
   const [headX, headY] = points[points.length - 1]
 
-  // Draw the neck as thick pixel-line segments — fattest near shoulder, slimmer near head.
-  const thickness = (i: number) => Math.max(1, Math.round((1.6 - i * 0.13) * scale))
+  // Neck thickness tapers from shoulder to head.
+  const thickness = (i: number) => Math.max(2, Math.round((2.0 - i * 0.13) * scale))
+  // Pass 1 — outline
+  ctx.fillStyle = BRACHIO_OUTLINE
   for (let i = 0; i < points.length - 1; i++) {
     const [x1, y1] = points[i], [x2, y2] = points[i + 1]
     const steps = Math.max(2, Math.ceil(Math.hypot(x2 - x1, y2 - y1)))
-    const th = thickness(i)
-    ctx.fillStyle = i === 0 ? BRACHIO_DARK : BRACHIO_MID
+    const th = thickness(i) + 2
     for (let s = 0; s <= steps; s++) {
       const px = Math.round(x1 + (x2 - x1) * (s / steps))
       const py = Math.round(y1 + (y2 - y1) * (s / steps))
       ctx.fillRect(px - Math.floor(th / 2), py - Math.floor(th / 2), th, th)
     }
-    // 1-pixel highlight on the back-of-neck edge (upper-left side)
-    ctx.fillStyle = BRACHIO_LIGHT
+  }
+  // Pass 2 — fill
+  ctx.fillStyle = BRACHIO_MID
+  for (let i = 0; i < points.length - 1; i++) {
+    const [x1, y1] = points[i], [x2, y2] = points[i + 1]
+    const steps = Math.max(2, Math.ceil(Math.hypot(x2 - x1, y2 - y1)))
+    const th = thickness(i)
     for (let s = 0; s <= steps; s++) {
       const px = Math.round(x1 + (x2 - x1) * (s / steps))
       const py = Math.round(y1 + (y2 - y1) * (s / steps))
-      ctx.fillRect(px - Math.floor(th / 2) - 1, py - Math.floor(th / 2), 1, th)
+      ctx.fillRect(px - Math.floor(th / 2), py - Math.floor(th / 2), th, th)
+    }
+  }
+  // Pass 3 — 1px highlight along upper edge
+  ctx.fillStyle = BRACHIO_LIGHT
+  for (let i = 0; i < points.length - 1; i++) {
+    const [x1, y1] = points[i], [x2, y2] = points[i + 1]
+    const steps = Math.max(2, Math.ceil(Math.hypot(x2 - x1, y2 - y1)))
+    const th = thickness(i)
+    for (let s = 0; s <= steps; s++) {
+      const px = Math.round(x1 + (x2 - x1) * (s / steps))
+      const py = Math.round(y1 + (y2 - y1) * (s / steps))
+      ctx.fillRect(px - Math.floor(th / 2), py - Math.floor(th / 2), 1, Math.max(1, Math.floor(th / 2)))
     }
   }
 
-  // Head (right-leaning teardrop)
+  // Head — chunky outlined oval with cream snout, dark pupil, white glint.
   const headAngle = angle + 0.15
-  const hx = headX + Math.cos(headAngle) * scale * 1.5
-  const hy = headY + Math.sin(headAngle) * scale * 1.5 + drinkBob
-  pixelEllipse(ctx, hx, hy, scale * 1.8, scale * 1.2, BRACHIO_MID)
-  pixelEllipse(ctx, hx, hy - scale * 0.4, scale * 1.5, scale * 0.8, BRACHIO_DARK)
-  // Eye
-  ctx.fillStyle = BRACHIO_EYE
-  ctx.fillRect(Math.round(hx + scale * 0.5), Math.round(hy - scale * 0.2), Math.max(1, Math.round(scale * 0.4)), Math.max(1, Math.round(scale * 0.4)))
-  // Tiny mouth highlight
-  ctx.fillStyle = BRACHIO_BELLY
-  ctx.fillRect(Math.round(hx + scale * 1.0), Math.round(hy + scale * 0.3), Math.max(1, Math.round(scale * 0.5)), Math.max(1, Math.round(scale * 0.2)))
+  const hx = headX + Math.cos(headAngle) * scale * 1.6
+  const hy = headY + Math.sin(headAngle) * scale * 1.6 + drinkBob
+  const hrx = scale * 2.2, hry = scale * 1.6
+  pixelEllipse(ctx, hx, hy, hrx + 1, hry + 1, BRACHIO_OUTLINE)
+  pixelEllipse(ctx, hx, hy, hrx, hry, BRACHIO_MID)
+  pixelEllipse(ctx, hx - scale * 0.3, hy - scale * 0.5, hrx * 0.8, hry * 0.5, BRACHIO_LIGHT)
+  pixelEllipse(ctx, hx + scale * 1.0, hy + scale * 0.4, scale * 0.9, scale * 0.6, BRACHIO_BELLY)
+  ctx.fillStyle = BRACHIO_OUTLINE
+  ctx.fillRect(Math.round(hx + scale * 0.7), Math.round(hy + scale * 0.5), Math.max(1, Math.round(scale * 1.2)), Math.max(1, Math.round(scale * 0.25)))
+  ctx.fillRect(Math.round(hx + scale * 0.3), Math.round(hy - scale * 0.4), Math.max(1, Math.round(scale * 0.7)), Math.max(1, Math.round(scale * 0.7)))
+  ctx.fillStyle = EYE_GLINT
+  ctx.fillRect(Math.round(hx + scale * 0.5), Math.round(hy - scale * 0.3), Math.max(1, Math.round(scale * 0.3)), Math.max(1, Math.round(scale * 0.3)))
 }
 
 // ─── Stone monument with carved "SC PRINTS" ──────────────────────────────────
@@ -561,14 +618,29 @@ function paintBackdrop(canvas: HTMLCanvasElement, w: number, h: number, dpr: num
     ctx.fillRect(0, y, w, 2)
   }
 
-  // Riverbank — a thin line of foam/wet sand at the river edge
+  // Sandy riverbank — chunky 3px tan/wet-sand band at the top of the river, with a soft
+  // foam pixel-line on top so the sand reads as "wet sand under the water surface".
+  const SAND_BASE = "#D4B886"
+  const SAND_LITE = "#E6CDA5"
+  const SAND_SHADOW = "#9C7E4F"
+  for (let x = 0; x < w; x++) {
+    const ripple = ((x * 7) % 11) / 11
+    ctx.fillStyle = ripple < 0.5 ? SAND_BASE : SAND_LITE
+    ctx.fillRect(x, riverY, 1, 1)
+    ctx.fillStyle = SAND_SHADOW
+    ctx.fillRect(x, riverY + 1, 1, 1)
+  }
   ctx.fillStyle = WATER_FOAM
-  for (let x = 0; x < w; x += 4) {
-    const dip = (x * 0.07 % 3 < 1) ? 1 : 0
-    ctx.fillRect(x, riverY + dip, 3, 1)
+  for (let x = 0; x < w; x += 5) {
+    const dip = ((x * 0.13) % 2 < 1) ? 0 : 1
+    ctx.fillRect(x, riverY - dip, 2, 1)
   }
   // Riverbank foreground rocks (right side, foreground)
   drawForegroundRocks(ctx, w, h, riverY)
+
+  // Foreground palms — lush silhouettes along the left and right edges, in front
+  // of the canopy and behind the monument so the depth reads correctly.
+  drawPalmsCluster(ctx, w, h)
 
   // Monument — placed on the right riverbank in the foreground
   if (monumentSprite) {
@@ -744,6 +816,82 @@ function drawForegroundRocks(ctx: CanvasRenderingContext2D, w: number, h: number
   }
 }
 
+// ─── Palm trees (map-inspired foreground silhouettes) ────────────────────────
+const PALM_OUTLINE = "#0F1A0C"
+const PALM_TRUNK = "#3A2A1A"
+const PALM_TRUNK_LITE = "#5A4232"
+const PALM_FROND_DARK = "#1F3318"
+const PALM_FROND_MID = "#3A6028"
+const PALM_FROND_LITE = "#5C8A3F"
+
+function drawPalmTree(
+  ctx: CanvasRenderingContext2D, baseX: number, baseY: number, scale: number, seed: number, flipped: boolean
+) {
+  const rng = mulberry32(seed)
+  const trunkW = Math.max(2, Math.round(scale * 1.2))
+  const trunkH = Math.round(scale * (10 + rng() * 5))
+  const trunkLean = Math.round((rng() - 0.5) * scale * 1.5)
+  const topX = baseX + trunkLean
+  const topY = baseY - trunkH
+  ctx.fillStyle = PALM_OUTLINE
+  for (let y = 0; y < trunkH; y++) {
+    const lean = Math.round((trunkLean * y) / Math.max(1, trunkH))
+    ctx.fillRect(baseX + lean - Math.floor(trunkW / 2) - 1, baseY - trunkH + y, trunkW + 2, 1)
+  }
+  ctx.fillStyle = PALM_TRUNK
+  for (let y = 0; y < trunkH; y++) {
+    const lean = Math.round((trunkLean * y) / Math.max(1, trunkH))
+    ctx.fillRect(baseX + lean - Math.floor(trunkW / 2), baseY - trunkH + y, trunkW, 1)
+  }
+  // Trunk segment stripes (cocoa-bark texture)
+  ctx.fillStyle = PALM_TRUNK_LITE
+  for (let y = 2; y < trunkH; y += 3) {
+    const lean = Math.round((trunkLean * y) / Math.max(1, trunkH))
+    ctx.fillRect(baseX + lean - Math.floor(trunkW / 2), baseY - trunkH + y, trunkW, 1)
+  }
+  // Crown — 6 fronds at staggered angles, drooping at the tips
+  const FRONDS = 6
+  const baseLen = scale * (4.5 + rng() * 1.5)
+  for (let i = 0; i < FRONDS; i++) {
+    const baseAngle = -Math.PI + (i + 0.5) * (Math.PI / FRONDS)
+    const angle = flipped ? -Math.PI - (baseAngle + Math.PI) : baseAngle
+    const len = baseLen * (0.7 + rng() * 0.6)
+    const droop = scale * (1.5 + rng() * 1)
+    const segs = Math.max(4, Math.round(len * 1.3))
+    for (let s = 0; s <= segs; s++) {
+      const t = s / segs
+      const fx = topX + Math.cos(angle) * t * len
+      const fy = topY + Math.sin(angle) * t * len + droop * t * t
+      const px = Math.round(fx), py = Math.round(fy)
+      ctx.fillStyle = PALM_OUTLINE
+      ctx.fillRect(px - 1, py - 1, 3, 3)
+      ctx.fillStyle = t < 0.35 ? PALM_FROND_LITE : t < 0.75 ? PALM_FROND_MID : PALM_FROND_DARK
+      ctx.fillRect(px, py, 1, 1)
+      if (s > 0 && s % 3 === 0 && t < 0.6) {
+        ctx.fillStyle = PALM_FROND_LITE
+        ctx.fillRect(px, py - 1, 1, 1)
+      }
+    }
+  }
+}
+
+function drawPalmsCluster(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const rng = mulberry32(98765)
+  const baseY = h - 4
+  const leftCount = 2 + Math.floor(rng() * 2)
+  for (let i = 0; i < leftCount; i++) {
+    const px = Math.floor(rng() * (w * 0.18)) + Math.floor(w * 0.02) + i * 14
+    const scale = 1.5 + rng() * 1.5
+    drawPalmTree(ctx, px, baseY - Math.floor(rng() * 4), scale, 1000 + i * 31, false)
+  }
+  const rightCount = 2 + Math.floor(rng() * 2)
+  for (let i = 0; i < rightCount; i++) {
+    const px = Math.floor(w * 0.88) + Math.floor(rng() * (w * 0.10)) - i * 14
+    const scale = 1.5 + rng() * 1.5
+    drawPalmTree(ctx, px, baseY - Math.floor(rng() * 4), scale, 2000 + i * 47, true)
+  }
+}
+
 // ─── Per-frame animated overlays ─────────────────────────────────────────────
 function drawWaterfall(
   ctx: CanvasRenderingContext2D, w: number, h: number, riverY: number,
@@ -819,24 +967,23 @@ function drawBrachiosaurus(
   const { x, y, scale } = state
   const cyclePhase = (state.cycleMs / 10000) % 1
   const bw = body.width, bh = body.height
-  // Body draw position — anchor body horizontally at x, with waterline at y.
-  // Body image is 44x18 at the requested scale; we want the lower belly (~y=14) at waterline.
+  // Body is 38x17 design pixels. Waterline sits at row 12 of 17.
+  const WATERLINE_ROW = 12, BODY_ROWS = 17
+  const NECK_ATTACH_COL = 33.5, BODY_COLS = 38, NECK_ATTACH_ROW = 1
   const drawX = Math.round(x - bw / 2)
-  const drawY = Math.round(y - bh * (14 / 18))
+  const drawY = Math.round(y - bh * (WATERLINE_ROW / BODY_ROWS))
   ctx.imageSmoothingEnabled = false
+  // Render the neck BEHIND the body so the shoulder bump occludes the neck base cleanly.
+  const shoulderX = drawX + Math.round((NECK_ATTACH_COL / BODY_COLS) * bw)
+  const shoulderY = drawY + Math.round((NECK_ATTACH_ROW / BODY_ROWS) * bh)
+  drawBrachioNeck(ctx, shoulderX, shoulderY, scale, cyclePhase)
   ctx.drawImage(body, drawX, drawY)
-  // Waterline wash — paint a soft horizontal band of WATER_MID over the brachio's
-  // lower body so it reads as "in the water".
+  // Waterline wash — soft band of WATER_MID over the submerged portion of the body.
   ctx.save()
   ctx.globalAlpha = 0.55
   ctx.fillStyle = WATER_MID
   ctx.fillRect(drawX, riverY - 1, bw, bh - (riverY - drawY))
   ctx.restore()
-
-  // Neck attaches at the body's right shoulder (design coords 33, 4 in the 44x18 sprite).
-  const shoulderX = drawX + Math.round((33 / 44) * bw)
-  const shoulderY = drawY + Math.round((4 / 18) * bh)
-  drawBrachioNeck(ctx, shoulderX, shoulderY, scale, cyclePhase)
 }
 
 function drawTriceratops(
