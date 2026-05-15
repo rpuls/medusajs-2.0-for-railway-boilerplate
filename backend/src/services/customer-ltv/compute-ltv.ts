@@ -19,8 +19,14 @@
  * hit this in practice.
  */
 
+/**
+ * `total` is widened beyond number|string because Medusa v2 hydrates
+ * monetary fields as BigNumber objects (e.g. `{ numeric: 267.85, raw: {
+ * value: "267.85", precision: 20 } }`) when read via `query.graph`.
+ * `toNumber` below knows how to unwrap each shape.
+ */
 export type LtvOrder = {
-  total: number | string
+  total: number | string | { numeric?: number; value?: string | number; raw?: { value?: string } } | null
   currency_code?: string | null
   status?: string | null
   created_at?: string | Date | null
@@ -39,11 +45,34 @@ export type LtvSummary = {
   mixed_currency_truncated: boolean
 }
 
-const toNumber = (v: number | string | null | undefined): number => {
+const toNumber = (v: unknown): number => {
+  if (v == null) return 0
   if (typeof v === "number") return Number.isFinite(v) ? v : 0
   if (typeof v === "string") {
     const n = Number.parseFloat(v)
     return Number.isFinite(n) ? n : 0
+  }
+  // Medusa v2 BigNumber shapes seen in the wild:
+  //   { numeric: 267.85, raw: { value: "267.85", precision: 20 } }
+  //   { value: "267.85" }
+  //   { value: 267.85 }
+  if (typeof v === "object") {
+    const obj = v as Record<string, unknown>
+    if (typeof obj.numeric === "number" && Number.isFinite(obj.numeric)) {
+      return obj.numeric
+    }
+    const rawValue = (obj.raw as Record<string, unknown> | undefined)?.value
+    if (typeof rawValue === "string") {
+      const n = Number.parseFloat(rawValue)
+      if (Number.isFinite(n)) return n
+    }
+    if (typeof obj.value === "number" && Number.isFinite(obj.value)) {
+      return obj.value
+    }
+    if (typeof obj.value === "string") {
+      const n = Number.parseFloat(obj.value)
+      if (Number.isFinite(n)) return n
+    }
   }
   return 0
 }
