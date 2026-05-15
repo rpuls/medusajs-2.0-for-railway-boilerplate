@@ -247,6 +247,14 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/wishlist",
+    },
+
+    {
+      resolve: "./src/modules/quote",
+    },
+
+    {
       resolve: "./src/modules/brand",
     },
 

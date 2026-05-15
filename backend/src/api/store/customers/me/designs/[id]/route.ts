@@ -71,6 +71,33 @@ export async function POST(
 
   const { design, designsService } = await loadOwnedDesign(req, params.id, customerId)
 
+  // If the customizer payload is changing, snapshot the OLD state into
+  // a design_version row before mutating the live design. Rename- and
+  // thumbnail-only updates don't create a version (avoids polluting
+  // the history with cosmetic changes).
+  let snapshottedVersion: number | null = null
+  if (body.customizer_metadata !== undefined) {
+    const existingVersions = await designsService.listDesignVersions(
+      { design_id: design.id },
+      { order: { version: "DESC" }, take: 1 }
+    )
+    const nextVersion =
+      ((existingVersions as Array<{ version: number }>)[0]?.version ?? 0) + 1
+    await designsService.createDesignVersions([
+      {
+        design_id: design.id,
+        customer_id: customerId,
+        version: nextVersion,
+        name: design.name,
+        thumbnail_url: design.thumbnail_url ?? null,
+        base_product_id: design.base_product_id ?? null,
+        base_variant_id: design.base_variant_id ?? null,
+        customizer_metadata: design.customizer_metadata,
+      },
+    ])
+    snapshottedVersion = nextVersion
+  }
+
   const [updated] = await designsService.updateDesigns([
     {
       id: design.id,
@@ -90,10 +117,11 @@ export async function POST(
       updated_name: body.name !== undefined,
       updated_thumbnail: body.thumbnail_url !== undefined,
       updated_metadata: body.customizer_metadata !== undefined,
+      snapshotted_version: snapshottedVersion,
     },
   })
 
-  res.json({ design: updated })
+  res.json({ design: updated, snapshotted_version: snapshottedVersion })
 }
 
 export async function DELETE(

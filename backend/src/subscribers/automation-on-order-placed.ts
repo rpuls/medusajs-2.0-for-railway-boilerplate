@@ -2,6 +2,7 @@ import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
 import { runRulesForEvent } from "../services/automation-rules/evaluate"
+import { getCustomerLtv } from "../services/customer-ltv/get-ltv"
 
 /**
  * Fires every automation rule with trigger_event = "order.placed".
@@ -23,6 +24,20 @@ export default async function automationOnOrderPlaced({
   } catch {
     return
   }
+  let lifetime_value = 0
+  let order_count = 0
+  if (order?.customer_id) {
+    try {
+      const ltv = await getCustomerLtv(container, order.customer_id)
+      lifetime_value = ltv.lifetime_value
+      order_count = ltv.order_count
+    } catch (err: any) {
+      logger.warn(
+        `automation:order.placed: ltv lookup failed for ${order.customer_id}: ${err?.message ?? err}`
+      )
+    }
+  }
+
   const payload = {
     order_id: orderId,
     customer_id: order?.customer_id ?? null,
@@ -36,6 +51,8 @@ export default async function automationOnOrderPlaced({
           0
         )
       : 0,
+    lifetime_value,
+    order_count,
   }
   try {
     const result = await runRulesForEvent(container, "order.placed", payload)

@@ -15,6 +15,14 @@ type LineItemMockupPreviewProps = {
   className?: string
 }
 
+// Sleeve and tag mockups are rendered server-side against a generic white
+// line-drawing placeholder (no variant-colour data is sent to the renderer),
+// so the resulting mockup looks like a white garment regardless of the
+// customer's chosen colour. When that's the *only* thing the cart preview
+// has to show, fall back to the variant-colour-aware product thumbnail so
+// the customer sees the actual garment colour they're buying.
+const NON_COLOR_AWARE_SIDES = new Set(["left_sleeve", "right_sleeve", "printed_tag"])
+
 /**
  * Cart / order line preview: one composite mockup per decorated side.
  * Multiple URLs show as a vertical strip so placement on each side stays visible.
@@ -36,10 +44,19 @@ const LineItemMockupPreview = ({
           mockupUrl: url,
         }))
 
+  const allMockupsAreNonColorAware =
+    normalizedMockups.length > 0 &&
+    normalizedMockups.every((m) => NON_COLOR_AWARE_SIDES.has(m.side))
+
   if (normalizedMockups.length <= 1) {
+    const primaryMockup = normalizedMockups[0]?.mockupUrl
+    const thumbnailSrc =
+      allMockupsAreNonColorAware && productThumbnail
+        ? productThumbnail
+        : primaryMockup ?? productThumbnail
     return (
       <Thumbnail
-        thumbnail={normalizedMockups[0]?.mockupUrl ?? productThumbnail}
+        thumbnail={thumbnailSrc}
         images={productImages}
         size={size}
         className={className}

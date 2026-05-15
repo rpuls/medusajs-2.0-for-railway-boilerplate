@@ -68,6 +68,14 @@ const TRIGGER_FIELDS: Record<string, { field: string; hint: string }[]> = {
     { field: "currency_code", hint: "Currency code, e.g. aud" },
     { field: "line_count", hint: "Number of line items" },
     { field: "quantity_total", hint: "Total item quantity" },
+    {
+      field: "lifetime_value",
+      hint: "Customer's cumulative spend across all non-cancelled orders",
+    },
+    {
+      field: "order_count",
+      hint: "Customer's cumulative order count (excluding cancelled)",
+    },
   ],
   "order.production_stage_changed": [
     { field: "to_stage", hint: "Stage being moved into, e.g. in_production" },

@@ -139,11 +139,12 @@ export async function buildChurnQueue(
     }
   }
 
-  // ---- Pull last_winback_sent_at off customer metadata ----
+  // ---- Pull last_winback_sent_at + marketing_consent_email off customer metadata ----
   const customerIds = Array.from(byCustomer.values())
     .map((c) => c.customer_id)
     .filter((id): id is string => typeof id === "string" && id.length > 0)
   const lastWinbackByCustomer = new Map<string, number>()
+  const optedOutCustomers = new Set<string>()
   if (customerIds.length > 0) {
     try {
       const { data: customers } = await query.graph({
@@ -153,10 +154,14 @@ export async function buildChurnQueue(
         pagination: { take: customerIds.length, skip: 0 },
       })
       for (const c of (customers as any[]) ?? []) {
-        const ts = (c?.metadata as any)?.last_winback_sent_at
+        const meta = (c?.metadata as Record<string, unknown> | undefined) ?? {}
+        const ts = meta.last_winback_sent_at
         if (typeof ts === "string") {
           const ms = Date.parse(ts)
           if (Number.isFinite(ms)) lastWinbackByCustomer.set(c.id, ms)
+        }
+        if (meta.marketing_consent_email === false) {
+          optedOutCustomers.add(c.id)
         }
       }
     } catch {
@@ -184,6 +189,7 @@ export async function buildChurnQueue(
     if (overdueFactor < 2) continue
 
     if (c.customer_id) {
+      if (optedOutCustomers.has(c.customer_id)) continue
       const lastWinback = lastWinbackByCustomer.get(c.customer_id)
       if (lastWinback != null) {
         const daysSinceWinback = (now.getTime() - lastWinback) / 86_400_000

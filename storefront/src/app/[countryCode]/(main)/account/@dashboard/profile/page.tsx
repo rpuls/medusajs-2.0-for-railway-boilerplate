@@ -3,11 +3,13 @@ import { Metadata } from "next"
 import ProfilePhone from "@modules/account//components/profile-phone"
 import ProfileBillingAddress from "@modules/account/components/profile-billing-address"
 import ProfileEmail from "@modules/account/components/profile-email"
+import ProfileMarketingConsent from "@modules/account/components/profile-marketing-consent"
 import ProfileName from "@modules/account/components/profile-name"
 import ProfilePassword from "@modules/account/components/profile-password"
 
 import { notFound } from "next/navigation"
 import { listRegions } from "@lib/data/regions"
+import { getConsent } from "@lib/data/consent"
 import { getCustomer } from "@lib/data/customer"
 
 export const metadata: Metadata = {
@@ -18,6 +20,7 @@ export const metadata: Metadata = {
 export default async function Profile() {
   const customer = await getCustomer()
   const regions = await listRegions()
+  const consent = await getConsent()
 
   if (!customer || !regions) {
     notFound()
@@ -41,6 +44,8 @@ export default async function Profile() {
         <ProfilePhone customer={customer} />
         <Divider />
         <ProfilePassword customer={customer} />
+        <Divider />
+        <ProfileMarketingConsent initial={consent} />
         <Divider />
         <ProfileBillingAddress customer={customer} regions={regions} />
       </div>

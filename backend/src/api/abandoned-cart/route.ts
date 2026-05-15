@@ -60,8 +60,17 @@ async function ensureAbandonedCartTable() {
           user_agent TEXT,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          reminder_sent_at TIMESTAMPTZ,
+          converted_at TIMESTAMPTZ,
           UNIQUE (cart_id, email)
         )
+      `)
+      // Two columns added after the original CREATE TABLE shipped — kept
+      // outside the CREATE for backward compat with existing prod tables.
+      await abandonedCartPool.query(`
+        ALTER TABLE abandoned_cart_followups
+          ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS converted_at TIMESTAMPTZ
       `)
     })()
   }

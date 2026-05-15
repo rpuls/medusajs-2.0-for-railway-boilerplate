@@ -18,6 +18,7 @@ import {
   getCustomizerMockupArtifacts,
   getCustomizerMockupUrls,
 } from "@modules/customizer/lib/metadata"
+import { getPrimaryGarmentImageUrl } from "@modules/products/lib/variant-options"
 import { memo, useState } from "react"
 
 type ItemProps = {
@@ -105,7 +106,19 @@ const Item = ({ item, type = "full" }: ItemProps) => {
             <LineItemMockupPreview
               mockups={mockupArtifacts}
               mockupUrls={mockupUrls}
-              productThumbnail={item.variant?.product?.thumbnail ?? item.thumbnail}
+              productThumbnail={
+                // Prefer the variant-colour-aware front image over the
+                // product's default thumbnail so the cart preview matches
+                // the colour the customer actually picked — important when
+                // the design only landed on a sleeve/printed_tag (those
+                // mockups always render against a white placeholder).
+                getPrimaryGarmentImageUrl(
+                  item.variant?.product as HttpTypes.StoreProduct | undefined,
+                  item.variant as HttpTypes.StoreProductVariant | undefined
+                ) ??
+                item.variant?.product?.thumbnail ??
+                item.thumbnail
+              }
               productImages={item.variant?.product?.images}
               size="square"
             />
