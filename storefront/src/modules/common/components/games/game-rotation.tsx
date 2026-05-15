@@ -13,7 +13,7 @@
  * of which one mounted.
  */
 import dynamic from "next/dynamic"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import type { GameComponentProps, GameId } from "./types"
 import { GAME_LABELS } from "./types"
@@ -32,19 +32,39 @@ const InvadersGame = dynamic<GameComponentProps>(
 
 /** Pure rotation policy. Currently a 50/50 random coin flip; centralised here
  * so changing the policy (e.g. weighting toward the new game during launch)
- * means editing one function. Returns a stable result for the page lifetime
- * because the caller stores it in state. */
+ * means editing one function. */
 function pickGame(): GameId {
   return Math.random() < 0.5 ? "tetris" : "invaders"
 }
 
 export default function GameRotation() {
-  /** Pick once on mount. Stored in state so re-renders don't re-roll. */
-  const [gameId] = useState<GameId>(() => pickGame())
+  /** Pick on the client only — SSR would call Math.random() during render and
+   * hydration would then mismatch when the client picked the other option. We
+   * defer the pick until after mount and render an invisible placeholder of
+   * the same height meanwhile so the page layout doesn't jump. */
+  const [gameId, setGameId] = useState<GameId | null>(null)
+  useEffect(() => {
+    setGameId(pickGame())
+  }, [])
+
   const Game = useMemo(
-    () => (gameId === "tetris" ? TetrisGame : InvadersGame),
+    () => (gameId === "tetris" ? TetrisGame : gameId === "invaders" ? InvadersGame : null),
     [gameId]
   )
+
+  if (!gameId || !Game) {
+    // Placeholder during SSR + the brief pre-mount client window. The actual
+    // game canvas is much taller; reserving min-height here avoids a layout
+    // shift when the game mounts on a 404 page.
+    return (
+      <div
+        className="w-full max-w-7xl mt-6 small:mt-10 flex flex-col items-stretch px-0"
+        aria-hidden
+        style={{ minHeight: "32rem" }}
+      />
+    )
+  }
+
   const label = GAME_LABELS[gameId]
   const intro =
     gameId === "tetris"
