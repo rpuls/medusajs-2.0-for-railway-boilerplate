@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { ArrowsRightLeft } from "@medusajs/icons"
+import { Map } from "@medusajs/icons"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { type ReactNode, useEffect, useId, useRef, useState } from "react"
 
@@ -862,7 +862,7 @@ const SystemMapPage = () => {
 
 export const config = defineRouteConfig({
   label: "System map",
-  icon: ArrowsRightLeft,
+  icon: Map,
 })
 
 export default SystemMapPage
