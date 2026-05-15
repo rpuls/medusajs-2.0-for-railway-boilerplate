@@ -351,7 +351,7 @@ export async function generateMockupPdf(
 
   const [magentaLogoFull, magentaLogoWatermark] = await Promise.all([
     makeMagentaLogo(rawLogoBuf, 100, 1.0),
-    makeMagentaLogo(rawLogoBuf, 500, 0.10),
+    makeMagentaLogo(rawLogoBuf, 600, 0.10),
   ])
 
   return buildPdf({ jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, magentaLogoFull, magentaLogoWatermark })
@@ -410,12 +410,12 @@ function buildPdf(params: {
           .font("PJS")
           .fontSize(12.5)
           .text("  " + value, { lineBreak: false })
-        textY += 20
+        textY += 17
       }
 
       // SC Prints logo — top right, magenta
-      const logoW = 90
-      const logoH = 90
+      const logoW = 72
+      const logoH = 72
       doc.image(magentaLogoFull, PW - MR - logoW, MT, {
         width: logoW,
         height: logoH,
@@ -423,14 +423,15 @@ function buildPdf(params: {
       })
 
       // ── MOCKUP IMAGES ────────────────────────────────────────────────────────
-      const imgY = MT + 108
-      const imgH = 300
-      const imgW = 250
+      const PH = 841.89
+      const imgY = MT + 80
+      const imgH = 420
+      const imgW = 260
 
-      // Watermark: centred in image band, drawn first so garment images render on top
-      const wmSize = 500
-      const wmX = ML + (usableW - wmSize) / 2
-      const wmY = imgY + (imgH - wmSize) / 2
+      // Watermark: centred on the full A4 page, drawn first so garment images render on top
+      const wmSize = 600
+      const wmX = (PW - wmSize) / 2
+      const wmY = (PH - wmSize) / 2
       doc.image(magentaLogoWatermark, wmX, wmY, { width: wmSize, height: wmSize })
 
       if (frontMockupBuf && backMockupBuf) {
@@ -448,21 +449,21 @@ function buildPdf(params: {
       }
 
       // ── POSITIONING & SIZING SECTION ─────────────────────────────────────────
-      const ruleY = imgY + imgH + 14
+      const ruleY = imgY + imgH + 8
       doc
         .moveTo(ML, ruleY)
         .lineTo(PW - MR, ruleY)
         .lineWidth(0.5)
         .stroke("#cccccc")
 
-      const posHeadY = ruleY + 8
+      const posHeadY = ruleY + 6
       doc
         .font("PJS-Bold")
         .fontSize(10)
         .fillColor("#000000")
         .text("Positioning and sizing", ML, posHeadY, { width: usableW, align: "center" })
 
-      const dimY = posHeadY + 17
+      const dimY = posHeadY + 14
       const dimText = printSizeLabel ? `Dimensions:  ${printSizeLabel}` : "Dimensions:"
       const halfW = (usableW - 10) / 2
       doc
@@ -474,7 +475,7 @@ function buildPdf(params: {
 
       // ── DISCLAIMER BOX ────────────────────────────────────────────────────────
       const boxPad = 10
-      const disclaimerY = dimY + 22
+      const disclaimerY = dimY + 16
       const disclaimerTextW = usableW - boxPad * 2
 
       doc.font("PJS").fontSize(8)
