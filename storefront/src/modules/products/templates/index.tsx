@@ -48,14 +48,12 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
     )
   }
 
-  // NOTE: Beanies previously used a dedicated EmbroideryOnlyProductTemplate.
-  // As of the unified-decoration rework, all products (including beanies)
-  // route through the standard customizer below. The customizer surfaces a
-  // per-side decoration method picker (print | embroidery) so beanies can
-  // still be embroidery-only via their `allowedPrintSides` restriction
-  // (handled in customizer/templates/index.tsx). The legacy
-  // EmbroideryOnlyProductTemplate import is kept available for rollback
-  // but no longer reachable by the router.
+  // All products (including beanies) route through the unified customizer.
+  // The customizer surfaces a per-side decoration method picker
+  // (print | embroidery) — see customizer/components/decoration-method-picker
+  // and embroidery-side-config. Beanies are still restricted by the
+  // `allowedPrintSides` logic in customizer/templates/index.tsx (treated as
+  // hats, front-only) so the experience is appropriate for the garment.
 
   // The customizer flow is the only purchase path — blank garments cannot be
   // ordered directly. ProductActions renders a "Customize this product" CTA
