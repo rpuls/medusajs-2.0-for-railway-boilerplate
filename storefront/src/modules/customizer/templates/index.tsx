@@ -42,6 +42,7 @@ import { getDisplayUnitMinorForVariant } from "@lib/util/get-product-price"
 import { sanitizeCustomizerDesignForCart } from "@modules/customizer/lib/sanitize-cart-metadata"
 import { uploadCustomerOriginalUnchanged } from "@modules/customizer/lib/upload-customer-original"
 import { extractCartDesigns, filterByKind } from "@lib/util/cart-decorations"
+import { sanitizeCartAddError } from "@lib/util/sanitize-cart-error"
 import {
   BulkPricingTier,
   CUSTOMIZER_PRINT_NOTES_MAX_LENGTH,
@@ -2918,9 +2919,11 @@ export default function CustomizerTemplate({
       // The generic Medusa framework default isn't actionable. Replace
       // it with a hint pointing to where to look so we can diagnose
       // failures from the field instead of staring at the generic copy.
+      // For everything else, route through the sanitizer so customers don't
+      // see leaked stack traces or internal paths from older backend builds.
       const friendly = /^an unknown error occurred\.?$/i.test(baseMessage.trim())
         ? "Add to cart failed on the server (no specific message returned). Open the browser console for details, or check the Railway backend logs around this timestamp."
-        : baseMessage
+        : sanitizeCartAddError(baseMessage)
       setUploadError(friendly)
     } finally {
       setIsSubmitting(false)

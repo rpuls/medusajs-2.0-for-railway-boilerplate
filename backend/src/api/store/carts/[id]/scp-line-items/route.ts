@@ -23,6 +23,10 @@ import {
 } from "../../../../../lib/scp-resolve-garment-unit-price"
 import { getPostHog } from "../../../../../lib/posthog"
 import { recomputeScpCartPricing } from "../../../../../lib/recompute-scp-cart-pricing"
+import {
+  classifyCartAddError,
+  extractWorkflowErrorMessage,
+} from "../../../../../lib/cart-workflow-error"
 
 const cartParamsSchema = z.object({
   id: z.string().min(1),
@@ -244,35 +248,17 @@ async function scpLineItemsPostHandler(req: MedusaRequest, res: MedusaResponse) 
       },
     })
   } catch (workflowError) {
-    // Re-throw as a typed MedusaError so the framework's default branch
-    // doesn't replace the message. INVALID_DATA → 400; UNEXPECTED_STATE →
-    // 500. We pick UNEXPECTED_STATE so retries are obvious to the customer
-    // (it isn't a payload validation problem).
-    // Medusa v2 workflow.run() can throw a WorkflowError, a plain Error, an
-    // array of step errors, or occasionally a plain object. Serialize safely
-    // so the message surfaced to the storefront (and logs) is always readable.
+    // Full error (with stack) goes to the Railway logs for debugging; the
+    // customer-facing message is sanitised by `classifyCartAddError` so we
+    // never leak file paths or stack frames into the storefront UI.
     // eslint-disable-next-line no-console
-    console.error("addToCartWorkflow threw:", workflowError)
-    let detail: string
-    if (workflowError instanceof Error) {
-      detail = `${workflowError.name}: ${workflowError.message}`
-    } else if (Array.isArray(workflowError)) {
-      detail = workflowError
-        .map((e) => (e instanceof Error ? `${e.name}: ${e.message}` : JSON.stringify(e)))
-        .join("; ")
-    } else if (typeof workflowError === "object" && workflowError !== null) {
-      try {
-        detail = JSON.stringify(workflowError)
-      } catch {
-        detail = String(workflowError)
-      }
-    } else {
-      detail = String(workflowError)
-    }
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      `addToCartWorkflow failed for variant ${variantId}, qty ${quantity}, unit_price ${unitPriceMajor}. ${detail}`
+    console.error(
+      `addToCartWorkflow threw (variant=${variantId} qty=${quantity} unit_price=${unitPriceMajor}):`,
+      workflowError
     )
+    const rawMessage = extractWorkflowErrorMessage(workflowError)
+    const { type, message } = classifyCartAddError(rawMessage)
+    throw new MedusaError(type, message)
   }
 
   const afterRows = await query.graph({

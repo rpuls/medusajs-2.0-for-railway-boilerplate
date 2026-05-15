@@ -17,6 +17,10 @@ import {
   resolveGarmentUnitAmountMajor,
 } from "../../../../../lib/scp-resolve-garment-unit-price"
 import { getPostHog } from "../../../../../lib/posthog"
+import {
+  classifyCartAddError,
+  extractWorkflowErrorMessage,
+} from "../../../../../lib/cart-workflow-error"
 
 const cartParamsSchema = z.object({ id: z.string().min(1) })
 
@@ -219,14 +223,17 @@ async function embroideryLineItemsPostHandler(req: MedusaRequest, res: MedusaRes
       },
     })
   } catch (workflowError) {
-    const detail =
-      workflowError instanceof Error
-        ? `${workflowError.name}: ${workflowError.message}`
-        : String(workflowError)
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      `addToCartWorkflow failed for embroidery line (variant ${variantId}, qty ${quantity}, unit_price ${finalUnitPriceMajor}). ${detail}`
+    // Full error (with stack) goes to the Railway logs for debugging; the
+    // customer-facing message is sanitised by `classifyCartAddError` so we
+    // never leak file paths or stack frames into the storefront UI.
+    // eslint-disable-next-line no-console
+    console.error(
+      `addToCartWorkflow threw for embroidery line (variant=${variantId} qty=${quantity} unit_price=${finalUnitPriceMajor}):`,
+      workflowError
     )
+    const rawMessage = extractWorkflowErrorMessage(workflowError)
+    const { type, message } = classifyCartAddError(rawMessage)
+    throw new MedusaError(type, message)
   }
 
   const afterRows = await query.graph({
