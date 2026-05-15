@@ -35,6 +35,7 @@ import {
   SCP_PRINT_UNIT_MATRIX,
   getAllowedScpPrintSizesForSide,
   resolveScpPrintSizeForSide,
+  resolveScpTierIndexForQuantity,
   type ScpPrintSizeId,
 } from "@modules/customizer/lib/scp-dtf-print-pricing"
 import { getDisplayUnitMinorForVariant } from "@lib/util/get-product-price"
@@ -3735,7 +3736,16 @@ export default function CustomizerTemplate({
                     {SCP_PRINT_SIZE_OPTIONS.filter((opt) =>
                       allowedSizesForCurrentSide.includes(opt.id)
                     ).map((opt) => {
-                      const fromPrice = SCP_PRINT_UNIT_MATRIX[opt.id][SCP_PRINT_UNIT_MATRIX[opt.id].length - 1]
+                      // Show the price the customer will *actually* pay at their
+                      // current quantity (highest 1-9 tier if no qty set yet) —
+                      // not the cheapest 100+ tier. The bulk discount drops it
+                      // further at higher qty, communicated via the bulk-tier
+                      // panel below.
+                      const matrixRow = SCP_PRINT_UNIT_MATRIX[opt.id]
+                      const tierIdx = resolveScpTierIndexForQuantity(totalQty)
+                      const currentPrice = matrixRow[tierIdx]
+                      const bestPrice = matrixRow[matrixRow.length - 1]
+                      const showsDiscountHint = currentPrice > bestPrice
                       const selected = scpPrintSizeChosen && scpPrintSizeId === opt.id
                       return (
                         <button
@@ -3760,7 +3770,10 @@ export default function CustomizerTemplate({
                             {opt.dimensionsLabel}
                           </span>
                           <span className="text-[11px] text-ui-fg-muted">
-                            from ${fromPrice.toFixed(2)} ea
+                            ${currentPrice.toFixed(2)} ea
+                            {showsDiscountHint
+                              ? ` · drops to $${bestPrice.toFixed(2)} at 100+`
+                              : ""}
                           </span>
                         </button>
                       )
@@ -3777,9 +3790,9 @@ export default function CustomizerTemplate({
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-semibold text-ui-fg-base">
-                      from $
+                      $
                       {SCP_PRINT_UNIT_MATRIX[scpPrintSizeId][
-                        SCP_PRINT_UNIT_MATRIX[scpPrintSizeId].length - 1
+                        resolveScpTierIndexForQuantity(totalQty)
                       ].toFixed(2)}{" "}
                       <span className="text-[11px] font-normal text-ui-fg-subtle">ea / location</span>
                     </p>
