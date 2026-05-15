@@ -449,9 +449,4 @@ const AsColourImportPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "AS Colour Import",
-  icon: ArrowDownTray,
-})
-
 export default AsColourImportPage

@@ -11,6 +11,7 @@ import {
   Skeleton,
   StatusBadge,
   Switch,
+  Tabs,
   Text,
   Tooltip,
 } from "@medusajs/ui"
@@ -34,6 +35,10 @@ import {
   nextStageInTrack,
   isProductionStage,
 } from "../../../lib/production-stage"
+import PrintQueuePage from "../print-queue/page"
+import PrintRecipesPage from "../print-recipes/page"
+import ProductionRejectsPage from "../production-rejects/page"
+import ProductionCalendarPage from "../production-calendar/page"
 
 /* ---------- types mirrored from /admin/reports/production-snapshot ------- */
 
@@ -186,7 +191,7 @@ const readInitialFilters = () => {
   return { methods, supplier, stuckOnly, drillStage }
 }
 
-const ProductionPage = () => {
+const ProductionDashboardTab = () => {
   const initial = useMemo(() => readInitialFilters(), [])
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loading, setLoading] = useState(true)
@@ -967,6 +972,25 @@ const KanbanCard = ({
     </a>
   )
 }
+
+const ProductionPage = () => (
+  <Tabs defaultValue="dashboard">
+    <div className="px-6 pt-4">
+      <Tabs.List>
+        <Tabs.Trigger value="dashboard">Dashboard</Tabs.Trigger>
+        <Tabs.Trigger value="print-queue">Print queue</Tabs.Trigger>
+        <Tabs.Trigger value="print-recipes">Print recipes</Tabs.Trigger>
+        <Tabs.Trigger value="calendar">Production calendar</Tabs.Trigger>
+        <Tabs.Trigger value="rejects">Rejects</Tabs.Trigger>
+      </Tabs.List>
+    </div>
+    <Tabs.Content value="dashboard"><ProductionDashboardTab /></Tabs.Content>
+    <Tabs.Content value="print-queue"><PrintQueuePage /></Tabs.Content>
+    <Tabs.Content value="print-recipes"><PrintRecipesPage /></Tabs.Content>
+    <Tabs.Content value="calendar"><ProductionCalendarPage /></Tabs.Content>
+    <Tabs.Content value="rejects"><ProductionRejectsPage /></Tabs.Content>
+  </Tabs>
+)
 
 export const config = defineRouteConfig({
   label: "Production",

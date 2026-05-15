@@ -528,9 +528,4 @@ const SeoAnalyticsPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "SEO",
-  rank: 99,
-})
-
 export default SeoAnalyticsPage

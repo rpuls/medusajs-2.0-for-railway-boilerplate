@@ -300,9 +300,4 @@ const PrintRecipesPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Print recipes",
-  icon: Tools,
-})
-
 export default PrintRecipesPage

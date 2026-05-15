@@ -46,6 +46,7 @@ import { CustomizerFunnelChart } from "../../components/reports/customizer-funne
 import { SavedDesignConversionChart } from "../../components/reports/saved-design-conversion-chart"
 import { ChurnQueueChart } from "../../components/reports/churn-queue-chart"
 import { EmailChannelRoiChart } from "../../components/reports/email-channel-roi-chart"
+import SeoAnalyticsPage from "../seo-analytics/page"
 import { AnnotationsManager } from "../../components/reports/annotations-manager"
 import { OperationalTiles } from "../../components/reports/operational-tiles"
 import { ReprintRateChart } from "../../components/reports/reprint-rate-chart"
@@ -217,6 +218,7 @@ const ReportsPage = () => {
             <Tabs.Trigger value="production">Production</Tabs.Trigger>
             <Tabs.Trigger value="customers">Customers</Tabs.Trigger>
             <Tabs.Trigger value="catalog">Catalog & supply</Tabs.Trigger>
+            <Tabs.Trigger value="seo">SEO</Tabs.Trigger>
           </Tabs.List>
         </Container>
 
@@ -467,6 +469,10 @@ const ReportsPage = () => {
               regionId={activeRegionId}
             />
           </div>
+        </Tabs.Content>
+
+        <Tabs.Content value="seo">
+          <SeoAnalyticsPage />
         </Tabs.Content>
       </Tabs>
     </div>

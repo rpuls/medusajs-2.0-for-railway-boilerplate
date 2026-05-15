@@ -497,9 +497,4 @@ const FashionBizImportPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "FashionBiz Import",
-  icon: ArrowDownTray,
-})
-
 export default FashionBizImportPage

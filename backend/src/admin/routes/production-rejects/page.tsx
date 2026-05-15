@@ -189,9 +189,4 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Rejects",
-  icon: Trash,
-})
-
 export default ProductionRejectsPage

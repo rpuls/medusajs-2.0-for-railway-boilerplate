@@ -3,6 +3,8 @@ import { Container, Heading, Tabs, Text } from "@medusajs/ui"
 import { CogSixTooth } from "@medusajs/icons"
 
 import { HelpTooltip } from "../../components/reports/help-tooltip"
+import AsColourImportPage from "../ascolour-import/page"
+import FashionBizImportPage from "../fashionbiz-import/page"
 import ProductBulkDeletePage from "../product-bulk-delete/page"
 import ProductTypeTagManagePage from "../product-type-tag-manage/page"
 import SpreadsheetSyncPage from "../spreadsheet-sync/page"
@@ -57,6 +59,8 @@ const ProductDataPage = () => {
             <Tabs.Trigger value="update-existing">Update existing</Tabs.Trigger>
             <Tabs.Trigger value="bulk-delete">Bulk delete</Tabs.Trigger>
             <Tabs.Trigger value="types-tags">Types &amp; tags</Tabs.Trigger>
+            <Tabs.Trigger value="ascolour-import">AS Colour Import</Tabs.Trigger>
+            <Tabs.Trigger value="fashionbiz-import">FashionBiz Import</Tabs.Trigger>
           </Tabs.List>
         </Container>
 
@@ -108,6 +112,14 @@ const ProductDataPage = () => {
             </Text>
           </Container>
           <ProductTypeTagManagePage />
+        </Tabs.Content>
+
+        <Tabs.Content value="ascolour-import" className="flex flex-col gap-y-3">
+          <AsColourImportPage />
+        </Tabs.Content>
+
+        <Tabs.Content value="fashionbiz-import" className="flex flex-col gap-y-3">
+          <FashionBizImportPage />
         </Tabs.Content>
       </Tabs>
     </div>

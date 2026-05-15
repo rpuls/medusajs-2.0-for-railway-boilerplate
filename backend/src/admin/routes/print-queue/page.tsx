@@ -189,9 +189,4 @@ const PrintQueuePage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Print queue",
-  icon: Adjustments,
-})
-
 export default PrintQueuePage

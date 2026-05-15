@@ -204,9 +204,4 @@ const ProductionCalendarPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Production calendar",
-  icon: Calendar,
-})
-
 export default ProductionCalendarPage
