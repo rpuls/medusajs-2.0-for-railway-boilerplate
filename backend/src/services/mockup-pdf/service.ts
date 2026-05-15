@@ -6,6 +6,72 @@ import sharp from "sharp"
 // Brand magenta: #ff2e63
 const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
 
+/**
+ * Remove the white background from a mockup image using edge-connected flood fill.
+ * Only pixels reachable from the image edges that meet the whiteness threshold are
+ * made transparent — so white fabric on a white garment is left untouched.
+ */
+async function removeWhiteBackground(imgBuf: Buffer, threshold = 238): Promise<Buffer> {
+  const { data, info } = await sharp(imgBuf)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const W = info.width
+  const H = info.height
+  const out = Buffer.from(data)
+  const visited = new Uint8Array(W * H)
+
+  function isWhitish(idx: number): boolean {
+    return (
+      data[idx * 4 + 0] >= threshold &&
+      data[idx * 4 + 1] >= threshold &&
+      data[idx * 4 + 2] >= threshold
+    )
+  }
+
+  // Seed queue with all whitish edge pixels
+  const queue: number[] = []
+  for (let x = 0; x < W; x++) {
+    const top = x
+    const bottom = (H - 1) * W + x
+    if (isWhitish(top)) { visited[top] = 1; queue.push(top) }
+    if (isWhitish(bottom)) { visited[bottom] = 1; queue.push(bottom) }
+  }
+  for (let y = 1; y < H - 1; y++) {
+    const left = y * W
+    const right = y * W + W - 1
+    if (isWhitish(left)) { visited[left] = 1; queue.push(left) }
+    if (isWhitish(right)) { visited[right] = 1; queue.push(right) }
+  }
+
+  // BFS — mark all connected whitish pixels transparent
+  let qi = 0
+  while (qi < queue.length) {
+    const idx = queue[qi++]
+    out[idx * 4 + 3] = 0
+
+    const x = idx % W
+    const y = Math.floor(idx / W)
+    const neighbors = [
+      y > 0 ? idx - W : -1,
+      y < H - 1 ? idx + W : -1,
+      x > 0 ? idx - 1 : -1,
+      x < W - 1 ? idx + 1 : -1,
+    ]
+    for (const n of neighbors) {
+      if (n >= 0 && !visited[n] && isWhitish(n)) {
+        visited[n] = 1
+        queue.push(n)
+      }
+    }
+  }
+
+  return sharp(out, { raw: { width: W, height: H, channels: 4 } })
+    .png()
+    .toBuffer()
+}
+
 async function makeMagentaLogo(
   logoBuf: Buffer,
   size: number,
@@ -251,9 +317,15 @@ export async function generateMockupPdf(
       const backUrl =
         artifacts.find((a) => a.side === "back")?.mockupUrl ?? null
 
-      const [frontBuf, backBuf] = await Promise.all([
+      const [frontRaw, backRaw] = await Promise.all([
         frontUrl ? fetchImageBuffer(frontUrl) : Promise.resolve(null),
         backUrl ? fetchImageBuffer(backUrl) : Promise.resolve(null),
+      ])
+
+      // Strip white background so the watermark shows through behind the garment
+      const [frontBuf, backBuf] = await Promise.all([
+        frontRaw ? removeWhiteBackground(frontRaw) : Promise.resolve(null),
+        backRaw ? removeWhiteBackground(backRaw) : Promise.resolve(null),
       ])
 
       return buildPageData(groupItems, frontBuf, backBuf)
