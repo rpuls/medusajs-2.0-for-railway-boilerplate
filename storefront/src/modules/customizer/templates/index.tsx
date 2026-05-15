@@ -3457,7 +3457,7 @@ export default function CustomizerTemplate({
           layout (col-span sits on lg, where order-* is reset to none).
         */}
         <div className={`order-2 lg:order-none flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start transition-[grid-column] duration-300 ease-in-out ${
-          isCustomizing ? "lg:col-span-7" : "lg:col-span-6"
+          isCustomizing ? "lg:col-span-7 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto" : "lg:col-span-6"
         }`}>
           {/* Gallery curtain-wipes away when customizing begins (pattern lifted
               from LabTierCCurtainWipeImage in the animation lab). The clipPath
