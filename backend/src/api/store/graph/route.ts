@@ -95,19 +95,11 @@ const HARD_MAX_LIMIT = 500
  * brand still get grouped correctly.
  */
 const HANDLE_PREFIX_BRAND: Array<{ prefix: string; brand: string }> = [
-  { prefix: "american-apparel", brand: "American Apparel" },
   { prefix: "biz-collection", brand: "Biz Collection" },
-  { prefix: "next-level", brand: "Next Level" },
-  { prefix: "stanley-stella", brand: "Stanley/Stella" },
+  { prefix: "biz-care", brand: "Biz Care" },
+  { prefix: "biz-corporates", brand: "Biz Corporates" },
   { prefix: "as-colour", brand: "AS Colour" },
-  { prefix: "grace", brand: "Grace Collection" },
-  { prefix: "dnc", brand: "DNC Workwear" },
-  { prefix: "ramo", brand: "Ramo" },
-  { prefix: "gildan", brand: "Gildan" },
   { prefix: "syzmik", brand: "Syzmik" },
-  { prefix: "anvil", brand: "Anvil" },
-  { prefix: "aussie-pacific", brand: "Aussie Pacific" },
-  { prefix: "winning-spirit", brand: "Winning Spirit" },
 ].sort((a, b) => b.prefix.length - a.prefix.length)
 
 /**
@@ -119,16 +111,8 @@ const HANDLE_PREFIX_BRAND: Array<{ prefix: string; brand: string }> = [
  */
 const CANONICAL_BRANDS: Array<{ name: string; logoSrc: string | null }> = [
   { name: "AS Colour", logoSrc: "/images/brands/logos/as-colour.png" },
-  { name: "Gildan", logoSrc: "/images/brands/logos/gildan.png" },
   { name: "Syzmik", logoSrc: "/images/brands/logos/syzmik-workwear.svg" },
   { name: "Biz Collection", logoSrc: "/images/brands/logos/biz-collection.svg" },
-  { name: "American Apparel", logoSrc: "/images/brands/logos/american-apparel.png" },
-  { name: "Anvil", logoSrc: "/images/brands/logos/anvil.png" },
-  { name: "DNC Workwear", logoSrc: "/images/brands/logos/dnc.png" },
-  { name: "Grace Collection", logoSrc: "/images/brands/logos/grace.svg" },
-  { name: "Ramo", logoSrc: "/images/brands/logos/ramo.svg" },
-  { name: "Aussie Pacific", logoSrc: null },
-  { name: "Winning Spirit", logoSrc: null },
 ]
 
 function inferBrandFromHandle(handle: string | null | undefined): string | null {

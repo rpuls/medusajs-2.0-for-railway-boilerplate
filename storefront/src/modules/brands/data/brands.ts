@@ -18,22 +18,11 @@ export type BrandPresentation = {
 
 const BRAND_PRESENTATION_BY_HANDLE: Record<string, BrandPresentation> = {
   "as-colour": { initials: "AS", bgClass: "bg-zinc-900", logoSrc: `${LOGO_BASE}/as-colour.png` },
-  gildan: { initials: "G", bgClass: "bg-blue-700", logoSrc: `${LOGO_BASE}/gildan.png` },
   syzmik: { initials: "SY", bgClass: "bg-slate-800", logoSrc: `${LOGO_BASE}/syzmik-workwear.svg` },
   "biz-collection": { initials: "B+", bgClass: "bg-rose-800", logoSrc: `${LOGO_BASE}/biz-collection.svg` },
-  "american-apparel": { initials: "AA", bgClass: "bg-neutral-800", logoSrc: `${LOGO_BASE}/american-apparel.png` },
-  anvil: { initials: "A", bgClass: "bg-slate-700", logoSrc: `${LOGO_BASE}/anvil.png` },
-  "dnc-workwear": { initials: "DNC", bgClass: "bg-zinc-600", logoSrc: `${LOGO_BASE}/dnc.png` },
-  grace: { initials: "GC", bgClass: "bg-stone-500", logoSrc: `${LOGO_BASE}/grace.svg` },
-  ramo: { initials: "R", bgClass: "bg-emerald-800", logoSrc: `${LOGO_BASE}/ramo.svg` },
-  "aussie-pacific": { initials: "AP", bgClass: "bg-sky-900" },
-  "winning-spirit": { initials: "WS", bgClass: "bg-indigo-900" },
   fashionbiz: { initials: "FZ", bgClass: "bg-rose-900" },
   "biz-care": { initials: "BC", bgClass: "bg-teal-700" },
   "biz-corporates": { initials: "BC", bgClass: "bg-blue-800" },
-  "stanley-stella": { initials: "SS", bgClass: "bg-stone-700" },
-  "next-level": { initials: "NL", bgClass: "bg-zinc-800" },
-  honeybee: { initials: "HB", bgClass: "bg-amber-700" },
 }
 
 const FALLBACK_PRESENTATION: BrandPresentation = {
