@@ -85,15 +85,23 @@ export function useGraphExpansion(
 
   const buildParams = useCallback(
     (node: GraphNode, offset: number): URLSearchParams | null => {
-      if (node.kind !== "brand" && node.kind !== "category") return null
+      if (!["brand", "category", "type", "tag"].includes(node.kind)) return null
       const params = new URLSearchParams()
       if (node.kind === "brand") {
         params.set("mode", "brand")
         params.set("brand", node.label)
-      } else {
+      } else if (node.kind === "category") {
         params.set("mode", "category")
         const categoryId = node.id.startsWith("cat:") ? node.id.slice(4) : node.id
         params.set("category_id", categoryId)
+      } else if (node.kind === "type") {
+        params.set("mode", "type")
+        const typeId = node.id.startsWith("type:") ? node.id.slice(5) : node.id
+        params.set("type_id", typeId)
+      } else if (node.kind === "tag") {
+        params.set("mode", "tag")
+        const tagId = node.id.startsWith("tag:") ? node.id.slice(4) : node.id
+        params.set("tag_id", tagId)
       }
       params.set("limit", String(expansionLimit))
       params.set("offset", String(offset))
@@ -146,7 +154,7 @@ export function useGraphExpansion(
 
   const expandNode = useCallback(
     async (node: GraphNode): Promise<void> => {
-      if (node.kind !== "brand" && node.kind !== "category") return
+      if (!["brand", "category", "type", "tag"].includes(node.kind)) return
       if (expandedRef.current.has(node.id)) return
       return runFetch(node, 0, `${node.id}:0`)
     },
@@ -155,7 +163,7 @@ export function useGraphExpansion(
 
   const loadMore = useCallback(
     async (node: GraphNode): Promise<void> => {
-      if (node.kind !== "brand" && node.kind !== "category") return
+      if (!["brand", "category", "type", "tag"].includes(node.kind)) return
       const info = infoRef.current.get(node.id)
       if (!info) return expandNode(node)
       if (info.loaded >= info.total) return

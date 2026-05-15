@@ -48,6 +48,22 @@ export const NODE_STYLE: Record<NodeKind, NodeStyle> = {
     labelColor: "#94a3b8",
     labelHighlightColor: "#f1f5f9",
   },
+  type: {
+    fill: "#5b21b6",
+    highlightFill: "#a78bfa",
+    stroke: "#7c3aed",
+    baseRadius: 7,
+    labelColor: "#a78bfa",
+    labelHighlightColor: "#ede9fe",
+  },
+  tag: {
+    fill: "#0f766e",
+    highlightFill: "#2dd4bf",
+    stroke: "#14b8a6",
+    baseRadius: 5.5,
+    labelColor: "#5eead4",
+    labelHighlightColor: "#ccfbf1",
+  },
   product: {
     fill: "#94a3b8",
     highlightFill: "#93c5fd",

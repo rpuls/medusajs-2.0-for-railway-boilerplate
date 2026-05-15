@@ -9,21 +9,25 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
  * category + collection relationships with no waterfalls.
  *
  * Modes:
- *   - `summary` (default): root + distinct brand nodes + top-level categories.
- *     No product nodes. Used for the initial paint.
- *   - `brand`:   products for one brand + links to brand + their categories.
+ *   - `summary` (default): root + distinct brand nodes + top-level categories
+ *     + product types + product tags. No product nodes. Used for initial paint.
+ *   - `brand`:    products for one brand + links to brand + their categories/types/tags.
  *   - `category`: products in one category + links.
- *   - `all`:     full dump, hard-capped. Diagnostic / admin tool override.
+ *   - `type`:     products for one product type + links.
+ *   - `tag`:      products for one product tag + links.
+ *   - `all`:      full dump, hard-capped. Diagnostic / admin tool override.
  *
  * Query params:
- *   - mode: "summary" | "brand" | "category" | "all" (default "summary")
+ *   - mode: "summary" | "brand" | "category" | "type" | "tag" | "all" (default "summary")
  *   - brand: brand name (required when mode=brand)
  *   - category_id: category id (required when mode=category)
+ *   - type_id: product type id (required when mode=type)
+ *   - tag_id: product tag id (required when mode=tag)
  *   - limit: per-page cap for product-returning modes (default 200, max 500)
  *   - offset: pagination offset (product-returning modes only)
  */
 
-type NodeKind = "root" | "brand" | "category" | "product"
+type NodeKind = "root" | "brand" | "category" | "product" | "type" | "tag"
 
 type GraphPrice = { amount: number; currency_code: string }
 
@@ -41,13 +45,17 @@ type GraphNode = {
 type GraphLinkKind =
   | "product-brand"
   | "product-category"
+  | "product-type"
+  | "product-tag"
   | "category-parent"
   | "brand-root"
   | "category-root"
+  | "type-root"
+  | "tag-root"
 
 type GraphLink = { source: string; target: string; kind: GraphLinkKind }
 
-type GraphMode = "summary" | "brand" | "category" | "all"
+type GraphMode = "summary" | "brand" | "category" | "type" | "tag" | "all"
 
 type GraphPayload = {
   nodes: GraphNode[]
@@ -64,6 +72,8 @@ type ProductRow = {
   thumbnail: string | null
   metadata: Record<string, unknown> | null
   status?: string
+  type?: { id: string; value: string } | null
+  tags?: Array<{ id: string; value: string }>
   variants?: Array<{
     id: string
     prices?: Array<{ amount: number; currency_code: string }>
@@ -144,6 +154,23 @@ function resolveProductBrand(row: ProductRow): string | null {
     typeof row.metadata?.brand === "string" ? (row.metadata.brand as string).trim() : ""
   if (metaBrand) return metaBrand
   return inferBrandFromHandle(row.handle)
+}
+
+function resolveProductType(row: ProductRow): { id: string; value: string } | null {
+  const t = row.type
+  if (t && typeof t.id === "string" && typeof t.value === "string") {
+    return { id: t.id, value: t.value }
+  }
+  return null
+}
+
+function resolveProductTags(row: ProductRow): Array<{ id: string; value: string }> {
+  const tags = row.tags
+  if (!Array.isArray(tags)) return []
+  return tags.filter(
+    (t): t is { id: string; value: string } =>
+      typeof t.id === "string" && typeof t.value === "string"
+  )
 }
 
 const BULK_VS_CALCULATED_MISMATCH_RATIO = 2
@@ -346,7 +373,7 @@ function setCacheHeaders(res: MedusaResponse) {
 
 function parseMode(raw: unknown): GraphMode {
   const v = typeof raw === "string" ? raw.toLowerCase() : ""
-  if (v === "brand" || v === "category" || v === "all") return v
+  if (v === "brand" || v === "category" || v === "type" || v === "tag" || v === "all") return v
   return "summary"
 }
 
@@ -373,6 +400,10 @@ const PRODUCT_FIELDS = [
   "brand.id",
   "brand.name",
   "brand.handle",
+  "type.id",
+  "type.value",
+  "tags.id",
+  "tags.value",
   "variants.id",
   "variants.prices.amount",
   "variants.prices.currency_code",
@@ -460,14 +491,32 @@ function buildProductNodeAndLinks(
       })
     }
   }
+
+  // Always emit type/tag links so products connect to the summary super-nodes
+  // when they're merged into the client payload.
+  const productType = resolveProductType(row)
+  if (productType) {
+    links.push({
+      source: node.id,
+      target: `type:${productType.id}`,
+      kind: "product-type",
+    })
+  }
+  for (const tag of resolveProductTags(row)) {
+    links.push({
+      source: node.id,
+      target: `tag:${tag.id}`,
+      kind: "product-tag",
+    })
+  }
+
   return { node, links, brand }
 }
 
 /**
  * Build the initial "summary" payload — root + brand super-nodes + category
- * super-nodes. Brand counts come from a lightweight product scan that pulls
- * only `id`, `handle` and `metadata.brand`, which `query.graph` can satisfy
- * efficiently.
+ * super-nodes + product type nodes + tag nodes. Brand/type/tag counts come
+ * from a lightweight product scan. No product nodes are emitted here.
  */
 async function buildSummary(query: QueryGraph): Promise<GraphPayload> {
   const nodes: GraphNode[] = [ROOT_NODE]
@@ -498,20 +547,35 @@ async function buildSummary(query: QueryGraph): Promise<GraphPayload> {
   }
 
   const brandCounts = new Map<string, number>()
+  const typeCounts = new Map<string, { value: string; count: number }>()
+  const tagCounts = new Map<string, { value: string; count: number }>()
+
   let skip = 0
   const take = 500
   for (;;) {
     const { data } = await query.graph({
       entity: "product",
-      fields: ["id", "handle", "metadata", "brand.name"],
+      fields: ["id", "handle", "metadata", "brand.name", "type.id", "type.value", "tags.id", "tags.value"],
       filters: { status: "published" },
       pagination: { take, skip },
     })
-    const page = (data as Array<Pick<ProductRow, "id" | "handle" | "metadata">>) ?? []
+    const page = (data as ProductRow[]) ?? []
     for (const row of page) {
       const brand = resolveProductBrand(row as ProductRow)
-      if (!brand) continue
-      brandCounts.set(brand, (brandCounts.get(brand) ?? 0) + 1)
+      if (brand) {
+        brandCounts.set(brand, (brandCounts.get(brand) ?? 0) + 1)
+      }
+
+      const productType = resolveProductType(row)
+      if (productType) {
+        const existing = typeCounts.get(productType.id) ?? { value: productType.value, count: 0 }
+        typeCounts.set(productType.id, { ...existing, count: existing.count + 1 })
+      }
+
+      for (const tag of resolveProductTags(row)) {
+        const existing = tagCounts.get(tag.id) ?? { value: tag.value, count: 0 }
+        tagCounts.set(tag.id, { ...existing, count: existing.count + 1 })
+      }
     }
     if (page.length < take) break
     skip += take
@@ -519,9 +583,8 @@ async function buildSummary(query: QueryGraph): Promise<GraphPayload> {
 
   /**
    * Always emit every canonical brand so the graph matches the `/brands` page,
-   * even when a brand has zero products in the current catalogue (common for
-   * newly-added brands or regions without stock). Non-canonical brands
-   * discovered from product metadata are appended afterwards.
+   * even when a brand has zero products in the current catalogue. Non-canonical
+   * brands discovered from product metadata are appended afterwards.
    */
   const emittedBrands = new Set<string>()
   for (const canonical of CANONICAL_BRANDS) {
@@ -553,6 +616,36 @@ async function buildSummary(query: QueryGraph): Promise<GraphPayload> {
       source: `brand:${brand}`,
       target: ROOT_ID,
       kind: "brand-root",
+    })
+  }
+
+  // Emit product type super-nodes.
+  for (const [typeId, { value, count }] of typeCounts) {
+    nodes.push({
+      id: `type:${typeId}`,
+      kind: "type",
+      label: value,
+      productCount: count,
+    })
+    links.push({
+      source: `type:${typeId}`,
+      target: ROOT_ID,
+      kind: "type-root",
+    })
+  }
+
+  // Emit tag super-nodes.
+  for (const [tagId, { value, count }] of tagCounts) {
+    nodes.push({
+      id: `tag:${tagId}`,
+      kind: "tag",
+      label: value,
+      productCount: count,
+    })
+    links.push({
+      source: `tag:${tagId}`,
+      target: ROOT_ID,
+      kind: "tag-root",
     })
   }
 
@@ -686,8 +779,6 @@ async function buildCategory(
         total = result.total
         break
       }
-      // Keep the latest attempt's total in case every attempt returns zero —
-      // so the UI still shows `0` rather than `undefined` in the badge.
       total = result.total
     } catch (error) {
       console.warn(
@@ -734,6 +825,126 @@ async function buildCategory(
   }
 
   return { nodes, links, mode: "category", offset, total }
+}
+
+async function buildType(
+  query: QueryGraph,
+  typeId: string,
+  limit: number,
+  offset: number,
+  preferredCurrency: string | null
+): Promise<GraphPayload> {
+  const nodes: GraphNode[] = []
+  const links: GraphLink[] = []
+
+  const { rows, total } = await fetchProducts(
+    query,
+    { type_id: typeId },
+    limit,
+    offset
+  )
+
+  const typeLabel = resolveProductType(rows[0] ?? ({} as ProductRow))?.value ?? "Type"
+
+  nodes.push({
+    id: `type:${typeId}`,
+    kind: "type",
+    label: typeLabel,
+    productCount: total,
+  })
+
+  const brandsSeen = new Set<string>()
+  const categoriesSeen = new Set<string>()
+
+  for (const row of rows) {
+    const { node, links: rowLinks, brand } = buildProductNodeAndLinks(
+      row,
+      preferredCurrency,
+      true,
+      true
+    )
+    nodes.push(node)
+    links.push(...rowLinks)
+    if (brand && !brandsSeen.has(brand)) {
+      brandsSeen.add(brand)
+      nodes.push({ id: `brand:${brand}`, kind: "brand", label: brand })
+    }
+    for (const cat of row.categories ?? []) {
+      if (!categoriesSeen.has(cat.id)) {
+        categoriesSeen.add(cat.id)
+        nodes.push({ id: `cat:${cat.id}`, kind: "category", label: cat.name })
+      }
+    }
+  }
+
+  return { nodes, links, mode: "type", offset, total }
+}
+
+async function buildTag(
+  query: QueryGraph,
+  tagId: string,
+  limit: number,
+  offset: number,
+  preferredCurrency: string | null
+): Promise<GraphPayload> {
+  const nodes: GraphNode[] = []
+  const links: GraphLink[] = []
+
+  // Filter products that have this tag. Medusa v2 supports relation filters
+  // via nested objects — `{ tags: { id: tagId } }` matches products where at
+  // least one tag matches the given id.
+  let rows: ProductRow[] = []
+  let total = 0
+  try {
+    const result = await fetchProducts(query, { tags: { id: tagId } }, limit, offset)
+    rows = result.rows
+    total = result.total
+  } catch (error) {
+    console.warn(`[/store/graph] tag filter failed for tag ${tagId}`, error)
+  }
+
+  // Determine tag label from any matching product row.
+  let tagLabel = "Tag"
+  for (const row of rows) {
+    const found = resolveProductTags(row).find((t) => t.id === tagId)
+    if (found) {
+      tagLabel = found.value
+      break
+    }
+  }
+
+  nodes.push({
+    id: `tag:${tagId}`,
+    kind: "tag",
+    label: tagLabel,
+    productCount: total,
+  })
+
+  const brandsSeen = new Set<string>()
+  const categoriesSeen = new Set<string>()
+
+  for (const row of rows) {
+    const { node, links: rowLinks, brand } = buildProductNodeAndLinks(
+      row,
+      preferredCurrency,
+      true,
+      true
+    )
+    nodes.push(node)
+    links.push(...rowLinks)
+    if (brand && !brandsSeen.has(brand)) {
+      brandsSeen.add(brand)
+      nodes.push({ id: `brand:${brand}`, kind: "brand", label: brand })
+    }
+    for (const cat of row.categories ?? []) {
+      if (!categoriesSeen.has(cat.id)) {
+        categoriesSeen.add(cat.id)
+        nodes.push({ id: `cat:${cat.id}`, kind: "category", label: cat.name })
+      }
+    }
+  }
+
+  return { nodes, links, mode: "tag", offset, total }
 }
 
 async function buildAll(
@@ -813,6 +1024,24 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         })
       }
       payload = await buildCategory(query, categoryId, limit, offset, preferredCurrency)
+    } else if (mode === "type") {
+      const typeId =
+        typeof req.query.type_id === "string" ? req.query.type_id.trim() : ""
+      if (!typeId) {
+        return res.status(400).json({
+          error: "Missing `type_id` query parameter for mode=type",
+        })
+      }
+      payload = await buildType(query, typeId, limit, offset, preferredCurrency)
+    } else if (mode === "tag") {
+      const tagId =
+        typeof req.query.tag_id === "string" ? req.query.tag_id.trim() : ""
+      if (!tagId) {
+        return res.status(400).json({
+          error: "Missing `tag_id` query parameter for mode=tag",
+        })
+      }
+      payload = await buildTag(query, tagId, limit, offset, preferredCurrency)
     } else {
       payload = await buildAll(query, limit, offset, preferredCurrency)
     }

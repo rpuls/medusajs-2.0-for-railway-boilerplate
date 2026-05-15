@@ -6,6 +6,8 @@ export type GraphVisibility = {
   root: boolean
   brand: boolean
   category: boolean
+  type: boolean
+  tag: boolean
   product: boolean
 }
 
@@ -26,6 +28,8 @@ export function GraphFilters({ value, onChange }: Props) {
   const items: Array<{ key: keyof GraphVisibility; label: string }> = [
     { key: "brand", label: "Brands" },
     { key: "category", label: "Categories" },
+    { key: "type", label: "Types" },
+    { key: "tag", label: "Tags" },
     { key: "product", label: "Products" },
   ]
 

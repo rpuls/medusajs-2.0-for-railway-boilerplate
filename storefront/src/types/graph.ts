@@ -6,9 +6,9 @@
  * Keep any shape changes in sync with the backend route.
  */
 
-export type GraphMode = "summary" | "brand" | "category" | "all"
+export type GraphMode = "summary" | "brand" | "category" | "type" | "tag" | "all"
 
-export type NodeKind = "root" | "brand" | "category" | "product"
+export type NodeKind = "root" | "brand" | "category" | "product" | "type" | "tag"
 
 /** `amount` is Medusa minor units (e.g. cents); format for display with ÷100. */
 export type GraphPrice = {
@@ -17,7 +17,7 @@ export type GraphPrice = {
 }
 
 export type GraphNode = {
-  /** Namespaced id — `root`, `brand:<name>`, `cat:<id>`, `prod:<id>`. */
+  /** Namespaced id — `root`, `brand:<name>`, `cat:<id>`, `prod:<id>`, `type:<id>`, `tag:<id>`. */
   id: string
   kind: NodeKind
   label: string
@@ -39,9 +39,13 @@ export type GraphNode = {
 export type GraphLinkKind =
   | "product-brand"
   | "product-category"
+  | "product-type"
+  | "product-tag"
   | "category-parent"
   | "brand-root"
   | "category-root"
+  | "type-root"
+  | "tag-root"
 
 export type GraphLink = {
   source: string
@@ -64,4 +68,6 @@ export const GRAPH_NODE_ID = {
   brand: (name: string) => `brand:${name}`,
   category: (id: string) => `cat:${id}`,
   product: (id: string) => `prod:${id}`,
+  type: (id: string) => `type:${id}`,
+  tag: (id: string) => `tag:${id}`,
 } as const
