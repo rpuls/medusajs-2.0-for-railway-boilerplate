@@ -251,20 +251,46 @@ export default function PricingPanel({
             nextTier && currentTier
               ? Math.max(0, currentTier.amountCents - nextTier.amountCents)
               : 0
+          // Progress fraction: each tier is one equal segment; fill the
+          // current segment proportionally by qty within that tier's range.
+          const progressPct = (() => {
+            if (tierHighlightQty <= 0 || !currentTier) return 0
+            if (!nextTier) return 100
+            const range = nextTier.minQuantity - currentTier.minQuantity
+            const withinTier = Math.min(1, Math.max(0, (tierHighlightQty - currentTier.minQuantity) / range))
+            return ((currentTierIdx + withinTier) / tiers.length) * 100
+          })()
           return (
             <details className="group rounded-lg border border-ui-border-base bg-ui-bg-subtle/40">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
-                <span className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
-                  Bulk discounts
-                </span>
-                <span className="flex items-center gap-2">
-                  {currentTier && tierHighlightQty > 0 ? (
-                    <span className="text-xs font-semibold text-emerald-700">
-                      {formatMoney(currentTier.amountCents, currencyCode)} / ea
-                    </span>
-                  ) : null}
-                  <ExpandCollapsePlus />
-                </span>
+              <summary className="block cursor-pointer list-none px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
+                    Bulk discounts
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {currentTier && tierHighlightQty > 0 ? (
+                      <span className="text-xs font-semibold text-emerald-700">
+                        {formatMoney(currentTier.amountCents, currencyCode)} / ea
+                      </span>
+                    ) : null}
+                    <ExpandCollapsePlus />
+                  </span>
+                </div>
+                <div className="relative mt-2">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-ui-bg-base-hover">
+                    <div
+                      className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
+                  {tiers.slice(1).map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute inset-y-0 w-0.5 rounded-full bg-white"
+                      style={{ left: `calc(${((i + 1) / tiers.length) * 100}% - 1px)` }}
+                    />
+                  ))}
+                </div>
               </summary>
               <div className="space-y-2 border-t border-ui-border-base px-3 pb-3 pt-2">
                 {nextTier && unitsToNext > 0 && tierHighlightQty > 0 ? (
