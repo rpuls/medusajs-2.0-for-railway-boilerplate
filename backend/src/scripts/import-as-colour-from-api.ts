@@ -365,6 +365,7 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
         ascolour: {
           styleCode: product.styleCode,
           lastSync: new Date().toISOString(),
+          productType: (product as any).productType ?? null,
           category: product.category ?? null,
           gender: (product as any).gender ?? null,
           fit: (product as any).fit ?? null,

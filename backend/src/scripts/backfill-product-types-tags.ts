@@ -254,8 +254,9 @@ export default async function backfillProductTypesTags({ container }: ExecArgs) 
             tagCache,
           })
 
-          // Also persist category/gender/fit into metadata.ascolour so future
-          // backfill runs can skip the API call for already-enriched products.
+          // Also persist productType/category/gender/fit into metadata.ascolour
+          // so future backfill runs can skip the API call for already-enriched
+          // products.
           const existingMeta: Record<string, any> = dbProduct.metadata ?? {}
           await (productModule as any).updateProducts(dbProduct.id, {
             metadata: {
@@ -263,6 +264,7 @@ export default async function backfillProductTypesTags({ container }: ExecArgs) 
               ascolour: {
                 ...(existingMeta.ascolour ?? {}),
                 styleCode: apiProduct.styleCode,
+                productType: (apiProduct as any).productType ?? null,
                 category: apiProduct.category ?? null,
                 gender: (apiProduct as any).gender ?? null,
                 fit: (apiProduct as any).fit ?? null,

@@ -40,11 +40,9 @@ export const PRODUCT_TYPE_ALIASES: Record<string, string> = {
   "business shirt": "Shirts",
   "short sleeve shirt": "Shirts",
   "ss shirt": "Shirts",
-  // Hi-vis garments are most commonly shirts; tag also added separately
-  "hi-vis": "Shirts",
-  "hi vis": "Shirts",
-  "high vis": "Shirts",
-  "high-vis": "Shirts",
+  "shirting and tops": "Shirts",
+  // Healthcare scrub tops typically classify as Shirts; hi-vis is NOT a
+  // garment type (it's a feature — see TAG_ALIASES) so it doesn't go here.
   "scrubs": "Shirts",
   // Longsleeves
   "longsleeve": "Longsleeves",
@@ -156,27 +154,43 @@ export const TAG_ALIASES: Record<string, string> = {
   "female": "Women",
   "unisex": "Unisex",
   "uni-sex": "Unisex",
+  "kids | youth": "Kids",
+  "kids": "Kids",
+  "youth": "Kids",
   // Fit
   "regular": "Regular Fit",
   "regular fit": "Regular Fit",
   "slim": "Slim Fit",
   "slim fit": "Slim Fit",
+  "slim-regular": "Slim Fit",
   "relaxed": "Relaxed Fit",
   "relaxed fit": "Relaxed Fit",
   "loose": "Relaxed Fit",
   "oversized": "Oversized",
+  "modern fit": "Modern Fit",
+  "classic fit": "Classic Fit",
+  "tailored fit": "Tailored Fit",
+  "easy fit": "Easy Fit",
+  "semi-fitted": "Semi-Fitted",
+  "semi fitted": "Semi-Fitted",
   // Sleeve length
   "short sleeve": "Short Sleeve",
   "short-sleeve": "Short Sleeve",
   "shortsleeve": "Short Sleeve",
+  "short": "Short Sleeve",
   "ss": "Short Sleeve",
   "long sleeve": "Long Sleeve",
   "long-sleeve": "Long Sleeve",
   "longsleeve": "Long Sleeve",
+  "long": "Long Sleeve",
   "ls": "Long Sleeve",
   "sleeveless": "Sleeveless",
   "3/4 sleeve": "3/4 Sleeve",
   "3/4 sleeves": "3/4 Sleeve",
+  // Cap profile (headwear)
+  "high profile": "High Profile",
+  "mid profile": "Mid Profile",
+  "low profile": "Low Profile",
   // Industry
   "corporate": "Corporate",
   "business": "Corporate",
@@ -184,6 +198,7 @@ export const TAG_ALIASES: Record<string, string> = {
   "medical": "Healthcare",
   "hospitality": "Hospitality",
   "construction": "Construction",
+  "industrial": "Industrial",
   // Safety
   "hi-vis": "Hi-Vis",
   "hi vis": "Hi-Vis",
@@ -191,6 +206,7 @@ export const TAG_ALIASES: Record<string, string> = {
   "high-vis": "Hi-Vis",
   "high visibility": "Hi-Vis",
   "hivis": "Hi-Vis",
+  "hi vis taped": "Hi-Vis",
   // Tech / fabric properties
   "stretch": "Stretch",
   "4-way stretch": "Stretch",
@@ -214,6 +230,34 @@ export const TAG_ALIASES: Record<string, string> = {
   "reflective": "Reflective",
   "breathable": "Breathable",
   "antibacterial": "Antibacterial",
+}
+
+// Tag values that are placeholders / garbage data — silently dropped.
+const GARBAGE_TAG_VALUES = new Set<string>([
+  "to be filled in",
+  "n/a",
+  "na",
+  "tbd",
+  "tbc",
+  "undefined",
+  "null",
+  "none",
+  "-",
+])
+
+/**
+ * Set of lowercase tag values that should be treated as garment-type indicators
+ * (i.e. inputs to product_type derivation). When `normalizeTags` sees one of
+ * these, it skips it — those values belong in product_type, not in tags.
+ *
+ * Built lazily from PRODUCT_TYPE_ALIASES keys so the two stay in sync.
+ */
+let GARMENT_TYPE_RAW_KEYS_CACHE: Set<string> | null = null
+function getGarmentTypeRawKeys(): Set<string> {
+  if (!GARMENT_TYPE_RAW_KEYS_CACHE) {
+    GARMENT_TYPE_RAW_KEYS_CACHE = new Set(Object.keys(PRODUCT_TYPE_ALIASES))
+  }
+  return GARMENT_TYPE_RAW_KEYS_CACHE
 }
 
 function internalTitleCase(s: string): string {
@@ -249,8 +293,15 @@ export function normalizeProductType(
 
 /**
  * Map an array of raw supplier strings to deduplicated canonical tag names.
- * Nulls and empty strings are silently skipped. Falls back to title-case for
- * unknowns and logs misses to unknownLog.
+ *
+ * Silently dropped:
+ *   - null/empty values
+ *   - garbage placeholders (e.g. "TO BE FILLED IN", "N/A")
+ *   - garment-type indicators (anything in PRODUCT_TYPE_ALIASES) — these
+ *     belong in product_type, not as tags
+ *
+ * Unknown values fall back to title-case and are logged so the alias map
+ * can be extended.
  */
 export function normalizeTags(
   raws: (string | null | undefined)[],
@@ -258,10 +309,13 @@ export function normalizeTags(
 ): string[] {
   const seen = new Set<string>()
   const out: string[] = []
+  const garmentTypeKeys = getGarmentTypeRawKeys()
   for (const raw of raws) {
     if (!raw?.trim()) continue
     const trimmed = raw.trim()
     const key = trimmed.toLowerCase()
+    if (GARBAGE_TAG_VALUES.has(key)) continue
+    if (garmentTypeKeys.has(key)) continue
     let canonical = TAG_ALIASES[key]
     if (!canonical) {
       canonical = internalTitleCase(trimmed)
@@ -279,14 +333,18 @@ export function normalizeTags(
 
 /**
  * Derive Medusa product_type and tags from an AS Colour product.
- *   product_type ← product.category
+ *   product_type ← product.productType (real API field) or product.category (legacy)
  *   tags         ← product.gender + product.fit
  */
 export function classifyAsColourProduct(
   product: AsColourProduct,
   unknownLog?: string[]
 ): { productType: string | null; tags: string[] } {
-  const productType = normalizeProductType(product.category, unknownLog)
+  // The real AS Colour API returns the garment category in a `productType`
+  // field (per the comments in import-as-colour-from-api.ts). Older snapshots
+  // may use `category` — try both.
+  const rawType = (product as any).productType ?? product.category
+  const productType = normalizeProductType(rawType, unknownLog)
   const rawTags = [
     (product as any).gender as string | undefined,
     (product as any).fit as string | undefined,
@@ -298,12 +356,15 @@ export function classifyAsColourProduct(
 /**
  * Derive Medusa product_type and tags from a FashionBiz product.
  *
- * product_type: scan product.tags[] for the first entry that appears in
- *   PRODUCT_TYPE_ALIASES (i.e. a garment-type descriptor). Falls back to
- *   title-cased first tag if none match.
+ * product_type: scan product.tags[] for the first entry that resolves to a
+ *   garment-type alias. For each tag, try exact match first, then split on
+ *   whitespace/hyphens/underscores and check each token (so "syzmik-shirts"
+ *   resolves via "shirts", "clearance tees" via "tees"). If no tag resolves,
+ *   product_type is left null — better to leave it unset than guess wrong.
  *
  * tags: all of product.tags + gender + fit + sleeve + industry + tech,
- *   normalised through TAG_ALIASES and deduplicated.
+ *   normalised through TAG_ALIASES and deduplicated. Garment-type indicators
+ *   are excluded automatically (they're the product_type, not a tag).
  */
 export function classifyFashionBizProduct(
   product: Pick<
@@ -314,26 +375,28 @@ export function classifyFashionBizProduct(
 ): { productType: string | null; tags: string[] } {
   const rawTags = product.tags ?? []
 
-  // Find the first tag that maps to a known garment type
   let productType: string | null = null
-  for (const t of rawTags) {
+  outer: for (const t of rawTags) {
     if (!t?.trim()) continue
     const key = t.trim().toLowerCase()
     if (key in PRODUCT_TYPE_ALIASES) {
       productType = PRODUCT_TYPE_ALIASES[key]
       break
     }
+    // Token-based fallback: handles "syzmik-shirts", "clearance tees",
+    // "shirts and polos", "work-shirts-and-polos", etc.
+    for (const token of key.split(/[\s\-_]+/)) {
+      if (token && token in PRODUCT_TYPE_ALIASES) {
+        productType = PRODUCT_TYPE_ALIASES[token]
+        break outer
+      }
+    }
   }
 
-  // Fall back to title-cased first tag if no known garment type found
   if (!productType && rawTags.length > 0) {
-    const first = rawTags[0]?.trim()
-    if (first) {
-      productType = internalTitleCase(first)
-      unknownLog?.push(
-        `[fashionbiz product_type] No garment-type tag in tags=[${rawTags.join(", ")}] for slug="${product.slug ?? "unknown"}" → fell back to "${productType}"`
-      )
-    }
+    unknownLog?.push(
+      `[fashionbiz product_type] No garment-type tag found in tags=[${rawTags.join(", ")}] for slug="${product.slug ?? "unknown"}" — leaving product_type unset.`
+    )
   }
 
   const allRawTags: (string | null | undefined)[] = [
