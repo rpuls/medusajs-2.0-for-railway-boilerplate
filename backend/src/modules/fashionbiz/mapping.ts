@@ -125,7 +125,7 @@ export const buildGarmentImagesForColour = (
   const frontUrl =
     all.find(urlIsProductFront) ??  // e.g. P515MS_Product_Black_01_xxx.jpg
     all.find(urlIsProductFlat) ??   // any flat _Product_ image as fallback
-    all[0] ?? ""
+    ""                              // don't fall back to model/lifestyle photos
 
   const backUrl =
     all.find(urlIsProductBack) ??   // e.g. P515MS_Product_Black_02_xxx.jpg
