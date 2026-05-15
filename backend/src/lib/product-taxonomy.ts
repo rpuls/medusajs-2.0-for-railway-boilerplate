@@ -15,24 +15,34 @@ export const PRODUCT_TYPE_ALIASES: Record<string, string> = {
   "tshirts": "T-Shirts",
   "basic tee": "T-Shirts",
   "ss tee": "T-Shirts",
+  "short sleeve t-shirts": "T-Shirts",
+  "short sleeve t-shirt": "T-Shirts",
   // Polos
   "polo": "Polos",
   "polos": "Polos",
   "polo shirt": "Polos",
   "polo shirts": "Polos",
-  // Hoodies
+  // Hoodies — including AS Colour's "Hooded Sweatshirts" / "Zip Sweatshirts"
+  // (most AS Colour zip styles are zip hoodies; the few non-hooded zip crews
+  // can be re-categorised manually in admin)
   "hoodie": "Hoodies",
   "hoodies": "Hoodies",
   "pullover hoodie": "Hoodies",
   "zip hoodie": "Hoodies",
   "zip up hoodie": "Hoodies",
   "zip-up hoodie": "Hoodies",
-  // Sweatshirts / Crews
+  "hooded sweatshirt": "Hoodies",
+  "hooded sweatshirts": "Hoodies",
+  "zip sweatshirt": "Hoodies",
+  "zip sweatshirts": "Hoodies",
+  // Sweatshirts / Crews (non-hooded)
   "sweatshirt": "Sweatshirts",
   "sweatshirts": "Sweatshirts",
   "crew": "Sweatshirts",
   "crew neck": "Sweatshirts",
   "crewneck": "Sweatshirts",
+  "crew sweatshirt": "Sweatshirts",
+  "crew sweatshirts": "Sweatshirts",
   // Shirts (woven / work / dress)
   "shirt": "Shirts",
   "shirts": "Shirts",
@@ -50,6 +60,10 @@ export const PRODUCT_TYPE_ALIASES: Record<string, string> = {
   "long sleeve": "Longsleeves",
   "long-sleeve": "Longsleeves",
   "long sleeve shirt": "Longsleeves",
+  "long sleeve t-shirt": "Longsleeves",
+  "long sleeve t-shirts": "Longsleeves",
+  "longsleeve t-shirt": "Longsleeves",
+  "longsleeve t-shirts": "Longsleeves",
   "ls shirt": "Longsleeves",
   "ls tee": "Longsleeves",
   // Singlets / Tanks
@@ -116,6 +130,10 @@ export const PRODUCT_TYPE_ALIASES: Record<string, string> = {
   "belts": "Accessories",
   "umbrella": "Accessories",
   "towel": "Accessories",
+  "tea towel": "Accessories",
+  "tea towels": "Accessories",
+  "flag": "Accessories",
+  "flags": "Accessories",
   // Socks
   "socks": "Socks",
   "sock": "Socks",
@@ -169,6 +187,7 @@ export const TAG_ALIASES: Record<string, string> = {
   "oversized": "Oversized",
   "modern fit": "Modern Fit",
   "classic fit": "Classic Fit",
+  "class fit": "Classic Fit", // observed FashionBiz typo for "Classic Fit"
   "tailored fit": "Tailored Fit",
   "easy fit": "Easy Fit",
   "semi-fitted": "Semi-Fitted",
@@ -230,6 +249,40 @@ export const TAG_ALIASES: Record<string, string> = {
   "reflective": "Reflective",
   "breathable": "Breathable",
   "antibacterial": "Antibacterial",
+  // Fabric materials
+  "cotton": "Cotton",
+  "polyester": "Polyester",
+  "elastane": "Elastane",
+  "spandex": "Elastane",
+  "bamboo": "Bamboo",
+  "wool": "Wool",
+  "merino": "Wool",
+  "linen": "Linen",
+  // Healthcare sub-industries (FashionBiz Biz Care)
+  "pharmaceutical": "Pharmaceutical",
+  "dentistry": "Dentistry",
+  "healthwear": "Healthcare",
+  "veterinary": "Veterinary",
+  "pharmacy": "Pharmacy",
+  "health aged care": "Healthcare",
+  // Use-case / vertical tags (FashionBiz)
+  "retail uniforms": "Retail",
+  "event promotional": "Promotional",
+  "auto transport": "Automotive",
+  "government and council": "Government",
+  "corporate office": "Corporate",
+  "banking and finance": "Finance",
+  "school education": "Education",
+  "sports teams": "Sports",
+  "mix and match": "Mix & Match",
+  // Brand range names — pass through cleaned (drop ™ etc.)
+  "biz cool™": "Biz Cool",
+  "biz cool": "Biz Cool",
+  "fire armour": "Fire Armour",
+  // Misc
+  "clearance": "Clearance",
+  "separates": "Separates",
+  "outerwear": "Outerwear",
 }
 
 // Tag values that are placeholders / garbage data — silently dropped.
@@ -297,8 +350,11 @@ export function normalizeProductType(
  * Silently dropped:
  *   - null/empty values
  *   - garbage placeholders (e.g. "TO BE FILLED IN", "N/A")
- *   - garment-type indicators (anything in PRODUCT_TYPE_ALIASES) — these
- *     belong in product_type, not as tags
+ *   - exact garment-type indicators (anything in PRODUCT_TYPE_ALIASES) —
+ *     these belong in product_type, not as tags
+ *   - compound tags whose tokens contain a garment-type indicator
+ *     (e.g. "shirts and polos", "syzmik-shirts", "clearance tees") —
+ *     these are garment-type aliases, not useful as attribute tags
  *
  * Unknown values fall back to title-case and are logged so the alias map
  * can be extended.
@@ -316,6 +372,10 @@ export function normalizeTags(
     const key = trimmed.toLowerCase()
     if (GARBAGE_TAG_VALUES.has(key)) continue
     if (garmentTypeKeys.has(key)) continue
+    // Token-based filter: drop multi-word tags that contain a garment-type
+    // token. "Clearance" alone passes; "Clearance Tees" doesn't.
+    const tokens = key.split(/[\s\-_]+/).filter(Boolean)
+    if (tokens.length > 1 && tokens.some((t) => garmentTypeKeys.has(t))) continue
     let canonical = TAG_ALIASES[key]
     if (!canonical) {
       canonical = internalTitleCase(trimmed)
