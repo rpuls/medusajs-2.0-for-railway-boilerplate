@@ -4,70 +4,17 @@ import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { addToCartSafe, retrieveCart } from "@lib/data/cart"
 import { uploadCustomerOriginalUnchanged } from "@modules/customizer/lib/upload-customer-original"
+import {
+  extractCartDesigns,
+  filterByKind,
+  type CartDesignSource,
+} from "@lib/util/cart-decorations"
 import type {
   BundleItem,
   BundleProduct,
   BundleProductVariant,
   BundleWithProducts,
 } from "@lib/data/bundles"
-
-// ---------------------------------------------------------------------------
-// Cart design reuse
-// ---------------------------------------------------------------------------
-
-type CartDesign = {
-  lineItemId: string
-  productTitle: string
-  variantTitle: string | null
-  thumbnail: string | null
-  artworkUrl: string | null
-  decorationNotes: string | null
-  bundleTitle: string | null
-}
-
-function extractCartDesigns(cart: unknown): CartDesign[] {
-  const items = (cart as { items?: unknown[] } | null)?.items ?? []
-  const designs: CartDesign[] = []
-  for (const raw of items) {
-    const item = raw as {
-      id?: string
-      product_title?: string | null
-      variant_title?: string | null
-      thumbnail?: string | null
-      metadata?: Record<string, unknown> | null
-    }
-    const meta = item.metadata ?? {}
-    const artworkUrl =
-      typeof meta.artwork_url === "string" && meta.artwork_url.trim()
-        ? meta.artwork_url
-        : null
-    const printNotes =
-      typeof meta.printNotes === "string" && meta.printNotes.trim()
-        ? meta.printNotes
-        : null
-    if (!artworkUrl && !printNotes) continue
-    designs.push({
-      lineItemId: item.id ?? "",
-      productTitle: item.product_title ?? "Item",
-      variantTitle: item.variant_title ?? null,
-      thumbnail: item.thumbnail ?? null,
-      artworkUrl,
-      decorationNotes: printNotes,
-      bundleTitle:
-        typeof meta.bundle_title === "string" ? meta.bundle_title : null,
-    })
-  }
-  // Deduplicate by artwork URL — multiple bundle lines often share one upload
-  const seen = new Set<string>()
-  const unique: CartDesign[] = []
-  for (const d of designs) {
-    const key = `${d.artworkUrl ?? ""}|${d.decorationNotes ?? ""}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    unique.push(d)
-  }
-  return unique
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -210,7 +157,7 @@ export default function BundleWizard({
   const [uploading, setUploading] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
   const [cartError, setCartError] = useState<string | null>(null)
-  const [cartDesigns, setCartDesigns] = useState<CartDesign[]>([])
+  const [cartDesigns, setCartDesigns] = useState<CartDesignSource[]>([])
   const [loadedCart, setLoadedCart] = useState(false)
   const [reusedFrom, setReusedFrom] = useState<string | null>(null)
 
@@ -277,7 +224,7 @@ export default function BundleWizard({
     }
   }
 
-  const handleReuseDesign = (design: CartDesign) => {
+  const handleReuseDesign = (design: CartDesignSource) => {
     setArtworkUrl(design.artworkUrl)
     setArtworkFile(null)
     if (design.decorationNotes) {
@@ -293,7 +240,9 @@ export default function BundleWizard({
     setLoadedCart(true)
     void retrieveCart().then((cart) => {
       if (!cart) return
-      setCartDesigns(extractCartDesigns(cart))
+      // Bundle wizard reuses artwork URL + notes; embroidery-only entries
+      // don't carry an artwork URL we can pre-fill, so they're filtered out.
+      setCartDesigns(filterByKind(extractCartDesigns(cart), ["artwork", "notes-only"]))
     })
   }, [step, artworkStepIndex, loadedCart])
 
@@ -695,11 +644,11 @@ function ArtworkStep({
   artworkUrl: string | null
   decorationNotes: string
   uploading: boolean
-  cartDesigns: CartDesign[]
+  cartDesigns: CartDesignSource[]
   reusedFrom: string | null
   onFileChange: (file: File) => void
   onNotesChange: (v: string) => void
-  onReuseDesign: (design: CartDesign) => void
+  onReuseDesign: (design: CartDesignSource) => void
   onBack: () => void
   onNext: () => void
 }) {
