@@ -1,5 +1,6 @@
 import React, { Suspense } from "react"
 
+import FrequentlyBoughtTogether from "@modules/products/components/frequently-bought-together"
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
 import ProductTabs from "@modules/products/components/product-tabs"
@@ -164,6 +165,18 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         find the Customize this product button" problem on phone.
       */}
       <MobileCustomizeCta />
+
+      <div
+        className="content-container my-12 small:my-20"
+        data-testid="cross-sell-container"
+      >
+        <Suspense fallback={null}>
+          <FrequentlyBoughtTogether
+            product={product}
+            countryCode={countryCode}
+          />
+        </Suspense>
+      </div>
 
       <div
         className="content-container my-16 small:my-32"

@@ -265,6 +265,32 @@ export const POSTHOG_COHORT_SYNC_ENABLED =
   String(process.env.POSTHOG_COHORT_SYNC_ENABLED).toLowerCase() === "true"
 export const POSTHOG_COHORT_SYNC_LIST = process.env.POSTHOG_COHORT_SYNC_LIST
 
+/**
+ * Algorithmic cross-sell ("Frequently bought together"). Daily cron
+ * walks order line items, counts co-purchase pairs, writes the top-K
+ * to `product.metadata.cross_sell_product_ids`. Opt-in via
+ * `CROSS_SELL_ENABLED=true` — staying disabled keeps the storefront
+ * PDP from rendering an empty/awkward block while you accumulate the
+ * order volume to make recommendations meaningful.
+ *
+ *   - `CROSS_SELL_MIN_CO_OCCURRENCE` — minimum number of orders a pair
+ *     must appear in before it's recommended. Default 2 keeps noise
+ *     down on small catalogs; raise to 3-5 for noisier data.
+ *   - `CROSS_SELL_MAX_PER_PRODUCT` — top-K recommendations per
+ *     product. Default 5 — storefront component caps display at 4-5
+ *     cards.
+ */
+export const CROSS_SELL_ENABLED =
+  String(process.env.CROSS_SELL_ENABLED).toLowerCase() === "true"
+export const CROSS_SELL_MIN_CO_OCCURRENCE = parseIntEnv(
+  process.env.CROSS_SELL_MIN_CO_OCCURRENCE,
+  2
+)
+export const CROSS_SELL_MAX_PER_PRODUCT = parseIntEnv(
+  process.env.CROSS_SELL_MAX_PER_PRODUCT,
+  5
+)
+
 /** If set, GET /key-exchange requires header x-medusa-key-exchange-secret (same value). */
 export const KEY_EXCHANGE_SECRET = process.env.KEY_EXCHANGE_SECRET
 
