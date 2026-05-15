@@ -78,7 +78,7 @@ export function mergePayloads(
  */
 export function filterPayload(
   payload: GraphPayload,
-  visible: { brand: boolean; category: boolean; product: boolean; root: boolean }
+  visible: { brand: boolean; category: boolean; product: boolean; root: boolean; type: boolean; tag: boolean }
 ): GraphPayload {
   const nodes = payload.nodes.filter((n) => visible[n.kind])
   const keepIds = new Set(nodes.map((n) => n.id))

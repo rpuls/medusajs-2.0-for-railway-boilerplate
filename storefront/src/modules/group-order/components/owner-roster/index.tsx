@@ -3,7 +3,12 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
-import { setGroupOrderStatus, type GroupOrder } from "@lib/data/group-order"
+import {
+  convertGroupOrderToCart,
+  setGroupOrderStatus,
+  type ConvertResult,
+  type GroupOrder,
+} from "@lib/data/group-order"
 
 type Props = {
   orders: GroupOrder[]
@@ -27,6 +32,10 @@ const OwnerRoster = ({ orders }: Props) => {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const [convertReport, setConvertReport] = useState<{
+    id: string
+    result: ConvertResult
+  } | null>(null)
 
   if (orders.length === 0) {
     return (
@@ -71,9 +80,75 @@ const OwnerRoster = ({ orders }: Props) => {
     }
   }
 
+  const handleConvert = (id: string) => {
+    if (
+      !confirm(
+        "Convert this group order to a cart? This builds line items from each participant's size + quantity and takes you to checkout. Participants whose size doesn't match the garment will be skipped (you'll see the list)."
+      )
+    ) {
+      return
+    }
+    setBusy(id)
+    startTransition(async () => {
+      const res = await convertGroupOrderToCart(id)
+      setBusy(null)
+      if (!res.ok) {
+        alert(res.error)
+        return
+      }
+      setConvertReport({ id, result: res.result })
+    })
+  }
+
   return (
-    <ul className="flex flex-col gap-y-4">
-      {orders.map((o) => (
+    <>
+      {convertReport ? (
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+          <h3 className="text-base font-semibold text-emerald-900">
+            Cart built — {convertReport.result.lines_added} line
+            {convertReport.result.lines_added === 1 ? "" : "s"} added
+          </h3>
+          {convertReport.result.skipped.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-sm text-emerald-800">
+                {convertReport.result.skipped.length} participant
+                {convertReport.result.skipped.length === 1 ? " was" : "s were"} skipped
+                because their size didn&apos;t match the base garment&apos;s variants:
+              </p>
+              <ul className="mt-2 list-disc pl-5 text-xs text-emerald-900 space-y-0.5">
+                {convertReport.result.skipped.map((s) => (
+                  <li key={s.participant_id}>
+                    {s.name} — size {s.size_label}
+                    {s.reason ? ` (${s.reason})` : ""}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-emerald-800">
+                You can add them manually in the cart, or update their size and
+                run convert again.
+              </p>
+            </div>
+          ) : null}
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/cart")}
+              className="inline-flex items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Open the cart
+            </button>
+            <button
+              type="button"
+              onClick={() => setConvertReport(null)}
+              className="inline-flex items-center justify-center rounded-md border border-ui-border-base bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-primary)]"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <ul className="flex flex-col gap-y-4">
+        {orders.map((o) => (
         <li
           key={o.id}
           className="rounded-xl border border-ui-border-base bg-white p-5"
@@ -128,11 +203,11 @@ const OwnerRoster = ({ orders }: Props) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleStatus(o.id, "converted")}
+                    onClick={() => handleConvert(o.id)}
                     disabled={busy === o.id}
                     className="inline-flex items-center justify-center rounded-md bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-60"
                   >
-                    Mark as sent
+                    {busy === o.id ? "Building cart…" : "Convert to cart"}
                   </button>
                 </>
               ) : null}
@@ -145,8 +220,9 @@ const OwnerRoster = ({ orders }: Props) => {
             View public page →
           </a>
         </li>
-      ))}
-    </ul>
+        ))}
+      </ul>
+    </>
   )
 }
 

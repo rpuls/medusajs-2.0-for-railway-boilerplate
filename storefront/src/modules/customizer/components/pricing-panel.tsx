@@ -204,21 +204,13 @@ export default function PricingPanel({
 
       <div className="space-y-2">
         <label className="text-xs font-medium text-ui-fg-subtle">Sizes</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid gap-1.5 ${sizes.length > 4 ? "grid-cols-3" : "grid-cols-2"}`}>
           {sizes.map((sizeEntry) => (
             <label
               key={sizeEntry.size}
-              className="flex items-center gap-2 rounded-md border border-ui-border-base px-2 py-1.5"
+              className="flex items-center gap-1.5 rounded-md border border-ui-border-base px-2 py-1"
               title={sizeEntry.size}
             >
-              {/*
-                Width was previously fixed at w-9 (36px) which clipped any
-                "size" longer than 4 characters. For headwear especially,
-                this slot doubles as a colour name (POWDER, BOTTLE GREEN,
-                CHARCOAL MARLE) — flex-1 + truncate keeps the row width
-                stable while letting longer labels shrink gracefully and
-                fall back to the tooltip via `title`.
-              */}
               <span className="flex-1 min-w-0 truncate text-xs font-medium" aria-label={sizeEntry.size}>
                 {sizeEntry.size}
               </span>
@@ -231,7 +223,7 @@ export default function PricingPanel({
                 onChange={(event) =>
                   onChangeSizeQty(sizeEntry.size, Number(event.target.value))
                 }
-                className="w-14 shrink-0 rounded-md border border-ui-border-base px-2 py-1 text-sm"
+                className="w-12 shrink-0 rounded-md border border-ui-border-base px-1.5 py-0.5 text-sm"
               />
             </label>
           ))}

@@ -24,6 +24,8 @@ const DEFAULT_VISIBILITY: GraphVisibility = {
   root: true,
   brand: true,
   category: true,
+  type: true,
+  tag: false, // tags are numerous — off by default, user can enable via the filter panel
   product: true,
 }
 
@@ -70,7 +72,12 @@ export function ExploreTemplate({ initialPayload, initialFocus }: Props) {
         return
       }
       setSelectedNodeId(node.id)
-      if (node.kind === "brand" || node.kind === "category") {
+      if (
+        node.kind === "brand" ||
+        node.kind === "category" ||
+        node.kind === "type" ||
+        node.kind === "tag"
+      ) {
         if (!expandedNodeIds.has(node.id)) {
           void expandNode(node)
         }
@@ -101,7 +108,10 @@ export function ExploreTemplate({ initialPayload, initialFocus }: Props) {
       lastInfo &&
       lastInfo.total === 0 &&
       state !== "loading" &&
-      (lastNode.kind === "brand" || lastNode.kind === "category")
+      (lastNode.kind === "brand" ||
+        lastNode.kind === "category" ||
+        lastNode.kind === "type" ||
+        lastNode.kind === "tag")
   )
 
   const handleLoadMore = useCallback(() => {
@@ -121,7 +131,13 @@ export function ExploreTemplate({ initialPayload, initialFocus }: Props) {
     if (!initialFocus) return
     const node = payload.nodes.find((n) => n.id === initialFocus)
     if (!node) return
-    if ((node.kind === "brand" || node.kind === "category") && !expandedNodeIds.has(node.id)) {
+    if (
+      (node.kind === "brand" ||
+        node.kind === "category" ||
+        node.kind === "type" ||
+        node.kind === "tag") &&
+      !expandedNodeIds.has(node.id)
+    ) {
       void expandNode(node)
     }
     const handle = window.setTimeout(() => {

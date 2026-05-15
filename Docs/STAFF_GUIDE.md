@@ -119,9 +119,40 @@ For schools, sports clubs, businesses — anything that groups multiple customer
 
 Customers see their memberships at `/account/organisations` on the storefront.
 
+## Group orders (customer-driven)
+
+Group orders are a customer-side flow. Coaches / school P&C / corporate buyers turn a saved design into a shareable link where teammates submit their own sizes.
+
+How a customer starts one (no admin action required):
+
+1. Save a design in the customizer (existing flow).
+2. Open `/account/designs` → click *Use for a group order* on the design.
+3. Fill in title + deadline + share-with email — generate the link.
+4. Send the link to teammates. Each picks a size from the actual variants on the base product.
+5. When everyone's in, the coach opens `/account/group-orders`, closes the order, and clicks *Convert to cart*.
+6. Backend builds one cart with N lines (one per participant, matched to the right variant). Participants with unmatchable sizes appear in the *skipped* list so the coach can fix them up.
+7. Coach checks out via the normal Stripe flow.
+
+Admin view: there's no `/app/group-orders` page — these belong to the customer. If a coach asks for help, look up their customer record and the group orders + linked design are visible via the data layer.
+
 ---
 
 ## Production tooling
+
+### Print queue (suggested run order)
+
+Path: `/app/print-queue`
+
+Today's queued jobs grouped by decoration method + ink colours so the press operator changes setups as few times as possible. Open this when planning the morning's run.
+
+- One bucket per `(method, colours)` combination — all jobs in a bucket share a setup.
+- Stale buckets float to the top (already overdue).
+- Within a bucket: stale jobs first, then earliest deadline, then FIFO by created_at.
+- "Unspecified (review)" bucket = orders without decoration metadata; check those before running.
+- Each job shows its recipe id (if linked) so the operator knows which tuning notes to follow.
+- An order with multiple techniques appears in two buckets — one per technique. That's deliberate.
+
+This is a *suggestion*, not a lock. Free to override based on what the press is already set up for.
 
 ### Production calendar (Gantt)
 
@@ -161,6 +192,17 @@ Curated photos of real SC PRINTS jobs as a Pinterest-style grid. Use it to:
 - Reuse approved customer photos with attribution.
 
 Tag tiles by theme (sports / corporate / school / embroidery) — they show as filter chips on the public page. Toggle published on/off without deleting.
+
+### AI description generator
+
+Where: every product detail page → AI description widget on the right column.
+
+Click *Generate drafts* and the system returns 3 description variants (short → standard → detailed) generated from the product's title, brand, type, weight, tags, variants, and any safe metadata fields. Pick the one closest to right, edit if needed, click *Apply this draft*.
+
+- Doesn't send pricing, SKUs, or stock to the LLM.
+- The optional *Hint* field biases the model — try "team kit", "winter casual", or similar.
+- If the AI provider isn't configured the widget shows a hint to set `AI_PROVIDER` + the matching API key on Railway.
+- Apply replaces the existing description in place. Roll back via Medusa core if needed.
 
 ---
 
@@ -214,6 +256,8 @@ Each cron has its own `*_ENABLED` env var (see `backend/src/lib/constants.ts`). 
 | I want to… | Go to |
 | --- | --- |
 | See what needs my attention today | `/app/studio` |
+| Plan today's production runs (minimise setup changes) | `/app/print-queue` |
+| Regenerate a product's description with AI | Product detail → AI description widget |
 | Find a customer who hasn't ordered in a while | `/app/studio` → "VIPs who've gone quiet" |
 | Add a snooze reminder for a customer | Customer detail → Notes → add note with snooze date |
 | Mark a customer tax-exempt | Customer detail → Tax status widget |

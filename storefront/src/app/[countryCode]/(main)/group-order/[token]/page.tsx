@@ -35,7 +35,8 @@ export default async function GroupOrderJoinPage({
     )
   }
 
-  const { group_order, participants } = data
+  const { group_order, participants, design_preview, product_preview } = data
+  const preferredSizes = product_preview?.available_sizes ?? []
 
   return (
     <div className="content-container py-12 max-w-3xl">
@@ -62,6 +63,35 @@ export default async function GroupOrderJoinPage({
           </p>
         ) : null}
 
+        {(design_preview?.thumbnail_url || product_preview?.thumbnail) ? (
+          <div className="mt-5 grid grid-cols-1 small:grid-cols-2 gap-4">
+            {design_preview?.thumbnail_url ? (
+              <figure className="overflow-hidden rounded-xl border border-[rgba(26,26,46,0.08)] bg-ui-bg-subtle">
+                <img
+                  src={design_preview.thumbnail_url}
+                  alt={design_preview.name ?? "Design preview"}
+                  className="block w-full"
+                />
+                <figcaption className="px-3 py-2 text-xs text-ui-fg-subtle">
+                  Design{design_preview.name ? ` · ${design_preview.name}` : ""}
+                </figcaption>
+              </figure>
+            ) : null}
+            {product_preview?.thumbnail ? (
+              <figure className="overflow-hidden rounded-xl border border-[rgba(26,26,46,0.08)] bg-ui-bg-subtle">
+                <img
+                  src={product_preview.thumbnail}
+                  alt={product_preview.title ?? "Garment"}
+                  className="block w-full"
+                />
+                <figcaption className="px-3 py-2 text-xs text-ui-fg-subtle">
+                  {product_preview.title ?? "Garment"}
+                </figcaption>
+              </figure>
+            ) : null}
+          </div>
+        ) : null}
+
         <hr className="my-6 border-[rgba(26,26,46,0.08)]" />
 
         {group_order.status !== "open" ? (
@@ -69,7 +99,7 @@ export default async function GroupOrderJoinPage({
             This group order is no longer accepting submissions.
           </p>
         ) : (
-          <JoinForm token={token} />
+          <JoinForm token={token} sizeOptions={preferredSizes} />
         )}
       </div>
 

@@ -141,6 +141,9 @@ type Props = {
   className?: string
 }
 
+/** Duration in ms for the entry glow ring that pulses out from newly-added nodes. */
+const GLOW_DURATION_MS = 900
+
 export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGraph(
   {
     payload,
@@ -162,6 +165,20 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
     height: 0,
   })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
+
+  // Track when each node first appeared so we can draw an entry glow ring.
+  const nodeEntryTimesRef = useRef<Map<string, number>>(new Map())
+  const knownNodeIdsRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    const now = Date.now()
+    for (const node of payload.nodes) {
+      if (!knownNodeIdsRef.current.has(node.id)) {
+        knownNodeIdsRef.current.add(node.id)
+        nodeEntryTimesRef.current.set(node.id, now)
+      }
+    }
+  }, [payload.nodes])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -296,6 +313,7 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
           // that appears on hover already shows the product title, thumbnail
           // and price, so drawing the same text on the canvas just created a
           // huge redundant overlay that collided with the tooltip card.
+          drawEntryGlow(ctx, node.id, x, y, radius, alpha, style.highlightFill, nodeEntryTimesRef)
           return
         }
       }
@@ -347,13 +365,13 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
           ctx.stroke()
           ctx.restore()
 
-          const isLabelEligibleKind = true
           const highZoom = globalScale > 2.2
           const showLabel = highZoom || (hasFocus && inFocus)
-          if (isLabelEligibleKind && showLabel) {
+          if (showLabel) {
             const labelColor = inFocus || isPrimary ? style.labelHighlightColor : style.labelColor
             drawLabel(ctx, node.label, x, y + r + 4, globalScale, isPrimary, labelColor)
           }
+          drawEntryGlow(ctx, node.id, x, y, r, alpha, style.highlightFill, nodeEntryTimesRef)
           return
         }
       }
@@ -368,6 +386,33 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
         const size = radius * 2
         ctx.fillRect(x - radius, y - radius, size, size)
         ctx.strokeRect(x - radius, y - radius, size, size)
+      } else if (node.kind === "type") {
+        // Diamond shape — visually distinct from circular brand/category nodes.
+        ctx.beginPath()
+        ctx.moveTo(x, y - radius)
+        ctx.lineTo(x + radius, y)
+        ctx.lineTo(x, y + radius)
+        ctx.lineTo(x - radius, y)
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
+      } else if (node.kind === "tag") {
+        // Rounded square — smaller than type, softer than the sharp diamond.
+        const cr = radius * 0.35
+        const r = radius
+        ctx.beginPath()
+        ctx.moveTo(x - r + cr, y - r)
+        ctx.lineTo(x + r - cr, y - r)
+        ctx.quadraticCurveTo(x + r, y - r, x + r, y - r + cr)
+        ctx.lineTo(x + r, y + r - cr)
+        ctx.quadraticCurveTo(x + r, y + r, x + r - cr, y + r)
+        ctx.lineTo(x - r + cr, y + r)
+        ctx.quadraticCurveTo(x - r, y + r, x - r, y + r - cr)
+        ctx.lineTo(x - r, y - r + cr)
+        ctx.quadraticCurveTo(x - r, y - r, x - r + cr, y - r)
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
       } else {
         ctx.beginPath()
         ctx.arc(x, y, radius, 0, Math.PI * 2)
@@ -378,15 +423,15 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
       /**
        * Label visibility:
        *   - Root label: always visible when zoomed in enough to be useful.
-       *   - Brand/category labels: only when the node is the primary focus
-       *     OR adjacent to it (so hovering a brand shows the brand name plus
-       *     its neighboring category labels). Without this rule all 11 brand
-       *     labels pile up on top of each other at default zoom.
-       *   - At high zoom (globalScale > 2.2) every non-product label renders
-       *     regardless, so users can still orient themselves when zoomed in.
+       *   - Brand/category/type/tag labels: only when the node is the primary
+       *     focus OR adjacent to it. At high zoom every non-product label shows.
        */
       const isLabelEligibleKind =
-        node.kind === "brand" || node.kind === "category" || node.kind === "root"
+        node.kind === "brand" ||
+        node.kind === "category" ||
+        node.kind === "type" ||
+        node.kind === "tag" ||
+        node.kind === "root"
       if (isLabelEligibleKind) {
         const highZoom = globalScale > 2.2
         const rootAlwaysShown = node.kind === "root" && globalScale > 0.9
@@ -399,6 +444,8 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
       }
 
       ctx.restore()
+
+      drawEntryGlow(ctx, node.id, x, y, radius, alpha, style.highlightFill, nodeEntryTimesRef)
     },
     [focusIds, hasFocus, primaryNodeId]
   )
@@ -516,15 +563,18 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
     const link = instance.d3Force("link")
     link?.distance?.((l: unknown) => {
       const kind = (l as { kind?: string } | null)?.kind
-      // Product→brand / product→category halos hug their hub tightly.
-      // Brand→root and category→root links are intentionally long so the
+      // Product→brand / product→category / product→type / product→tag halos
+      // hug their hub tightly. Hub→root links are intentionally long so
       // super-nodes spread into a wide ring around the center, leaving room
-      // for every brand label to sit on its own without colliding with its
-      // neighbor's label.
+      // for every label to sit on its own without colliding with neighbors.
       if (kind === "product-brand" || kind === "product-category") return 14
+      if (kind === "product-type") return 18
+      if (kind === "product-tag") return 14
       if (kind === "category-parent") return 20
-      if (kind === "brand-root") return 110
-      if (kind === "category-root") return 85
+      if (kind === "brand-root") return 120
+      if (kind === "category-root") return 95
+      if (kind === "type-root") return 90
+      if (kind === "tag-root") return 72
       return 60
     })
     link?.strength?.(0.55)
@@ -532,12 +582,13 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
     const charge = instance.d3Force("charge")
     charge?.strength?.((d: unknown) => {
       const kind = (d as { kind?: string } | null)?.kind
-      // Stronger repulsion on brand / category super-nodes so they actively
-      // push each other apart around the ring, rather than clumping on one
-      // side of the root.
+      // Stronger repulsion on brand / category / type super-nodes so they
+      // actively push each other apart around the ring.
       if (kind === "root") return -380
       if (kind === "brand") return -260
       if (kind === "category") return -160
+      if (kind === "type") return -200
+      if (kind === "tag") return -110
       return -18
     })
 
@@ -584,11 +635,48 @@ export const ForceGraph = forwardRef<ForceGraphHandle, Props>(function ForceGrap
           onNodeHover={handleNodeHover}
           onBackgroundClick={handleBackgroundClick}
           enableNodeDrag={true}
-          warmupTicks={80}
-          d3AlphaDecay={0.035}
-          d3VelocityDecay={0.32}
+          warmupTicks={15}
+          d3AlphaDecay={0.055}
+          d3VelocityDecay={0.42}
         />
       )}
     </div>
   )
 })
+
+/**
+ * Draw a softly expanding glow ring around a node for the first GLOW_DURATION_MS
+ * after it first appears. The ring pulses outward and fades to transparent so
+ * the "arriving" motion is visible without being distracting.
+ *
+ * Extracted as a standalone function so it can be called consistently across
+ * every branch of nodeCanvasObject (product thumbnail, brand logo, generic circle).
+ */
+function drawEntryGlow(
+  ctx: CanvasRenderingContext2D,
+  nodeId: string,
+  x: number,
+  y: number,
+  radius: number,
+  baseAlpha: number,
+  glowColor: string,
+  entryTimesRef: React.MutableRefObject<Map<string, number>>
+) {
+  const entryTime = entryTimesRef.current.get(nodeId)
+  if (entryTime === undefined) return
+  const age = Date.now() - entryTime
+  if (age >= GLOW_DURATION_MS) return
+
+  const t = age / GLOW_DURATION_MS // 0 → 1 over glow duration
+  const fade = Math.pow(1 - t, 1.4) // fast-out easing: strong at 0, zero at 1
+  const ringRadius = radius * (1 + 0.8 * t) // ring expands outward
+
+  ctx.save()
+  ctx.globalAlpha = baseAlpha * fade * 0.7
+  ctx.strokeStyle = glowColor
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.arc(x, y, ringRadius, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.restore()
+}

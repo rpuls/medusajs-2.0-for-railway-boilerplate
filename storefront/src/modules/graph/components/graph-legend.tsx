@@ -5,6 +5,8 @@ import { NODE_STYLE } from "../lib/style"
 const ITEMS: Array<{ kind: keyof typeof NODE_STYLE; label: string }> = [
   { kind: "brand", label: "Brand" },
   { kind: "category", label: "Category" },
+  { kind: "type", label: "Product Type" },
+  { kind: "tag", label: "Tag" },
   { kind: "product", label: "Product" },
 ]
 

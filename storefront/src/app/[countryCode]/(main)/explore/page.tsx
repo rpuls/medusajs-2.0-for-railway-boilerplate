@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import { Suspense } from "react"
 
 import { getGraphSummary } from "@lib/data/graph"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
@@ -41,19 +42,26 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function ExplorePage({ params, searchParams }: PageProps) {
-  const [{ countryCode }, search, summaryResult] = await Promise.all([
-    params,
-    searchParams,
-    getGraphSummary()
-      .then((payload): { ok: true; payload: GraphPayload } => ({ ok: true, payload }))
-      .catch(
-        (error: unknown): { ok: false; error: string } => ({
-          ok: false,
-          error: error instanceof Error ? error.message : "unknown error",
-        })
-      ),
-  ])
+/**
+ * Async server component that fetches the graph summary and renders the graph.
+ * Lives inside a Suspense boundary so the page shell streams immediately while
+ * the summary is being fetched — eliminating the blank-screen wait on cache miss.
+ */
+async function ExploreGraphData({
+  countryCode,
+  search,
+}: {
+  countryCode: string
+  search: Record<string, string | string[] | undefined>
+}) {
+  const summaryResult = await getGraphSummary()
+    .then((payload): { ok: true; payload: GraphPayload } => ({ ok: true, payload }))
+    .catch(
+      (error: unknown): { ok: false; error: string } => ({
+        ok: false,
+        error: error instanceof Error ? error.message : "unknown error",
+      })
+    )
 
   if (!summaryResult.ok) {
     return (
@@ -90,5 +98,25 @@ export default async function ExplorePage({ params, searchParams }: PageProps) {
       initialPayload={summaryResult.payload}
       initialFocus={initialFocus}
     />
+  )
+}
+
+function GraphLoadingShell() {
+  return (
+    <section className="relative h-[calc(100vh-var(--nav-height,72px))] w-full overflow-hidden bg-ui-bg-base flex items-center justify-center">
+      <p className="text-ui-fg-subtle text-small-regular animate-pulse">
+        Loading catalog&hellip;
+      </p>
+    </section>
+  )
+}
+
+export default async function ExplorePage({ params, searchParams }: PageProps) {
+  const [{ countryCode }, search] = await Promise.all([params, searchParams])
+
+  return (
+    <Suspense fallback={<GraphLoadingShell />}>
+      <ExploreGraphData countryCode={countryCode} search={search} />
+    </Suspense>
   )
 }
