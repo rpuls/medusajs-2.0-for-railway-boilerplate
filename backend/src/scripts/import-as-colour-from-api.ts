@@ -148,7 +148,14 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   const costBySku = new Map<string, number>()
   for (const entry of priceList) {
     const price = Number(entry.price)
-    if (entry.sku && Number.isFinite(price)) {
+    if (!entry.sku || !Number.isFinite(price)) continue
+    // AS Colour's pricelist returns multiple rows per SKU (one per
+    // quantity-break tier). The 1-pack tier — the price SC Prints pays
+    // when buying single units — is always the most expensive of those
+    // rows. Keep the max so the tier we pick is deterministic across
+    // runs, not "whichever page happened to come last".
+    const prev = costBySku.get(entry.sku)
+    if (prev === undefined || price > prev) {
       costBySku.set(entry.sku, price)
     }
   }
