@@ -21,12 +21,13 @@ type Props = {
   value: EmbroideryConfig | undefined
   onChange: (side: GarmentSide, next: EmbroideryConfig) => void
   /**
-   * Optional image data URL of the artwork placed on the canvas for this
-   * side. When supplied the "Estimate stitches with AI" button uses it as
-   * the source for the vision API call (no separate upload step needed).
+   * Optional resolver called when the customer clicks "Estimate stitches
+   * with AI" — should return a data URL of the artwork currently placed on
+   * the canvas for this side, or null when nothing is placed yet. Callback
+   * (not a prop) so we don't have to maintain a data URL in parent state
+   * that changes every time the customer drags artwork.
    */
-  artworkDataUrl?: string | null
-  artworkMediaType?: string | null
+  getArtworkDataUrl?: () => { dataUrl: string; mediaType: string } | null
 }
 
 /**
@@ -43,8 +44,7 @@ const EmbroiderySideConfig: React.FC<Props> = ({
   side,
   value,
   onChange,
-  artworkDataUrl,
-  artworkMediaType,
+  getArtworkDataUrl,
 }) => {
   const [widthMm, setWidthMm] = useState<number>(value?.widthMm ?? 80)
   const [heightMm, setHeightMm] = useState<number>(value?.heightMm ?? 80)
@@ -73,7 +73,8 @@ const EmbroiderySideConfig: React.FC<Props> = ({
   }
 
   const handleEstimate = async () => {
-    if (!artworkDataUrl) {
+    const artwork = getArtworkDataUrl?.() ?? null
+    if (!artwork) {
       setEstimateError(
         "Place artwork on the canvas first — then we can analyse it for an AI stitch estimate."
       )
@@ -90,8 +91,8 @@ const EmbroiderySideConfig: React.FC<Props> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: artworkDataUrl,
-          mediaType: artworkMediaType ?? "image/png",
+          imageBase64: artwork.dataUrl,
+          mediaType: artwork.mediaType,
           widthMm,
           heightMm,
         }),
@@ -134,6 +135,11 @@ const EmbroiderySideConfig: React.FC<Props> = ({
           Stitched thread on garment
         </span>
       </div>
+
+      <p className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] text-blue-900">
+        Upload your logo via the <strong>Add to design</strong> panel on the
+        left, then enter the embroidered size below and run the AI estimate.
+      </p>
 
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-xs">

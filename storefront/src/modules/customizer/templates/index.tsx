@@ -591,6 +591,42 @@ export default function CustomizerTemplate({
   const fabricContainerRef = useRef<HTMLDivElement | null>(null)
   const htmlCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
+  /**
+   * Resolver for EmbroiderySideConfig — returns a data URL of the artwork
+   * currently placed on the canvas for the active side. Preference order:
+   * 1) selected (active) object → just its bounds (best for multi-object sides)
+   * 2) first top-level object on the canvas
+   * Returns null when no artwork has been placed yet.
+   */
+  const getCurrentSideArtworkDataUrl = (): { dataUrl: string; mediaType: string } | null => {
+    const canvas = fabricCanvasRef.current
+    if (!canvas || typeof canvas.toDataURL !== "function") return null
+    try {
+      const active = canvas.getActiveObject?.()
+      const target = active ?? canvas.getObjects?.()?.[0]
+      if (!target) return null
+      // Use the target object's bounding rect as the dataURL crop. Fabric's
+      // toDataURL accepts left/top/width/height to clip to a specific region.
+      const rect = target.getBoundingRect?.(true, true)
+      if (!rect || rect.width <= 0 || rect.height <= 0) {
+        // Fallback: whole-canvas screenshot if bounds are unavailable.
+        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 1 }) as string
+        return dataUrl ? { dataUrl, mediaType: "image/png" } : null
+      }
+      const dataUrl = canvas.toDataURL({
+        format: "png",
+        multiplier: 1,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      }) as string
+      return dataUrl ? { dataUrl, mediaType: "image/png" } : null
+    } catch {
+      return null
+    }
+  }
+
   useLayoutEffect(() => {
     const host = fabricContainerRef.current
     if (!host) {
@@ -3191,9 +3227,15 @@ export default function CustomizerTemplate({
                 value={sideDecorationMethods[currentSide] ?? "print"}
                 onChange={(side, method) => {
                   setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
-                  // Clean up embroidery config when switching back to print
-                  if (method === "print") {
+                  if (method === "embroidery") {
+                    setSizingDoneSides((prev) => ({ ...prev, [side]: true }))
+                  } else {
                     setSideEmbroideryConfigs((prev) => {
+                      const next = { ...prev }
+                      delete next[side]
+                      return next
+                    })
+                    setSizingDoneSides((prev) => {
                       const next = { ...prev }
                       delete next[side]
                       return next
@@ -3208,6 +3250,7 @@ export default function CustomizerTemplate({
                   onChange={(side, next) => {
                     setSideEmbroideryConfigs((prev) => ({ ...prev, [side]: next }))
                   }}
+                  getArtworkDataUrl={getCurrentSideArtworkDataUrl}
                 />
               ) : null}
             </div>
@@ -3886,8 +3929,22 @@ export default function CustomizerTemplate({
                             value={sideDecorationMethods[currentSide] ?? "print"}
                             onChange={(side, method) => {
                               setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
-                              if (method === "print") {
+                              if (method === "embroidery") {
+                                // Embroidery sides specify their size via mm dimensions in
+                                // EmbroiderySideConfig, not via the print-size selector. Mark
+                                // the side as sized so the upload panel + Step 3 don't block
+                                // the customer from placing artwork.
+                                setSizingDoneSides((prev) => ({ ...prev, [side]: true }))
+                                setPdpStep((s) => (s > 3 ? s : 3))
+                              } else {
                                 setSideEmbroideryConfigs((prev) => {
+                                  const next = { ...prev }
+                                  delete next[side]
+                                  return next
+                                })
+                                // Reverting to print: clear the side's "sized" flag so the
+                                // wizard prompts for an A6/A4/A3 selection again.
+                                setSizingDoneSides((prev) => {
                                   const next = { ...prev }
                                   delete next[side]
                                   return next
@@ -3902,6 +3959,7 @@ export default function CustomizerTemplate({
                               onChange={(side, next) => {
                                 setSideEmbroideryConfigs((prev) => ({ ...prev, [side]: next }))
                               }}
+                              getArtworkDataUrl={getCurrentSideArtworkDataUrl}
                             />
                           ) : null}
                         </>
@@ -3999,7 +4057,13 @@ export default function CustomizerTemplate({
               />
               {pdpStep === 3 ? (
                 <>
-                  {allowedSizesForCurrentSide.length === 1 &&
+                  {sideDecorationMethods[currentSide] === "embroidery" ? (
+                    <p className="rounded-md bg-ui-bg-subtle/70 px-2.5 py-1.5 text-xs text-ui-fg-subtle">
+                      <span className="font-semibold text-ui-fg-base">{sideLabel}</span> uses
+                      embroidery — size is set by the mm dimensions in Step 2.
+                      No print-size selection needed for this location.
+                    </p>
+                  ) : allowedSizesForCurrentSide.length === 1 &&
                   allowedSizesForCurrentSide[0] === "up_to_a6" ? (
                     <p className="rounded-md bg-ui-bg-subtle/70 px-2.5 py-1.5 text-xs text-ui-fg-subtle">
                       <span className="font-semibold text-ui-fg-base">{sideLabel}</span> prints
@@ -4012,6 +4076,7 @@ export default function CustomizerTemplate({
                       long-sleeve garments can go up to A3 (29×42 cm).
                     </p>
                   ) : null}
+                  {sideDecorationMethods[currentSide] === "embroidery" ? null : (
                   <div className="grid grid-cols-2 gap-2">
                     {SCP_PRINT_SIZE_OPTIONS.filter((opt) =>
                       allowedSizesForCurrentSide.includes(opt.id)
@@ -4059,6 +4124,7 @@ export default function CustomizerTemplate({
                       )
                     })}
                   </div>
+                  )}
                 </>
               ) : (
                 <div className="space-y-2">
