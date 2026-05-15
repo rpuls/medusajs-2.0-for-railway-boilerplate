@@ -38,6 +38,10 @@ export type BundleProductVariant = {
   title: string
   sku: string | null
   metadata: Record<string, unknown> | null
+  /** Inventory tracking — populated by the store/bundles route. */
+  manage_inventory?: boolean | null
+  allow_backorder?: boolean | null
+  inventory_quantity?: number | null
   options?: Array<{
     id: string
     value: string

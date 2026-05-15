@@ -4,6 +4,7 @@ import { useMemo } from "react"
 
 import { convertToLocale } from "@lib/util/money"
 import FlyToCartAddButton from "@modules/common/components/fly-to-cart-add-button"
+import StockWarningIcon from "@modules/products/components/stock-warning-icon"
 import {
   SCP_BLANK_ALIGNED_QUANTITY_TIERS,
   SCP_PRINT_SIZE_OPTIONS,
@@ -19,6 +20,10 @@ import {
   PrintSpec,
   SizeQuantity,
 } from "@modules/customizer/lib/types"
+import {
+  stockWarningMessage,
+  type VariantStockState,
+} from "@modules/products/lib/variant-stock"
 
 type PricingPanelProps = {
   currencyCode: string
@@ -80,6 +85,13 @@ type PricingPanelProps = {
    * Omit for the standalone (non-cart-aware) calculation.
    */
   aggregatedCartQuantity?: number
+  /**
+   * Per-size stock state. When supplied, sizes that are out of stock,
+   * backorderable, or running low surface a hoverable `!` icon explaining
+   * the possible delivery delay. Computed by the parent because the panel
+   * doesn't otherwise know about variants.
+   */
+  stockBySize?: Record<string, VariantStockState | undefined>
 }
 
 const formatMoney = (amount: number, currencyCode: string) =>
@@ -120,6 +132,7 @@ export default function PricingPanel({
   onSaveDesign,
   isSavingDesign = false,
   aggregatedCartQuantity,
+  stockBySize,
 }: PricingPanelProps) {
   const ctaLabel = primaryCtaLabel ?? "Add to cart"
   const ctaLoadingLabel = primaryCtaLoadingLabel ?? "Adding..."
@@ -205,28 +218,35 @@ export default function PricingPanel({
       <div className="space-y-2">
         <label className="text-xs font-medium text-ui-fg-subtle">Sizes</label>
         <div className={`grid gap-1.5 ${sizes.length > 4 ? "grid-cols-3" : "grid-cols-2"}`}>
-          {sizes.map((sizeEntry) => (
-            <label
-              key={sizeEntry.size}
-              className="flex items-center gap-1.5 rounded-md border border-ui-border-base px-2 py-1"
-              title={sizeEntry.size}
-            >
-              <span className="flex-1 min-w-0 truncate text-xs font-medium" aria-label={sizeEntry.size}>
-                {sizeEntry.size}
-              </span>
-              <input
-                type="number"
-                min={0}
-                max={999}
-                value={sizeEntry.quantity}
-                onFocus={(event) => event.currentTarget.select()}
-                onChange={(event) =>
-                  onChangeSizeQty(sizeEntry.size, Number(event.target.value))
-                }
-                className="w-12 shrink-0 rounded-md border border-ui-border-base px-1.5 py-0.5 text-sm"
-              />
-            </label>
-          ))}
+          {sizes.map((sizeEntry) => {
+            const stockState = stockBySize?.[sizeEntry.size]
+            const warning = stockState ? stockWarningMessage(stockState) : null
+            return (
+              <label
+                key={sizeEntry.size}
+                className="flex items-center gap-1.5 rounded-md border border-ui-border-base px-2 py-1"
+                title={sizeEntry.size}
+              >
+                <span className="flex-1 min-w-0 truncate text-xs font-medium" aria-label={sizeEntry.size}>
+                  {sizeEntry.size}
+                </span>
+                {warning && stockState ? (
+                  <StockWarningIcon message={warning} kind={stockState.kind} />
+                ) : null}
+                <input
+                  type="number"
+                  min={0}
+                  max={999}
+                  value={sizeEntry.quantity}
+                  onFocus={(event) => event.currentTarget.select()}
+                  onChange={(event) =>
+                    onChangeSizeQty(sizeEntry.size, Number(event.target.value))
+                  }
+                  className="w-12 shrink-0 rounded-md border border-ui-border-base px-1.5 py-0.5 text-sm"
+                />
+              </label>
+            )
+          })}
         </div>
       </div>
 

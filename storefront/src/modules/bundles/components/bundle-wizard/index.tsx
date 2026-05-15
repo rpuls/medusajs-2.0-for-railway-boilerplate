@@ -9,6 +9,12 @@ import {
   filterByKind,
   type CartDesignSource,
 } from "@lib/util/cart-decorations"
+import StockWarningIcon from "@modules/products/components/stock-warning-icon"
+import {
+  aggregateStockKind,
+  getVariantStockState,
+  stockWarningMessage,
+} from "@modules/products/lib/variant-stock"
 import type {
   BundleItem,
   BundleProduct,
@@ -94,6 +100,35 @@ function findVariantId(
     if (colorMatch && sizeMatch) return v.id
   }
   return null
+}
+
+function findVariant(
+  product: BundleProduct,
+  colorOptionId: string | null,
+  selectedColor: string | null,
+  sizeOptionId: string | null,
+  sizeValue: string
+): BundleProductVariant | null {
+  for (const v of product.variants) {
+    const colorMatch =
+      !colorOptionId ||
+      !selectedColor ||
+      getOptionValue(v, colorOptionId) === selectedColor
+    const sizeMatch =
+      !sizeOptionId || getOptionValue(v, sizeOptionId) === sizeValue
+    if (colorMatch && sizeMatch) return v
+  }
+  return null
+}
+
+function variantsForColor(
+  product: BundleProduct,
+  colorOptionId: string,
+  color: string
+): BundleProductVariant[] {
+  return product.variants.filter(
+    (v) => getOptionValue(v, colorOptionId) === color
+  )
 }
 
 const DECORATION_LABELS: Record<string, string> = {
@@ -531,20 +566,41 @@ function ProductConfigStep({
             <div className="flex flex-col gap-y-2">
               <p className="text-sm font-medium text-ui-fg-base">Select colour</p>
               <div className="flex flex-wrap gap-2">
-                {colorInfo.values.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => onColorSelect(colorInfo.optionId, color)}
-                    className={[
-                      "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                      config.selectedColor === color
-                        ? "border-ui-fg-interactive bg-ui-fg-interactive text-ui-bg-base"
-                        : "border-ui-border-base bg-ui-bg-base text-ui-fg-base hover:bg-ui-bg-subtle",
-                    ].join(" ")}
-                  >
-                    {color}
-                  </button>
-                ))}
+                {colorInfo.values.map((color) => {
+                  const colorVariants = variantsForColor(
+                    product,
+                    colorInfo.optionId,
+                    color
+                  )
+                  const aggKind = aggregateStockKind(colorVariants)
+                  // Pill warning only fires for fully-out / backorder
+                  // colours; "low_stock" stays quiet because individual
+                  // size warnings carry that nuance once the customer picks.
+                  const colorWarning =
+                    aggKind === "out_of_stock"
+                      ? "All sizes in this colour are out of stock."
+                      : aggKind === "backorder"
+                        ? "Currently out of stock — you can still order, but it may take longer to ship while we restock."
+                        : null
+                  return (
+                    <span key={color} className="inline-flex items-center gap-1.5">
+                      <button
+                        onClick={() => onColorSelect(colorInfo.optionId, color)}
+                        className={[
+                          "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                          config.selectedColor === color
+                            ? "border-ui-fg-interactive bg-ui-fg-interactive text-ui-bg-base"
+                            : "border-ui-border-base bg-ui-bg-base text-ui-fg-base hover:bg-ui-bg-subtle",
+                        ].join(" ")}
+                      >
+                        {color}
+                      </button>
+                      {colorWarning ? (
+                        <StockWarningIcon message={colorWarning} kind={aggKind} />
+                      ) : null}
+                    </span>
+                  )
+                })}
               </div>
             </div>
           ) : null}
@@ -568,28 +624,52 @@ function ProductConfigStep({
                     </tr>
                   </thead>
                   <tbody>
-                    {sizeInfo.values.map((size) => (
-                      <tr
-                        key={size}
-                        className="border-b border-ui-border-base last:border-0"
-                      >
-                        <td className="px-4 py-2.5 text-ui-fg-base">{size}</td>
-                        <td className="px-4 py-2.5">
-                          <input
-                            type="number"
-                            min={0}
-                            value={config.sizeQtys[size] ?? 0}
-                            onChange={(e) =>
-                              onSizeQtyChange(
-                                size,
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            className="w-20 rounded-md border border-ui-border-base bg-ui-bg-base px-2 py-1 text-sm text-ui-fg-base"
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                    {sizeInfo.values.map((size) => {
+                      const requested = config.sizeQtys[size] ?? 0
+                      const variant = findVariant(
+                        product,
+                        config.colorOptionId,
+                        config.selectedColor,
+                        sizeInfo.optionId,
+                        size
+                      )
+                      const stockState = getVariantStockState(variant, {
+                        requestedQuantity: requested,
+                      })
+                      const warning = stockWarningMessage(stockState)
+                      return (
+                        <tr
+                          key={size}
+                          className="border-b border-ui-border-base last:border-0"
+                        >
+                          <td className="px-4 py-2.5 text-ui-fg-base">
+                            <span className="inline-flex items-center gap-1.5">
+                              {size}
+                              {warning ? (
+                                <StockWarningIcon
+                                  message={warning}
+                                  kind={stockState.kind}
+                                />
+                              ) : null}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <input
+                              type="number"
+                              min={0}
+                              value={requested}
+                              onChange={(e) =>
+                                onSizeQtyChange(
+                                  size,
+                                  parseInt(e.target.value) || 0
+                                )
+                              }
+                              className="w-20 rounded-md border border-ui-border-base bg-ui-bg-base px-2 py-1 text-sm text-ui-fg-base"
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
