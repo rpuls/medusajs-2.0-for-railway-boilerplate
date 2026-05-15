@@ -3899,7 +3899,7 @@ export default function CustomizerTemplate({
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
               className="flex flex-col gap-3"
             >
-              <div className="space-y-3 rounded-xl border border-ui-fg-base bg-ui-bg-base p-4 shadow-sm">
+              <div className="space-y-2 rounded-xl border border-ui-fg-base bg-ui-bg-base p-3 shadow-sm">
                 <StepHeader num={stepNum(4)} title="Quantity & checkout" done={false} active={true} help="Enter how many of each size you need. Bulk discounts apply automatically — the more you order, the lower the price per garment. Once you're happy, add to cart and complete checkout." />
                 {(() => {
                   const sideShortMap: Record<GarmentSide, string> = {
@@ -3927,9 +3927,6 @@ export default function CustomizerTemplate({
                     </p>
                   )
                 })()}
-                <p className="text-xs text-ui-fg-subtle">
-                  Set quantities per size, then add to cart.
-                </p>
               </div>
               <PricingPanel
                 currencyCode={currencyCode}

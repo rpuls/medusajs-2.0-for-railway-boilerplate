@@ -260,45 +260,55 @@ export default function PricingPanel({
               ? Math.max(0, currentTier.amountCents - nextTier.amountCents)
               : 0
           return (
-            <div className="space-y-2 rounded-lg border border-ui-border-base bg-ui-bg-subtle/40 p-3">
-              <div className="flex items-baseline justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
+            <details className="group rounded-lg border border-ui-border-base bg-ui-bg-subtle/40">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ui-fg-base">
                   Bulk discounts
-                </p>
+                </span>
+                <span className="flex items-center gap-2">
+                  {currentTier && tierHighlightQty > 0 ? (
+                    <span className="text-xs font-semibold text-emerald-700">
+                      {formatMoney(currentTier.amountCents, currencyCode)} / ea
+                    </span>
+                  ) : null}
+                  <ExpandCollapsePlus />
+                </span>
+              </summary>
+              <div className="space-y-2 border-t border-ui-border-base px-3 pb-3 pt-2">
                 {nextTier && unitsToNext > 0 && tierHighlightQty > 0 ? (
                   <p className="text-[11px] text-emerald-700">
                     Add {unitsToNext} more {isAggregated ? "across your cart " : ""}to save {formatMoney(savings, currencyCode)}/ea
                   </p>
                 ) : null}
+                {isAggregated ? (
+                  <p className="text-[11px] text-emerald-700">
+                    Including {cartAggregate} unit{cartAggregate === 1 ? "" : "s"} already in your cart, your projected tier is highlighted below.
+                  </p>
+                ) : null}
+                <ul className="grid grid-cols-1 gap-1 text-xs">
+                  {tiers.map((tier, idx) => {
+                    const isCurrent = idx === currentTierIdx && tierHighlightQty > 0
+                    return (
+                      <li
+                        key={`${tier.minQuantity}-${tier.maxQuantity ?? "max"}`}
+                        className={`flex items-center justify-between rounded px-2 py-1 transition-colors ${
+                          isCurrent
+                            ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
+                            : "text-ui-fg-subtle"
+                        }`}
+                      >
+                        <span className={isCurrent ? "font-semibold" : ""}>
+                          {formatTierRange(tier.minQuantity, tier.maxQuantity)} pcs
+                        </span>
+                        <span className={isCurrent ? "font-semibold" : ""}>
+                          {formatMoney(tier.amountCents, currencyCode)} / ea
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
-              {isAggregated ? (
-                <p className="text-[11px] text-emerald-700">
-                  Including {cartAggregate} unit{cartAggregate === 1 ? "" : "s"} already in your cart, your projected tier is highlighted below.
-                </p>
-              ) : null}
-              <ul className="grid grid-cols-1 gap-1 text-xs">
-                {tiers.map((tier, idx) => {
-                  const isCurrent = idx === currentTierIdx && tierHighlightQty > 0
-                  return (
-                    <li
-                      key={`${tier.minQuantity}-${tier.maxQuantity ?? "max"}`}
-                      className={`flex items-center justify-between rounded px-2 py-1 transition-colors ${
-                        isCurrent
-                          ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
-                          : "text-ui-fg-subtle"
-                      }`}
-                    >
-                      <span className={isCurrent ? "font-semibold" : ""}>
-                        {formatTierRange(tier.minQuantity, tier.maxQuantity)} pcs
-                      </span>
-                      <span className={isCurrent ? "font-semibold" : ""}>
-                        {formatMoney(tier.amountCents, currencyCode)} / ea
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
+            </details>
           )
         })()
       ) : null}
