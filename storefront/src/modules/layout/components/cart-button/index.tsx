@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import CartDropdown from "../cart-dropdown"
-import { enrichLineItems, retrieveCart } from "@lib/data/cart"
+import { enrichLineItems, retrieveCart, stripHeavyCartMetadataForRender } from "@lib/data/cart"
 import { applyDisplayPriceCorrectionToCart } from "@lib/util/apply-display-price-correction"
 
 const fetchCart = async () => {
@@ -12,7 +12,10 @@ const fetchCart = async () => {
 
   if (cart?.items?.length) {
     const enrichedItems = await enrichLineItems(cart.items, cart.region_id!)
-    cart.items = enrichedItems
+    // Header cart dropdown only shows thumbnails / titles / quantities.
+    // Strip heavy customizer metadata so the navbar (rendered on every page)
+    // doesn't drag a multi-MB RSC payload around for large carts.
+    cart.items = stripHeavyCartMetadataForRender(enrichedItems) as typeof cart.items
     applyDisplayPriceCorrectionToCart(cart)
   }
 

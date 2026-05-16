@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import CartTemplate from "@modules/cart/templates"
 
-import { enrichLineItems, retrieveCart } from "@lib/data/cart"
+import { enrichLineItems, retrieveCart, stripHeavyCartMetadataForRender } from "@lib/data/cart"
 import { applyDisplayPriceCorrectionToCart } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
@@ -21,7 +21,14 @@ const fetchCart = async () => {
 
     if (cart?.items?.length) {
       const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
-      cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+      // Strip heavy customizer metadata (sideLayouts, prints, artifacts, etc.)
+      // before passing to client components — large carts (100+ customized
+      // lines) otherwise blow the RSC payload and the page errors out with
+      // "Something went wrong loading your cart". Backend keeps the full
+      // metadata; re-edit flows refetch it on demand.
+      cart.items = stripHeavyCartMetadataForRender(
+        enrichedItems
+      ) as HttpTypes.StoreCartLineItem[]
       applyDisplayPriceCorrectionToCart(cart)
     }
 

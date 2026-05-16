@@ -6,7 +6,7 @@ import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import { BeginCheckoutTracker } from "@modules/checkout/components/begin-checkout-tracker"
 import PerksBanner from "@modules/checkout/components/perks-banner"
-import { enrichLineItems, retrieveCart } from "@lib/data/cart"
+import { enrichLineItems, retrieveCart, stripHeavyCartMetadataForRender } from "@lib/data/cart"
 import { applyDisplayPriceCorrectionToCart } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
@@ -24,7 +24,11 @@ const fetchCart = async () => {
 
   if (cart?.items?.length) {
     const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
-    cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+    // Strip heavy customizer metadata before passing to client components.
+    // See stripHeavyCartMetadataForRender for the rationale.
+    cart.items = stripHeavyCartMetadataForRender(
+      enrichedItems
+    ) as HttpTypes.StoreCartLineItem[]
     applyDisplayPriceCorrectionToCart(cart)
   }
 

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 
 import OrderDetailsTemplate from "@modules/order/templates/order-details-template"
 import { retrieveOrder } from "@lib/data/orders"
-import { enrichLineItems } from "@lib/data/cart"
+import { enrichLineItems, stripHeavyCartMetadataForRender } from "@lib/data/cart"
 import { applyDisplayPriceCorrectionToOrder } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
 
@@ -19,9 +19,11 @@ async function getOrder(id: string) {
   }
 
   const enrichedItems = await enrichLineItems(order.items, order.region_id!)
+  // Strip heavy customizer metadata before passing to client components.
+  const liteItems = stripHeavyCartMetadataForRender(enrichedItems)
   const withItems = {
     ...order,
-    items: enrichedItems,
+    items: liteItems,
   } as unknown as HttpTypes.StoreOrder
   applyDisplayPriceCorrectionToOrder(withItems)
   return withItems
