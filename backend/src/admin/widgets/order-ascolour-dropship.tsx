@@ -2,6 +2,8 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Button, Container, Heading, Input, Label, Text, Textarea } from "@medusajs/ui"
+
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 const adminPath = (orderId: string) => `/admin/orders/${orderId}/send-to-ascolour`
@@ -144,7 +146,19 @@ const OrderAsColourDropshipWidget = ({ data }: DetailWidgetProps<AdminOrder>) =>
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
-        <Heading level="h2">AS Colour dropship</Heading>
+        <Heading level="h2" className="flex items-center">
+          AS Colour dropship
+          <HelpTooltip
+            text={{
+              title: "AS Colour dropship",
+              body: "Sends this order's blank garments directly from AS Colour's warehouse to your production address via their dropship programme.",
+              bullets: [
+                "Review the SKU and quantity summary before submitting — changes require a new dropship request.",
+                "Status updates here once AS Colour confirms the dispatch.",
+              ],
+            }}
+          />
+        </Heading>
         {loading ? <Badge color="grey">Loading…</Badge> : null}
       </div>
 
