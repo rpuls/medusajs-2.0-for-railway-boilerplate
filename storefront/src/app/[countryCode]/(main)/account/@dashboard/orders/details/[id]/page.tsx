@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 
 import OrderDetailsTemplate from "@modules/order/templates/order-details-template"
 import { retrieveOrder } from "@lib/data/orders"
-import { enrichLineItems, stripHeavyCartMetadataForRender } from "@lib/data/cart"
+import { enrichLineItems } from "@lib/data/cart"
+import { stripHeavyCartMetadataForRender } from "@lib/util/strip-cart-metadata"
 import { applyDisplayPriceCorrectionToOrder } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
 

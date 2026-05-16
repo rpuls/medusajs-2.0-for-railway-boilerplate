@@ -1,7 +1,8 @@
 import { Metadata } from "next"
 import CartTemplate from "@modules/cart/templates"
 
-import { enrichLineItems, retrieveCart, stripHeavyCartMetadataForRender } from "@lib/data/cart"
+import { enrichLineItems, retrieveCart } from "@lib/data/cart"
+import { stripHeavyCartMetadataForRender } from "@lib/util/strip-cart-metadata"
 import { applyDisplayPriceCorrectionToCart } from "@lib/util/apply-display-price-correction"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
