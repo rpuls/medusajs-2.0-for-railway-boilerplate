@@ -77,9 +77,52 @@ const fetchCart = async () => {
   }
 }
 
-export default async function Cart() {
+export default async function Cart({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
   const cart = await fetchCart()
   const customer = await getCustomer()
+
+  // Bisect mode — /au/cart?debug=<level> renders progressively simpler
+  // versions of the cart page so we can isolate which component throws
+  // during hydration. Server log shows the function returned 200, so the
+  // bug is in client-side render. Remove this block once isolated.
+  const params = searchParams ? await searchParams : undefined
+  const debugLevel = params?.debug
+  if (typeof debugLevel === "string") {
+    const itemCount = cart?.items?.length ?? 0
+    if (debugLevel === "0") {
+      // Level 0: pure server render. No client components at all. If THIS
+      // errors, the issue is in the data fetch / serialization path.
+      return (
+        <div className="content-container py-10">
+          <h1 className="text-xl font-semibold">Debug 0 — server only</h1>
+          <p className="mt-2 text-sm">Cart loaded: {itemCount} items</p>
+          <p className="mt-1 text-xs text-ui-fg-subtle">cart_id={cart?.id ?? "(none)"}</p>
+        </div>
+      )
+    }
+    if (debugLevel === "1") {
+      // Level 1: just dump cart JSON in a <pre>. Still server only — proves
+      // the cart data itself can serialize and round-trip with no client component.
+      return (
+        <div className="content-container py-10">
+          <h1 className="text-xl font-semibold">Debug 1 — cart JSON</h1>
+          <pre className="mt-2 text-[10px] overflow-auto max-h-[80vh] bg-ui-bg-subtle p-3 rounded">
+            {JSON.stringify(cart, null, 2).slice(0, 50_000)}
+          </pre>
+        </div>
+      )
+    }
+    if (debugLevel === "2") {
+      // Level 2: render CartTemplate but cart=null so the empty-cart branch
+      // fires (no item rendering, no Summary). If this works, the issue is
+      // in one of ItemsTemplate / Summary / AggregatedTierBanner.
+      return <CartTemplate cart={null} customer={customer} />
+    }
+  }
 
   return <CartTemplate cart={cart} customer={customer} />
 }
