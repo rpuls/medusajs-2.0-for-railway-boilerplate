@@ -3922,48 +3922,13 @@ export default function CustomizerTemplate({
                           more spots — each location is priced separately.
                         </p>
                       )}
-                      {pdpStep === 2 ? (
-                        <>
-                          <DecorationMethodPicker
-                            side={currentSide}
-                            value={sideDecorationMethods[currentSide] ?? "print"}
-                            onChange={(side, method) => {
-                              setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
-                              if (method === "embroidery") {
-                                // Embroidery sides specify their size via mm dimensions in
-                                // EmbroiderySideConfig, not via the print-size selector. Mark
-                                // the side as sized so the upload panel + Step 3 don't block
-                                // the customer from placing artwork.
-                                setSizingDoneSides((prev) => ({ ...prev, [side]: true }))
-                                setPdpStep((s) => (s > 3 ? s : 3))
-                              } else {
-                                setSideEmbroideryConfigs((prev) => {
-                                  const next = { ...prev }
-                                  delete next[side]
-                                  return next
-                                })
-                                // Reverting to print: clear the side's "sized" flag so the
-                                // wizard prompts for an A6/A4/A3 selection again.
-                                setSizingDoneSides((prev) => {
-                                  const next = { ...prev }
-                                  delete next[side]
-                                  return next
-                                })
-                              }
-                            }}
-                          />
-                          {sideDecorationMethods[currentSide] === "embroidery" ? (
-                            <EmbroiderySideConfig
-                              side={currentSide}
-                              value={sideEmbroideryConfigs[currentSide]}
-                              onChange={(side, next) => {
-                                setSideEmbroideryConfigs((prev) => ({ ...prev, [side]: next }))
-                              }}
-                              getArtworkDataUrl={getCurrentSideArtworkDataUrl}
-                            />
-                          ) : null}
-                        </>
-                      ) : null}
+                      {/*
+                        The decoration-method picker (Print/Embroidery) used
+                        to live here, but it's now in Step 3 alongside the
+                        size/embroidery configuration — that way the customer
+                        can change a side's method any time they're working
+                        on it, not just during the initial Step-2 setup.
+                      */}
                     </>
                   ) : null}
                 </motion.div>
@@ -4057,12 +4022,50 @@ export default function CustomizerTemplate({
               />
               {pdpStep === 3 ? (
                 <>
+                  {/* Per-side method picker — always visible here so the
+                      customer can switch a side between print and embroidery
+                      after the initial Step-2 setup (e.g. front=print at
+                      first, then change back=embroidery without re-opening
+                      the print-positions step). */}
+                  <div className="rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-ui-fg-subtle">
+                        Decoration method · {sideLabel}
+                      </span>
+                    </div>
+                    <DecorationMethodPicker
+                      side={currentSide}
+                      value={sideDecorationMethods[currentSide] ?? "print"}
+                      onChange={(side, method) => {
+                        setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
+                        if (method === "embroidery") {
+                          setSizingDoneSides((prev) => ({ ...prev, [side]: true }))
+                        } else {
+                          setSideEmbroideryConfigs((prev) => {
+                            const next = { ...prev }
+                            delete next[side]
+                            return next
+                          })
+                          setSizingDoneSides((prev) => {
+                            const next = { ...prev }
+                            delete next[side]
+                            return next
+                          })
+                          // Re-prompt for print size since we just reverted to print.
+                          setScpPrintSizeChosen(false)
+                        }
+                      }}
+                    />
+                  </div>
                   {sideDecorationMethods[currentSide] === "embroidery" ? (
-                    <p className="rounded-md bg-ui-bg-subtle/70 px-2.5 py-1.5 text-xs text-ui-fg-subtle">
-                      <span className="font-semibold text-ui-fg-base">{sideLabel}</span> uses
-                      embroidery — size is set by the mm dimensions in Step 2.
-                      No print-size selection needed for this location.
-                    </p>
+                    <EmbroiderySideConfig
+                      side={currentSide}
+                      value={sideEmbroideryConfigs[currentSide]}
+                      onChange={(side, next) => {
+                        setSideEmbroideryConfigs((prev) => ({ ...prev, [side]: next }))
+                      }}
+                      getArtworkDataUrl={getCurrentSideArtworkDataUrl}
+                    />
                   ) : allowedSizesForCurrentSide.length === 1 &&
                   allowedSizesForCurrentSide[0] === "up_to_a6" ? (
                     <p className="rounded-md bg-ui-bg-subtle/70 px-2.5 py-1.5 text-xs text-ui-fg-subtle">

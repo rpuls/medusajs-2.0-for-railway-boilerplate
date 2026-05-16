@@ -138,7 +138,7 @@ const EmbroiderySideConfig: React.FC<Props> = ({
 
       <p className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] text-blue-900">
         Upload your logo via the <strong>Add to design</strong> panel on the
-        left, then enter the embroidered size below and run the AI estimate.
+        left, place it on the canvas, then run the AI estimate below.
       </p>
 
       <div className="grid grid-cols-2 gap-2">
