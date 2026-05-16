@@ -46,6 +46,9 @@ export async function generateMetadata({
       description,
       images: [SEO.ogImage],
     },
+    other: {
+      "asset-credits": "Earth rotating sprite by gold356 — https://gold356.itch.io/earh-rotating-32-x-32",
+    },
   }
 }
 
