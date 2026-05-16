@@ -7,86 +7,36 @@ import sharp from "sharp"
 const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
 
 /**
- * Remove the white background from a mockup image using edge-connected flood fill.
- * Only pixels reachable from the image edges that meet the whiteness threshold are
- * made transparent — so white fabric on a white garment is left untouched.
+ * Remove the near-white background from a mockup image.
+ *
+ * Strategy: global threshold — every pixel where R, G, and B are all ≥ threshold
+ * becomes fully transparent. This reliably handles sleeve / tag mockups that are
+ * cropped tight to the garment (where edge-connected flood-fill can't reach the
+ * background). Safe for any coloured garment because coloured fabric always has
+ * at least one channel well below 220 (e.g. orange: B = 0, blue: R ≈ 0).
+ * White garments on white backgrounds are an inherent limitation of any
+ * colour-based approach.
  */
 async function removeWhiteBackground(imgBuf: Buffer, threshold = 220): Promise<Buffer> {
-  // PAD = 10: wide enough that even a sleeve flush with the original image edge
-  // still has a clear white-pixel path from the padding into the background.
-  // threshold = 220: catches JPEG-compressed whites (often 225-237) and
-  // light-grey mockup backgrounds without touching coloured garment fabric.
-  const PAD = 10
-  const paddedBuf = await sharp(imgBuf)
-    .extend({
-      top: PAD, bottom: PAD, left: PAD, right: PAD,
-      background: { r: 255, g: 255, b: 255, alpha: 255 },
-    })
-    .png()
-    .toBuffer()
-
-  const { data, info } = await sharp(paddedBuf)
+  const { data, info } = await sharp(imgBuf)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
 
-  const W = info.width
-  const H = info.height
+  const pixels = info.width * info.height
   const out = Buffer.from(data)
-  const visited = new Uint8Array(W * H)
 
-  function isWhitish(idx: number): boolean {
-    return (
-      data[idx * 4 + 0] >= threshold &&
-      data[idx * 4 + 1] >= threshold &&
-      data[idx * 4 + 2] >= threshold
-    )
-  }
-
-  // Seed queue with all whitish edge pixels
-  const queue: number[] = []
-  for (let x = 0; x < W; x++) {
-    const top = x
-    const bottom = (H - 1) * W + x
-    if (isWhitish(top)) { visited[top] = 1; queue.push(top) }
-    if (isWhitish(bottom)) { visited[bottom] = 1; queue.push(bottom) }
-  }
-  for (let y = 1; y < H - 1; y++) {
-    const left = y * W
-    const right = y * W + W - 1
-    if (isWhitish(left)) { visited[left] = 1; queue.push(left) }
-    if (isWhitish(right)) { visited[right] = 1; queue.push(right) }
-  }
-
-  // 8-directional BFS — includes diagonals so it doesn't get stuck at corners
-  let qi = 0
-  while (qi < queue.length) {
-    const idx = queue[qi++]
-    out[idx * 4 + 3] = 0
-
-    const x = idx % W
-    const y = Math.floor(idx / W)
-    const neighbors = [
-      y > 0             ? idx - W     : -1,  // N
-      y < H - 1         ? idx + W     : -1,  // S
-      x > 0             ? idx - 1     : -1,  // W
-      x < W - 1         ? idx + 1     : -1,  // E
-      y > 0   && x > 0  ? idx - W - 1 : -1,  // NW
-      y > 0   && x < W-1? idx - W + 1 : -1,  // NE
-      y < H-1 && x > 0  ? idx + W - 1 : -1,  // SW
-      y < H-1 && x < W-1? idx + W + 1 : -1,  // SE
-    ]
-    for (const n of neighbors) {
-      if (n >= 0 && !visited[n] && isWhitish(n)) {
-        visited[n] = 1
-        queue.push(n)
-      }
+  for (let i = 0; i < pixels; i++) {
+    if (
+      data[i * 4 + 0] >= threshold &&
+      data[i * 4 + 1] >= threshold &&
+      data[i * 4 + 2] >= threshold
+    ) {
+      out[i * 4 + 3] = 0
     }
   }
 
-  // Crop the padding back off to return original dimensions
-  return sharp(out, { raw: { width: W, height: H, channels: 4 } })
-    .extract({ left: PAD, top: PAD, width: W - PAD * 2, height: H - PAD * 2 })
+  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
     .png()
     .toBuffer()
 }
