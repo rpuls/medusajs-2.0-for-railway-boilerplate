@@ -123,6 +123,25 @@ const SIZE_ORDER = [
   "2XL", "XXL", "3XL", "XXXL", "4XL", "XXXXL", "5XL", "XXXXXL", "6XL", "7XL", "8XL",
 ]
 
+const SIDE_ORDER = [
+  "front", "back",
+  "left_sleeve", "right_sleeve", "sleeve",
+  "left", "right",
+  "printed_tag", "tag",
+]
+
+const SIDE_LABELS: Record<string, string> = {
+  front: "Front",
+  back: "Back",
+  left_sleeve: "Left Sleeve",
+  right_sleeve: "Right Sleeve",
+  sleeve: "Sleeve",
+  left: "Left",
+  right: "Right",
+  printed_tag: "Tag",
+  tag: "Tag",
+}
+
 type SizeQuantity = { size: string; quantity: number }
 
 type ArtifactEntry = {
@@ -163,8 +182,8 @@ export type MockupPdfOptions = {
 interface PageData {
   productTitle: string
   printSizeLabel: string
-  frontMockupBuf: Buffer | null
-  backMockupBuf: Buffer | null
+  /** All decorated sides in display order (front, back, sleeves, tag…) */
+  mockups: Array<{ side: string; buf: Buffer }>
   sizes: SizeQuantity[]
   printNotes: string | null
 }
@@ -209,8 +228,7 @@ function sortSizes(sizes: SizeQuantity[]): SizeQuantity[] {
 
 function buildPageData(
   groupItems: OrderItem[],
-  frontBuf: Buffer | null,
-  backBuf: Buffer | null
+  mockups: Array<{ side: string; buf: Buffer }>
 ): PageData {
   const canonical =
     groupItems.find(
@@ -257,8 +275,7 @@ function buildPageData(
   return {
     productTitle,
     printSizeLabel,
-    frontMockupBuf: frontBuf,
-    backMockupBuf: backBuf,
+    mockups,
     sizes: sortSizes(sizes),
     printNotes,
   }
@@ -318,23 +335,34 @@ export async function generateMockupPdf(
         ? (rawDesign!.artifacts as ArtifactEntry[])
         : []
 
-      const frontUrl =
-        artifacts.find((a) => a.side === "front")?.mockupUrl ?? null
-      const backUrl =
-        artifacts.find((a) => a.side === "back")?.mockupUrl ?? null
+      // Collect every side that has a mockup URL, in display order
+      const sidesWithUrls = artifacts
+        .filter((a): a is ArtifactEntry & { mockupUrl: string } =>
+          typeof a.mockupUrl === "string" && a.mockupUrl.startsWith("http")
+        )
+        .sort((a, b) => {
+          const ai = SIDE_ORDER.indexOf(a.side)
+          const bi = SIDE_ORDER.indexOf(b.side)
+          if (ai !== -1 && bi !== -1) return ai - bi
+          if (ai !== -1) return -1
+          if (bi !== -1) return 1
+          return 0
+        })
 
-      const [frontRaw, backRaw] = await Promise.all([
-        frontUrl ? fetchImageBuffer(frontUrl) : Promise.resolve(null),
-        backUrl ? fetchImageBuffer(backUrl) : Promise.resolve(null),
-      ])
+      const rawBufs = await Promise.all(
+        sidesWithUrls.map((a) => fetchImageBuffer(a.mockupUrl))
+      )
 
       // Strip white background so the watermark shows through behind the garment
-      const [frontBuf, backBuf] = await Promise.all([
-        frontRaw ? removeWhiteBackground(frontRaw) : Promise.resolve(null),
-        backRaw ? removeWhiteBackground(backRaw) : Promise.resolve(null),
-      ])
+      const processedBufs = await Promise.all(
+        rawBufs.map((buf) => (buf ? removeWhiteBackground(buf) : Promise.resolve(null)))
+      )
 
-      return buildPageData(groupItems, frontBuf, backBuf)
+      const mockups = sidesWithUrls
+        .map((a, i) => ({ side: a.side, buf: processedBufs[i] }))
+        .filter((m): m is { side: string; buf: Buffer } => m.buf !== null)
+
+      return buildPageData(groupItems, mockups)
     })
   )
 
@@ -351,7 +379,7 @@ export async function generateMockupPdf(
 
   const [magentaLogoFull, magentaLogoWatermark] = await Promise.all([
     makeMagentaLogo(rawLogoBuf, 100, 1.0),
-    makeMagentaLogo(rawLogoBuf, 600, 0.10),
+    makeMagentaLogo(rawLogoBuf, 750, 0.10),
   ])
 
   return buildPdf({ jobNumber, customerName, orderDate, pages, regularFontBuf, boldFontBuf, magentaLogoFull, magentaLogoWatermark })
@@ -389,7 +417,7 @@ function buildPdf(params: {
     const usableW = PW - ML - MR // ~535pt
 
     for (const page of pages) {
-      const { productTitle, printSizeLabel, frontMockupBuf, backMockupBuf, sizes, printNotes } = page
+      const { productTitle, printSizeLabel, mockups, sizes, printNotes } = page
 
       doc.addPage()
 
@@ -425,31 +453,65 @@ function buildPdf(params: {
       // ── MOCKUP IMAGES ────────────────────────────────────────────────────────
       const PH = 841.89
       const imgY = MT + 80
-      const imgH = 420
-      const imgW = 260
+      // Total image band height (includes cell images + per-row labels)
+      const imgBandH = 440
+      const labelH = 13  // height reserved for the side-label row
 
-      // Watermark: centred on the full A4 page, drawn first so garment images render on top
-      const wmSize = 600
+      // Watermark: centred on the full A4 page (750pt bleeds past all edges)
+      const wmSize = 750
       const wmX = (PW - wmSize) / 2
       const wmY = (PH - wmSize) / 2
       doc.image(magentaLogoWatermark, wmX, wmY, { width: wmSize, height: wmSize })
 
-      if (frontMockupBuf && backMockupBuf) {
-        const gap = usableW - imgW * 2
-        doc.image(frontMockupBuf, ML, imgY, { width: imgW, height: imgH, fit: [imgW, imgH] })
-        doc.image(backMockupBuf, ML + imgW + gap, imgY, {
-          width: imgW,
-          height: imgH,
-          fit: [imgW, imgH],
-        })
-      } else if (frontMockupBuf ?? backMockupBuf) {
-        const singleBuf = (frontMockupBuf ?? backMockupBuf)!
-        const centreX = ML + (usableW - imgW) / 2
-        doc.image(singleBuf, centreX, imgY, { width: imgW, height: imgH, fit: [imgW, imgH] })
+      if (mockups.length > 0) {
+        const count = mockups.length
+        // ≤4 sides → 2 cols; 5+ sides → 3 cols
+        const cols = count >= 5 ? 3 : count === 1 ? 1 : 2
+        const rows = Math.ceil(count / cols)
+        const colGap = 8
+        const rowGap = 10
+        // Per-cell image height: divide available band after reserving label rows and gaps
+        const cellH = (imgBandH - labelH * rows - rowGap * (rows - 1)) / rows
+        const cellW = (usableW - colGap * (cols - 1)) / cols
+
+        for (let i = 0; i < count; i++) {
+          const { side, buf } = mockups[i]
+          const row = Math.floor(i / cols)
+          const col = i % cols
+
+          // Centre an incomplete last row
+          const itemsInLastRow = count % cols || cols
+          const itemsInRow = row === rows - 1 ? itemsInLastRow : cols
+          const rowXOff =
+            itemsInRow < cols
+              ? (usableW - (itemsInRow * cellW + (itemsInRow - 1) * colGap)) / 2
+              : 0
+
+          const x = ML + rowXOff + col * (cellW + colGap)
+          const y = imgY + row * (cellH + rowGap + labelH)
+
+          doc.image(buf, x, y, {
+            width: cellW,
+            height: cellH,
+            fit: [cellW, cellH],
+            align: "center",
+            valign: "center",
+          })
+
+          // Side label beneath image
+          const label =
+            SIDE_LABELS[side] ??
+            side.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+          doc
+            .font("PJS")
+            .fontSize(8)
+            .fillColor("#666666")
+            .text(label, x, y + cellH + 2, { width: cellW, align: "center" })
+        }
       }
 
       // ── POSITIONING & SIZING SECTION ─────────────────────────────────────────
-      const ruleY = imgY + imgH + 8
+      const ruleY = imgY + imgBandH + 8
       doc
         .moveTo(ML, ruleY)
         .lineTo(PW - MR, ruleY)
