@@ -520,7 +520,8 @@ function buildPdf(params: {
       const imgY = MT + 80
       // Total image band height (includes cell images + per-row labels)
       const imgBandH = 440
-      const labelH = 13  // height reserved for the side-label row
+      // Two lines reserved under each image: side name + print dimension
+      const labelH = 24
 
       // Watermark: centred on the full A4 page (750pt bleeds past all edges)
       const wmSize = 750
@@ -540,7 +541,7 @@ function buildPdf(params: {
         const cellW = (usableW - colGap * (cols - 1)) / cols
 
         for (let i = 0; i < count; i++) {
-          const { side, buf } = mockups[i]
+          const { side, buf, printSizeLabel } = mockups[i]
           const row = Math.floor(i / cols)
           const col = i % cols
 
@@ -563,19 +564,29 @@ function buildPdf(params: {
             valign: "center",
           })
 
-          // Side label beneath image
+          // Side label + print dimension beneath image (two lines)
           const label =
             SIDE_LABELS[side] ??
             side.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
           doc
+            .font("PJS-Bold")
+            .fontSize(8)
+            .fillColor("#222222")
+            .text(label, x, y + cellH + 2, { width: cellW, align: "center" })
+          doc
             .font("PJS")
             .fontSize(8)
             .fillColor("#666666")
-            .text(label, x, y + cellH + 2, { width: cellW, align: "center" })
+            .text(printSizeLabel || "—", x, y + cellH + 12, {
+              width: cellW,
+              align: "center",
+            })
         }
       }
 
-      // ── POSITIONING & SIZING SECTION ─────────────────────────────────────────
+      // ── SECTION DIVIDER ──────────────────────────────────────────────────────
+      // Per-image dimensions are rendered directly under each mockup above,
+      // so no consolidated "Positioning and sizing" line is needed.
       const ruleY = imgY + imgBandH + 8
       doc
         .moveTo(ML, ruleY)
@@ -583,38 +594,9 @@ function buildPdf(params: {
         .lineWidth(0.5)
         .stroke("#cccccc")
 
-      const posHeadY = ruleY + 6
-      doc
-        .font("PJS-Bold")
-        .fontSize(10)
-        .fillColor("#000000")
-        .text("Positioning and sizing", ML, posHeadY, { width: usableW, align: "center" })
-
-      const dimY = posHeadY + 14
-      // Group sides that share the same print size: "Front & Back: 21×30 cm  ·  Left Sleeve: 10×15 cm …"
-      const dimGroups: Array<{ sides: string[]; sizeLabel: string }> = []
-      for (const m of mockups) {
-        if (!m.printSizeLabel) continue
-        const existing = dimGroups.find((g) => g.sizeLabel === m.printSizeLabel)
-        const name = SIDE_LABELS[m.side] ?? m.side.replace(/_/g, " ")
-        if (existing) {
-          existing.sides.push(name)
-        } else {
-          dimGroups.push({ sides: [name], sizeLabel: m.printSizeLabel })
-        }
-      }
-      const dimText = dimGroups.length
-        ? dimGroups.map((g) => `${g.sides.join(" & ")}: ${g.sizeLabel}`).join("   ·   ")
-        : "Dimensions: —"
-      doc
-        .font("PJS")
-        .fontSize(9)
-        .fillColor("#444444")
-        .text(dimText, ML, dimY, { width: usableW, align: "center" })
-
       // ── DISCLAIMER BOX ────────────────────────────────────────────────────────
       const boxPad = 10
-      const disclaimerY = dimY + 16
+      const disclaimerY = ruleY + 12
       const disclaimerTextW = usableW - boxPad * 2
 
       doc.font("PJS").fontSize(8)
