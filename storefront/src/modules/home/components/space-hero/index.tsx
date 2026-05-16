@@ -63,7 +63,7 @@ interface SceneState {
   flybys: Flyby[]; flybySprites: HTMLCanvasElement[]; nextFlybyMs: number
   logoImg: HTMLImageElement | null; logoW: number; logoH: number
   logoPixels: LogoPixel[] | null; logoCols: number; logoRows: number; logoPixelSize: number
-  earthImg: HTMLImageElement | null
+  earthVideo: HTMLVideoElement | null
 }
 
 // ─── Planet sprite helpers ────────────────────────────────────────────────────
@@ -449,9 +449,11 @@ export default function SpaceHero({ className, style }: { className?: string; st
       initialized: false,
     }))
     const logoImg = new Image(); logoImg.src = "/branding/sc-prints-logo-transparent.png"
-    const earthImg = new Image()
-    earthImg.src = "/branding/earth-rotating.gif"
-    return { planets, comets: [], nextCometMs: randomBetween(3000, 7000), flybys: [], flybySprites: [], nextFlybyMs: randomBetween(8000, 18000), logoImg, logoW: 0, logoH: 0, logoPixels: null, logoCols: 0, logoRows: 0, logoPixelSize: 0, earthImg }
+    const earthVideo = document.createElement("video")
+    earthVideo.src = "/branding/earth-rotating.mp4"
+    earthVideo.muted = true; earthVideo.loop = true; earthVideo.playsInline = true; earthVideo.autoplay = true
+    earthVideo.play().catch(() => {})
+    return { planets, comets: [], nextCometMs: randomBetween(3000, 7000), flybys: [], flybySprites: [], nextFlybyMs: randomBetween(8000, 18000), logoImg, logoW: 0, logoH: 0, logoPixels: null, logoCols: 0, logoRows: 0, logoPixelSize: 0, earthVideo }
   }, [])
 
   const drawStars = useCallback((canvas: HTMLCanvasElement, w: number, h: number, dpr: number) => {
@@ -693,15 +695,12 @@ export default function SpaceHero({ className, style }: { className?: string; st
           ctx.rect(Math.round(offX + lx * ps), Math.round(offY + ly * ps), ps, ps)
         ctx.clip()
 
-        if (state.earthImg?.complete && state.earthImg.naturalWidth > 0) {
-          // Scale the GIF so its height fills the logo band; tile horizontally
-          const gifW = state.earthImg.naturalWidth
-          const gifH = state.earthImg.naturalHeight
+        if (state.earthVideo && state.earthVideo.readyState >= 2) {
           const tileH = logoH
-          const tileW = gifW * (tileH / gifH)
+          const tileW = state.earthVideo.videoWidth * (tileH / state.earthVideo.videoHeight)
           ctx.imageSmoothingEnabled = true
           for (let tx = offX; tx < offX + logoW; tx += tileW)
-            ctx.drawImage(state.earthImg, tx, offY, tileW, tileH)
+            ctx.drawImage(state.earthVideo, tx, offY, tileW, tileH)
         } else {
           ctx.fillStyle = "#FFFFFF"
           for (const { lx, ly } of state.logoPixels)
