@@ -31,30 +31,74 @@
  * Server Actions file must be an async function. This helper is sync,
  * so it can't sit alongside the cart Server Actions.
  */
-export function stripHeavyCartMetadataForRender<T extends { metadata?: unknown }>(
+export function stripHeavyCartMetadataForRender<T extends { metadata?: unknown; variant?: unknown }>(
   items: T[] | null | undefined
 ): T[] {
   if (!items || !Array.isArray(items)) return []
-  return items.map((item) => {
-    const meta = (item as { metadata?: Record<string, unknown> | null }).metadata
-    if (!meta || typeof meta !== "object") return item
+  return items.map((item) => stripOneLineItem(item))
+}
+
+function stripOneLineItem<T extends { metadata?: unknown; variant?: unknown }>(item: T): T {
+  let next = item as T & {
+    metadata?: Record<string, unknown> | null
+    variant?: Record<string, unknown> | null
+  }
+
+  // ── 1. Slim customizerDesign on metadata ──
+  const meta = next.metadata
+  if (meta && typeof meta === "object") {
     const design = (meta as Record<string, unknown>).customizerDesign
-    if (!design || typeof design !== "object") return item
-    // Shallow-clone metadata + customizerDesign so we don't mutate inputs.
-    const designLite: Record<string, unknown> = {
-      ...(design as Record<string, unknown>),
+    if (design && typeof design === "object") {
+      const designLite: Record<string, unknown> = {
+        ...(design as Record<string, unknown>),
+      }
+      // Drop the actual size-bombs only. Keep artifacts (URLs, small) so the
+      // cart Item component can render its mockup preview thumbnail.
+      delete designLite.sideLayouts
+      delete designLite.prints
+      delete designLite.customerOriginalFiles
+      next = {
+        ...next,
+        metadata: {
+          ...(meta as Record<string, unknown>),
+          customizerDesign: designLite,
+        },
+      }
     }
-    // Drop the actual size-bombs only. Keep artifacts (URLs, small) so the
-    // cart Item component can render its mockup preview thumbnail.
-    delete designLite.sideLayouts
-    delete designLite.prints
-    delete designLite.customerOriginalFiles
-    return {
-      ...item,
-      metadata: {
-        ...(meta as Record<string, unknown>),
-        customizerDesign: designLite,
-      },
-    } as T
-  })
+  }
+
+  // ── 2. Slim variant.product duplication ──
+  // Each of 100+ cart lines carries its OWN copy of variant.product through
+  // enrichLineItems. The product object contains description (often a few KB
+  // of HTML), full images array, brand details, collections, categories,
+  // tags, and product metadata — none of which the cart UI needs per-line.
+  // Keep only the fields the cart Item component reads:
+  //   product.handle, product.title, product.thumbnail, product.images
+  //   (just the first one — used for color-aware variant image fallback)
+  const variant = next.variant
+  if (variant && typeof variant === "object") {
+    const v = variant as Record<string, unknown>
+    const product = v.product
+    if (product && typeof product === "object") {
+      const p = product as Record<string, unknown>
+      const slimProduct: Record<string, unknown> = {
+        id: p.id,
+        handle: p.handle,
+        title: p.title,
+        thumbnail: p.thumbnail,
+        // images: keep only the first few (used by getPrimaryGarmentImageUrl
+        // for color-aware variant image fallback)
+        images: Array.isArray(p.images) ? p.images.slice(0, 4) : [],
+      }
+      next = {
+        ...next,
+        variant: {
+          ...v,
+          product: slimProduct,
+        },
+      }
+    }
+  }
+
+  return next as T
 }

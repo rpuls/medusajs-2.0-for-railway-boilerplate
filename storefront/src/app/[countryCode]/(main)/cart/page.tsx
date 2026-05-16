@@ -22,11 +22,10 @@ const fetchCart = async () => {
 
     if (cart?.items?.length) {
       const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
-      // Strip heavy customizer metadata (sideLayouts, prints, artifacts, etc.)
-      // before passing to client components — large carts (100+ customized
-      // lines) otherwise blow the RSC payload and the page errors out with
-      // "Something went wrong loading your cart". Backend keeps the full
-      // metadata; re-edit flows refetch it on demand.
+      // Strip heavy customizer metadata (sideLayouts, prints, customerOriginalFiles)
+      // before passing to client components. Pure performance optimization for
+      // large carts; the cart UI only reads thumbnail / mockup-artifact URLs
+      // (still kept) plus top-level scalars. See stripHeavyCartMetadataForRender.
       cart.items = stripHeavyCartMetadataForRender(
         enrichedItems
       ) as HttpTypes.StoreCartLineItem[]

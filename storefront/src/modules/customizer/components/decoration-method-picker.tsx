@@ -35,12 +35,15 @@ const DecorationMethodPicker: React.FC<Props> = ({
   disabled,
   availableMethods = ["print", "embroidery"],
 }) => {
+  // When only one method is available (e.g. embroidery-only for beanies),
+  // render full-width single-column so the card doesn't look squashed.
+  const isSingleMethod = availableMethods.length === 1
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-[11px] font-semibold uppercase tracking-wide text-ui-fg-subtle">
         Method
       </span>
-      <div className="grid grid-cols-2 gap-2">
+      <div className={isSingleMethod ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
         {availableMethods.map((method) => {
           const selected = value === method
           return (
