@@ -1,24 +1,30 @@
 /**
- * Strip heavy customizer metadata from cart/order line items for safe
- * server→client serialization through RSC. Each customizable line carries
- * a `customizerDesign` blob with:
+ * Strip the genuinely heavy customizer metadata from cart/order line items
+ * for safe server→client serialization through RSC.
  *
- *   - sideLayouts: per-side Fabric.js JSON (the biggest field by far —
- *     every placed image/text object with full transform data)
- *   - prints: per-image print specs
- *   - artifacts: render artifact URLs and metadata
+ * What gets stripped (the actual size-bombs):
+ *   - sideLayouts: per-side Fabric.js JSON — every placed image/text object
+ *     with full transform data; the biggest field by far on a decorated line
+ *   - prints: per-image print specs (one object per placed Fabric object)
  *   - customerOriginalFiles: uploaded source-file refs
- *   - sideEmbroideryConfigs: per-side embroidery config blobs
  *
- * For a cart with 100+ customized lines the cumulative payload easily
+ * What's KEPT (small but UI-critical):
+ *   - artifacts: hosted mockup URLs per decorated side. These are short URL
+ *     strings (~150 chars each) and the cart Item component reads them via
+ *     getCustomizerMockupArtifacts() to render the design preview thumbnail.
+ *     Stripping these broke the visible-preview in cart, which is the whole
+ *     reason customers can tell their custom item apart from a blank one.
+ *   - pricing.server: per-line pricing snapshot (used by admin tooling)
+ *   - printNotes: free-text instructions for production
+ *   - sideDecorationMethods: one string per side, tiny
+ *   - sideEmbroideryConfigs: small (mm dims, stitch count); kept for cart
+ *     summary surfaces and re-edit affordance
+ *
+ * For a cart with 100+ customized lines the cumulative payload otherwise
  * crosses the practical RSC streaming limit, which manifests as the cart
  * page error boundary firing with no specific message ("Something went
- * wrong loading your cart"). The cart UI itself only reads top-level
- * scalars (quantity, unit_price, product_title, thumbnail) — none of
- * the heavy fields — so we can safely drop them for the render pass.
- *
- * Full metadata is preserved on the backend cart line and re-fetched on
- * demand (see getOrderLineCustomizerMetadata for the re-edit flow).
+ * wrong loading your cart"). Full metadata is preserved on the backend
+ * cart line and re-fetched on demand (see getOrderLineCustomizerMetadata).
  *
  * NOTE: This file deliberately lives in lib/util/ (NOT lib/data/cart.ts)
  * because lib/data/cart.ts uses `"use server"` — every export from a
@@ -38,16 +44,11 @@ export function stripHeavyCartMetadataForRender<T extends { metadata?: unknown }
     const designLite: Record<string, unknown> = {
       ...(design as Record<string, unknown>),
     }
-    // Drop the heaviest fields. Keep pricing.server (small, used by admin
-    // tooling that reads enriched orders) and printNotes (free text).
+    // Drop the actual size-bombs only. Keep artifacts (URLs, small) so the
+    // cart Item component can render its mockup preview thumbnail.
     delete designLite.sideLayouts
     delete designLite.prints
-    delete designLite.artifacts
     delete designLite.customerOriginalFiles
-    delete designLite.sideEmbroideryConfigs
-    // sideDecorationMethods is small (one string per side) — kept so the
-    // cart line knows which sides are print vs embroidery for any future
-    // summary display. Strip if it grows.
     return {
       ...item,
       metadata: {
