@@ -325,7 +325,7 @@ const parseGarmentImagesObject = (
         typeof parsed.model_image === "string" && parsed.model_image.length
           ? parsed.model_image
           : undefined
-      const raw = [modelImage, parsed.front, parsed.back, ...all].filter(
+      const raw = [parsed.front, parsed.back, ...all, modelImage].filter(
         (value): value is string => typeof value === "string" && value.length > 0
       )
       return {
@@ -348,7 +348,7 @@ const parseGarmentImagesObject = (
     typeof obj.model_image === "string" && obj.model_image.length
       ? obj.model_image
       : undefined
-  const raw = [modelImage, obj.front, obj.back, ...all].filter(
+  const raw = [obj.front, obj.back, ...all, modelImage].filter(
     (value): value is string => typeof value === "string" && value.length > 0
   )
 
@@ -812,7 +812,9 @@ const garmentUrlLooksLikeBack = (url: string) => {
     /[-/_.]back[-/_.]/i.test(lower) ||
     lower.includes("back.") ||
     lower.includes("_back") ||
-    lower.includes("-back")
+    lower.includes("-back") ||
+    // FashionBiz convention: _Product_Colour_02_ = flat back
+    (lower.includes("_product_") && (lower.includes("_02_") || lower.includes("_02.")))
   )
 }
 
@@ -824,7 +826,9 @@ const garmentUrlLooksLikeFront = (url: string) => {
     /[-/_.]front[-/_.]/i.test(lower) ||
     lower.includes("front.") ||
     lower.includes("_front") ||
-    lower.includes("-front")
+    lower.includes("-front") ||
+    // FashionBiz convention: _Product_Colour_01_ = flat front
+    (lower.includes("_product_") && (lower.includes("_01_") || lower.includes("_01.")))
   )
 }
 

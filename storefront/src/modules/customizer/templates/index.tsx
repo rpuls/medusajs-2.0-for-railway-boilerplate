@@ -3082,6 +3082,15 @@ export default function CustomizerTemplate({
     }
   }
 
+  const sideLabel =
+    currentSide === "left_sleeve"
+      ? "Left Sleeve"
+      : currentSide === "right_sleeve"
+      ? "Right Sleeve"
+      : currentSide === "printed_tag"
+      ? "Printed Tag"
+      : currentSide.charAt(0).toUpperCase() + currentSide.slice(1)
+
   const editorColumn = (
           <div className="space-y-4">
             <div className="overflow-hidden rounded-2xl border border-ui-border-base bg-ui-bg-base shadow-sm">
@@ -3171,6 +3180,9 @@ export default function CustomizerTemplate({
                 </div>
 
                 <div className="order-1 min-h-[min(58vh,680px)] flex-1 p-4 small:p-5 lg:order-2">
+                  <p className="mb-2 text-center text-xs font-semibold uppercase tracking-widest text-ui-fg-subtle">
+                    Editing: {sideLabel}
+                  </p>
                   <div className="z-[1]">
                     <CanvasStage
                       tintColor={variantTintHex}
@@ -3508,15 +3520,6 @@ export default function CustomizerTemplate({
         />
     </div>
   )
-
-  const sideLabel =
-    currentSide === "left_sleeve"
-      ? "Left Sleeve"
-      : currentSide === "right_sleeve"
-      ? "Right Sleeve"
-      : currentSide === "printed_tag"
-      ? "Printed Tag"
-      : currentSide.charAt(0).toUpperCase() + currentSide.slice(1)
 
   if (embedded && integratedPdpSlots) {
     // Guided wizard: steps reveal one at a time and collapse to a summary
