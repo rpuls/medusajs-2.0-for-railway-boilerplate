@@ -31,6 +31,24 @@ const fetchCart = async () => {
         enrichedItems
       ) as HttpTypes.StoreCartLineItem[]
       applyDisplayPriceCorrectionToCart(cart)
+
+      // Diagnostic: log a one-line summary of the cart payload size so the
+      // "Something went wrong loading your cart" error has a paper trail in
+      // Vercel runtime logs. JSON.stringify can also surface circular ref
+      // or BigInt errors here (caught and logged separately).
+      try {
+        const serialized = JSON.stringify(cart)
+        // eslint-disable-next-line no-console
+        console.info(
+          `[cart-page-diag] items=${cart.items.length} serialized=${(
+            Buffer.byteLength(serialized, "utf-8") /
+            1024
+          ).toFixed(1)}KB cart_id=${cart.id}`
+        )
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error("[cart-page-diag] serialize-cart-summary failed:", e)
+      }
     }
 
     return cart

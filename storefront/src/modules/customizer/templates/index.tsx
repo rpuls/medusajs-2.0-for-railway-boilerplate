@@ -71,6 +71,7 @@ import { sortApparelSizeLabels } from "@modules/products/lib/apparel-size-order"
 import {
   getGarmentImageUrlForPrintSide,
   getPrimaryGarmentImageUrl,
+  isBeanieGarmentProduct,
   isHatGarmentProduct,
   isLongSleeveGarmentProduct,
 } from "@modules/products/lib/variant-options"
@@ -889,6 +890,15 @@ export default function CustomizerTemplate({
     [selectedProduct]
   )
   /**
+   * Beanies are embroidery-only — the knit fabric can't take heat-press
+   * DTF prints. When true the DecorationMethodPicker is restricted to
+   * the embroidery option and every side defaults to embroidery on mount.
+   */
+  const productIsBeanie = useMemo(
+    () => isBeanieGarmentProduct(selectedProduct),
+    [selectedProduct]
+  )
+  /**
    * Sides the customer can print on for this product. Hats: front only —
    * the curved crown is the single realistic transfer location. Bottom-
    * half garments and accessories (pants, totes, bags, beanies, aprons,
@@ -1008,6 +1018,20 @@ export default function CustomizerTemplate({
     // is past step 1 and the customer has actually switched sides.
     setShowSideNudge(!decoratedSides.includes(currentSide))
   }, [currentSide]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Beanies are embroidery-only — knit fabric can't take DTF heat-press.
+   * Auto-set the active side's method to "embroidery" so the customer
+   * doesn't have to click the picker, and mark it sized so the upload
+   * panel + Step 3 unlock immediately. Skip if the side already has an
+   * explicit method (e.g. restored from a saved design / re-order).
+   */
+  useEffect(() => {
+    if (!productIsBeanie) return
+    if (sideDecorationMethods[currentSide]) return
+    setSideDecorationMethods((prev) => ({ ...prev, [currentSide]: "embroidery" }))
+    setSizingDoneSides((prev) => ({ ...prev, [currentSide]: true }))
+  }, [productIsBeanie, currentSide, sideDecorationMethods])
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
   const embedPdpQuantityStepNumber = showPdpLabeledOptionsStep ? 3 : 2
@@ -3224,7 +3248,11 @@ export default function CustomizerTemplate({
               </p>
               <DecorationMethodPicker
                 side={currentSide}
-                value={sideDecorationMethods[currentSide] ?? "print"}
+                value={
+                  sideDecorationMethods[currentSide] ??
+                  (productIsBeanie ? "embroidery" : "print")
+                }
+                availableMethods={productIsBeanie ? ["embroidery"] : ["print", "embroidery"]}
                 onChange={(side, method) => {
                   setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
                   if (method === "embroidery") {
@@ -4035,7 +4063,13 @@ export default function CustomizerTemplate({
                     </div>
                     <DecorationMethodPicker
                       side={currentSide}
-                      value={sideDecorationMethods[currentSide] ?? "print"}
+                      value={
+                        sideDecorationMethods[currentSide] ??
+                        (productIsBeanie ? "embroidery" : "print")
+                      }
+                      availableMethods={
+                        productIsBeanie ? ["embroidery"] : ["print", "embroidery"]
+                      }
                       onChange={(side, method) => {
                         setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
                         if (method === "embroidery") {
