@@ -82,10 +82,66 @@ index 0377a7ffd0d505338789d64b9344c64b332dbff0..262abc544b0802391a9c7fcc2f898cdb
  };
  var ProductStatusHeader = () => {
 diff --git a/dist/product-detail-ZF64CTWE.mjs b/dist/product-detail-ZF64CTWE.mjs
-index 471c72e74d40cc72392c5174048ba653658cf937..4b2e0cedaff88af501c0a68801e2be1c2308bc3f 100644
+index 471c72e74d40cc72392c5174048ba653658cf937..43bec29596a0b9fe0f48692db3a8179a2da4568e 100644
 --- a/dist/product-detail-ZF64CTWE.mjs
 +++ b/dist/product-detail-ZF64CTWE.mjs
-@@ -669,7 +669,7 @@ var ProductOrganizationSection = ({
+@@ -312,7 +312,7 @@ var ProductGeneralSection = ({
+ };
+ 
+ // src/routes/products/product-detail/components/product-media-section/product-media-section.tsx
+-import { PencilSquare as PencilSquare3, ThumbnailBadge } from "@medusajs/icons";
++import { ChevronDown, PencilSquare as PencilSquare3, ThumbnailBadge } from "@medusajs/icons";
+ import {
+   Button,
+   Checkbox,
+@@ -333,6 +333,7 @@ var ProductMediaSection = ({ product }) => {
+   const prompt = usePrompt2();
+   const navigate = useNavigate2();
+   const [selection, setSelection] = useState({});
++  const [collapsed, setCollapsed] = useState(true);
+   const media = getMedia(product);
+   const handleCheckedChange = (id) => {
+     setSelection((prev) => {
+@@ -378,7 +379,10 @@ var ProductMediaSection = ({ product }) => {
+   };
+   return /* @__PURE__ */ jsxs3(Container3, { className: "divide-y p-0", children: [
+     /* @__PURE__ */ jsxs3("div", { className: "flex items-center justify-between px-6 py-4", children: [
+-      /* @__PURE__ */ jsx4(Heading3, { level: "h2", children: t("products.media.label") }),
++      /* @__PURE__ */ jsxs3("button", { type: "button", className: "flex items-center gap-2 text-left", onClick: () => setCollapsed((c) => !c), children: [
++        /* @__PURE__ */ jsx4(ChevronDown, { className: clx("text-ui-fg-subtle transition-transform duration-200", { "rotate-180": !collapsed }) }),
++        /* @__PURE__ */ jsx4(Heading3, { level: "h2", children: t("products.media.label") })
++      ] }),
+       /* @__PURE__ */ jsx4(
+         ActionMenu,
+         {
+@@ -396,7 +400,7 @@ var ProductMediaSection = ({ product }) => {
+         }
+       )
+     ] }),
+-    media.length > 0 ? /* @__PURE__ */ jsx4("div", { className: "grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-4 px-6 py-4", children: media.map((i, index) => {
++    !collapsed && media.length > 0 ? /* @__PURE__ */ jsx4("div", { className: "grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-4 px-6 py-4", children: media.map((i, index) => {
+       const isSelected = selection[i.id];
+       return /* @__PURE__ */ jsxs3(
+         "div",
+@@ -434,7 +438,7 @@ var ProductMediaSection = ({ product }) => {
+         },
+         i.id
+       );
+-    }) }) : /* @__PURE__ */ jsxs3("div", { className: "flex flex-col items-center gap-y-4 pb-8 pt-6", children: [
++    }) }) : !collapsed ? /* @__PURE__ */ jsxs3("div", { className: "flex flex-col items-center gap-y-4 pb-8 pt-6", children: [
+       /* @__PURE__ */ jsxs3("div", { className: "flex flex-col items-center", children: [
+         /* @__PURE__ */ jsx4(
+           Text,
+@@ -449,7 +453,7 @@ var ProductMediaSection = ({ product }) => {
+         /* @__PURE__ */ jsx4(Text, { size: "small", className: "text-ui-fg-muted", children: t("products.media.emptyState.description") })
+       ] }),
+       /* @__PURE__ */ jsx4(Button, { size: "small", variant: "secondary", asChild: true, children: /* @__PURE__ */ jsx4(Link, { to: "media?view=edit", children: t("products.media.emptyState.action") }) })
+-    ] }),
++    ] }) : null,
+     /* @__PURE__ */ jsx4(CommandBar, { open: !!Object.keys(selection).length, children: /* @__PURE__ */ jsxs3(CommandBar.Bar, { children: [
+       /* @__PURE__ */ jsx4(CommandBar.Value, { children: t("general.countSelected", {
+         count: Object.keys(selection).length
+@@ -669,7 +673,7 @@ var ProductOrganizationSection = ({
        SectionRow,
        {
          title: t("fields.categories"),
