@@ -36,11 +36,11 @@ const DecorationMethodPicker: React.FC<Props> = ({
   availableMethods = ["print", "embroidery"],
 }) => {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <span className="text-[11px] font-semibold uppercase tracking-wide text-ui-fg-subtle">
         Method
       </span>
-      <div className="inline-flex rounded-md border border-ui-border-base bg-ui-bg-base p-0.5">
+      <div className="grid grid-cols-2 gap-2">
         {availableMethods.map((method) => {
           const selected = value === method
           return (
@@ -50,13 +50,24 @@ const DecorationMethodPicker: React.FC<Props> = ({
               disabled={disabled}
               onClick={() => onChange(side, method)}
               title={METHOD_HINT[method]}
-              className={`min-w-[88px] rounded px-3 py-1.5 text-xs font-medium transition ${
+              aria-pressed={selected}
+              className={`flex flex-col items-start gap-0.5 rounded-lg border-2 px-3 py-2.5 text-left transition ${
                 selected
-                  ? "bg-ui-bg-base-pressed text-ui-fg-base shadow-sm"
-                  : "text-ui-fg-subtle hover:text-ui-fg-base"
+                  ? "border-[var(--brand-primary,#002a5c)] bg-[var(--brand-primary,#002a5c)] text-white shadow-sm"
+                  : "border-ui-border-base bg-ui-bg-base text-ui-fg-base hover:border-ui-border-strong hover:bg-ui-bg-subtle"
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
-              {METHOD_LABEL[method]}
+              <span className="flex items-center gap-1.5 text-sm font-semibold">
+                {selected ? <span aria-hidden>✓</span> : null}
+                {METHOD_LABEL[method]}
+              </span>
+              <span
+                className={`text-[11px] leading-snug ${
+                  selected ? "text-white/80" : "text-ui-fg-subtle"
+                }`}
+              >
+                {METHOD_HINT[method]}
+              </span>
             </button>
           )
         })}
