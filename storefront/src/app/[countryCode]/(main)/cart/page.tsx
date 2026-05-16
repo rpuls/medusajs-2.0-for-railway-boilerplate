@@ -32,10 +32,22 @@ const fetchCart = async () => {
       ) as HttpTypes.StoreCartLineItem[]
       applyDisplayPriceCorrectionToCart(cart)
 
-      // Diagnostic: log a one-line summary of the cart payload size so the
-      // "Something went wrong loading your cart" error has a paper trail in
-      // Vercel runtime logs. JSON.stringify can also surface circular ref
-      // or BigInt errors here (caught and logged separately).
+      // Diagnostic + serialization sanitization in one pass.
+      //
+      // The cart page has been erroring with "Server Components render" for
+      // multiple iterations. PostHog only shows Next.js's production-omitted
+      // generic message, so we can't see the real stack. One common cause of
+      // RSC render errors is a non-serializable value on a client-component
+      // prop — BigInt, Symbol, function, Date with methods, or a circular
+      // reference. JSON.stringify will throw on those (which we log), and
+      // JSON.parse(JSON.stringify(...)) silently drops anything that
+      // survived. That gives us:
+      //   - Visible log line showing serialized size + item count
+      //   - An exception in logs if JSON.stringify itself can't handle it
+      //   - A sanitized cart object that's guaranteed RSC-safe (passes only
+      //     plain JSON-compatible values to client components)
+      // If the cart starts loading after this lands, the original issue was
+      // a non-JSON value somewhere on the cart object.
       try {
         const serialized = JSON.stringify(cart)
         // eslint-disable-next-line no-console
@@ -45,9 +57,16 @@ const fetchCart = async () => {
             1024
           ).toFixed(1)}KB cart_id=${cart.id}`
         )
+        // Hand back the JSON-roundtripped cart so any non-serializable
+        // values (functions, Symbols, BigInt, class instances with custom
+        // toJSON) are dropped before they reach client components.
+        return JSON.parse(serialized) as HttpTypes.StoreCart
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error("[cart-page-diag] serialize-cart-summary failed:", e)
+        console.error("[cart-page-diag] serialize-cart failed:", e)
+        // Fall back to the raw cart — at least the original error stack
+        // gets through. If JSON.stringify threw, we'll see that error
+        // class/message in Vercel logs instead of the generic RSC mask.
       }
     }
 
