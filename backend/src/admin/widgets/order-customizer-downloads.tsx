@@ -150,23 +150,21 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
             </Text>
           </div>
         </button>
-        {!collapsed && (
-          <div className="flex flex-col items-end gap-y-1">
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={downloadMockupPdf}
-              disabled={pdfLoading}
-            >
-              {pdfLoading ? "Generating…" : "Download Mockup PDF"}
-            </Button>
-            {pdfError ? (
-              <Text size="xsmall" className="text-ui-fg-error">
-                {pdfError}
-              </Text>
-            ) : null}
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-y-1">
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={downloadMockupPdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? "Generating…" : "Download Mockup PDF"}
+          </Button>
+          {pdfError ? (
+            <Text size="xsmall" className="text-ui-fg-error">
+              {pdfError}
+            </Text>
+          ) : null}
+        </div>
       </div>
 
       {!collapsed && (
