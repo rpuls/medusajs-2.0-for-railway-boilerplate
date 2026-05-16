@@ -2354,6 +2354,10 @@ export default function CustomizerTemplate({
         width: Math.round(canvasDims.width),
         height: Math.round(canvasDims.height),
       },
+      // Backend ignores this for non-sleeve sides; when set on a sleeve it
+      // recolours the white placeholder so the mockup picks up the variant
+      // colour instead of staying white-on-black.
+      tintColor: variantTintHex ?? undefined,
     }
 
     const [printResponse, mockupResponse] = await Promise.all([
