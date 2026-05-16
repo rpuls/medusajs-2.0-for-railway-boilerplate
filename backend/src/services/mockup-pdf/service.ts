@@ -7,36 +7,100 @@ import sharp from "sharp"
 const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
 
 /**
- * Remove the near-white background from a mockup image.
+ * Remove the solid background (white OR black) from a mockup image so the
+ * page watermark can show through behind the garment.
  *
- * Strategy: global threshold — every pixel where R, G, and B are all ≥ threshold
- * becomes fully transparent. This reliably handles sleeve / tag mockups that are
- * cropped tight to the garment (where edge-connected flood-fill can't reach the
- * background). Safe for any coloured garment because coloured fabric always has
- * at least one channel well below 220 (e.g. orange: B = 0, blue: R ≈ 0).
- * White garments on white backgrounds are an inherent limitation of any
- * colour-based approach.
+ * Strategy: sample the four corners to detect the background colour:
+ *   - If corners are near-white → apply a global threshold (R,G,B ≥ 220).
+ *     Safe because coloured fabric always has at least one channel well below
+ *     220, so we can blast everything bright in one pass.
+ *   - If corners are near-black → edge-connected flood fill from the borders.
+ *     We can't use a global threshold here because designs often contain pure
+ *     black (e.g. logo backgrounds) which would be destroyed; flood fill only
+ *     touches background pixels reachable from the image edges.
+ *   - Otherwise → leave the image alone.
  */
-async function removeWhiteBackground(imgBuf: Buffer, threshold = 220): Promise<Buffer> {
+async function removeBackground(imgBuf: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(imgBuf)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
 
-  const pixels = info.width * info.height
+  const W = info.width
+  const H = info.height
   const out = Buffer.from(data)
 
-  for (let i = 0; i < pixels; i++) {
-    if (
-      data[i * 4 + 0] >= threshold &&
-      data[i * 4 + 1] >= threshold &&
-      data[i * 4 + 2] >= threshold
-    ) {
-      out[i * 4 + 3] = 0
+  // Sample the 4 corners to detect background colour
+  const cornerPixelIdxs = [0, W - 1, (H - 1) * W, H * W - 1]
+  const isWhitishCorner = (i: number) =>
+    data[i * 4] >= 220 && data[i * 4 + 1] >= 220 && data[i * 4 + 2] >= 220
+  const isBlackishCorner = (i: number) =>
+    data[i * 4] <= 30 && data[i * 4 + 1] <= 30 && data[i * 4 + 2] <= 30
+
+  const whiteCorners = cornerPixelIdxs.filter(isWhitishCorner).length
+  const blackCorners = cornerPixelIdxs.filter(isBlackishCorner).length
+
+  if (whiteCorners >= 3) {
+    // Global threshold for near-white pixels
+    const pixels = W * H
+    for (let i = 0; i < pixels; i++) {
+      if (
+        data[i * 4 + 0] >= 220 &&
+        data[i * 4 + 1] >= 220 &&
+        data[i * 4 + 2] >= 220
+      ) {
+        out[i * 4 + 3] = 0
+      }
+    }
+  } else if (blackCorners >= 3) {
+    // Edge-connected flood fill for near-black background (preserve design black)
+    const visited = new Uint8Array(W * H)
+    const isBlack = (i: number) =>
+      data[i * 4] <= 30 && data[i * 4 + 1] <= 30 && data[i * 4 + 2] <= 30
+
+    const queue: number[] = []
+    for (let x = 0; x < W; x++) {
+      const top = x
+      const bottom = (H - 1) * W + x
+      if (isBlack(top)) { visited[top] = 1; queue.push(top) }
+      if (isBlack(bottom)) { visited[bottom] = 1; queue.push(bottom) }
+    }
+    for (let y = 1; y < H - 1; y++) {
+      const left = y * W
+      const right = y * W + W - 1
+      if (isBlack(left)) { visited[left] = 1; queue.push(left) }
+      if (isBlack(right)) { visited[right] = 1; queue.push(right) }
+    }
+
+    // 8-directional BFS — diagonals so we don't stall at thin features
+    let qi = 0
+    while (qi < queue.length) {
+      const idx = queue[qi++]
+      out[idx * 4 + 3] = 0
+
+      const x = idx % W
+      const y = Math.floor(idx / W)
+      const neighbors = [
+        y > 0 ? idx - W : -1,
+        y < H - 1 ? idx + W : -1,
+        x > 0 ? idx - 1 : -1,
+        x < W - 1 ? idx + 1 : -1,
+        x > 0 && y > 0 ? idx - W - 1 : -1,
+        x < W - 1 && y > 0 ? idx - W + 1 : -1,
+        x > 0 && y < H - 1 ? idx + W - 1 : -1,
+        x < W - 1 && y < H - 1 ? idx + W + 1 : -1,
+      ]
+      for (const n of neighbors) {
+        if (n >= 0 && !visited[n] && isBlack(n)) {
+          visited[n] = 1
+          queue.push(n)
+        }
+      }
     }
   }
+  // else: mixed corners — no clear background colour, leave the image alone
 
-  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
+  return sharp(out, { raw: { width: W, height: H, channels: 4 } })
     .png()
     .toBuffer()
 }
@@ -338,16 +402,28 @@ export async function generateMockupPdf(
           return 0
         })
 
+      // The "printed_tag" mockup currently uses a lifestyle/hero photo (no
+      // dedicated neck-tag template exists), which doesn't communicate "this
+      // is the tag print". Substitute the front mockup URL so the customer
+      // sees the garment they're getting; the side label still reads "Tag".
+      const frontArtifact = sidesWithUrls.find((a) => a.side === "front")
+      const sidesWithEffectiveUrls = sidesWithUrls.map((a) =>
+        (a.side === "printed_tag" || a.side === "tag") && frontArtifact
+          ? { ...a, mockupUrl: frontArtifact.mockupUrl }
+          : a
+      )
+
       const rawBufs = await Promise.all(
-        sidesWithUrls.map((a) => fetchImageBuffer(a.mockupUrl))
+        sidesWithEffectiveUrls.map((a) => fetchImageBuffer(a.mockupUrl))
       )
 
-      // Strip white background so the watermark shows through behind the garment
+      // Strip solid background (white OR black) so the watermark shows
+      // through behind the garment
       const processedBufs = await Promise.all(
-        rawBufs.map((buf) => (buf ? removeWhiteBackground(buf) : Promise.resolve(null)))
+        rawBufs.map((buf) => (buf ? removeBackground(buf) : Promise.resolve(null)))
       )
 
-      const mockups = sidesWithUrls
+      const mockups = sidesWithEffectiveUrls
         .map((a, i) => ({ side: a.side, buf: processedBufs[i] }))
         .filter((m): m is { side: string; buf: Buffer } => m.buf !== null)
 
