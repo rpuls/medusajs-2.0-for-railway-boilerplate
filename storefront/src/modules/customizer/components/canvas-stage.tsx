@@ -142,6 +142,22 @@ export default function CanvasStage({
         />
       ) : null}
 
+      {/*
+        Sleeve view uses a generic line-drawing placeholder (we don't have
+        per-product sleeve photography). Without a label, customers read the
+        minimal art as a broken canvas. Surface a small caption so it's clear
+        the placeholder is intentional — your artwork still prints on the
+        actual garment sleeve.
+      */}
+      {isSleeveView && showPhoto ? (
+        <div
+          className="pointer-events-none absolute left-3 top-3 rounded-md border border-ui-border-base bg-ui-bg-base/90 px-2 py-1 text-[11px] font-medium text-ui-fg-subtle shadow-sm"
+          aria-hidden
+        >
+          Generic sleeve preview · artwork prints on the real garment
+        </div>
+      ) : null}
+
       <div
         ref={fabricContainerRef}
         className="absolute inset-0 h-full w-full touch-none"

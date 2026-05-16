@@ -87,6 +87,14 @@ const ItemsTemplate = ({ items }: ItemsTemplateProps) => {
   }, [sortedItems])
 
   const showGroups = !!groups && groups.length > 0 && groups.length < (items?.length ?? 0)
+  // Large-cart heuristic: when the customer is carrying >20 individual lines,
+  // collapse every group by default. The grouped rows still show product
+  // title + quantity + total — customer expands only the groups they want
+  // to edit individual sizes on. Mounts roughly group-count <Item> components
+  // instead of total-line-count, which cuts hydration time dramatically on
+  // 100+ line carts. (Match the threshold used by CartDropdown's isBulk.)
+  const totalLineCount = items?.length ?? 0
+  const defaultGroupOpen = totalLineCount <= 20
 
   return (
     <div>
@@ -120,6 +128,7 @@ const ItemsTemplate = ({ items }: ItemsTemplateProps) => {
                     totalAmount={group.totalAmount}
                     currencyCode={group.currencyCode}
                     isDesignGroup={group.isDesignGroup}
+                    defaultOpen={defaultGroupOpen}
                   >
                     {group.lines.map((item) => (
                       <Item key={item.id} item={item} />
@@ -140,6 +149,10 @@ type CartItemGroupProps = {
   totalAmount: number
   currencyCode: string | undefined
   isDesignGroup: boolean
+  /** Initial expanded state. Defaults to true for small carts; large carts pass
+   *  false so groups render collapsed and individual <Item> rows only mount
+   *  when the customer expands a group. */
+  defaultOpen?: boolean
   children: React.ReactNode
 }
 
@@ -150,9 +163,10 @@ const CartItemGroup = ({
   totalAmount,
   currencyCode,
   isDesignGroup,
+  defaultOpen = true,
   children,
 }: CartItemGroupProps) => {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(defaultOpen)
   const formattedTotal = formatCurrency(totalAmount, currencyCode)
 
   return (
