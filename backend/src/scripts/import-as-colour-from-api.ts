@@ -8,6 +8,7 @@ import {
   createProductsWorkflow,
   createInventoryLevelsWorkflow,
   updateInventoryLevelsWorkflow,
+  linkSalesChannelsToStockLocationWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { ASCOLOUR_MODULE } from "../modules/ascolour"
 import AsColourService from "../modules/ascolour/service"
@@ -141,6 +142,26 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
     })
     asColourLocationId = Array.isArray(created) ? created[0].id : created.id
     logger.info(`Created stock location ${AS_COLOUR_LOCATION_NAME} (${asColourLocationId})`)
+  }
+
+  // Ensure the stock location is linked to all sales channels — without this
+  // the storefront returns variant.inventory_quantity = 0 for AS Colour
+  // variants (stock exists at the location, but the channel can't see it).
+  // Idempotent — Medusa's workflow no-ops when the link already exists.
+  if (asColourLocationId && !dryRun) {
+    const allChannels = (await salesChannelService.listSalesChannels(
+      {},
+      { take: 500 }
+    )) as Array<{ id: string }>
+    const channelIds = allChannels.map((c) => c.id)
+    if (channelIds.length > 0) {
+      await linkSalesChannelsToStockLocationWorkflow(container).run({
+        input: { id: asColourLocationId, add: channelIds },
+      })
+      logger.info(
+        `Linked ${channelIds.length} sales channel(s) to ${AS_COLOUR_LOCATION_NAME}`
+      )
+    }
   }
 
   // 1. Fetch catalogue + price list

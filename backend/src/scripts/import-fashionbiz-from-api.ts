@@ -33,6 +33,7 @@ import {
   createProductsWorkflow,
   createInventoryLevelsWorkflow,
   updateInventoryLevelsWorkflow,
+  linkSalesChannelsToStockLocationWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { FASHIONBIZ_MODULE } from "../modules/fashionbiz"
 import FashionBizService from "../modules/fashionbiz/service"
@@ -192,6 +193,26 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
     })
     locationId = Array.isArray(created) ? created[0].id : created.id
     logger.info(`Created stock location ${FASHIONBIZ_LOCATION_NAME} (${locationId})`)
+  }
+
+  // Ensure the stock location is linked to all sales channels — without this
+  // the storefront returns variant.inventory_quantity = 0 for FashionBiz
+  // variants (stock exists at the location, but the channel can't see it).
+  // Idempotent — Medusa's workflow no-ops when the link already exists.
+  if (locationId && !dryRun) {
+    const allChannels = (await salesChannelService.listSalesChannels(
+      {},
+      { take: 500 }
+    )) as Array<{ id: string }>
+    const channelIds = allChannels.map((c) => c.id)
+    if (channelIds.length > 0) {
+      await linkSalesChannelsToStockLocationWorkflow(container).run({
+        input: { id: locationId, add: channelIds },
+      })
+      logger.info(
+        `Linked ${channelIds.length} sales channel(s) to ${FASHIONBIZ_LOCATION_NAME}`
+      )
+    }
   }
 
   // Resolve Brand entities by handle. Hard-fail with a clear message if any
