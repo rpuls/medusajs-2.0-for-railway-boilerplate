@@ -46,7 +46,7 @@ export default function StockWarningIcon({
       </button>
       <span
         role="tooltip"
-        className={`pointer-events-none absolute bottom-full right-0 z-30 mb-1 hidden w-56 -translate-y-0.5 rounded-md bg-ui-fg-base px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-ui-bg-base shadow-lg peer-hover:block peer-focus:block ${
+        className={`pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 z-30 mb-1 hidden w-56 -translate-y-0.5 rounded-md bg-ui-fg-base px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-ui-bg-base shadow-lg peer-hover:block peer-focus:block ${
           tapped ? "!block" : ""
         }`}
       >
