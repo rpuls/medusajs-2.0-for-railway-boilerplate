@@ -63,7 +63,7 @@ interface SceneState {
   flybys: Flyby[]; flybySprites: HTMLCanvasElement[]; nextFlybyMs: number
   logoImg: HTMLImageElement | null; logoW: number; logoH: number
   logoPixels: LogoPixel[] | null; logoCols: number; logoRows: number; logoPixelSize: number
-  earthImg: HTMLImageElement | null; earthFrames: number
+  earthImg: HTMLImageElement | null
 }
 
 // ─── Planet sprite helpers ────────────────────────────────────────────────────
@@ -450,9 +450,8 @@ export default function SpaceHero({ className, style }: { className?: string; st
     }))
     const logoImg = new Image(); logoImg.src = "/branding/sc-prints-logo-transparent.png"
     const earthImg = new Image()
-    earthImg.src = "/branding/earth-spritesheet.png"
-    earthImg.onload = () => { stateRef.current && (stateRef.current.earthFrames = Math.max(1, Math.floor(earthImg.naturalWidth / 32))) }
-    return { planets, comets: [], nextCometMs: randomBetween(3000, 7000), flybys: [], flybySprites: [], nextFlybyMs: randomBetween(8000, 18000), logoImg, logoW: 0, logoH: 0, logoPixels: null, logoCols: 0, logoRows: 0, logoPixelSize: 0, earthImg, earthFrames: 0 }
+    earthImg.src = "/branding/earth-rotating.gif"
+    return { planets, comets: [], nextCometMs: randomBetween(3000, 7000), flybys: [], flybySprites: [], nextFlybyMs: randomBetween(8000, 18000), logoImg, logoW: 0, logoH: 0, logoPixels: null, logoCols: 0, logoRows: 0, logoPixelSize: 0, earthImg }
   }, [])
 
   const drawStars = useCallback((canvas: HTMLCanvasElement, w: number, h: number, dpr: number) => {
@@ -492,7 +491,6 @@ export default function SpaceHero({ className, style }: { className?: string; st
     let lastTs = performance.now(), elapsed = 0
 
     const LOGO_SAMPLE_COLS = 72, LOGO_DISPLAY_COLS = 64
-    const EARTH_FRAME_MS = 80  // ms per sprite frame (~12 fps for the rotation)
 
     const calcLogoSize = () => {
       if (!state.logoImg || state.logoImg.naturalWidth === 0) return
@@ -695,17 +693,15 @@ export default function SpaceHero({ className, style }: { className?: string; st
           ctx.rect(Math.round(offX + lx * ps), Math.round(offY + ly * ps), ps, ps)
         ctx.clip()
 
-        if (state.earthImg?.complete && state.earthFrames > 0) {
-          const frame = Math.floor(elapsed / EARTH_FRAME_MS) % state.earthFrames
-          // Scale the 32×32 sprite frame up to fill the logo height (integer scale looks sharpest)
-          const scale = Math.max(1, Math.round(logoH / 32))
-          const tileW = 32 * scale
-          const tileH = 32 * scale
-          const tileY = offY + (logoH - tileH) / 2  // vertically centre the tile in the logo band
-          ctx.imageSmoothingEnabled = false
-          // Tile the current frame across the full logo width
+        if (state.earthImg?.complete && state.earthImg.naturalWidth > 0) {
+          // Scale the GIF so its height fills the logo band; tile horizontally
+          const gifW = state.earthImg.naturalWidth
+          const gifH = state.earthImg.naturalHeight
+          const tileH = logoH
+          const tileW = gifW * (tileH / gifH)
+          ctx.imageSmoothingEnabled = true
           for (let tx = offX; tx < offX + logoW; tx += tileW)
-            ctx.drawImage(state.earthImg, frame * 32, 0, 32, 32, tx, tileY, tileW, tileH)
+            ctx.drawImage(state.earthImg, tx, offY, tileW, tileH)
         } else {
           ctx.fillStyle = "#FFFFFF"
           for (const { lx, ly } of state.logoPixels)
