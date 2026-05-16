@@ -11,10 +11,12 @@ const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
  * Only pixels reachable from the image edges that meet the whiteness threshold are
  * made transparent — so white fabric on a white garment is left untouched.
  */
-async function removeWhiteBackground(imgBuf: Buffer, threshold = 238): Promise<Buffer> {
-  // Add a 2px white border so the flood fill always has edge seeds, even when the
-  // garment (e.g. a sleeve) is cropped to the very edge of the image.
-  const PAD = 2
+async function removeWhiteBackground(imgBuf: Buffer, threshold = 220): Promise<Buffer> {
+  // PAD = 10: wide enough that even a sleeve flush with the original image edge
+  // still has a clear white-pixel path from the padding into the background.
+  // threshold = 220: catches JPEG-compressed whites (often 225-237) and
+  // light-grey mockup backgrounds without touching coloured garment fabric.
+  const PAD = 10
   const paddedBuf = await sharp(imgBuf)
     .extend({
       top: PAD, bottom: PAD, left: PAD, right: PAD,
@@ -56,7 +58,7 @@ async function removeWhiteBackground(imgBuf: Buffer, threshold = 238): Promise<B
     if (isWhitish(right)) { visited[right] = 1; queue.push(right) }
   }
 
-  // BFS — mark all connected whitish pixels transparent
+  // 8-directional BFS — includes diagonals so it doesn't get stuck at corners
   let qi = 0
   while (qi < queue.length) {
     const idx = queue[qi++]
@@ -65,10 +67,14 @@ async function removeWhiteBackground(imgBuf: Buffer, threshold = 238): Promise<B
     const x = idx % W
     const y = Math.floor(idx / W)
     const neighbors = [
-      y > 0 ? idx - W : -1,
-      y < H - 1 ? idx + W : -1,
-      x > 0 ? idx - 1 : -1,
-      x < W - 1 ? idx + 1 : -1,
+      y > 0             ? idx - W     : -1,  // N
+      y < H - 1         ? idx + W     : -1,  // S
+      x > 0             ? idx - 1     : -1,  // W
+      x < W - 1         ? idx + 1     : -1,  // E
+      y > 0   && x > 0  ? idx - W - 1 : -1,  // NW
+      y > 0   && x < W-1? idx - W + 1 : -1,  // NE
+      y < H-1 && x > 0  ? idx + W - 1 : -1,  // SW
+      y < H-1 && x < W-1? idx + W + 1 : -1,  // SE
     ]
     for (const n of neighbors) {
       if (n >= 0 && !visited[n] && isWhitish(n)) {
