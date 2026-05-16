@@ -12,7 +12,18 @@ const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
  * made transparent — so white fabric on a white garment is left untouched.
  */
 async function removeWhiteBackground(imgBuf: Buffer, threshold = 238): Promise<Buffer> {
-  const { data, info } = await sharp(imgBuf)
+  // Add a 2px white border so the flood fill always has edge seeds, even when the
+  // garment (e.g. a sleeve) is cropped to the very edge of the image.
+  const PAD = 2
+  const paddedBuf = await sharp(imgBuf)
+    .extend({
+      top: PAD, bottom: PAD, left: PAD, right: PAD,
+      background: { r: 255, g: 255, b: 255, alpha: 255 },
+    })
+    .png()
+    .toBuffer()
+
+  const { data, info } = await sharp(paddedBuf)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
@@ -67,7 +78,9 @@ async function removeWhiteBackground(imgBuf: Buffer, threshold = 238): Promise<B
     }
   }
 
+  // Crop the padding back off to return original dimensions
   return sharp(out, { raw: { width: W, height: H, channels: 4 } })
+    .extract({ left: PAD, top: PAD, width: W - PAD * 2, height: H - PAD * 2 })
     .png()
     .toBuffer()
 }
@@ -181,9 +194,8 @@ export type MockupPdfOptions = {
 
 interface PageData {
   productTitle: string
-  printSizeLabel: string
-  /** All decorated sides in display order (front, back, sleeves, tag…) */
-  mockups: Array<{ side: string; buf: Buffer }>
+  /** All decorated sides in display order; each carries its own print-size label */
+  mockups: Array<{ side: string; buf: Buffer; printSizeLabel: string }>
   sizes: SizeQuantity[]
   printNotes: string | null
 }
@@ -226,6 +238,9 @@ function sortSizes(sizes: SizeQuantity[]): SizeQuantity[] {
   })
 }
 
+// Largest print size wins when multiple prints exist for one side
+const PRINT_SIZE_PRIORITY = ["up_to_a6", "up_to_a4", "up_to_a3", "oversize"]
+
 function buildPageData(
   groupItems: OrderItem[],
   mockups: Array<{ side: string; buf: Buffer }>
@@ -261,21 +276,39 @@ function buildPageData(
     if (metaSizes.length > 0) sizes = metaSizes
   }
 
-  const printSizeId =
-    typeof rawDesign?.scpPrintSizeId === "string" ? rawDesign.scpPrintSizeId : null
-  const printSizeLabel = printSizeId ? (PRINT_SIZE_LABELS[printSizeId] ?? "") : ""
   const productTitle = String(
     canonical?.product_title ?? canonical?.title ?? "Product"
   )
 
-  const rawNotes = (rawDesign as Record<string, unknown> | null)?.printNotes
+  const rawNotes = rawDesign?.printNotes
   const printNotes =
     typeof rawNotes === "string" && rawNotes.trim() ? rawNotes.trim() : null
 
+  // Per-side print dimensions — from customizerDesign.prints[] (per-print pricing model)
+  // with fallback to the legacy single scpPrintSizeId field.
+  type PrintSpecRaw = { side: string; sizeId: string }
+  const prints = Array.isArray(rawDesign?.prints)
+    ? (rawDesign!.prints as PrintSpecRaw[]).filter(
+        (p) => typeof p.side === "string" && typeof p.sizeId === "string"
+      )
+    : []
+  const globalSizeId =
+    typeof rawDesign?.scpPrintSizeId === "string" ? rawDesign.scpPrintSizeId : null
+
+  function sideLabel(side: string): string {
+    const sidePrints = prints.filter((p) => p.side === side)
+    if (sidePrints.length > 0) {
+      const best = sidePrints.reduce((a, b) =>
+        PRINT_SIZE_PRIORITY.indexOf(b.sizeId) > PRINT_SIZE_PRIORITY.indexOf(a.sizeId) ? b : a
+      )
+      return PRINT_SIZE_LABELS[best.sizeId] ?? ""
+    }
+    return globalSizeId ? (PRINT_SIZE_LABELS[globalSizeId] ?? "") : ""
+  }
+
   return {
     productTitle,
-    printSizeLabel,
-    mockups,
+    mockups: mockups.map((m) => ({ ...m, printSizeLabel: sideLabel(m.side) })),
     sizes: sortSizes(sizes),
     printNotes,
   }
@@ -417,7 +450,7 @@ function buildPdf(params: {
     const usableW = PW - ML - MR // ~535pt
 
     for (const page of pages) {
-      const { productTitle, printSizeLabel, mockups, sizes, printNotes } = page
+      const { productTitle, mockups, sizes, printNotes } = page
 
       doc.addPage()
 
@@ -526,14 +559,26 @@ function buildPdf(params: {
         .text("Positioning and sizing", ML, posHeadY, { width: usableW, align: "center" })
 
       const dimY = posHeadY + 14
-      const dimText = printSizeLabel ? `Dimensions:  ${printSizeLabel}` : "Dimensions:"
-      const halfW = (usableW - 10) / 2
+      // Group sides that share the same print size: "Front & Back: 21×30 cm  ·  Left Sleeve: 10×15 cm …"
+      const dimGroups: Array<{ sides: string[]; sizeLabel: string }> = []
+      for (const m of mockups) {
+        if (!m.printSizeLabel) continue
+        const existing = dimGroups.find((g) => g.sizeLabel === m.printSizeLabel)
+        const name = SIDE_LABELS[m.side] ?? m.side.replace(/_/g, " ")
+        if (existing) {
+          existing.sides.push(name)
+        } else {
+          dimGroups.push({ sides: [name], sizeLabel: m.printSizeLabel })
+        }
+      }
+      const dimText = dimGroups.length
+        ? dimGroups.map((g) => `${g.sides.join(" & ")}: ${g.sizeLabel}`).join("   ·   ")
+        : "Dimensions: —"
       doc
         .font("PJS")
         .fontSize(9)
         .fillColor("#444444")
-        .text(dimText, ML, dimY, { width: halfW })
-        .text(dimText, ML + halfW + 10, dimY, { width: halfW })
+        .text(dimText, ML, dimY, { width: usableW, align: "center" })
 
       // ── DISCLAIMER BOX ────────────────────────────────────────────────────────
       const boxPad = 10
