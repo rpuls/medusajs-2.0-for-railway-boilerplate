@@ -72,14 +72,16 @@ export const renderDescription = (description: FashionBizDescription | undefined
 
 /**
  * Score an image so flat/ghost garment shots sort before model/lifestyle.
- * FashionBiz URL convention: _Product_ = flat garment, _Talent_ = model.
+ * FashionBiz URL convention: *Product* = flat garment, *Talent* = model.
+ * CDN variants observed: _Product_ (older), _bProduct_ (newer Syzmik/current CDN).
  * Falls back to image_type field if URL gives no signal.
  * Lower score = higher priority.
  */
 const flatnessScore = (img: FashionBizImage): number => {
   const url = img.https_attachment_url ?? ""
-  if (url.includes("_Product_")) return 0
-  if (url.includes("_Talent_")) return 2
+  const lower = url.toLowerCase()
+  if (lower.includes("product")) return 0
+  if (lower.includes("talent")) return 2
   const t = (img.image_type ?? "").toLowerCase()
   if (t.includes("flat") || t.includes("ghost") || t.includes("product") || t.includes("technical")) return 0
   if (t.includes("model") || t.includes("lifestyle") || t.includes("catwalk")) return 2
@@ -99,21 +101,25 @@ const sortImages = (imgs: FashionBizImage[]): FashionBizImage[] =>
   })
 
 /**
- * FashionBiz URL pattern: _Product_{colour}_01 = flat front,
- * _Product_{colour}_02 = flat back, _Talent_ = model/lifestyle.
+ * FashionBiz URL pattern: *Product*_01 = flat front, *Product*_02 = flat back,
+ * *Talent* = model/lifestyle. CDN variants: _Product_ (older), _bProduct_ (newer).
  * The index suffix (_01, _02) may be followed by a hash or the extension.
  */
-const urlIsProductFront = (url: string) =>
-  url.includes("_Product_") && (url.includes("_01_") || url.includes("_01."))
+const urlIsProductFront = (url: string) => {
+  const lower = url.toLowerCase()
+  return lower.includes("product") && (lower.includes("_01_") || lower.includes("_01."))
+}
 
-const urlIsProductBack = (url: string) =>
-  url.includes("_Product_") && (url.includes("_02_") || url.includes("_02."))
+const urlIsProductBack = (url: string) => {
+  const lower = url.toLowerCase()
+  return lower.includes("product") && (lower.includes("_02_") || lower.includes("_02."))
+}
 
-const urlIsProductFlat = (url: string) => url.includes("_Product_")
+const urlIsProductFlat = (url: string) => url.toLowerCase().includes("product")
 
 /**
  * Build the `garment_images` metadata block for a single colour variant.
- * Uses FashionBiz's _Product_/_Talent_ URL convention to identify flat
+ * Uses FashionBiz's *Product*/*Talent* URL convention to identify flat
  * garment shots vs model photos, and _01/_02 suffix for front vs back.
  */
 export const buildGarmentImagesForColour = (
@@ -131,7 +137,7 @@ export const buildGarmentImagesForColour = (
     all.find(urlIsProductBack) ??   // e.g. P515MS_Product_Black_02_xxx.jpg
     undefined
 
-  const modelUrl = all.find((u) => u.includes("_Talent_")) ?? undefined
+  const modelUrl = all.find((u) => u.toLowerCase().includes("talent")) ?? undefined
 
   return {
     front: frontUrl,

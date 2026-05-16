@@ -813,8 +813,8 @@ const garmentUrlLooksLikeBack = (url: string) => {
     lower.includes("back.") ||
     lower.includes("_back") ||
     lower.includes("-back") ||
-    // FashionBiz convention: _Product_Colour_02_ = flat back
-    (lower.includes("_product_") && (lower.includes("_02_") || lower.includes("_02.")))
+    // FashionBiz convention: *Product*_02_ = flat back (handles _Product_ and _bProduct_ CDN variants)
+    (lower.includes("product") && (lower.includes("_02_") || lower.includes("_02.")))
   )
 }
 
@@ -827,8 +827,8 @@ const garmentUrlLooksLikeFront = (url: string) => {
     lower.includes("front.") ||
     lower.includes("_front") ||
     lower.includes("-front") ||
-    // FashionBiz convention: _Product_Colour_01_ = flat front
-    (lower.includes("_product_") && (lower.includes("_01_") || lower.includes("_01.")))
+    // FashionBiz convention: *Product*_01_ = flat front (handles _Product_ and _bProduct_ CDN variants)
+    (lower.includes("product") && (lower.includes("_01_") || lower.includes("_01.")))
   )
 }
 
