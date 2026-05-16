@@ -2,7 +2,10 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Button, Container, Heading, Text } from "@medusajs/ui"
+import { ChevronDown } from "@medusajs/icons"
 import { useCallback, useEffect, useState } from "react"
+
+import { HelpTooltip } from "../components/reports/help-tooltip"
 
 function adminCustomizerDownloadPath(orderId: string) {
   return `/admin/orders/${orderId}/customizer-download`
@@ -52,6 +55,7 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
   const [error, setError] = useState<string | null>(null)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(true)
 
   const downloadMockupPdf = useCallback(async () => {
     if (!orderId) return
@@ -118,29 +122,54 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
   return (
     <Container className="divide-y p-0 border-t border-ui-border-base">
       <div className="flex items-center justify-between px-6 py-4">
-        <div>
-          <Heading level="h2">Customizer print & preview</Heading>
-          <Text size="small" className="text-ui-fg-subtle mt-1">
-            Customer uploads (exact file), rendered print PNG, and garment mockup from order metadata.
-          </Text>
-        </div>
-        <div className="flex flex-col items-end gap-y-1">
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={downloadMockupPdf}
-            disabled={pdfLoading}
-          >
-            {pdfLoading ? "Generating…" : "Download Mockup PDF"}
-          </Button>
-          {pdfError ? (
-            <Text size="xsmall" className="text-ui-fg-error">
-              {pdfError}
+        <button
+          type="button"
+          className="flex items-center gap-2 text-left"
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <ChevronDown
+            className={`text-ui-fg-subtle transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`}
+          />
+          <div>
+            <Heading level="h2" className="flex items-center">
+              Customizer print & preview
+              <HelpTooltip
+                text={{
+                  title: "Customizer print & preview",
+                  body: "Customer's original uploaded file, the rendered high-res print PNG, and the garment mockup JPEG for each decorated side.",
+                  bullets: [
+                    "The original file is what the customer uploaded — use it if you need to re-render or re-trace.",
+                    "The print PNG is what the press should receive — already composited at the garment's print area size.",
+                    "Download Mockup PDF generates an artwork approval document you can email the customer for sign-off.",
+                  ],
+                }}
+              />
+            </Heading>
+            <Text size="small" className="text-ui-fg-subtle mt-1">
+              Customer uploads (exact file), rendered print PNG, and garment mockup from order metadata.
             </Text>
-          ) : null}
-        </div>
+          </div>
+        </button>
+        {!collapsed && (
+          <div className="flex flex-col items-end gap-y-1">
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={downloadMockupPdf}
+              disabled={pdfLoading}
+            >
+              {pdfLoading ? "Generating…" : "Download Mockup PDF"}
+            </Button>
+            {pdfError ? (
+              <Text size="xsmall" className="text-ui-fg-error">
+                {pdfError}
+              </Text>
+            ) : null}
+          </div>
+        )}
       </div>
 
+      {!collapsed && (
       <div className="px-6 py-4">
         {error ? (
           <Text size="small" className="text-ui-fg-error">
@@ -283,6 +312,7 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
         )}
 
       </div>
+      )}
     </Container>
   )
 }

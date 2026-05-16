@@ -2,6 +2,8 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminOrder } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
+
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { useMemo } from "react"
 
 type ShippingDecision = {
@@ -55,7 +57,20 @@ const OrderShippingDecisionWidget = ({ data }: DetailWidgetProps<AdminOrder>) =>
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
-        <Heading level="h2">Shipping decision</Heading>
+        <Heading level="h2" className="flex items-center">
+          Shipping decision
+          <HelpTooltip
+            text={{
+              title: "Shipping decision",
+              body: "Whether this order qualifies for flat-rate shipping or needs a live ShipStation quote, calculated from the total cart weight at checkout vs the 3 kg threshold.",
+              bullets: [
+                "Flat-rate: total cart weight ≤ 3 kg.",
+                "Live quote: total cart weight > 3 kg — ShipStation calculates the rate.",
+                "\"Items missing weight\" means some variants have no weight set. Fix them in the product's Variant weights widget.",
+              ],
+            }}
+          />
+        </Heading>
         {decision ? (
           <Badge color={decision.tier === "flat" ? "blue" : "green"}>
             {decision.tier === "flat" ? "Flat-rate" : "Live ShipStation quote"}

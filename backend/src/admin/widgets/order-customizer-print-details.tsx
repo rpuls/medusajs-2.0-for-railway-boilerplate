@@ -3,6 +3,8 @@ import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
+
 /**
  * Per-order widget that surfaces — for every line item carrying
  * `metadata.customizerDesign` — (a) the print sizes the customer (or the
@@ -190,7 +192,19 @@ const OrderCustomizerPrintDetailsWidget = ({
   return (
     <Container className="p-0 border-t border-ui-border-base">
       <div className="px-6 py-4">
-        <Heading level="h2">Print details &amp; cost breakdown</Heading>
+        <Heading level="h2" className="flex items-center">
+          Print details &amp; cost breakdown
+          <HelpTooltip
+            text={{
+              title: "Print details & cost breakdown",
+              body: "Per-line breakdown of print positions, physical dimensions from the customer's Step 3 size choice, and how each unit price splits between garment cost and print decoration.",
+              bullets: [
+                "Sizes come from the customer's Step 3 choice in the customizer (A6 / A4 / A3 / Oversize).",
+                "The cost split is calculated from the product's bulk-pricing metadata — useful for quoting reprints.",
+              ],
+            }}
+          />
+        </Heading>
         <Text size="small" className="text-ui-fg-subtle mt-1">
           Per-side print sizes the customer ended up with, and how each unit
           price splits between garment cost and print decoration.
