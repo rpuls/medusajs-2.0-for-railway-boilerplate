@@ -119,7 +119,7 @@ const urlIsProductFlat = (url: string) => url.toLowerCase().includes("product")
 
 /**
  * Build the `garment_images` metadata block for a single colour variant.
- * Uses FashionBiz's *Product*/*Talent* URL convention to identify flat
+ * Uses FashionBiz's _Product_ / _Talent_ URL convention to identify flat
  * garment shots vs model photos, and _01/_02 suffix for front vs back.
  */
 export const buildGarmentImagesForColour = (
