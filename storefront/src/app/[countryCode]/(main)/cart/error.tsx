@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { useParams } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { phCaptureException } from "@lib/posthog"
 
@@ -10,6 +11,9 @@ type Props = {
 }
 
 export default function CartError({ error, reset }: Props) {
+  const { countryCode } = useParams() as { countryCode?: string | string[] }
+  const cc = Array.isArray(countryCode) ? countryCode[0] : countryCode || "au"
+
   useEffect(() => {
     console.error("Cart route error boundary:", error)
     phCaptureException(error, { digest: error.digest, scope: "cart-error" })
@@ -21,7 +25,7 @@ export default function CartError({ error, reset }: Props) {
         <p className="text-sm font-semibold">Something went wrong loading your cart.</p>
         <p className="mt-1 text-xs break-all">{error.message || "Unknown error"}</p>
         {error.digest ? <p className="mt-1 text-xs">Digest: {error.digest}</p> : null}
-        <div className="mt-3 flex gap-3 items-center">
+        <div className="mt-3 flex flex-wrap gap-3 items-center">
           <button
             type="button"
             onClick={reset}
@@ -35,6 +39,15 @@ export default function CartError({ error, reset }: Props) {
           >
             Go shopping
           </LocalizedClientLink>
+          {/* Emergency recovery — drops the cart cookie so the next request
+              starts with a fresh empty cart. Used when the cart page can't
+              render and the customer can't reach per-line delete buttons. */}
+          <a
+            href={`/${cc}/cart/clear?to=/${cc}/store`}
+            className="ml-auto text-xs underline text-rose-700 hover:text-rose-900"
+          >
+            Start fresh cart (clears current cart)
+          </a>
         </div>
       </div>
     </div>
