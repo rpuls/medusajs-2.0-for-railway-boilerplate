@@ -96,11 +96,18 @@ export default async function orderArtworkStageChangedHandler({
   const firstName = order.shipping_address?.first_name ?? null
 
   const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
+
+  // Staff-uploaded revised proof takes priority over everything else.
+  const revisedProofs = Array.isArray(orderMeta.revised_proofs)
+    ? (orderMeta.revised_proofs as Array<{ url?: string; uploaded_at?: string }>)
+    : []
+  const latestRevisedProofUrl =
+    revisedProofs
+      .filter((p) => typeof p?.url === "string" && (p.url as string).length > 0)
+      .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))[0]?.url ?? null
+
   const photos = Array.isArray(orderMeta.production_photos)
-    ? (orderMeta.production_photos as Array<{
-        url?: string
-        uploaded_at?: string
-      }>)
+    ? (orderMeta.production_photos as Array<{ url?: string; uploaded_at?: string }>)
     : []
   const latestPhotoUrl =
     photos
@@ -109,10 +116,10 @@ export default async function orderArtworkStageChangedHandler({
         (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
       )[0]?.url ?? null
 
-  // Collect customizer mockup images from line items for the approval email
-  // so the customer can see exactly what they're approving.
+  // Revised proof wins; if none, fall back to auto-generated mockups from line items.
+  // mockupImages is only populated for awaiting_approval (and only when no revised proof exists).
   const mockupImages =
-    toStage === "awaiting_approval"
+    toStage === "awaiting_approval" && !latestRevisedProofUrl
       ? (() => {
           const imgs = (order.items ?? [])
             .flatMap((line: any) => {
@@ -189,7 +196,7 @@ export default async function orderArtworkStageChangedHandler({
                 content: "approve_button",
               }) ?? approvalUrl,
               mockupImages,
-              proofImageUrl: mockupImages ? null : latestPhotoUrl,
+              proofImageUrl: latestRevisedProofUrl ?? (mockupImages ? null : latestPhotoUrl),
               staffNote: null,
             },
             preview: `Your proof is ready for sign-off — order #${displayId}.`,

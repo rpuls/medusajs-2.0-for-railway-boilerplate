@@ -82,8 +82,9 @@ const ApprovalForm = ({ orderId, sig, initial }: Props) => {
             className="w-full rounded-md border border-[rgba(26,26,46,0.08)]"
           />
           <p className="mt-2 text-xs text-ui-fg-subtle">
-            Latest proof preview from our studio. Zoom in on a phone to check
-            colours and placement.
+            {initial.revised_proof_note
+              ? `Studio note: ${initial.revised_proof_note}`
+              : "Revised proof from our studio. Zoom in on a phone to check colours and placement."}
           </p>
         </div>
       ) : null}

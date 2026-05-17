@@ -8,7 +8,11 @@ export type ArtworkApprovalState = {
   artwork_stage: string | null
   artwork_approved_at: string | null
   artwork_approver_name: string | null
+  /** Latest staff-uploaded revised proof URL (or latest production photo if none). Null if neither exists. */
   latest_photo_url: string | null
+  /** Non-null when latest_photo_url comes from a revised proof upload. */
+  revised_proof_note?: string | null
+  /** Auto-generated mockup images from line items. Empty when a revised proof exists (proof takes priority). */
   mockup_urls: { side: string; side_label?: string | null; url: string }[]
 }
 

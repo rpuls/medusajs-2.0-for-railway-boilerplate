@@ -62,14 +62,24 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
       )[0]?.url ?? null
 
-  const mockupUrls = (order.items ?? [])
-    .flatMap((line: any) => {
-      const exp = buildLineCustomizerExport(line)
-      return (exp?.artifacts ?? []).filter(
-        (a) => a.mockup_url && !a.mockup_url_inline_omitted
-      )
-    })
-    .map((a: any) => ({ side: a.side, side_label: a.side_label, url: a.mockup_url as string }))
+  // Staff-uploaded revised proof takes priority over auto-generated mockups.
+  const revisedProofs = Array.isArray(meta.revised_proofs)
+    ? (meta.revised_proofs as Array<{ url?: string; uploaded_at?: string; note?: string | null }>)
+    : []
+  const latestRevisedProof = revisedProofs
+    .filter((p) => typeof p?.url === "string" && p.url.length > 0)
+    .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))[0] ?? null
+
+  const mockupUrls = latestRevisedProof
+    ? []
+    : (order.items ?? [])
+        .flatMap((line: any) => {
+          const exp = buildLineCustomizerExport(line)
+          return (exp?.artifacts ?? []).filter(
+            (a) => a.mockup_url && !a.mockup_url_inline_omitted
+          )
+        })
+        .map((a: any) => ({ side: a.side, side_label: a.side_label, url: a.mockup_url as string }))
 
   res.json({
     order_id: order.id,
@@ -84,7 +94,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       typeof meta.artwork_approver_name === "string"
         ? meta.artwork_approver_name
         : null,
-    latest_photo_url: latestPhotoUrl,
+    latest_photo_url: latestRevisedProof?.url ?? latestPhotoUrl,
+    revised_proof_note: latestRevisedProof?.note ?? null,
     mockup_urls: mockupUrls,
   })
 }
