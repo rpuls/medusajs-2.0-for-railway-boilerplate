@@ -78,6 +78,32 @@ export default class AussiePacificService {
     return all
   }
 
+  /**
+   * Lightweight variant of `fetchAllProducts` that omits variants/images
+   * for fast catalog browsing in the admin UI. Returns only top-level
+   * product fields (name, style_code, main_category, sub_category,
+   * style, run_out, brand, description). ~10x faster than fetchAllProducts.
+   */
+  async fetchAllProductStubs(): Promise<AussiePacificProduct[]> {
+    const all: AussiePacificProduct[] = []
+    let page = 1
+    while (true) {
+      // Empty `include` skips the heavy nested data. AP defaults to
+      // returning variants if include is omitted, so we pass an explicit
+      // empty string.
+      const resp = await this.client_.getProducts({
+        page,
+        limit: PAGE_SIZE,
+        include: "",
+      })
+      const batch = extractProducts(resp)
+      all.push(...batch)
+      if (batch.length < PAGE_SIZE) break
+      page += 1
+    }
+    return all
+  }
+
   async fetchProductByStyleCode(
     styleCode: string
   ): Promise<AussiePacificProduct | null> {
