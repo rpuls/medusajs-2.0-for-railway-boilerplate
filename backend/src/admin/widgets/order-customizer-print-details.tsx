@@ -1,6 +1,8 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
+import { ChevronDown } from "@medusajs/icons"
+import { useState } from "react"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 
 import { HelpTooltip } from "../components/reports/help-tooltip"
@@ -171,6 +173,7 @@ const OrderCustomizerPrintDetailsWidget = ({
   const orderId = data?.id
   const items = (data?.items ?? []) as unknown as AdminOrderItem[]
   const currency = (data?.currency_code ?? "AUD").toUpperCase()
+  const [collapsed, setCollapsed] = useState(true)
 
   if (!orderId) {
     return null
@@ -191,26 +194,36 @@ const OrderCustomizerPrintDetailsWidget = ({
 
   return (
     <Container className="p-0 border-t border-ui-border-base">
-      <div className="px-6 py-4">
-        <Heading level="h2" className="flex items-center">
-          Print details &amp; cost breakdown
-          <HelpTooltip
-            text={{
-              title: "Print details & cost breakdown",
-              body: "Per-line breakdown of print positions, physical dimensions from the customer's Step 3 size choice, and how each unit price splits between garment cost and print decoration.",
-              bullets: [
-                "Sizes come from the customer's Step 3 choice in the customizer (A6 / A4 / A3 / Oversize).",
-                "The cost split is calculated from the product's bulk-pricing metadata — useful for quoting reprints.",
-              ],
-            }}
-          />
-        </Heading>
-        <Text size="small" className="text-ui-fg-subtle mt-1">
-          Per-side print sizes the customer ended up with, and how each unit
-          price splits between garment cost and print decoration.
-        </Text>
-      </div>
+      <button
+        type="button"
+        className="flex items-start gap-2 text-left w-full px-6 py-4"
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <ChevronDown
+          className={`text-ui-fg-subtle transition-transform duration-200 shrink-0 mt-0.5 ${collapsed ? "" : "rotate-180"}`}
+        />
+        <div className="flex-1">
+          <Heading level="h2" className="flex items-center">
+            Print details &amp; cost breakdown
+            <HelpTooltip
+              text={{
+                title: "Print details & cost breakdown",
+                body: "Per-line breakdown of print positions, physical dimensions from the customer's Step 3 size choice, and how each unit price splits between garment cost and print decoration.",
+                bullets: [
+                  "Sizes come from the customer's Step 3 choice in the customizer (A6 / A4 / A3 / Oversize).",
+                  "The cost split is calculated from the product's bulk-pricing metadata — useful for quoting reprints.",
+                ],
+              }}
+            />
+          </Heading>
+          <Text size="small" className="text-ui-fg-subtle mt-1">
+            Per-side print sizes the customer ended up with, and how each unit
+            price splits between garment cost and print decoration.
+          </Text>
+        </div>
+      </button>
 
+      {!collapsed && (
       <div className="px-6 pb-5 flex flex-col gap-y-4">
         {Array.from(grouped.entries()).map(([key, groupItems]) => {
           const canonical =
@@ -398,6 +411,7 @@ const OrderCustomizerPrintDetailsWidget = ({
           )
         })}
       </div>
+      )}
     </Container>
   )
 }
