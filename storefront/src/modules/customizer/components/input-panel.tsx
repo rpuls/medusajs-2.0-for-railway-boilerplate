@@ -94,9 +94,15 @@ export default function InputPanel({
           </p>
           <p className="mt-1 text-xs text-ui-fg-subtle">
             {disabledMessage?.body ??
-              "Pick your colour, print location, and print size on the right. Once that's done, you can upload artwork here."}
+              "Pick your colour and print location on the right to get started."}
           </p>
         </div>
+      ) : null}
+
+      {enabled && cartDesigns !== undefined && cartDesigns.length === 0 ? (
+        <p className="text-[11px] text-ui-fg-muted">
+          No cart designs yet — add a customized item to your cart first to reuse its artwork here.
+        </p>
       ) : null}
 
       {enabled && cartDesigns && cartDesigns.length > 0 && onAddCartDesign ? (

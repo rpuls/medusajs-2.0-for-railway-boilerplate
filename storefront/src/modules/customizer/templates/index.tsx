@@ -3300,18 +3300,12 @@ export default function CustomizerTemplate({
                     onDeleteUpload={(uploadId) =>
                       setSessionUploads((current) => current.filter((entry) => entry.id !== uploadId))
                     }
-                    enabled={!embedded || ((!pdpHasVariantOptions || pdpStep1Done) && pdpStep3Done)}
+                    enabled={!embedded || (!pdpHasVariantOptions || pdpStep1Done)}
                     disabledMessage={
                       pdpHasVariantOptions && !pdpStep1Done
                         ? {
                             title: "Customize first",
                             body: 'Click "Customize this product" on the right to start.',
-                          }
-                        : !pdpStep3Done
-                        ? {
-                            title: "Choose a print size",
-                            body:
-                              "Pick a print size on the right. Once that's done, you can upload artwork here.",
                           }
                         : undefined
                     }
