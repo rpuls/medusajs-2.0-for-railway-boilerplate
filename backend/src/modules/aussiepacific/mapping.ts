@@ -11,14 +11,21 @@ import {
 } from "./types"
 
 /**
- * Tolerate AP returning collections as either an array or an object keyed
- * by id. Returns a plain array in either case (empty if the value is
- * missing or some other shape).
+ * Tolerate AP's wrapped collection shapes. Verified against live
+ * `/api/v1/products?include=variants,images` (2026-05-17):
+ *   variants: { data: [ {...}, {...} ] }
+ *   images:   { data: [ { filename: "https://..." } ] }
+ * The `{ data: [...] }` wrapper is checked first; falls back to bare
+ * array, then id-keyed object, then empty for any other shape.
  */
 export const toArray = <T>(value: unknown): T[] => {
   if (!value) return []
   if (Array.isArray(value)) return value as T[]
-  if (typeof value === "object") return Object.values(value as Record<string, T>)
+  if (typeof value === "object") {
+    const wrapped = (value as { data?: unknown }).data
+    if (Array.isArray(wrapped)) return wrapped as T[]
+    return Object.values(value as Record<string, T>)
+  }
   return []
 }
 
@@ -42,12 +49,14 @@ export const titleCase = (s: string | undefined) => {
 }
 
 /**
- * Pull a usable URL out of an image entry. AP's docs don't pin the field
- * name, so we tolerate `url` / `src` / `path` (in that order).
+ * Pull a usable URL out of an image entry. Verified against live AP
+ * responses (2026-05-17): the field is `filename` and contains a full
+ * https:// URL. We still tolerate `url` / `src` / `path` as fallbacks
+ * in case AP changes the shape.
  */
 export const imageUrl = (img: AussiePacificImage | undefined): string => {
   if (!img) return ""
-  return (img.url ?? img.src ?? img.path ?? "") as string
+  return (img.filename ?? img.url ?? img.src ?? img.path ?? "") as string
 }
 
 /** Score an image so flat garment shots sort before model/lifestyle. */

@@ -29,7 +29,9 @@ export type AussiePacificOptions = {
 }
 
 export type AussiePacificImage = {
-  /** Vendor-hosted URL. Field name varies by payload — we tolerate `url`, `src`, `path`. */
+  /** Vendor-hosted URL. Live responses use `filename`; the other fields
+   *  are tolerated fallbacks in case the API shape changes. */
+  filename?: string
   url?: string
   src?: string
   path?: string

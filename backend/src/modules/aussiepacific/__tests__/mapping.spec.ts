@@ -6,6 +6,7 @@ import {
   normalizeStockLevel,
   slugify,
   titleCase,
+  toArray,
 } from "../mapping"
 import type { AussiePacificProduct } from "../types"
 
@@ -44,14 +45,42 @@ describe("Aussie Pacific mapping helpers", () => {
   })
 
   describe("imageUrl", () => {
-    it("returns the first present field in order: url, src, path", () => {
-      expect(imageUrl({ url: "https://a", src: "https://b", path: "https://c" })).toBe("https://a")
+    it("prefers `filename` (the field AP uses in live responses)", () => {
+      expect(
+        imageUrl({
+          filename: "https://aussiepacific-images.s3.amazonaws.com/foo.jpg",
+          url: "https://other",
+        })
+      ).toBe("https://aussiepacific-images.s3.amazonaws.com/foo.jpg")
+    })
+    it("falls back to url/src/path when filename is absent", () => {
+      expect(imageUrl({ url: "https://a", src: "https://b" })).toBe("https://a")
       expect(imageUrl({ src: "https://b", path: "https://c" })).toBe("https://b")
       expect(imageUrl({ path: "https://c" })).toBe("https://c")
     })
     it("returns empty string for missing/undefined", () => {
       expect(imageUrl({})).toBe("")
       expect(imageUrl(undefined)).toBe("")
+    })
+  })
+
+  describe("toArray", () => {
+    it("returns a bare array unchanged", () => {
+      expect(toArray([1, 2, 3])).toEqual([1, 2, 3])
+    })
+    it("unwraps the AP `{ data: [...] }` envelope", () => {
+      // Verified shape: live AP responses return variants and images as
+      // `{ data: [ ... ] }` rather than bare arrays.
+      expect(toArray({ data: ["a", "b"] })).toEqual(["a", "b"])
+    })
+    it("falls back to Object.values for id-keyed objects", () => {
+      expect(toArray({ "1": "a", "2": "b" })).toEqual(["a", "b"])
+    })
+    it("returns empty array for null/undefined/primitive", () => {
+      expect(toArray(null)).toEqual([])
+      expect(toArray(undefined)).toEqual([])
+      expect(toArray(42)).toEqual([])
+      expect(toArray("foo")).toEqual([])
     })
   })
 
