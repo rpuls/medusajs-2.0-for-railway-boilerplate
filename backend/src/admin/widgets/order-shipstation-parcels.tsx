@@ -10,6 +10,8 @@ import {
 } from "@medusajs/ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
+
 import { sdk } from "../lib/sdk"
 
 type Parcel = {
@@ -128,7 +130,19 @@ const OrderShipStationParcelsWidget = ({
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
-        <Heading level="h2">ShipStation parcels</Heading>
+        <Heading level="h2" className="flex items-center">
+          ShipStation parcels
+          <HelpTooltip
+            text={{
+              title: "ShipStation parcels",
+              body: "Parcel records synced from ShipStation for this order's fulfilments — tracking numbers, carrier, weight, and dimensions.",
+              bullets: [
+                "Parcels appear here after ShipStation processes the shipment.",
+                "Use tracking numbers to follow up with the carrier if a customer reports a missing delivery.",
+              ],
+            }}
+          />
+        </Heading>
         {totalParcels > 0 ? (
           <Badge color="grey" size="2xsmall">
             {totalParcels} {totalParcels === 1 ? "parcel" : "parcels"}

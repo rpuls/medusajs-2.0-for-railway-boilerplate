@@ -7,25 +7,21 @@ import sharp from "sharp"
 const BRAND_MAGENTA = { r: 255, g: 46, b: 99 }
 
 /**
- * Remove the white background from a mockup image using edge-connected flood fill.
- * Only pixels reachable from the image edges that meet the whiteness threshold are
- * made transparent — so white fabric on a white garment is left untouched.
+ * Remove the solid background (white OR black) from a mockup image so the
+ * page watermark can show through behind the garment.
+ *
+ * Strategy: sample the four corners to detect the background colour:
+ *   - If corners are near-white → apply a global threshold (R,G,B ≥ 220).
+ *     Safe because coloured fabric always has at least one channel well below
+ *     220, so we can blast everything bright in one pass.
+ *   - If corners are near-black → edge-connected flood fill from the borders.
+ *     We can't use a global threshold here because designs often contain pure
+ *     black (e.g. logo backgrounds) which would be destroyed; flood fill only
+ *     touches background pixels reachable from the image edges.
+ *   - Otherwise → leave the image alone.
  */
-async function removeWhiteBackground(imgBuf: Buffer, threshold = 220): Promise<Buffer> {
-  // PAD = 10: wide enough that even a sleeve flush with the original image edge
-  // still has a clear white-pixel path from the padding into the background.
-  // threshold = 220: catches JPEG-compressed whites (often 225-237) and
-  // light-grey mockup backgrounds without touching coloured garment fabric.
-  const PAD = 10
-  const paddedBuf = await sharp(imgBuf)
-    .extend({
-      top: PAD, bottom: PAD, left: PAD, right: PAD,
-      background: { r: 255, g: 255, b: 255, alpha: 255 },
-    })
-    .png()
-    .toBuffer()
-
-  const { data, info } = await sharp(paddedBuf)
+async function removeBackground(imgBuf: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(imgBuf)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
@@ -33,60 +29,78 @@ async function removeWhiteBackground(imgBuf: Buffer, threshold = 220): Promise<B
   const W = info.width
   const H = info.height
   const out = Buffer.from(data)
-  const visited = new Uint8Array(W * H)
 
-  function isWhitish(idx: number): boolean {
-    return (
-      data[idx * 4 + 0] >= threshold &&
-      data[idx * 4 + 1] >= threshold &&
-      data[idx * 4 + 2] >= threshold
-    )
-  }
+  // Sample the 4 corners to detect background colour
+  const cornerPixelIdxs = [0, W - 1, (H - 1) * W, H * W - 1]
+  const isWhitishCorner = (i: number) =>
+    data[i * 4] >= 220 && data[i * 4 + 1] >= 220 && data[i * 4 + 2] >= 220
+  const isBlackishCorner = (i: number) =>
+    data[i * 4] <= 30 && data[i * 4 + 1] <= 30 && data[i * 4 + 2] <= 30
 
-  // Seed queue with all whitish edge pixels
-  const queue: number[] = []
-  for (let x = 0; x < W; x++) {
-    const top = x
-    const bottom = (H - 1) * W + x
-    if (isWhitish(top)) { visited[top] = 1; queue.push(top) }
-    if (isWhitish(bottom)) { visited[bottom] = 1; queue.push(bottom) }
-  }
-  for (let y = 1; y < H - 1; y++) {
-    const left = y * W
-    const right = y * W + W - 1
-    if (isWhitish(left)) { visited[left] = 1; queue.push(left) }
-    if (isWhitish(right)) { visited[right] = 1; queue.push(right) }
-  }
+  const whiteCorners = cornerPixelIdxs.filter(isWhitishCorner).length
+  const blackCorners = cornerPixelIdxs.filter(isBlackishCorner).length
 
-  // 8-directional BFS — includes diagonals so it doesn't get stuck at corners
-  let qi = 0
-  while (qi < queue.length) {
-    const idx = queue[qi++]
-    out[idx * 4 + 3] = 0
+  if (whiteCorners >= 3) {
+    // Global threshold for near-white pixels
+    const pixels = W * H
+    for (let i = 0; i < pixels; i++) {
+      if (
+        data[i * 4 + 0] >= 220 &&
+        data[i * 4 + 1] >= 220 &&
+        data[i * 4 + 2] >= 220
+      ) {
+        out[i * 4 + 3] = 0
+      }
+    }
+  } else if (blackCorners >= 3) {
+    // Edge-connected flood fill for near-black background (preserve design black)
+    const visited = new Uint8Array(W * H)
+    const isBlack = (i: number) =>
+      data[i * 4] <= 30 && data[i * 4 + 1] <= 30 && data[i * 4 + 2] <= 30
 
-    const x = idx % W
-    const y = Math.floor(idx / W)
-    const neighbors = [
-      y > 0             ? idx - W     : -1,  // N
-      y < H - 1         ? idx + W     : -1,  // S
-      x > 0             ? idx - 1     : -1,  // W
-      x < W - 1         ? idx + 1     : -1,  // E
-      y > 0   && x > 0  ? idx - W - 1 : -1,  // NW
-      y > 0   && x < W-1? idx - W + 1 : -1,  // NE
-      y < H-1 && x > 0  ? idx + W - 1 : -1,  // SW
-      y < H-1 && x < W-1? idx + W + 1 : -1,  // SE
-    ]
-    for (const n of neighbors) {
-      if (n >= 0 && !visited[n] && isWhitish(n)) {
-        visited[n] = 1
-        queue.push(n)
+    const queue: number[] = []
+    for (let x = 0; x < W; x++) {
+      const top = x
+      const bottom = (H - 1) * W + x
+      if (isBlack(top)) { visited[top] = 1; queue.push(top) }
+      if (isBlack(bottom)) { visited[bottom] = 1; queue.push(bottom) }
+    }
+    for (let y = 1; y < H - 1; y++) {
+      const left = y * W
+      const right = y * W + W - 1
+      if (isBlack(left)) { visited[left] = 1; queue.push(left) }
+      if (isBlack(right)) { visited[right] = 1; queue.push(right) }
+    }
+
+    // 8-directional BFS — diagonals so we don't stall at thin features
+    let qi = 0
+    while (qi < queue.length) {
+      const idx = queue[qi++]
+      out[idx * 4 + 3] = 0
+
+      const x = idx % W
+      const y = Math.floor(idx / W)
+      const neighbors = [
+        y > 0 ? idx - W : -1,
+        y < H - 1 ? idx + W : -1,
+        x > 0 ? idx - 1 : -1,
+        x < W - 1 ? idx + 1 : -1,
+        x > 0 && y > 0 ? idx - W - 1 : -1,
+        x < W - 1 && y > 0 ? idx - W + 1 : -1,
+        x > 0 && y < H - 1 ? idx + W - 1 : -1,
+        x < W - 1 && y < H - 1 ? idx + W + 1 : -1,
+      ]
+      for (const n of neighbors) {
+        if (n >= 0 && !visited[n] && isBlack(n)) {
+          visited[n] = 1
+          queue.push(n)
+        }
       }
     }
   }
+  // else: mixed corners — no clear background colour, leave the image alone
 
-  // Crop the padding back off to return original dimensions
   return sharp(out, { raw: { width: W, height: H, channels: 4 } })
-    .extract({ left: PAD, top: PAD, width: W - PAD * 2, height: H - PAD * 2 })
     .png()
     .toBuffer()
 }
@@ -388,16 +402,28 @@ export async function generateMockupPdf(
           return 0
         })
 
+      // The "printed_tag" mockup currently uses a lifestyle/hero photo (no
+      // dedicated neck-tag template exists), which doesn't communicate "this
+      // is the tag print". Substitute the front mockup URL so the customer
+      // sees the garment they're getting; the side label still reads "Tag".
+      const frontArtifact = sidesWithUrls.find((a) => a.side === "front")
+      const sidesWithEffectiveUrls = sidesWithUrls.map((a) =>
+        (a.side === "printed_tag" || a.side === "tag") && frontArtifact
+          ? { ...a, mockupUrl: frontArtifact.mockupUrl }
+          : a
+      )
+
       const rawBufs = await Promise.all(
-        sidesWithUrls.map((a) => fetchImageBuffer(a.mockupUrl))
+        sidesWithEffectiveUrls.map((a) => fetchImageBuffer(a.mockupUrl))
       )
 
-      // Strip white background so the watermark shows through behind the garment
+      // Strip solid background (white OR black) so the watermark shows
+      // through behind the garment
       const processedBufs = await Promise.all(
-        rawBufs.map((buf) => (buf ? removeWhiteBackground(buf) : Promise.resolve(null)))
+        rawBufs.map((buf) => (buf ? removeBackground(buf) : Promise.resolve(null)))
       )
 
-      const mockups = sidesWithUrls
+      const mockups = sidesWithEffectiveUrls
         .map((a, i) => ({ side: a.side, buf: processedBufs[i] }))
         .filter((m): m is { side: string; buf: Buffer } => m.buf !== null)
 
@@ -494,7 +520,8 @@ function buildPdf(params: {
       const imgY = MT + 80
       // Total image band height (includes cell images + per-row labels)
       const imgBandH = 440
-      const labelH = 13  // height reserved for the side-label row
+      // Two lines reserved under each image: side name + print dimension
+      const labelH = 24
 
       // Watermark: centred on the full A4 page (750pt bleeds past all edges)
       const wmSize = 750
@@ -514,7 +541,7 @@ function buildPdf(params: {
         const cellW = (usableW - colGap * (cols - 1)) / cols
 
         for (let i = 0; i < count; i++) {
-          const { side, buf } = mockups[i]
+          const { side, buf, printSizeLabel } = mockups[i]
           const row = Math.floor(i / cols)
           const col = i % cols
 
@@ -537,19 +564,29 @@ function buildPdf(params: {
             valign: "center",
           })
 
-          // Side label beneath image
+          // Side label + print dimension beneath image (two lines)
           const label =
             SIDE_LABELS[side] ??
             side.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
           doc
+            .font("PJS-Bold")
+            .fontSize(8)
+            .fillColor("#222222")
+            .text(label, x, y + cellH + 2, { width: cellW, align: "center" })
+          doc
             .font("PJS")
             .fontSize(8)
             .fillColor("#666666")
-            .text(label, x, y + cellH + 2, { width: cellW, align: "center" })
+            .text(printSizeLabel || "—", x, y + cellH + 12, {
+              width: cellW,
+              align: "center",
+            })
         }
       }
 
-      // ── POSITIONING & SIZING SECTION ─────────────────────────────────────────
+      // ── SECTION DIVIDER ──────────────────────────────────────────────────────
+      // Per-image dimensions are rendered directly under each mockup above,
+      // so no consolidated "Positioning and sizing" line is needed.
       const ruleY = imgY + imgBandH + 8
       doc
         .moveTo(ML, ruleY)
@@ -557,38 +594,9 @@ function buildPdf(params: {
         .lineWidth(0.5)
         .stroke("#cccccc")
 
-      const posHeadY = ruleY + 6
-      doc
-        .font("PJS-Bold")
-        .fontSize(10)
-        .fillColor("#000000")
-        .text("Positioning and sizing", ML, posHeadY, { width: usableW, align: "center" })
-
-      const dimY = posHeadY + 14
-      // Group sides that share the same print size: "Front & Back: 21×30 cm  ·  Left Sleeve: 10×15 cm …"
-      const dimGroups: Array<{ sides: string[]; sizeLabel: string }> = []
-      for (const m of mockups) {
-        if (!m.printSizeLabel) continue
-        const existing = dimGroups.find((g) => g.sizeLabel === m.printSizeLabel)
-        const name = SIDE_LABELS[m.side] ?? m.side.replace(/_/g, " ")
-        if (existing) {
-          existing.sides.push(name)
-        } else {
-          dimGroups.push({ sides: [name], sizeLabel: m.printSizeLabel })
-        }
-      }
-      const dimText = dimGroups.length
-        ? dimGroups.map((g) => `${g.sides.join(" & ")}: ${g.sizeLabel}`).join("   ·   ")
-        : "Dimensions: —"
-      doc
-        .font("PJS")
-        .fontSize(9)
-        .fillColor("#444444")
-        .text(dimText, ML, dimY, { width: usableW, align: "center" })
-
       // ── DISCLAIMER BOX ────────────────────────────────────────────────────────
       const boxPad = 10
-      const disclaimerY = dimY + 16
+      const disclaimerY = ruleY + 12
       const disclaimerTextW = usableW - boxPad * 2
 
       doc.font("PJS").fontSize(8)

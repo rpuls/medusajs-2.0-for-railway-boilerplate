@@ -26,6 +26,19 @@ export const renderRequestSchema = z.object({
       height: z.number().min(120).max(8000),
     })
     .optional(),
+  /**
+   * Optional hex colour (`#RRGGBB`) sampled from the variant photo on the
+   * storefront. When provided for a sleeve side, the renderer recolours the
+   * generic white sleeve placeholder so the final mockup picks up the
+   * garment colour instead of staying white-on-black. Ignored for
+   * front/back/printed_tag, which already use real product photography.
+   */
+  tintColor: z
+    .preprocess(
+      (v) => (typeof v === "string" && v.trim() ? v.trim() : null),
+      z.union([z.string().regex(/^#[0-9a-fA-F]{6}$/), z.null()])
+    )
+    .optional(),
 })
 
 export type RenderRequestPayload = z.infer<typeof renderRequestSchema>

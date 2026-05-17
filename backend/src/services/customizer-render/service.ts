@@ -198,6 +198,115 @@ const rasterizeCustomizerSvgToCanvas = async (
   return { buffer: buf, width: w, height: h }
 }
 
+/** Hex `#RRGGBB` → {r,g,b}; null on malformed input. */
+const parseHex = (hex: string): { r: number; g: number; b: number } | null => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return null
+  const v = parseInt(m[1], 16)
+  return { r: (v >> 16) & 0xff, g: (v >> 8) & 0xff, b: v & 0xff }
+}
+
+/**
+ * Recolour a generic white sleeve placeholder so the final mockup picks up
+ * the garment colour. Replicates the storefront's CSS effect (canvas-stage):
+ *
+ *   - Light tint  → "multiply" the tint into every pixel. White body picks
+ *                   up the tint, dark line work stays dark.
+ *   - Dark tint   → invert the placeholder, then take pixel-wise max with
+ *                   the tint (equivalent to `lighten` blend with `filter:
+ *                   invert(1)`). Body becomes the dark tint colour, lines
+ *                   render bright so they're still readable.
+ *
+ * Luminance threshold of 0.4 (Rec.709) matches the storefront so the preview
+ * and the rendered mockup agree on which branch was taken.
+ */
+const tintSleevePlaceholder = async (
+  placeholderBuf: Buffer,
+  hex: string
+): Promise<Buffer> => {
+  const tint = parseHex(hex)
+  if (!tint) return placeholderBuf
+
+  const { data, info } = await sharp(placeholderBuf)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const pixels = info.width * info.height
+  const out = Buffer.from(data)
+
+  const lum = (0.2126 * tint.r + 0.7152 * tint.g + 0.0722 * tint.b) / 255
+  const isDark = lum < 0.4
+
+  for (let i = 0; i < pixels; i++) {
+    const off = i * 4
+    const r = data[off]
+    const g = data[off + 1]
+    const b = data[off + 2]
+    if (isDark) {
+      // invert + lighten(tint, inverted)
+      out[off] = Math.max(tint.r, 255 - r)
+      out[off + 1] = Math.max(tint.g, 255 - g)
+      out[off + 2] = Math.max(tint.b, 255 - b)
+    } else {
+      // multiply(tint, original)
+      out[off] = Math.round((tint.r * r) / 255)
+      out[off + 1] = Math.round((tint.g * g) / 255)
+      out[off + 2] = Math.round((tint.b * b) / 255)
+    }
+    // alpha unchanged
+  }
+
+  return sharp(out, {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  })
+    .png()
+    .toBuffer()
+}
+
+// Matches CanvasStage: scale(3.2) with transform-origin: 50% 14%
+const TAG_ZOOM_SCALE = 3.2
+const TAG_ORIGIN_X = 0.5
+const TAG_ORIGIN_Y = 0.14
+
+/**
+ * For `printed_tag` the storefront zooms the garment image (CSS scale(3.2),
+ * transform-origin: 50% 14%) while leaving the Fabric canvas unscaled. The
+ * backend must replicate that crop so the artwork composite lands in the same
+ * relative position. Steps:
+ *   1. Apply object-cover (garmentCoverMatchCanvas) to get W×H.
+ *   2. Crop the tag-visible region: top-left (originX - 1/(2*scale), originY*(1-1/scale)),
+ *      size W/scale × H/scale.
+ *   3. Resize the crop back to W×H.
+ */
+const garmentTagViewMatchCanvas = async (
+  garmentBuffer: Buffer,
+  viewportWidth: number,
+  viewportHeight: number
+): Promise<Buffer> => {
+  // Step 1: object-cover crop
+  const covered = await garmentCoverMatchCanvas(garmentBuffer, viewportWidth, viewportHeight)
+
+  // Step 2: tag crop (exact inverse of the CSS transform)
+  const cropLeft = Math.round((TAG_ORIGIN_X - 1 / (2 * TAG_ZOOM_SCALE)) * viewportWidth)
+  const cropTop = Math.round(TAG_ORIGIN_Y * (1 - 1 / TAG_ZOOM_SCALE) * viewportHeight)
+  const cropWidth = Math.round(viewportWidth / TAG_ZOOM_SCALE)
+  const cropHeight = Math.round(viewportHeight / TAG_ZOOM_SCALE)
+
+  // Clamp to safe bounds
+  const left = Math.max(0, cropLeft)
+  const top = Math.max(0, cropTop)
+  const width = Math.min(cropWidth, viewportWidth - left)
+  const height = Math.min(cropHeight, viewportHeight - top)
+
+  // Step 3: resize back to canvas dimensions
+  return sharp(covered)
+    .extract({ left, top, width, height })
+    .resize(viewportWidth, viewportHeight)
+    .png()
+    .toBuffer()
+}
+
 /**
  * Mirrors CSS `object-fit: cover`: center crop then resize to viewport (same as storefront img).
  */
@@ -329,7 +438,10 @@ export const renderMockupAsset = async (payload: RenderRequestPayload) => {
       const arrayBuffer = await response.arrayBuffer()
       let rawGarment = Buffer.from(arrayBuffer)
       if (canvasDims?.width && canvasDims?.height) {
-        garmentBase = await garmentCoverMatchCanvas(rawGarment, canvasDims.width, canvasDims.height)
+        garmentBase =
+          payload.side === "printed_tag"
+            ? await garmentTagViewMatchCanvas(rawGarment, canvasDims.width, canvasDims.height)
+            : await garmentCoverMatchCanvas(rawGarment, canvasDims.width, canvasDims.height)
         mockupWidth = canvasDims.width
         mockupHeight = canvasDims.height
       } else {
@@ -375,6 +487,20 @@ export const renderMockupAsset = async (payload: RenderRequestPayload) => {
     const garmentMeta = await sharp(garmentBase).metadata()
     mockupWidth = garmentMeta.width ?? mockupWidth
     mockupHeight = garmentMeta.height ?? mockupHeight
+  }
+
+  // Recolour the generic sleeve placeholder so the rendered mockup picks up
+  // the variant colour (storefront preview already does this via CSS).
+  // No-op for non-sleeve sides or when the storefront couldn't sample a tint.
+  if (
+    payload.tintColor &&
+    (payload.side === "left_sleeve" || payload.side === "right_sleeve")
+  ) {
+    try {
+      garmentBase = await tintSleevePlaceholder(garmentBase, payload.tintColor)
+    } catch {
+      // Tinting is best-effort — fall back to the uncoloured placeholder.
+    }
   }
 
   const overlayMeta = await sharp(fullOverlay).metadata()

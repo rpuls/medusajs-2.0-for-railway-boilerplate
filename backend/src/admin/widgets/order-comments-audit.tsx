@@ -4,6 +4,8 @@ import { Button, Container, Heading, Tabs, Text, Textarea, toast } from "@medusa
 import { Trash } from "@medusajs/icons"
 import { useEffect, useState } from "react"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
+
 import { PALETTE } from "../lib/reports/palette"
 
 type Comment = {
@@ -137,8 +139,18 @@ const OrderCommentsAuditWidget = ({ data: order }: { data: { id: string } }) => 
 
   return (
     <Container className="flex flex-col gap-y-3 p-6">
-      <Heading level="h2" className="text-base font-semibold">
+      <Heading level="h2" className="text-base font-semibold flex items-center">
         Comments &amp; activity
+        <HelpTooltip
+          text={{
+            title: "Comments & activity",
+            body: "Internal comments and an audit trail of every event on this order. Not visible to the customer.",
+            bullets: [
+              "@mention a staff member's email to notify them directly.",
+              "The Activity tab shows system events: stage changes, emails sent, and Medusa order events.",
+            ],
+          }}
+        />
       </Heading>
 
       <Tabs defaultValue="comments">

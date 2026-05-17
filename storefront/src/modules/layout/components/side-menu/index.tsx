@@ -36,6 +36,7 @@ const SERVICES_GROUP: SideMenuBrowseGroup = {
 const discoverLinks: Array<{ label: string; href: string; testId: string }> = [
   { label: "Explore", href: "/explore", testId: "explore-link" },
   { label: "DTF builder", href: "/dtf-builder", testId: "dtf-builder-link" },
+  { label: "3D Print Design", href: "/3d-print-design", testId: "3d-print-design-link" },
   { label: "FAQ", href: "/faq", testId: "faq-link" },
 ]
 
