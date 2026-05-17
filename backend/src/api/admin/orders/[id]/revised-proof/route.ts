@@ -67,10 +67,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(400).json({ error: "Only image uploads are accepted" })
   }
 
-  const fileModuleService = req.scope.resolve(Modules.FILE) as unknown as {
-    createFiles: (
-      data: { filename: string; mimeType: string; content: string }[]
-    ) => Promise<Array<{ id: string; url: string }>>
+  let fileModuleService: { createFiles: (data: { filename: string; mimeType: string; content: string }[]) => Promise<Array<{ id: string; url: string }>> }
+  try {
+    fileModuleService = req.scope.resolve(Modules.FILE) as typeof fileModuleService
+  } catch (err: any) {
+    return res.status(500).json({ error: "File module not available", detail: String(err?.message ?? err) })
   }
 
   const safeName = `revised-proofs/${orderId}/${parsed.side}/${Date.now()}-${parsed.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`
@@ -112,9 +113,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const proofs = [...existing, proof]
-  await orderModuleService.updateOrders(orderId, {
-    metadata: { ...meta, revised_proofs: proofs },
-  })
+  try {
+    await orderModuleService.updateOrders(orderId, {
+      metadata: { ...meta, revised_proofs: proofs },
+    })
+  } catch (err: any) {
+    return res.status(500).json({ error: "Failed to save proof", detail: String(err?.message ?? err) })
+  }
 
   res.status(201).json({ proof, proofs })
 }

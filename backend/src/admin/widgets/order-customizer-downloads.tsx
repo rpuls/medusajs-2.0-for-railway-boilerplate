@@ -134,7 +134,7 @@ const SideProofCard = ({
           }),
         })
         const body = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`)
+        if (!res.ok) throw new Error(body?.error ?? body?.message ?? `HTTP ${res.status}`)
         onProofsChange(body.proofs ?? [])
         setNote("")
       } catch (err) {
@@ -157,7 +157,7 @@ const SideProofCard = ({
           headers: { Accept: "application/json" },
         })
         const body = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`)
+        if (!res.ok) throw new Error(body?.error ?? body?.message ?? `HTTP ${res.status}`)
         onProofsChange(body.proofs ?? [])
         setSelected("original")
       } catch (err) {
