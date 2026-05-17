@@ -361,27 +361,31 @@ type CustomiserModalProps = {
 
 const CustomiserModal = ({ src, onClose }: CustomiserModalProps) => (
   <div
-    className="fixed inset-0 z-[100] flex flex-col bg-black/70"
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-6"
     onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
   >
-    <div className="flex items-center justify-between bg-ui-bg-base px-4 py-2 border-b border-ui-border-base">
-      <Text size="small" weight="plus">Customise proof position — adjust artwork, then click Save Proof</Text>
-      <button
-        type="button"
-        onClick={onClose}
-        className="flex items-center gap-1 rounded px-2 py-1 text-ui-fg-subtle hover:text-ui-fg-base hover:bg-ui-bg-subtle"
-        aria-label="Close customiser"
-      >
-        <XMark />
-        <span className="text-xsmall">Close</span>
-      </button>
+    <div className="flex flex-col w-full max-w-6xl rounded-xl overflow-hidden shadow-2xl border border-ui-border-base"
+      style={{ height: "90vh" }}
+    >
+      <div className="flex items-center justify-between bg-ui-bg-base px-4 py-2 border-b border-ui-border-base shrink-0">
+        <Text size="small" weight="plus">Customise proof position — adjust artwork, then click Save Proof</Text>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-1 rounded px-2 py-1 text-ui-fg-subtle hover:text-ui-fg-base hover:bg-ui-bg-subtle"
+          aria-label="Close customiser"
+        >
+          <XMark />
+          <span className="text-xsmall">Close</span>
+        </button>
+      </div>
+      <iframe
+        src={src}
+        className="flex-1 w-full border-0 bg-white"
+        allow="clipboard-read; clipboard-write"
+        title="Customise proof position"
+      />
     </div>
-    <iframe
-      src={src}
-      className="flex-1 w-full border-0 bg-white"
-      allow="clipboard-read; clipboard-write"
-      title="Customise proof position"
-    />
   </div>
 )
 
