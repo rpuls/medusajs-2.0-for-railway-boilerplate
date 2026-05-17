@@ -89,6 +89,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "dncworkwear.com.au",
       },
+      {
+        protocol: "https",
+        hostname: "aussiepacific-images.s3.ap-southeast-2.amazonaws.com",
+      },
     ],
   },
   // ──────────────────────────────────────────────────────────────────
