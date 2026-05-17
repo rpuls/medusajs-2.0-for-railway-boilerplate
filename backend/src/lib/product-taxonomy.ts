@@ -512,14 +512,23 @@ export function classifyFashionBizProduct(
 /**
  * Derive Medusa product_type and tags from an Aussie Pacific product.
  *
- * AP exposes `main_category` and `sub_category` strings (e.g.
- * "T-Shirts" / "Mens Tees", "Polos" / "Mens Polos"). We resolve
- * product_type from main_category first, falling back to sub_category
- * if the main is unrecognised — then sub_category becomes a tag.
+ * AP exposes `main_category`, `sub_category`, and `style` (a range/
+ * collection name like "Bayview", "Botany"). Observed:
  *
- * Tags additionally include any garment-shape hint from `style` (e.g.
- * "Long Sleeve", "Pullover") so the storefront's facet UI gets the same
- * signals it does from FashionBiz/AS Colour.
+ *   main_category   sub_category    style
+ *   "Ladies"        "Shirts"        "Bayview"
+ *   "Mens"          "Polos"         "Botany"
+ *
+ * `main_category` is usually a demographic (Ladies/Mens/Kids), not a
+ * garment shape, so we look up `sub_category` first for the product
+ * type. We use STRICT alias matching (no title-case fallback) so that
+ * demographic strings like "Ladies" never leak through as a Type — they
+ * flow into the tag pipeline instead, where `ladies → Women` etc. are
+ * already mapped (see TAG_ALIASES).
+ *
+ * `style` is the AP range/collection name and is already present in the
+ * product title (e.g. "BAYVIEW LADY SHIRT 3/4 SLEEVE - 2906T"), so it
+ * adds no customer-facing value as a tag and is dropped.
  */
 export function classifyAussiePacificProduct(
   product: Pick<
@@ -528,29 +537,54 @@ export function classifyAussiePacificProduct(
   >,
   unknownLog?: string[]
 ): { productType: string | null; tags: string[] } {
-  const candidateTypes = [product.main_category, product.sub_category]
-  let productType: string | null = null
-  for (const raw of candidateTypes) {
-    const resolved = normalizeProductType(raw, undefined)
-    if (resolved) {
-      productType = resolved
-      break
-    }
+  // Strict alias lookup — no title-case fallback. "Ladies" / "Mens" /
+  // "Kids" never become Types this way.
+  const lookupType = (raw: string | null | undefined): string | null => {
+    if (!raw?.trim()) return null
+    const key = raw.trim().toLowerCase()
+    return PRODUCT_TYPE_ALIASES[key] ?? null
   }
+  // sub_category first (more specific), main_category second.
+  const productType =
+    lookupType(product.sub_category) ?? lookupType(product.main_category)
+
   if (!productType && (product.main_category || product.sub_category)) {
     unknownLog?.push(
-      `[aussie-pacific product_type] Could not resolve type from main="${product.main_category ?? ""}" sub="${product.sub_category ?? ""}" for style_code="${product.style_code ?? "unknown"}" — leaving product_type unset.`
+      `[aussie-pacific product_type] Could not resolve type from sub="${product.sub_category ?? ""}" main="${product.main_category ?? ""}" for style_code="${product.style_code ?? "unknown"}" — leaving product_type unset.`
     )
   }
 
-  const rawTags: (string | null | undefined)[] = [
-    // Keep sub_category as a tag if we didn't burn it as the product_type
-    product.main_category && product.main_category !== productType
-      ? product.sub_category
-      : undefined,
-    product.style,
-  ]
-  const tags = normalizeTags(rawTags, unknownLog)
+  // Tags: AP's main_category is a demographic (Ladies/Mens/Kids/Unisex),
+  // not a garment shape. Map it directly to a canonical demographic tag.
+  // We bypass normalizeTags for this because "kids" is also in
+  // PRODUCT_TYPE_ALIASES (it's both a demographic AND a garment-type
+  // indicator), which would otherwise cause normalizeTags to filter it.
+  //
+  // `style` (Bayview, Botany, …) is intentionally NOT a tag — it's
+  // already in the product title and means nothing to customers.
+  // `sub_category` is also not surfaced as a tag — when it doesn't
+  // resolve to the productType it's usually a garment-type variant
+  // ("Long Sleeve Shirts") that adds noise; the title already conveys
+  // shape.
+  const DEMOGRAPHIC_TO_TAG: Record<string, string> = {
+    ladies: "Women",
+    women: "Women",
+    womens: "Women",
+    mens: "Men",
+    men: "Men",
+    kids: "Kids",
+    youth: "Kids",
+    children: "Kids",
+    unisex: "Unisex",
+  }
+  const tags: string[] = []
+  const seenTags = new Set<string>()
+  const mainKey = (product.main_category ?? "").trim().toLowerCase()
+  const demographicTag = DEMOGRAPHIC_TO_TAG[mainKey]
+  if (demographicTag && !seenTags.has(demographicTag)) {
+    seenTags.add(demographicTag)
+    tags.push(demographicTag)
+  }
 
   return { productType, tags }
 }

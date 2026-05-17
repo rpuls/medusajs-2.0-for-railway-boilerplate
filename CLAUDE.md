@@ -289,7 +289,9 @@ Env vars: `IMPORT_LIMIT` (cap product count), `IMPORT_DRY_RUN=1` (no DB writes).
 
 **Idempotency**: create-only, keyed by handle (`aussie-pacific-{style_code}`, e.g. `aussie-pacific-1300`). Existing handles are skipped. Re-importing to update is a planned follow-up.
 
-**Run-out items**: products with `run_out === true` are imported as `status: "draft"` and tagged `Discontinued` so they don't show on the storefront until the operator reviews them.
+**Run-out items**: products with `run_out === true` are **skipped entirely** at import time (logged once per skipped style). Same policy as FashionBiz's `sales_status === "clearance"`. AS Colour has no documented discontinued field yet — run `probe-ascolour-product-shape.ts` to discover one.
+
+**Tagging**: AP's `style` field carries a range/collection name (Bayview, Botany, …) that's already in the product title, so it's **not** surfaced as a tag. `main_category` is treated as a demographic (Ladies → Women, Mens → Men, Kids → Kids, Unisex → Unisex). `sub_category` is the primary source of the Medusa `product_type` (e.g. "Shirts", "Polos"); strict alias matching is used so unknown values resolve to `null` rather than leaking demographic strings like "Ladies" through as a Type.
 
 **Stock**: lives at a separate `"Aussie Pacific Warehouse"` stock location. AP exposes no `updated_at` filter — the daily job walks every page of `/api/v1/products?include=variants` and rebuilds the full SKU → quantity map. Stock is embedded on variants (single `stock_level` field), so one paginated catalog walk delivers everything.
 

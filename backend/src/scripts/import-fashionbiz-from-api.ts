@@ -243,6 +243,7 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
   }
   const toCreate: any[] = []
   const created: CreatedProductContext[] = []
+  let skippedClearance = 0
 
   // Skip-list: existing handles across all brands in scope. We collect all
   // candidate handles up front, then check against Medusa in one graph
@@ -289,6 +290,17 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
       const handle = handleForProduct(batch.brand, product.slug)
       if (existingHandles.has(handle)) {
         logger.info(`  Skipping existing handle ${handle}`)
+        continue
+      }
+
+      // FashionBiz `sales_status` of "clearance" means the style is being
+      // run out — don't add it to the catalog. Case-insensitive to be
+      // tolerant of casing drift.
+      if ((product.sales_status ?? "").trim().toLowerCase() === "clearance") {
+        skippedClearance++
+        logger.info(
+          `  Skipping ${batch.brand}/${product.slug} (${product.name}) — sales_status=clearance`
+        )
         continue
       }
 
@@ -437,7 +449,9 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
     }
   }
 
-  logger.info(`Prepared ${toCreate.length} products for creation.`)
+  logger.info(
+    `Prepared ${toCreate.length} product(s) for creation. Skipped ${skippedClearance} clearance style(s).`
+  )
 
   if (dryRun) {
     logger.info("Dry run — skipping createProductsWorkflow + inventory seed.")

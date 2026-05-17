@@ -1,17 +1,23 @@
 /**
- * One-shot cleanup: delete any imported Aussie Pacific product whose
- * source style is run_out=true (discontinued).
+ * One-shot cleanup of imported Aussie Pacific products.
  *
- * The first import run landed 5 products before we changed the importer
- * to skip run_out styles entirely. This script finds and deletes the
- * mistakenly-imported discontinued ones.
+ * Two modes (mutually exclusive):
  *
- * Idempotent — safe to re-run; it only deletes products where
- * `metadata.aussiepacific.run_out === true`.
+ *   default       Delete products where `metadata.aussiepacific.run_out`
+ *                 === true. Used after we changed the importer to skip
+ *                 run_out styles entirely, to remove ones that landed
+ *                 before the fix.
+ *
+ *   ALL=1         Delete every product where `metadata.source ===
+ *                 "aussiepacific"`. Use this for a clean-slate re-import
+ *                 after the taxonomy/tagging logic changes.
+ *
+ * Combine with DRY_RUN=1 to preview without deleting.
  *
  * Usage:
  *   DRY_RUN=1 pnpm --filter backend medusa exec cleanup-aussie-pacific-runout
- *   (drop DRY_RUN to apply)
+ *   ALL=1 DRY_RUN=1 pnpm --filter backend medusa exec cleanup-aussie-pacific-runout
+ *   ALL=1 pnpm --filter backend medusa exec cleanup-aussie-pacific-runout
  */
 
 import { ExecArgs } from "@medusajs/framework/types"
@@ -28,11 +34,14 @@ export default async function cleanupAussiePacificRunOut({
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const dryRun =
     process.env.DRY_RUN === "1" || process.env.DRY_RUN === "true"
+  const all = process.env.ALL === "1" || process.env.ALL === "true"
 
-  logger.info(`Aussie Pacific run-out cleanup — dryRun=${dryRun}`)
+  logger.info(
+    `Aussie Pacific cleanup — mode=${all ? "ALL aussiepacific products" : "run_out only"}, dryRun=${dryRun}`
+  )
 
   // Walk every product with metadata.source === "aussiepacific" and
-  // collect the ones marked discontinued.
+  // collect the ones we want to delete (run_out by default, all in ALL mode).
   type Row = { id: string; handle: string; metadata: any }
   const toDelete: Row[] = []
   const PAGE = 200
@@ -47,7 +56,7 @@ export default async function cleanupAussiePacificRunOut({
     for (const p of page as any[]) {
       const meta = p?.metadata ?? {}
       if (meta?.source !== "aussiepacific") continue
-      if (meta?.aussiepacific?.run_out === true) {
+      if (all || meta?.aussiepacific?.run_out === true) {
         toDelete.push({ id: p.id, handle: p.handle, metadata: meta })
       }
     }
@@ -56,11 +65,11 @@ export default async function cleanupAussiePacificRunOut({
   }
 
   if (!toDelete.length) {
-    logger.info("No run-out AP products found. Nothing to delete.")
+    logger.info("No matching AP products found. Nothing to delete.")
     return
   }
 
-  logger.info(`Found ${toDelete.length} run-out AP product(s) to delete:`)
+  logger.info(`Found ${toDelete.length} AP product(s) to delete:`)
   for (const p of toDelete) {
     logger.info(`  - ${p.handle} (${p.id})`)
   }
@@ -74,5 +83,5 @@ export default async function cleanupAussiePacificRunOut({
     input: { ids: toDelete.map((p) => p.id) },
   })
 
-  logger.info(`Deleted ${toDelete.length} run-out AP product(s).`)
+  logger.info(`Deleted ${toDelete.length} AP product(s).`)
 }
