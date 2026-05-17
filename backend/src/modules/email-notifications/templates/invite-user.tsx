@@ -1,4 +1,4 @@
-import { Button, Link, Section, Text, Img, Hr } from '@react-email/components'
+import { Button, Link, Section, Text, Hr } from '@react-email/components'
 import { Base } from './base'
 
 /**
@@ -33,20 +33,13 @@ export const isInviteUserData = (data: any): data is InviteUserEmailProps =>
  */
 export const InviteUserEmail = ({
   inviteLink,
-  preview = `You've been invited to Medusa!`,
+  preview = `You've been invited to SC Prints Admin`,
 }: InviteUserEmailProps) => {
   return (
     <Base preview={preview}>
-      <Section className="mt-[32px]">
-        <Img
-          src="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg"
-          alt="Medusa"
-          className="mx-auto w-28"
-        />
-      </Section>
-      <Section className="text-center">
+      <Section className="text-center mt-[32px]">
         <Text className="text-black text-[14px] leading-[24px]">
-          You&apos;ve been invited to be an administrator on <strong>Medusa</strong>.
+          You&apos;ve been invited to be an administrator on <strong>SC Prints</strong>.
         </Text>
         <Section className="mt-4 mb-[32px]">
           <Button
@@ -75,7 +68,7 @@ export const InviteUserEmail = ({
       <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
       <Text className="text-[#666666] text-[12px] leading-[24px]">
         If you were not expecting this invitation, you can ignore this email, as the
-        invitation will expire in 24 hours. If you are concerned about your account's safety,
+        invitation will expire in 24 hours. If you are concerned about your account&apos;s safety,
         please reply to this email to get in touch with us.
       </Text>
     </Base>
