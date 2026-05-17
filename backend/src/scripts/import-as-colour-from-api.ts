@@ -167,6 +167,33 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
   // 1. Fetch catalogue + price list
   logger.info("Fetching AS Colour catalogue...")
   let products = await ascolour.fetchAllProducts()
+
+  // AS Colour appends "S" to a styleCode to mark it as superseded/
+  // discontinued (verified empirically 2026-05-17 via
+  // probe-ascolour-product-shape.ts: 141/629 styles end in "S" and
+  // 75 of them have a paired non-S base still in the catalog — the
+  // characteristic "current ↔ superseded" pattern). Skip them.
+  //
+  // Set IMPORT_INCLUDE_DISCONTINUED=1 to bypass this filter (e.g. for
+  // historical analysis or to import a specific S-suffix style by hand).
+  const skipDiscontinued =
+    process.env.IMPORT_INCLUDE_DISCONTINUED !== "1" &&
+    process.env.IMPORT_INCLUDE_DISCONTINUED !== "true"
+  let skippedDiscontinued = 0
+  if (skipDiscontinued) {
+    const before = products.length
+    products = products.filter((p) => {
+      if (/S$/.test(String(p.styleCode ?? ""))) {
+        skippedDiscontinued++
+        return false
+      }
+      return true
+    })
+    logger.info(
+      `Filtered out ${before - products.length} discontinued style(s) (styleCode ending in "S"). Set IMPORT_INCLUDE_DISCONTINUED=1 to bypass.`
+    )
+  }
+
   if (limit) products = products.slice(0, limit)
   logger.info(`Got ${products.length} products from AS Colour.`)
 

@@ -230,7 +230,9 @@ Pulls every AS Colour style + variant from their authenticated catalog API, crea
 | Hourly stock sync job | [backend/src/jobs/sync-ascolour-inventory.ts](backend/src/jobs/sync-ascolour-inventory.ts) |
 | Shared price ladder | [backend/src/utils/bulk-price-ladder.ts](backend/src/utils/bulk-price-ladder.ts) |
 
-Run the initial import with `pnpm --filter backend medusa exec import-as-colour-from-api` (env vars: `IMPORT_LIMIT`, `IMPORT_DRY_RUN`).
+Run the initial import with `pnpm --filter backend medusa exec import-as-colour-from-api` (env vars: `IMPORT_LIMIT`, `IMPORT_DRY_RUN`, `IMPORT_INCLUDE_DISCONTINUED`).
+
+**Discontinued styles**: AS Colour appends `"S"` to a `styleCode` to mark it as superseded/discontinued (verified empirically — 22% of their catalog ends in `S` and 75 of those have a paired non-S base still in the catalog). The importer **skips** styleCodes ending in `S` by default. Set `IMPORT_INCLUDE_DISCONTINUED=1` to bypass for one-off historical imports. For already-imported discontinued products in production, soft-disable them (status→draft + add "Discontinued" tag, preserving order history) via [cleanup-ascolour-discontinued.ts](backend/src/scripts/cleanup-ascolour-discontinued.ts).
 
 ### FashionBiz API importer + daily inventory sync
 
