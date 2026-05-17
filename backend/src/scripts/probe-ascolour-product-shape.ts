@@ -76,7 +76,59 @@ export default async function probeAscolourProductShape({
     }
   } else {
     logger.info(
-      "[probe] No obvious discontinued-marker candidates in top-level keys. Inspect the full payload above; it may be a nested flag or a boolean named something unexpected."
+      "[probe] No obvious discontinued-marker candidates in top-level keys."
+    )
+  }
+
+  // Hypothesis check: AS Colour appends an "S" to styleCodes (and possibly
+  // colour SKUs) to mark them as discontinued/superseded. Walk every fetched
+  // product and report the distribution + sample suffixes.
+  const sSuffixStyles: Array<{ styleCode: string; styleName?: string; productType?: string }> = []
+  for (const p of products) {
+    const code = String((p as any).styleCode ?? "")
+    if (/S$/.test(code)) {
+      sSuffixStyles.push({
+        styleCode: code,
+        styleName: (p as any).styleName,
+        productType: (p as any).productType,
+      })
+    }
+  }
+  logger.info(
+    `[probe] styleCodes ending in "S": ${sSuffixStyles.length} / ${products.length} (${((sSuffixStyles.length / products.length) * 100).toFixed(1)}%)`
+  )
+  // Sample up to 20 to eyeball whether they look discontinued.
+  for (const s of sSuffixStyles.slice(0, 20)) {
+    logger.info(
+      `[probe]   ${s.styleCode}  type="${s.productType ?? ""}"  name="${s.styleName ?? ""}"`
+    )
+  }
+  if (sSuffixStyles.length > 20) {
+    logger.info(`[probe]   …and ${sSuffixStyles.length - 20} more.`)
+  }
+  // Also list a few styles where both base (e.g. "5050") and S-suffix
+  // ("5050S") exist — that's the strongest signal AS Colour uses "S" for
+  // supersession.
+  const codes = new Set(products.map((p) => String((p as any).styleCode ?? "")))
+  const pairs: Array<{ base: string; sCode: string }> = []
+  for (const code of codes) {
+    if (/S$/.test(code)) {
+      const base = code.slice(0, -1)
+      if (codes.has(base)) {
+        pairs.push({ base, sCode: code })
+      }
+    }
+  }
+  if (pairs.length) {
+    logger.info(
+      `[probe] paired base↔S-suffix styles (strongest "supersession" signal): ${pairs.length}`
+    )
+    for (const pair of pairs.slice(0, 20)) {
+      logger.info(`[probe]   ${pair.base} ↔ ${pair.sCode}`)
+    }
+  } else {
+    logger.info(
+      "[probe] No paired base↔S-suffix styles found. The S suffix may be intrinsic to the styleCode for some product lines, not a discontinue marker."
     )
   }
 }
