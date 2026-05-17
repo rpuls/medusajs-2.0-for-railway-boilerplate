@@ -401,7 +401,7 @@ const AussiePacificImportPage = () => {
                       <Checkbox
                         checked={headerChecked}
                         onCheckedChange={(c) => toggleAllOnPage(c === true)}
-                        disabled={products.length === 0 || loading}
+                        disabled={products.length === 0}
                       />
                     </Table.HeaderCell>
                     <Table.HeaderCell className="w-[110px]">
@@ -449,7 +449,6 @@ const AussiePacificImportPage = () => {
                             onCheckedChange={(c) =>
                               toggleOne(p.style_code, c === true)
                             }
-                            disabled={loading}
                           />
                         </Table.Cell>
                         <Table.Cell>
