@@ -44,6 +44,10 @@ import {
   FASHIONBIZ_BRANCH,
   FASHIONBIZ_BASE_URL,
   FASHIONBIZ_COST_ADJUSTMENT,
+  AUSSIE_PACIFIC_API_TOKEN,
+  AUSSIE_PACIFIC_BASE_URL,
+  AUSSIE_PACIFIC_COST_ADJUSTMENT,
+  AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD,
   WORKER_MODE,
   MINIO_ENDPOINT,
   MINIO_ACCESS_KEY,
@@ -239,6 +243,18 @@ const medusaConfig = {
             branch: FASHIONBIZ_BRANCH,
             base_url: FASHIONBIZ_BASE_URL,
             cost_adjustment: FASHIONBIZ_COST_ADJUSTMENT,
+          },
+        }]
+      : []),
+
+    ...(AUSSIE_PACIFIC_API_TOKEN
+      ? [{
+          resolve: "./src/modules/aussiepacific",
+          options: {
+            token: AUSSIE_PACIFIC_API_TOKEN,
+            base_url: AUSSIE_PACIFIC_BASE_URL,
+            cost_adjustment: AUSSIE_PACIFIC_COST_ADJUSTMENT,
+            default_shipping_method: AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD,
           },
         }]
       : []),

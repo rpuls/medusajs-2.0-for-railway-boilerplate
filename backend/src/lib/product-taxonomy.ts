@@ -1,5 +1,6 @@
 import type { AsColourProduct } from "../modules/ascolour/types"
 import type { FashionBizProduct } from "../modules/fashionbiz/types"
+import type { AussiePacificProduct } from "../modules/aussiepacific/types"
 
 // Canonical product type names — must match create-product-types.ts exactly.
 // All alias keys are lowercase; the values are the exact Medusa ProductType.value strings.
@@ -504,6 +505,52 @@ export function classifyFashionBizProduct(
     product.tech,
   ]
   const tags = normalizeTags(allRawTags, unknownLog)
+
+  return { productType, tags }
+}
+
+/**
+ * Derive Medusa product_type and tags from an Aussie Pacific product.
+ *
+ * AP exposes `main_category` and `sub_category` strings (e.g.
+ * "T-Shirts" / "Mens Tees", "Polos" / "Mens Polos"). We resolve
+ * product_type from main_category first, falling back to sub_category
+ * if the main is unrecognised — then sub_category becomes a tag.
+ *
+ * Tags additionally include any garment-shape hint from `style` (e.g.
+ * "Long Sleeve", "Pullover") so the storefront's facet UI gets the same
+ * signals it does from FashionBiz/AS Colour.
+ */
+export function classifyAussiePacificProduct(
+  product: Pick<
+    AussiePacificProduct,
+    "main_category" | "sub_category" | "style" | "style_code"
+  >,
+  unknownLog?: string[]
+): { productType: string | null; tags: string[] } {
+  const candidateTypes = [product.main_category, product.sub_category]
+  let productType: string | null = null
+  for (const raw of candidateTypes) {
+    const resolved = normalizeProductType(raw, undefined)
+    if (resolved) {
+      productType = resolved
+      break
+    }
+  }
+  if (!productType && (product.main_category || product.sub_category)) {
+    unknownLog?.push(
+      `[aussie-pacific product_type] Could not resolve type from main="${product.main_category ?? ""}" sub="${product.sub_category ?? ""}" for style_code="${product.style_code ?? "unknown"}" — leaving product_type unset.`
+    )
+  }
+
+  const rawTags: (string | null | undefined)[] = [
+    // Keep sub_category as a tag if we didn't burn it as the product_type
+    product.main_category && product.main_category !== productType
+      ? product.sub_category
+      : undefined,
+    product.style,
+  ]
+  const tags = normalizeTags(rawTags, unknownLog)
 
   return { productType, tags }
 }

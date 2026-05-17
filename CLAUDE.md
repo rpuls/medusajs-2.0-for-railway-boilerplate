@@ -176,6 +176,11 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | `FASHIONBIZ_BASE_URL` | Optional. FashionBiz API base URL — only override for staging or proxy. | `https://www.fashionbizapis.com/api/v3` |
 | `FASHIONBIZ_COST_ADJUSTMENT` | Multiplier applied to the API "1-99" tier price before it's fed into the bulk-price ladder. The FashionBiz public API exposes a published "1-99" wholesale tier, but the distributor storefront (`au-store.fashionbizapps.com`) charges SC Prints **~15% above that tier** (observed 2026-05-13 across P400MS/BP2616MS/BP2610MS/P515MS, ratios 1.1505/1.1498/1.1498/1.1541). Production should set this to `1.15` so the retail ladder is calculated from the cost we'll actually be billed. | `1.0` (no adjustment — undercharges by ~15% if left at default) |
 
+| `AUSSIE_PACIFIC_API_TOKEN` | Optional. Aussie Pacific Public API v1 bearer token (Authorization: `Bearer <token>`). Required to enable the AP importer + daily stock sync + dropship-order send. When unset, the AP module is not registered and the cron is a no-op. | unset |
+| `AUSSIE_PACIFIC_BASE_URL` | Optional. Aussie Pacific API base URL — only override for staging or proxy. | `https://api.aussiepacific.com.au` |
+| `AUSSIE_PACIFIC_COST_ADJUSTMENT` | Multiplier applied to the API `price` field before it's fed into the bulk-price ladder. We currently assume AP's `price` is ex-GST cost (same convention as AS Colour and the FashionBiz "1-99" tier), so default is `1.0`. Calibrate against the first real invoice — if AP returns inc-GST prices, set `0.909`; if AP's published price sits below the trade rate (like FashionBiz's distributor storefront), set the observed ratio. The first 5 styles emit a calibration log line during import so the operator can sanity-check before scaling up. | `1.0` |
+| `AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD` | Optional. Default shipping method embedded in dropship order payloads. Falls back to the form input on the admin widget when unset. | unset |
+
 All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 
 ### Storefront (`storefront/.env`)
@@ -255,6 +260,42 @@ The adjustment exists because the public-API "1-99" tier is a *published* price;
 **Idempotency**: create-only, keyed by handle (`{brand}-{slug}`, e.g. `biz-collection-p400ms`). Existing handles are skipped — re-importing to update is a planned follow-up.
 
 **Stock**: lives at a separate `"FashionBiz Warehouse"` stock location, parallel to `"AS Colour Warehouse"`, so per-supplier stock provenance is preserved. The daily job walks every variant whose `metadata.fashionbiz.product_slug` is set, groups by `(brand, slug, colour)`, and calls one `/stock` endpoint per group (FashionBiz has no `updated_at` filter, so a full sweep is required).
+
+### Aussie Pacific API importer + daily inventory sync + dropship send
+
+Same pattern as FashionBiz, for the Aussie Pacific catalog. Hits `https://api.aussiepacific.com.au/api/v1/` with `Authorization: Bearer <AUSSIE_PACIFIC_API_TOKEN>`. Products land linked to the pre-seeded `Aussie Pacific` Brand (`external_code = "AP"`). Stock refreshes daily at 05:00 UTC at the "Aussie Pacific Warehouse" stock location. Admins can forward AP-line orders to AP's dropship endpoint from the order detail page or the "Aussie Pacific Orders" admin dashboard.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/aussiepacific/](backend/src/modules/aussiepacific/) |
+| Initial import script | [backend/src/scripts/import-aussie-pacific-from-api.ts](backend/src/scripts/import-aussie-pacific-from-api.ts) |
+| Daily stock sync job (`0 5 * * *`) | [backend/src/jobs/sync-aussie-pacific-inventory.ts](backend/src/jobs/sync-aussie-pacific-inventory.ts) |
+| Status-mapping lib | [backend/src/lib/aussiepacific-status.ts](backend/src/lib/aussiepacific-status.ts) |
+| Send-to-AP admin route | [backend/src/api/admin/orders/\[id\]/send-to-aussie-pacific/route.ts](backend/src/api/admin/orders/[id]/send-to-aussie-pacific/route.ts) |
+| Order-detail widget | [backend/src/admin/widgets/order-aussie-pacific-dropship.tsx](backend/src/admin/widgets/order-aussie-pacific-dropship.tsx) |
+| Dropship dashboard data | [backend/src/api/admin/dropship/aussie-pacific/route.ts](backend/src/api/admin/dropship/aussie-pacific/route.ts) |
+| Dropship dashboard page | [backend/src/admin/routes/dropship/aussie-pacific/page.tsx](backend/src/admin/routes/dropship/aussie-pacific/page.tsx) |
+
+Run the initial import with:
+
+```bash
+IMPORT_LIMIT=5 IMPORT_DRY_RUN=1 \
+  pnpm --filter backend medusa exec import-aussie-pacific-from-api
+```
+
+Env vars: `IMPORT_LIMIT` (cap product count), `IMPORT_DRY_RUN=1` (no DB writes).
+
+**Pricing**: AP returns a single wholesale `price` per variant. The importer treats this as ex-GST cost, multiplies by `AUSSIE_PACIFIC_COST_ADJUSTMENT` (default 1.0), then runs the result through the shared `buildPriceLadder()` markup formula. Per-variant pricing matters here — like AS Colour, the API's per-SKU cost can vary across a style, so each variant gets its own ladder and the cheapest variant's ladder is stored as the product-level `bulk_pricing` metadata. The first 5 styles of each import log a calibration line so the operator can spot-check the ex-GST assumption against AP's invoices before going wide.
+
+**Idempotency**: create-only, keyed by handle (`aussie-pacific-{style_code}`, e.g. `aussie-pacific-1300`). Existing handles are skipped. Re-importing to update is a planned follow-up.
+
+**Run-out items**: products with `run_out === true` are imported as `status: "draft"` and tagged `Discontinued` so they don't show on the storefront until the operator reviews them.
+
+**Stock**: lives at a separate `"Aussie Pacific Warehouse"` stock location. AP exposes no `updated_at` filter — the daily job walks every page of `/api/v1/products?include=variants` and rebuilds the full SKU → quantity map. Stock is embedded on variants (single `stock_level` field), so one paginated catalog walk delivers everything.
+
+**Dropship**: AP's API documents `POST /api/v1/order` but exposes **no GET endpoint for order retrieval, no shipment/tracking endpoints, and no webhooks**. The admin widget submits the order and records whatever response AP returns (typically just a reference + "Submitted" status). Operators reconcile shipment progress via AP email confirmations or the distributor portal until AP adds a status endpoint. The status-mapping lib + reserved metadata fields (`aussiepacific_last_synced_at`, `aussiepacific_shipments`) are in place so a polling cron can be added later without touching the create flow.
+
+**Workshop "ship-to" address**: AP dropships reuse the existing `ASCOLOUR_WORKSHOP_*` env vars (same physical SC Prints address). If AP ever needs a different destination, introduce `AUSSIE_PACIFIC_WORKSHOP_*` overrides at that point.
 
 ## Tests
 

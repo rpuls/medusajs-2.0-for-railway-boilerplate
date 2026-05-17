@@ -407,6 +407,31 @@ export const FASHIONBIZ_COST_ADJUSTMENT = Number.parseFloat(
 )
 
 /**
+ * Aussie Pacific Public API v1 (https://api.aussiepacific.com.au/docs/).
+ * Bearer token issued per-customer by AP. When the token is missing the
+ * module is not registered, so the importer/job become no-ops and dev
+ * environments without a token still boot cleanly.
+ *
+ * `AUSSIE_PACIFIC_COST_ADJUSTMENT` is the calibration dial for the retail
+ * price ladder. We currently assume AP's API `price` is ex-GST cost (same
+ * convention as AS Colour and the FashionBiz "1-99" tier), so default 1.0.
+ * Adjust per-environment if real invoices disagree.
+ *
+ * Workshop ship-to address for dropship orders is reused from the
+ * `ASCOLOUR_WORKSHOP_*` vars — same physical address. If AP ever needs a
+ * different destination introduce a parallel `AUSSIE_PACIFIC_WORKSHOP_*`
+ * set then.
+ */
+export const AUSSIE_PACIFIC_API_TOKEN = process.env.AUSSIE_PACIFIC_API_TOKEN
+export const AUSSIE_PACIFIC_BASE_URL =
+  process.env.AUSSIE_PACIFIC_BASE_URL || "https://api.aussiepacific.com.au"
+export const AUSSIE_PACIFIC_COST_ADJUSTMENT = Number.parseFloat(
+  process.env.AUSSIE_PACIFIC_COST_ADJUSTMENT || "1.0"
+)
+export const AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD =
+  process.env.AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD
+
+/**
  * Google Search Console + Google Analytics 4 (read-only).
  *
  * `GOOGLE_SERVICE_ACCOUNT_JSON` is the full JSON key for a service account.
