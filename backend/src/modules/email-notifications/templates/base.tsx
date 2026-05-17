@@ -1,4 +1,4 @@
-import { Html, Body, Container, Preview, Tailwind, Head, Section, Text } from '@react-email/components'
+import { Html, Body, Container, Preview, Tailwind, Head, Section, Text, Img } from '@react-email/components'
 import * as React from 'react'
 
 const NAVY = '#1a1a2e'
@@ -19,9 +19,12 @@ export const Base: React.FC<BaseProps> = ({ preview, children }) => {
           <Container style={{ maxWidth: '500px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 16px rgba(26,26,46,0.10)' }}>
             {/* Branded header bar */}
             <Section style={{ backgroundColor: NAVY, padding: '20px 28px', textAlign: 'center' }}>
-              <Text style={{ margin: 0, fontSize: '20px', fontWeight: 800, letterSpacing: '0.12em', color: '#ffffff' }}>
-                SC <Text style={{ display: 'inline', color: MAGENTA }}>PRINTS</Text>
-              </Text>
+              <Img
+                src="https://sc-prints.com.au/branding/sc-prints-logo-white.png"
+                alt="SC Prints"
+                width={160}
+                style={{ margin: '0 auto', display: 'block' }}
+              />
             </Section>
 
             {/* Email body */}
