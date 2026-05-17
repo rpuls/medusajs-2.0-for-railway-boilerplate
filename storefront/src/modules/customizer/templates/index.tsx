@@ -70,12 +70,13 @@ import { useCustomizeModeOptional } from "@modules/products/context/customize-mo
 import { sortApparelSizeLabels } from "@modules/products/lib/apparel-size-order"
 import {
   getGarmentImageUrlForPrintSide,
-  getPrimaryGarmentImageUrl,
+  getVariantOptionValue,
   isBeanieGarmentProduct,
+  isColorOptionTitle,
   isHatGarmentProduct,
   isLongSleeveGarmentProduct,
 } from "@modules/products/lib/variant-options"
-import { sampleImageDominantColor } from "@modules/customizer/lib/sample-image-color"
+import { resolveGarmentSwatchColor } from "@modules/products/lib/garment-swatch-colors"
 import { HttpTypes } from "@medusajs/types"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
@@ -1077,25 +1078,16 @@ export default function CustomizerTemplate({
     [selectedProduct, selectedVariant]
   )
 
-  // Sample the variant's front photo to get the dominant garment colour, used
-  // to tint the sleeve placeholder line drawings via CSS mix-blend-mode. Falls
-  // back silently to no tint if the image can't be read (e.g. CORS).
-  const variantPrimaryImageUrl = useMemo(
-    () => getPrimaryGarmentImageUrl(selectedProduct, selectedVariant) ?? defaultGarmentImage,
-    [selectedProduct, selectedVariant, defaultGarmentImage]
-  )
-  const [variantTintHex, setVariantTintHex] = useState<string | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    setVariantTintHex(null)
-    if (!variantPrimaryImageUrl) return
-    sampleImageDominantColor(variantPrimaryImageUrl).then((hex) => {
-      if (!cancelled) setVariantTintHex(hex)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [variantPrimaryImageUrl])
+  // Resolve the variant's garment colour from the colour option label using the
+  // same swatch table as the PDP. This avoids CORS issues with image sampling.
+  const variantTintHex = useMemo(() => {
+    if (!selectedProduct || !selectedVariant) return null
+    const colorOption = selectedProduct.options?.find((o) => isColorOptionTitle(o.title))
+    if (!colorOption?.title) return null
+    const label = getVariantOptionValue(selectedVariant, colorOption.title, selectedProduct)
+    if (!label) return null
+    return resolveGarmentSwatchColor(label)
+  }, [selectedProduct, selectedVariant])
 
   const nonSizeOptions = useMemo(
     () => (selectedProduct ? getNonSizeOptions(selectedProduct) : []),
