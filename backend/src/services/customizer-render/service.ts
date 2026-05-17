@@ -264,6 +264,49 @@ const tintSleevePlaceholder = async (
     .toBuffer()
 }
 
+// Matches CanvasStage: scale(3.2) with transform-origin: 50% 14%
+const TAG_ZOOM_SCALE = 3.2
+const TAG_ORIGIN_X = 0.5
+const TAG_ORIGIN_Y = 0.14
+
+/**
+ * For `printed_tag` the storefront zooms the garment image (CSS scale(3.2),
+ * transform-origin: 50% 14%) while leaving the Fabric canvas unscaled. The
+ * backend must replicate that crop so the artwork composite lands in the same
+ * relative position. Steps:
+ *   1. Apply object-cover (garmentCoverMatchCanvas) to get W×H.
+ *   2. Crop the tag-visible region: top-left (originX - 1/(2*scale), originY*(1-1/scale)),
+ *      size W/scale × H/scale.
+ *   3. Resize the crop back to W×H.
+ */
+const garmentTagViewMatchCanvas = async (
+  garmentBuffer: Buffer,
+  viewportWidth: number,
+  viewportHeight: number
+): Promise<Buffer> => {
+  // Step 1: object-cover crop
+  const covered = await garmentCoverMatchCanvas(garmentBuffer, viewportWidth, viewportHeight)
+
+  // Step 2: tag crop (exact inverse of the CSS transform)
+  const cropLeft = Math.round((TAG_ORIGIN_X - 1 / (2 * TAG_ZOOM_SCALE)) * viewportWidth)
+  const cropTop = Math.round(TAG_ORIGIN_Y * (1 - 1 / TAG_ZOOM_SCALE) * viewportHeight)
+  const cropWidth = Math.round(viewportWidth / TAG_ZOOM_SCALE)
+  const cropHeight = Math.round(viewportHeight / TAG_ZOOM_SCALE)
+
+  // Clamp to safe bounds
+  const left = Math.max(0, cropLeft)
+  const top = Math.max(0, cropTop)
+  const width = Math.min(cropWidth, viewportWidth - left)
+  const height = Math.min(cropHeight, viewportHeight - top)
+
+  // Step 3: resize back to canvas dimensions
+  return sharp(covered)
+    .extract({ left, top, width, height })
+    .resize(viewportWidth, viewportHeight)
+    .png()
+    .toBuffer()
+}
+
 /**
  * Mirrors CSS `object-fit: cover`: center crop then resize to viewport (same as storefront img).
  */
@@ -395,7 +438,10 @@ export const renderMockupAsset = async (payload: RenderRequestPayload) => {
       const arrayBuffer = await response.arrayBuffer()
       let rawGarment = Buffer.from(arrayBuffer)
       if (canvasDims?.width && canvasDims?.height) {
-        garmentBase = await garmentCoverMatchCanvas(rawGarment, canvasDims.width, canvasDims.height)
+        garmentBase =
+          payload.side === "printed_tag"
+            ? await garmentTagViewMatchCanvas(rawGarment, canvasDims.width, canvasDims.height)
+            : await garmentCoverMatchCanvas(rawGarment, canvasDims.width, canvasDims.height)
         mockupWidth = canvasDims.width
         mockupHeight = canvasDims.height
       } else {
