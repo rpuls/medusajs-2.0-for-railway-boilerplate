@@ -362,13 +362,51 @@ export default function CustomizerGuide({
         typeof document !== "undefined" &&
         createPortal(
           <>
-            {/* Backdrop dismiss layer */}
-            <div
-              className="fixed inset-0 cursor-pointer"
-              style={{ zIndex: 9988 }}
-              onClick={() => handleClose("backdrop")}
-              aria-hidden="true"
-            />
+            {/*
+              Backdrop dismiss: 4 quadrant divs covering only the dark area,
+              leaving the spotlight region uncovered so clicks reach the real
+              step cards underneath.
+            */}
+            {cutout ? (
+              <>
+                {/* Top strip */}
+                <div
+                  className="fixed cursor-pointer"
+                  style={{ zIndex: 9988, top: 0, left: 0, right: 0, height: cutout.y }}
+                  onClick={() => handleClose("backdrop")}
+                  aria-hidden="true"
+                />
+                {/* Bottom strip */}
+                <div
+                  className="fixed cursor-pointer"
+                  style={{ zIndex: 9988, top: cutout.y + cutout.height, left: 0, right: 0, bottom: 0 }}
+                  onClick={() => handleClose("backdrop")}
+                  aria-hidden="true"
+                />
+                {/* Left strip (between top and bottom) */}
+                <div
+                  className="fixed cursor-pointer"
+                  style={{ zIndex: 9988, top: cutout.y, height: cutout.height, left: 0, width: cutout.x }}
+                  onClick={() => handleClose("backdrop")}
+                  aria-hidden="true"
+                />
+                {/* Right strip (between top and bottom) */}
+                <div
+                  className="fixed cursor-pointer"
+                  style={{ zIndex: 9988, top: cutout.y, height: cutout.height, left: cutout.x + cutout.width, right: 0 }}
+                  onClick={() => handleClose("backdrop")}
+                  aria-hidden="true"
+                />
+              </>
+            ) : (
+              /* Fallback full-screen dismiss before first rect is measured */
+              <div
+                className="fixed inset-0 cursor-pointer"
+                style={{ zIndex: 9988 }}
+                onClick={() => handleClose("backdrop")}
+                aria-hidden="true"
+              />
+            )}
 
             {/* SVG spotlight mask */}
             {cutout && (
