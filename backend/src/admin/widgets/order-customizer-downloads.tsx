@@ -64,14 +64,6 @@ function formatDate(iso: string): string {
   return new Date(ts).toLocaleString()
 }
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-
 // ─── Per-side mockup + proof history card ────────────────────────────────────
 
 type SideProofCardProps = {
@@ -81,7 +73,7 @@ type SideProofCardProps = {
   proofsForSide: RevisedProof[]
   customerOriginalFileUrl?: string | null
   onProofsChange: (updated: RevisedProof[]) => void
-  onCustomisePosition: ((artworkUrl: string) => void) | null
+  onCustomisePosition: ((artworkUrl: string | null) => void) | null
 }
 
 const SideProofCard = ({
@@ -94,16 +86,12 @@ const SideProofCard = ({
   onCustomisePosition,
 }: SideProofCardProps) => {
   const key = sideKey(lineItemId, art.side)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Default to latest proof, or "original"
   const [selected, setSelected] = useState<string>(
     proofsForSide.length > 0 ? proofsForSide[proofsForSide.length - 1].id : "original"
   )
-  const [note, setNote] = useState("")
-  const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   // Keep selected in sync when proofs reload
   useEffect(() => {
@@ -126,49 +114,16 @@ const SideProofCard = ({
       ? (customerOriginalFileUrl ?? art.print_url)
       : (selectedProof?.artwork_url ?? selectedProof?.url ?? customerOriginalFileUrl ?? art.print_url)
 
-  // Artwork URL to load into the customiser for re-positioning
+  // Artwork URL to pre-load into the customiser (latest proof artwork, or original upload, or print PNG)
   const artworkForCustomiser =
     selectedProof?.artwork_url ?? customerOriginalFileUrl ?? art.print_url ?? null
 
-  const handleUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
-      e.target.value = ""
-      setUploading(true)
-      setError(null)
-      try {
-        const dataUrl = await fileToBase64(file)
-        const res = await fetch(adminProofPath(orderId), {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            line_item_id: lineItemId,
-            side: art.side,
-            filename: file.name,
-            mime_type: file.type || "image/jpeg",
-            data_base64: dataUrl,
-            note: note.trim() || undefined,
-          }),
-        })
-        const body = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(body?.error ?? body?.message ?? `HTTP ${res.status}`)
-        onProofsChange(body.proofs ?? [])
-        setNote("")
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Upload failed")
-      } finally {
-        setUploading(false)
-      }
-    },
-    [orderId, lineItemId, art.side, note, onProofsChange]
-  )
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleDelete = useCallback(
     async (proofId: string) => {
       setDeletingId(proofId)
-      setError(null)
+      setDeleteError(null)
       try {
         const res = await fetch(`${adminProofPath(orderId)}?id=${encodeURIComponent(proofId)}`, {
           method: "DELETE",
@@ -180,7 +135,7 @@ const SideProofCard = ({
         onProofsChange(body.proofs ?? [])
         setSelected("original")
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Delete failed")
+        setDeleteError(err instanceof Error ? err.message : "Delete failed")
       } finally {
         setDeletingId(null)
       }
@@ -234,46 +189,19 @@ const SideProofCard = ({
               </a>
             )}
 
-            {/* Upload revised proof */}
-            <div className="border-t border-ui-border-base pt-2 flex flex-col gap-y-1 mt-auto">
-              <Text size="xsmall" weight="plus">Upload revised proof</Text>
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Note (e.g. shifted logo 5mm left)"
-                disabled={uploading}
-                className="w-full rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-1.5 text-xsmall text-ui-fg-base placeholder:text-ui-fg-muted focus:outline-none focus:ring-1 focus:ring-ui-fg-interactive disabled:opacity-60"
-              />
-              {error && (
-                <Text size="xsmall" className="text-ui-fg-error">{error}</Text>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleUpload}
-              />
-              <Button
-                variant="secondary"
-                size="small"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? "Uploading…" : proofsForSide.length > 0 ? "Upload revised proof" : "Upload proof"}
-              </Button>
-              {/* Customise position button — opens storefront customiser iframe */}
-              {onCustomisePosition && artworkForCustomiser ? (
+            {/* Customise position — single action, routes all proof creation through the iframe */}
+            {onCustomisePosition ? (
+              <div className="border-t border-ui-border-base pt-2 mt-auto">
                 <Button
                   variant="secondary"
                   size="small"
+                  className="w-full"
                   onClick={() => onCustomisePosition(artworkForCustomiser)}
                 >
-                  Customise position
+                  {proofsForSide.length > 0 ? "Customise proof position" : "Create revised proof"}
                 </Button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -327,6 +255,9 @@ const SideProofCard = ({
                   )}
                 </div>
               ) : null}
+              {deleteError && (
+                <Text size="xsmall" className="text-ui-fg-error">{deleteError}</Text>
+              )}
 
               {/* Mockup label + download link */}
               <div>
@@ -538,17 +469,17 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
   const buildCustomiserSrc = (
     line: LinePayload,
     art: ArtifactPayload,
-    artworkUrl: string
+    artworkUrl: string | null
   ): string | null => {
     if (!storefrontUrl || !line.product_handle || !line.variant_id) return null
     const base = `${storefrontUrl}/${countryCode}/customizer`
-    const params = new URLSearchParams({
+    const params: Record<string, string> = {
       product: line.product_handle,
       variant: line.variant_id,
       adminProof: `${orderId}:${line.line_item_id}:${art.side}`,
-      proofArtwork: encodeURIComponent(artworkUrl),
-    })
-    return `${base}?${params.toString()}`
+    }
+    if (artworkUrl) params.proofArtwork = encodeURIComponent(artworkUrl)
+    return `${base}?${new URLSearchParams(params).toString()}`
   }
 
   return (
@@ -675,7 +606,7 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
                           line.customer_original_files?.[0]?.url ?? null
 
                         // Build customiser URL — requires storefront URL + product handle + variant ID
-                        const makeCustomiserCb = (artworkUrl: string) => {
+                        const makeCustomiserCb = (artworkUrl: string | null) => {
                           const src = buildCustomiserSrc(line, art, artworkUrl)
                           if (src) setModalSrc(src)
                         }
