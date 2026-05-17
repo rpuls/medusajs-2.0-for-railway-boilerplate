@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 
 import { listStoreProductTags, listStoreProductTypes } from "@lib/data/catalog-facets"
-import { listBrands } from "@lib/data/brands"
+import { listBrands, retrieveBrandByHandle } from "@lib/data/brands"
 import AsColourStoreUgcMasonry from "@modules/brands/components/as-colour-store-ugc-masonry"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
@@ -47,11 +47,30 @@ const StoreTemplate = async ({
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
-  const [productTypes, productTags, brands] = await Promise.all([
+  // Derive a candidate handle from the URL brand param so we can fetch product IDs
+  // in parallel with other data (before listBrands resolves). Converts "AS Colour" →
+  // "as-colour", "Biz Collection" → "biz-collection", etc.
+  const brandHandleGuess = brand
+    ? brand.trim().toLowerCase().replace(/\s+/g, "-")
+    : null
+
+  const [productTypes, productTags, brands, brandData] = await Promise.all([
     listStoreProductTypes(),
     listStoreProductTags(),
     listBrands(),
+    brandHandleGuess
+      ? retrieveBrandByHandle(brandHandleGuess)
+      : Promise.resolve({ brand: null, children: [], product_ids: [] }),
   ])
+
+  // product_ids from the brand route is server-side brand filtering — avoids relying on
+  // Medusa's *brand field expansion which only resolves for 1 product per brand entity.
+  const brandProductIds: string[] | undefined =
+    brandData.brand != null
+      ? brandData.product_ids.length > 0
+        ? brandData.product_ids
+        : ["__no_match__"]
+      : undefined
 
   const matchedBrand = brand
     ? brands.find(
@@ -116,10 +135,11 @@ const StoreTemplate = async ({
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
+            productsIds={brandProductIds}
             minPrice={minPrice}
             maxPrice={maxPrice}
             inStock={inStock}
-            brand={brand}
+            brand={brandProductIds !== undefined ? undefined : brand}
             fabric={fabric}
             tagId={tagId}
             typeId={typeId}

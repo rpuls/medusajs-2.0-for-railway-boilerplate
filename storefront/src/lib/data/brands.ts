@@ -19,6 +19,7 @@ type BrandsListResponse = {
 type BrandRetrieveResponse = {
   brand: StorefrontBrand
   children: StorefrontBrand[]
+  product_ids?: string[]
 }
 
 const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
@@ -46,16 +47,17 @@ export const listBrands = cache(async function (): Promise<StorefrontBrand[]> {
 export async function retrieveBrandByHandle(handle: string): Promise<{
   brand: StorefrontBrand | null
   children: StorefrontBrand[]
+  product_ids: string[]
 }> {
   try {
     const res = await fetch(`${MEDUSA_BACKEND_URL}/store/brands/${encodeURIComponent(handle)}`, {
       headers: brandHeaders(),
-      next: { tags: ["brands", `brand-${handle}`], revalidate: 600 },
+      next: { tags: ["brands", `brand-${handle}`], revalidate: 120 },
     })
-    if (!res.ok) return { brand: null, children: [] }
+    if (!res.ok) return { brand: null, children: [], product_ids: [] }
     const data = (await res.json()) as BrandRetrieveResponse
-    return { brand: data.brand ?? null, children: data.children ?? [] }
+    return { brand: data.brand ?? null, children: data.children ?? [], product_ids: data.product_ids ?? [] }
   } catch {
-    return { brand: null, children: [] }
+    return { brand: null, children: [], product_ids: [] }
   }
 }
