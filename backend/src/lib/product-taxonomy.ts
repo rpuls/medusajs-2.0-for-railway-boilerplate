@@ -537,12 +537,45 @@ export function classifyAussiePacificProduct(
   >,
   unknownLog?: string[]
 ): { productType: string | null; tags: string[] } {
-  // Strict alias lookup — no title-case fallback. "Ladies" / "Mens" /
-  // "Kids" never become Types this way.
+  // Demographic tokens that should NEVER become a productType, even though
+  // some of them ("kids") are also in PRODUCT_TYPE_ALIASES.
+  const DEMOGRAPHIC_KEYS = new Set([
+    "ladies",
+    "lady",
+    "women",
+    "womens",
+    "woman",
+    "mens",
+    "men",
+    "kids",
+    "kid",
+    "youth",
+    "youths",
+    "children",
+    "child",
+    "boys",
+    "boy",
+    "girls",
+    "girl",
+    "unisex",
+  ])
+
+  // Lookup a productType from a raw string. First try exact alias; if that
+  // fails, split into tokens and return the first GARMENT (non-demographic)
+  // token that resolves. This handles AP's compound sub_categories like
+  // "Kids Polos" → "Polos", "Mens T-Shirts" → "T-Shirts", "Womens Tees" →
+  // "T-Shirts".
   const lookupType = (raw: string | null | undefined): string | null => {
     if (!raw?.trim()) return null
     const key = raw.trim().toLowerCase()
-    return PRODUCT_TYPE_ALIASES[key] ?? null
+    const exact = PRODUCT_TYPE_ALIASES[key]
+    if (exact && !DEMOGRAPHIC_KEYS.has(key)) return exact
+    for (const token of key.split(/[\s\-_/]+/).filter(Boolean)) {
+      if (DEMOGRAPHIC_KEYS.has(token)) continue
+      const t = PRODUCT_TYPE_ALIASES[token]
+      if (t) return t
+    }
+    return null
   }
   // sub_category first (more specific), main_category second.
   const productType =
@@ -568,22 +601,47 @@ export function classifyAussiePacificProduct(
   // shape.
   const DEMOGRAPHIC_TO_TAG: Record<string, string> = {
     ladies: "Women",
+    lady: "Women",
     women: "Women",
     womens: "Women",
+    woman: "Women",
     mens: "Men",
     men: "Men",
     kids: "Kids",
+    kid: "Kids",
     youth: "Kids",
+    youths: "Kids",
     children: "Kids",
+    child: "Kids",
+    boys: "Kids",
+    boy: "Kids",
+    girls: "Kids",
+    girl: "Kids",
     unisex: "Unisex",
   }
   const tags: string[] = []
   const seenTags = new Set<string>()
-  const mainKey = (product.main_category ?? "").trim().toLowerCase()
-  const demographicTag = DEMOGRAPHIC_TO_TAG[mainKey]
-  if (demographicTag && !seenTags.has(demographicTag)) {
-    seenTags.add(demographicTag)
-    tags.push(demographicTag)
+  // Look for demographic tokens in BOTH main_category and sub_category.
+  // Examples: main="Kids", sub="Kids Polos" → tag "Kids"; main="Polos",
+  // sub="Mens Polos" → tag "Men".
+  for (const raw of [product.main_category, product.sub_category]) {
+    const key = (raw ?? "").trim().toLowerCase()
+    if (!key) continue
+    // Exact match first.
+    const exactTag = DEMOGRAPHIC_TO_TAG[key]
+    if (exactTag && !seenTags.has(exactTag)) {
+      seenTags.add(exactTag)
+      tags.push(exactTag)
+      continue
+    }
+    // Token split for compounds ("Kids Polos", "Mens-Polos").
+    for (const token of key.split(/[\s\-_/]+/).filter(Boolean)) {
+      const t = DEMOGRAPHIC_TO_TAG[token]
+      if (t && !seenTags.has(t)) {
+        seenTags.add(t)
+        tags.push(t)
+      }
+    }
   }
 
   return { productType, tags }

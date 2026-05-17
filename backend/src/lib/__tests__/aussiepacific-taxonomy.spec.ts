@@ -82,6 +82,51 @@ describe("classifyAussiePacificProduct", () => {
     expect(result.tags).not.toContain("Shirts")
   })
 
+  it("resolves productType from compound sub_category strings, skipping demographic tokens", () => {
+    // Real example from the live API: "Botany Kids Polos - N3307" with
+    // main_category="Kids", sub_category="Kids Polos". Should resolve to
+    // Polos (not Kids).
+    const kidsPolos = classifyAussiePacificProduct({
+      main_category: "Kids",
+      sub_category: "Kids Polos",
+      style: "Botany",
+      style_code: "3307",
+    })
+    expect(kidsPolos.productType).toBe("Polos")
+    expect(kidsPolos.tags).toContain("Kids")
+    expect(kidsPolos.tags).not.toContain("Polos")
+
+    const mensTees = classifyAussiePacificProduct({
+      main_category: "Mens",
+      sub_category: "Mens Tees",
+      style: "Whatever",
+      style_code: "5050",
+    })
+    expect(mensTees.productType).toBe("T-Shirts")
+    expect(mensTees.tags).toContain("Men")
+
+    const womensPolos = classifyAussiePacificProduct({
+      main_category: "Ladies",
+      sub_category: "Womens Polos",
+      style: "Whatever",
+      style_code: "5060",
+    })
+    expect(womensPolos.productType).toBe("Polos")
+    expect(womensPolos.tags).toContain("Women")
+  })
+
+  it("picks demographic tag from sub_category when main_category isn't demographic", () => {
+    // Hypothetical AP shape where sub_category carries the demographic.
+    const result = classifyAussiePacificProduct({
+      main_category: "Polos",
+      sub_category: "Kids Polos",
+      style: "Botany",
+      style_code: "3307K",
+    })
+    expect(result.productType).toBe("Polos")
+    expect(result.tags).toContain("Kids")
+  })
+
   it("leaves productType null and logs when neither category resolves", () => {
     const log: string[] = []
     const result = classifyAussiePacificProduct(
