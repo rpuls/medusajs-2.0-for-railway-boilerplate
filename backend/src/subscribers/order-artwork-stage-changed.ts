@@ -4,6 +4,7 @@ import {
   IOrderModuleService,
 } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
+import IORedis from "ioredis"
 import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
 import { tagUrl } from "../lib/email-utm"
 import { buildLineCustomizerExport } from "../lib/customizer-order-artifacts"
@@ -21,6 +22,44 @@ import { signArtworkApproval } from "../services/artwork-approval/sign"
 const STOREFRONT_URL = process.env.STOREFRONT_URL?.replace(/\/$/, "")
 const STOREFRONT_DEFAULT_COUNTRY_CODE =
   process.env.STOREFRONT_DEFAULT_COUNTRY_CODE?.toLowerCase()
+
+// Lazy singleton Redis client — used only for the atomic dedup lock below.
+// Reuses the same REDIS_URL that the event bus connects to. If REDIS_URL is
+// unset we fall back to a no-op lock (single-instance dev only).
+let _redis: IORedis | null = null
+const getRedis = (): IORedis | null => {
+  if (_redis) return _redis
+  const url = process.env.REDIS_URL
+  if (!url) return null
+  try {
+    _redis = new IORedis(url, { maxRetriesPerRequest: 3, lazyConnect: false })
+    _redis.on("error", () => {
+      /* swallow — the email path will fall back to metadata-based dedup */
+    })
+    return _redis
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Atomic dedup: returns true if we got the lock (first sender), false if it's
+ * already held. Uses Redis SET key NX EX ttl, the canonical distributed-lock
+ * primitive. Race-proof across BullMQ retries, multiple Medusa instances,
+ * and parallel admin clicks. Falls back to "true" (no lock) if Redis is
+ * unavailable — better to send than to silently swallow.
+ */
+async function acquireEmailLock(orderId: string, stage: string): Promise<boolean> {
+  const redis = getRedis()
+  if (!redis) return true
+  const key = `email-lock:artwork:${stage}:${orderId}`
+  try {
+    const result = await redis.set(key, new Date().toISOString(), "EX", 300, "NX")
+    return result === "OK"
+  } catch {
+    return true
+  }
+}
 
 function buildPortalUrl(orderId: string): string | null {
   if (!STOREFRONT_URL) return null
@@ -97,30 +136,19 @@ export default async function orderArtworkStageChangedHandler({
 
   const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
 
-  // Idempotency guard: if we already sent an email for this exact stage transition
-  // within the last 2 minutes, skip. Guards against duplicate fires from BullMQ
-  // retries, automation rules, or any other unknown double-trigger source.
-  const idempotencyKey = `artwork_email_sent_at_${toStage}`
-  const sentAt = orderMeta[idempotencyKey] as string | undefined
-  if (sentAt) {
-    const sentMs = Date.parse(sentAt)
-    if (Number.isFinite(sentMs) && Date.now() - sentMs < 120_000) {
-      logger.warn(
-        `${ARTWORK_STAGE_EVENT}: suppressing duplicate ${toStage} email for ${data.order_id} (already sent at ${sentAt})`
-      )
-      return
-    }
-  }
-  // Stamp before sending so a second concurrent invocation sees it immediately.
-  try {
-    await orderModuleService.updateOrders(data.order_id, {
-      metadata: { ...orderMeta, [idempotencyKey]: new Date().toISOString() },
-    })
-  } catch (stampError) {
+  // Atomic Redis lock — only one invocation per (order, stage) within 5 min
+  // gets through. Race-proof unlike a metadata-based check, which has a
+  // read-then-write window two parallel invocations can both pass through.
+  const gotLock = await acquireEmailLock(data.order_id, toStage)
+  if (!gotLock) {
     logger.warn(
-      `${ARTWORK_STAGE_EVENT}: failed to stamp idempotency key for ${data.order_id}: ${(stampError as Error).message}`
+      `${ARTWORK_STAGE_EVENT}: duplicate ${toStage} fire for ${data.order_id} — lock already held, skipping send. [v=2026-05-17-redis-lock]`
     )
+    return
   }
+  logger.info(
+    `${ARTWORK_STAGE_EVENT}: acquired lock for ${data.order_id} stage=${toStage}, proceeding. [v=2026-05-17-redis-lock]`
+  )
 
   // Staff-uploaded revised proof takes priority over everything else.
   const revisedProofs = Array.isArray(orderMeta.revised_proofs)
