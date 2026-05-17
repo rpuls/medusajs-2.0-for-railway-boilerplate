@@ -93,7 +93,15 @@ export class AussiePacificClient {
     const search = new URLSearchParams()
     search.set("page", String(params.page ?? 1))
     search.set("limit", String(params.limit ?? 250))
-    search.set("include", params.include ?? "variants,images")
+    // When `include` is undefined we pass the default; when it's an empty
+    // string we OMIT the param entirely so AP's server-side validation
+    // doesn't reject `include=` as an invalid value. (Observed: AP returns
+    // 500 on `include=`.)
+    if (params.include === undefined) {
+      search.set("include", "variants,images")
+    } else if (params.include !== "") {
+      search.set("include", params.include)
+    }
     return this.sendRequest<AussiePacificListResponse>(
       `/api/v1/products?${search.toString()}`
     )

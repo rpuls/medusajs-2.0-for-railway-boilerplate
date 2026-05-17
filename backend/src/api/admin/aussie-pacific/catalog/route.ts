@@ -42,7 +42,16 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     req.query.include_discontinued === "true"
 
   // Fetch all stubs from AP API (no variants/images for speed).
-  let stubs = await ap.fetchAllProductStubs()
+  let stubs
+  try {
+    stubs = await ap.fetchAllProductStubs()
+  } catch (err: any) {
+    const msg = err?.message ?? String(err)
+    console.error(`[aussie-pacific/catalog] fetchAllProductStubs failed:`, msg)
+    return res.status(502).json({
+      error: `Aussie Pacific catalog fetch failed: ${msg}`,
+    })
+  }
 
   // Filter discontinued unless explicitly requested.
   if (!includeDiscontinued) {

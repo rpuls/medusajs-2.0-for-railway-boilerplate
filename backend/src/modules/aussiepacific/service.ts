@@ -79,18 +79,19 @@ export default class AussiePacificService {
   }
 
   /**
-   * Lightweight variant of `fetchAllProducts` that omits variants/images
-   * for fast catalog browsing in the admin UI. Returns only top-level
-   * product fields (name, style_code, main_category, sub_category,
-   * style, run_out, brand, description). ~10x faster than fetchAllProducts.
+   * Lightweight variant of `fetchAllProducts` that skips images for
+   * fast catalog browsing in the admin UI. Returns top-level product
+   * fields plus variants (AP's default — they don't seem to support
+   * fully omitting variants), but no images.
+   *
+   * Passes `include: ""` which the client converts to "omit the param
+   * entirely", letting AP fall back to its default response shape.
+   * Sending `include=` literally to AP triggers a 500.
    */
   async fetchAllProductStubs(): Promise<AussiePacificProduct[]> {
     const all: AussiePacificProduct[] = []
     let page = 1
     while (true) {
-      // Empty `include` skips the heavy nested data. AP defaults to
-      // returning variants if include is omitted, so we pass an explicit
-      // empty string.
       const resp = await this.client_.getProducts({
         page,
         limit: PAGE_SIZE,
