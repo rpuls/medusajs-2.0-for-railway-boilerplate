@@ -85,6 +85,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import { motion } from "framer-motion"
 import { trackCustomizerAction, trackCustomizerFunnel } from "@lib/analytics"
 import { phCapture } from "@lib/posthog"
+import CustomizerGuide from "@modules/customizer/components/customizer-guide"
 import * as fabric from "fabric"
 import { FabricImage } from "fabric"
 
@@ -594,6 +595,11 @@ export default function CustomizerTemplate({
   /** Host div only — canvas is created imperatively so Fabric can replace/wrap it without breaking React siblings (garment img). */
   const fabricContainerRef = useRef<HTMLDivElement | null>(null)
   const htmlCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const step1Ref = useRef<HTMLDivElement | null>(null)
+  const step2Ref = useRef<HTMLDivElement | null>(null)
+  const step3Ref = useRef<HTMLDivElement | null>(null)
+  const step4Ref = useRef<HTMLDivElement | null>(null)
+  const sidebarScrollRef = useRef<HTMLDivElement | null>(null)
 
   /**
    * Resolver for EmbroiderySideConfig — returns a data URL of the artwork
@@ -737,6 +743,7 @@ export default function CustomizerTemplate({
   const [pdpStep, setPdpStep] = useState<1 | 2 | 3 | 4>(1)
   const [pdpStep1Done, setPdpStep1Done] = useState(false)
   const [pdpStep2Done, setPdpStep2Done] = useState(false)
+  const [showGuidePulse, setShowGuidePulse] = useState(false)
   // Record<GarmentSide, true> avoids Set spread which requires es2015+ target.
   const [sizingDoneSides, setSizingDoneSides] = useState<Partial<Record<GarmentSide, true>>>({})
   // pdpStep3Done: true once at least one side is sized — gates the upload panel
@@ -827,6 +834,14 @@ export default function CustomizerTemplate({
   useEffect(() => {
     effectivePrintSizeIdRef.current = effectivePrintSizeIdForArea
   }, [effectivePrintSizeIdForArea])
+  // Briefly pulse the "Need help?" trigger on first load to draw attention
+  useEffect(() => {
+    if (!embedded || pdpStep1Done || pdpStep > 1) return
+    setShowGuidePulse(true)
+    const t = setTimeout(() => setShowGuidePulse(false), 4000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Load any artwork the customer has already attached to other cart items
   // (e.g. via the bundle wizard) so the InputPanel can offer a one-click
@@ -3914,14 +3929,25 @@ export default function CustomizerTemplate({
 
           {editorColumn}
         </div>
-        <div className={`order-1 lg:order-none flex min-w-0 flex-col gap-2 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto transition-[grid-column] duration-300 ease-in-out ${
+        <div ref={sidebarScrollRef} className={`order-1 lg:order-none flex min-w-0 flex-col gap-2 self-start lg:sticky lg:top-24 lg:pr-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto transition-[grid-column] duration-300 ease-in-out ${
           isCustomizing ? "lg:col-span-5" : "lg:col-span-3"
         }`}>
           <div className="space-y-1 border-b border-ui-border-base pb-3">
-            <p className="text-xl font-semibold text-ui-fg-base">Customize and checkout</p>
-            <p className="text-xs text-ui-fg-subtle">
-              We'll guide you through each step.
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xl font-semibold text-ui-fg-base">Customize and checkout</p>
+                <p className="text-xs text-ui-fg-subtle">We'll guide you through each step.</p>
+              </div>
+              {embedded ? (
+                <CustomizerGuide
+                  pdpStep={pdpStep}
+                  hasStep1={hasStep1}
+                  stepRefs={{ step1: step1Ref, step2: step2Ref, step3: step3Ref, step4: step4Ref }}
+                  sidebarScrollRef={sidebarScrollRef}
+                  showTriggerPulse={showGuidePulse}
+                />
+              ) : null}
+            </div>
           </div>
 
           {editLineItemId ? (
@@ -3975,7 +4001,7 @@ export default function CustomizerTemplate({
 
           {/* Step 1 — Product options (color/etc.) */}
           {hasStep1 ? (
-            <div className={`space-y-3 rounded-xl border p-4 ${
+            <div ref={step1Ref} className={`space-y-3 rounded-xl border p-4 ${
               pdpStep === 1
                 ? "border-ui-fg-base bg-ui-bg-base shadow-sm"
                 : "border-ui-border-base bg-ui-bg-subtle/40"
@@ -4041,6 +4067,7 @@ export default function CustomizerTemplate({
               const totalAllowed = allowedPrintSides.length
               return (
                 <motion.div
+                  ref={step2Ref}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
@@ -4179,6 +4206,7 @@ export default function CustomizerTemplate({
           {/* Step 3 — Print size */}
           {pdpStep >= 3 ? (
             <motion.div
+              ref={step3Ref}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
@@ -4358,6 +4386,7 @@ export default function CustomizerTemplate({
           {/* Step 4 — Quantities, notes & checkout */}
           {pdpStep >= 4 ? (
             <motion.div
+              ref={step4Ref}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
