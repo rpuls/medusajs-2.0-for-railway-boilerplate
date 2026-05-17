@@ -25,6 +25,16 @@ export default defineMiddlewares({
       bodyParser: { sizeLimit: CUSTOMIZER_BODY_LIMIT },
     },
     {
+      matcher: "/admin/orders/:id/revised-proof",
+      methods: ["POST"],
+      bodyParser: { sizeLimit: "12mb" },
+    },
+    {
+      matcher: "/admin/orders/:id/production-photos",
+      methods: ["POST"],
+      bodyParser: { sizeLimit: "12mb" },
+    },
+    {
       matcher: "/store/carts/:id/scp-line-items",
       methods: ["POST"],
       bodyParser: { sizeLimit: "4mb" },
