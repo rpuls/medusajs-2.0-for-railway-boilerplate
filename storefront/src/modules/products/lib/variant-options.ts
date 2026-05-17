@@ -204,6 +204,70 @@ export function isHatGarmentProduct(
   )
 }
 
+const PUFFER_META_KEYS = [
+  "garment_type",
+  "style",
+  "product_type",
+  "category",
+  "apparel_category",
+] as const
+
+/**
+ * Puffer / insulated jackets — heat-applied decoration (DTF, screen) damages
+ * the fill, so the customizer locks these to embroidery-only.
+ *
+ * Detection covers the obvious "puffer" naming plus the broader vocabulary
+ * suppliers use for the same construction: "quilted", "down(-filled/jacket)",
+ * "padded jacket/vest/gilet/bodywarmer", "insulated jacket/vest/...". Standalone
+ * "padded" / "insulated" are excluded because they false-positive on shoulder
+ * padding and thermal liners. Searches `product.description` too — many products
+ * (e.g. "Womens Tailor Jacket" with a Quilted feature) hide the signal there.
+ */
+export function isPufferJacketProduct(
+  product: HttpTypes.StoreProduct | undefined | null
+): boolean {
+  if (!product) return false
+  const meta = (product.metadata ?? {}) as Record<string, unknown>
+  const metaString = (key: string): string | null => {
+    const v = meta[key]
+    return typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null
+  }
+  const PATTERN =
+    /\b(puffer|quilted|down[\s-]?(?:jacket|filled|fill|vest)|(?:padded|insulated)[\s-]?(?:jacket|vest|gilet|bodywarmer|coat|parka))\b/
+  const metaBlob = PUFFER_META_KEYS.map(metaString).filter(Boolean).join(" ")
+  if (PATTERN.test(metaBlob)) return true
+  const titleBlob = [product.title, product.handle, product.subtitle, product.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+  return PATTERN.test(titleBlob)
+}
+
+/**
+ * Vest / sleeveless garments — no sleeve sides should be offered for
+ * decoration. Detection mirrors the puffer/beanie pattern: metadata first,
+ * then a title/handle keyword fallback. The fallback uses a strict
+ * `\bvest(s)?\b` boundary so words like "investment" or "vested" don't
+ * misclassify.
+ */
+export function isVestGarmentProduct(
+  product: HttpTypes.StoreProduct | undefined | null
+): boolean {
+  if (!product) return false
+  const meta = (product.metadata ?? {}) as Record<string, unknown>
+  const metaString = (key: string): string | null => {
+    const v = meta[key]
+    return typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null
+  }
+  const metaBlob = PUFFER_META_KEYS.map(metaString).filter(Boolean).join(" ")
+  if (/\bvest(s)?\b/.test(metaBlob)) return true
+  const titleBlob = [product.title, product.handle, product.subtitle]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+  return /\bvest(s)?\b/.test(titleBlob)
+}
+
 function getSleevePlaceholderUrl(
   side: "left_sleeve" | "right_sleeve",
   product: HttpTypes.StoreProduct | undefined
