@@ -5,6 +5,8 @@ import { z } from "zod"
 import { ulid } from "ulid"
 
 const uploadSchema = z.object({
+  line_item_id: z.string().min(1),
+  side: z.string().min(1),
   filename: z.string().min(1).max(200),
   mime_type: z.string().min(1).max(80),
   data_base64: z.string().min(1),
@@ -15,6 +17,8 @@ const MAX_BYTES = 8 * 1024 * 1024 // 8 MB
 
 export type RevisedProof = {
   id: string
+  line_item_id: string
+  side: string
   url: string
   filename: string
   mime_type: string
@@ -69,7 +73,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     ) => Promise<Array<{ id: string; url: string }>>
   }
 
-  const safeName = `revised-proofs/${orderId}/${Date.now()}-${parsed.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+  const safeName = `revised-proofs/${orderId}/${parsed.side}/${Date.now()}-${parsed.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`
   let uploaded: Array<{ id: string; url: string }>
   try {
     uploaded = await fileModuleService.createFiles([
@@ -97,6 +101,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const proof: RevisedProof = {
     id: ulid(),
+    line_item_id: parsed.line_item_id,
+    side: parsed.side,
     url: uploaded[0].url,
     filename: parsed.filename,
     mime_type: parsed.mime_type,

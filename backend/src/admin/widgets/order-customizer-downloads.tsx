@@ -1,14 +1,18 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
-import { Badge, Button, Container, Heading, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Select, Text } from "@medusajs/ui"
 import { ChevronDown } from "@medusajs/icons"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { HelpTooltip } from "../components/reports/help-tooltip"
+import type { RevisedProof } from "../../api/admin/orders/[id]/revised-proof/route"
 
 function adminCustomizerDownloadPath(orderId: string) {
   return `/admin/orders/${orderId}/customizer-download`
+}
+function adminProofPath(orderId: string) {
+  return `/admin/orders/${orderId}/revised-proof`
 }
 
 type ArtifactPayload = {
@@ -41,12 +45,283 @@ type DownloadPayload = {
   lines?: LinePayload[]
 }
 
+function sideKey(lineItemId: string, side: string) {
+  return `${lineItemId}:${side}`
+}
+
 function lineHeading(line: LinePayload) {
   const product = line.product_title || line.title || "Product"
   const variant =
     line.variant_title && typeof line.variant_title === "string" ? line.variant_title : null
   return variant ? `${product} · ${variant}` : product
 }
+
+function formatDate(iso: string): string {
+  const ts = Date.parse(iso)
+  if (!Number.isFinite(ts)) return "—"
+  return new Date(ts).toLocaleString()
+}
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+
+// ─── Per-side mockup + proof history card ────────────────────────────────────
+
+type SideProofCardProps = {
+  orderId: string
+  lineItemId: string
+  art: ArtifactPayload
+  proofsForSide: RevisedProof[]
+  onProofsChange: (updated: RevisedProof[]) => void
+}
+
+const SideProofCard = ({
+  orderId,
+  lineItemId,
+  art,
+  proofsForSide,
+  onProofsChange,
+}: SideProofCardProps) => {
+  const key = sideKey(lineItemId, art.side)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Default to latest proof, or "original"
+  const [selected, setSelected] = useState<string>(
+    proofsForSide.length > 0 ? proofsForSide[proofsForSide.length - 1].id : "original"
+  )
+  const [note, setNote] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  // Keep selected in sync when proofs reload (e.g. after upload/delete from parent)
+  useEffect(() => {
+    setSelected(
+      proofsForSide.length > 0 ? proofsForSide[proofsForSide.length - 1].id : "original"
+    )
+  }, [proofsForSide])
+
+  const displayedUrl =
+    selected === "original"
+      ? art.mockup_url
+      : (proofsForSide.find((p) => p.id === selected)?.url ?? art.mockup_url)
+
+  const handleUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      e.target.value = ""
+      setUploading(true)
+      setError(null)
+      try {
+        const dataUrl = await fileToBase64(file)
+        const res = await fetch(adminProofPath(orderId), {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            line_item_id: lineItemId,
+            side: art.side,
+            filename: file.name,
+            mime_type: file.type || "image/jpeg",
+            data_base64: dataUrl,
+            note: note.trim() || undefined,
+          }),
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`)
+        onProofsChange(body.proofs ?? [])
+        setNote("")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed")
+      } finally {
+        setUploading(false)
+      }
+    },
+    [orderId, lineItemId, art.side, note, onProofsChange]
+  )
+
+  const handleDelete = useCallback(
+    async (proofId: string) => {
+      setDeletingId(proofId)
+      setError(null)
+      try {
+        const res = await fetch(`${adminProofPath(orderId)}?id=${encodeURIComponent(proofId)}`, {
+          method: "DELETE",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body?.error ?? `HTTP ${res.status}`)
+        onProofsChange(body.proofs ?? [])
+        setSelected("original")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Delete failed")
+      } finally {
+        setDeletingId(null)
+      }
+    },
+    [orderId, onProofsChange]
+  )
+
+  return (
+    <li
+      key={key}
+      className="rounded-md bg-ui-bg-subtle px-3 py-2"
+    >
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3">
+        <Text size="xsmall" weight="plus">
+          {art.side_label}
+        </Text>
+        {art.print_url_inline_omitted ? (
+          <Badge size="2xsmall" color="orange">Print file too large (inline)</Badge>
+        ) : null}
+        {art.mockup_url_inline_omitted ? (
+          <Badge size="2xsmall" color="orange">Mockup too large (inline)</Badge>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Print PNG — static, no history */}
+        {art.print_url ? (
+          <div className="rounded-lg border border-ui-border-base bg-ui-bg-base overflow-hidden">
+            <img
+              src={art.print_url}
+              alt={`Print artwork ${art.side_label}`}
+              className="mx-auto block max-h-48 w-auto object-contain bg-ui-bg-component p-2"
+            />
+            <div className="border-t border-ui-border-base px-3 py-2">
+              <Text size="xsmall" className="text-ui-fg-subtle mb-1">
+                Generated print file (not the customer upload)
+              </Text>
+              <a
+                href={art.print_url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-small text-blue-600 hover:underline break-all"
+              >
+                Open generated print PNG (right-click → Save as…)
+              </a>
+            </div>
+          </div>
+        ) : !art.print_url_inline_omitted ? (
+          <Text size="xsmall" className="text-ui-fg-subtle">
+            No print URL on record for this side.
+          </Text>
+        ) : null}
+
+        {/* Mockup + proof history */}
+        {art.mockup_url || proofsForSide.length > 0 ? (
+          <div className="rounded-lg border border-ui-border-base bg-ui-bg-base overflow-hidden flex flex-col">
+            {displayedUrl ? (
+              <img
+                src={displayedUrl}
+                alt={`Garment preview ${art.side_label}`}
+                className="mx-auto block max-h-48 w-auto object-contain bg-ui-bg-component p-2"
+              />
+            ) : (
+              <div className="h-48 bg-ui-bg-component flex items-center justify-center">
+                <Text size="xsmall" className="text-ui-fg-muted">No image</Text>
+              </div>
+            )}
+
+            <div className="border-t border-ui-border-base px-3 py-2 flex flex-col gap-y-2 flex-1">
+              {/* History dropdown — only when there are proofs */}
+              {proofsForSide.length > 0 ? (
+                <div className="flex items-center gap-x-2">
+                  <div className="flex-1 min-w-0">
+                    <Select
+                      value={selected}
+                      onValueChange={(v) => setSelected(v)}
+                    >
+                      <Select.Trigger>
+                        <Select.Value />
+                      </Select.Trigger>
+                      <Select.Content>
+                        <Select.Item value="original">Original mockup</Select.Item>
+                        {[...proofsForSide].reverse().map((p) => (
+                          <Select.Item key={p.id} value={p.id}>
+                            {p.note ? `${p.note} · ` : ""}{formatDate(p.uploaded_at)}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select>
+                  </div>
+                  {selected !== "original" && (
+                    <Button
+                      size="small"
+                      variant="transparent"
+                      className="text-ui-fg-error hover:text-ui-fg-error shrink-0"
+                      disabled={deletingId === selected}
+                      onClick={() => handleDelete(selected)}
+                    >
+                      {deletingId === selected ? "Removing…" : "Remove"}
+                    </Button>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Garment mockup label + download link */}
+              <div>
+                <Text size="xsmall" className="text-ui-fg-subtle">
+                  {selected === "original" ? "Garment mockup (JPEG)" : "Revised proof"}
+                </Text>
+                {displayedUrl && (
+                  <a
+                    href={displayedUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-small text-blue-600 hover:underline break-all"
+                  >
+                    Open {selected === "original" ? "mockup JPEG" : "revised proof"} (right-click → Save as…)
+                  </a>
+                )}
+              </div>
+
+              {/* Upload revised proof */}
+              <div className="border-t border-ui-border-base pt-2 flex flex-col gap-y-1 mt-auto">
+                <Text size="xsmall" weight="plus">Upload revised proof</Text>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Note (e.g. shifted logo 5mm left)"
+                  disabled={uploading}
+                  className="w-full rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-1.5 text-xsmall text-ui-fg-base placeholder:text-ui-fg-muted focus:outline-none focus:ring-1 focus:ring-ui-fg-interactive disabled:opacity-60"
+                />
+                {error && (
+                  <Text size="xsmall" className="text-ui-fg-error">{error}</Text>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleUpload}
+                />
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? "Uploading…" : proofsForSide.length > 0 ? "Upload revised proof" : "Upload proof"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </li>
+  )
+}
+
+// ─── Main widget ─────────────────────────────────────────────────────────────
 
 const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   const orderId = data?.id
@@ -56,6 +331,12 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState(true)
+
+  // All proofs for this order — grouped per side when rendering
+  const [allProofs, setAllProofs] = useState<RevisedProof[]>(() => {
+    const meta = (data?.metadata ?? {}) as Record<string, unknown>
+    return Array.isArray(meta.revised_proofs) ? (meta.revised_proofs as RevisedProof[]) : []
+  })
 
   const downloadMockupPdf = useCallback(async () => {
     if (!orderId) return
@@ -86,23 +367,30 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
   }, [orderId, data?.display_id])
 
   const load = useCallback(async () => {
-    if (!orderId) {
-      return
-    }
+    if (!orderId) return
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(adminCustomizerDownloadPath(orderId), {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      })
-      const body = (await res.json().catch(() => ({}))) as DownloadPayload & { message?: string }
-      if (!res.ok) {
-        throw new Error(body?.message || `HTTP ${res.status}`)
+      const [artifactsRes, proofsRes] = await Promise.all([
+        fetch(adminCustomizerDownloadPath(orderId), {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }),
+        fetch(adminProofPath(orderId), {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }),
+      ])
+      const artifactsBody = (await artifactsRes.json().catch(() => ({}))) as DownloadPayload & { message?: string }
+      if (!artifactsRes.ok) throw new Error(artifactsBody?.message || `HTTP ${artifactsRes.status}`)
+      setPayload(artifactsBody)
+
+      if (proofsRes.ok) {
+        const proofsBody = await proofsRes.json().catch(() => ({})) as { proofs?: RevisedProof[] }
+        setAllProofs(proofsBody.proofs ?? [])
       }
-      setPayload(body)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load customizer URLs")
+      setError(e instanceof Error ? e.message : "Failed to load customizer assets")
       setPayload(null)
     } finally {
       setLoading(false)
@@ -115,9 +403,11 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
 
   const lines = payload?.lines?.filter((line) => line.has_customizer) ?? []
 
-  if (!orderId) {
-    return null
-  }
+  if (!orderId) return null
+
+  const handleProofsChange = useCallback((updated: RevisedProof[]) => {
+    setAllProofs(updated)
+  }, [])
 
   return (
     <Container className="divide-y p-0 border-t border-ui-border-base">
@@ -136,17 +426,17 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
               <HelpTooltip
                 text={{
                   title: "Customizer print & preview",
-                  body: "Customer's original uploaded file, the rendered high-res print PNG, and the garment mockup JPEG for each decorated side.",
+                  body: "Customer's original uploaded file, the rendered high-res print PNG, and the garment mockup JPEG for each decorated side. Upload a revised proof per location to replace the mockup in the customer's approval email.",
                   bullets: [
-                    "The original file is what the customer uploaded — use it if you need to re-render or re-trace.",
-                    "The print PNG is what the press should receive — already composited at the garment's print area size.",
-                    "Download Mockup PDF generates an artwork approval document you can email the customer for sign-off.",
+                    "The print PNG is what the press receives — already composited at the print area size.",
+                    "Upload a revised proof under any side to replace that mockup in the next approval email.",
+                    "The history dropdown lets you review previous revisions without losing them.",
                   ],
                 }}
               />
             </Heading>
             <Text size="small" className="text-ui-fg-subtle mt-1">
-              Customer uploads (exact file), rendered print PNG, and garment mockup from order metadata.
+              Customer uploads, print PNGs, mockups, and per-location proof history.
             </Text>
           </div>
         </button>
@@ -168,148 +458,87 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
       </div>
 
       {!collapsed && (
-      <div className="px-6 py-4">
-        {error ? (
-          <Text size="small" className="text-ui-fg-error">
-            {error}
-          </Text>
-        ) : loading && !payload ? (
-          <Text size="small" className="text-ui-fg-subtle">
-            Loading downloadable assets…
-          </Text>
-        ) : lines.length === 0 ? (
-          <Text size="small" className="text-ui-fg-subtle">
-            No Fabric customizer (customizerDesign) metadata on this order line.
-          </Text>
-        ) : (
-          <ul className="flex flex-col gap-y-5 list-none p-0 m-0">
-            {lines.map((line) => (
-              <li
-                key={line.line_item_id}
-                className="border-b border-ui-border-base pb-4 last:border-0 last:pb-0"
-              >
-                <Text size="small" weight="plus" className="text-ui-fg-base">
-                  {lineHeading(line)}
-                </Text>
-                <Text size="xsmall" className="text-ui-fg-subtle mt-0.5">
-                  Qty {line.quantity}
-                </Text>
-
-                {line.customer_original_files && line.customer_original_files.length > 0 ? (
-                  <div className="mt-3 rounded-md border border-ui-border-base bg-ui-bg-component px-3 py-2">
-                    <Text size="xsmall" weight="plus">
-                      Customer upload (original file — unchanged)
-                    </Text>
-                    <ul className="mt-2 list-none m-0 p-0 flex flex-col gap-y-2">
-                      {line.customer_original_files.map((f) => (
-                        <li key={f.url}>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="text-xsmall text-ui-fg-muted">{f.mime_type}</span>
-                            <span className="text-xsmall text-ui-fg-subtle truncate max-w-[200px]" title={f.file_name}>
-                              {f.file_name}
-                            </span>
-                          </div>
-                          <a
-                            href={f.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="text-small text-blue-600 hover:underline break-all mt-0.5 inline-block"
-                          >
-                            Download original ({f.file_name})
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {line.artifacts.length === 0 ? (
-                  <Text size="xsmall" className="text-ui-fg-subtle mt-2">
-                    Customizer metadata present but no per-side artifacts (or render did not persist
-                    hosted URLs—check object storage).
+        <div className="px-6 py-4">
+          {error ? (
+            <Text size="small" className="text-ui-fg-error">{error}</Text>
+          ) : loading && !payload ? (
+            <Text size="small" className="text-ui-fg-subtle">Loading downloadable assets…</Text>
+          ) : lines.length === 0 ? (
+            <Text size="small" className="text-ui-fg-subtle">
+              No Fabric customizer (customizerDesign) metadata on this order line.
+            </Text>
+          ) : (
+            <ul className="flex flex-col gap-y-5 list-none p-0 m-0">
+              {lines.map((line) => (
+                <li
+                  key={line.line_item_id}
+                  className="border-b border-ui-border-base pb-4 last:border-0 last:pb-0"
+                >
+                  <Text size="small" weight="plus" className="text-ui-fg-base">
+                    {lineHeading(line)}
                   </Text>
-                ) : null}
+                  <Text size="xsmall" className="text-ui-fg-subtle mt-0.5">
+                    Qty {line.quantity}
+                  </Text>
 
-                <ul className="mt-2 flex flex-col gap-y-3 list-none p-0">
-                  {line.artifacts.map((art) => (
-                    <li
-                      key={`${line.line_item_id}-${art.side}`}
-                      className="rounded-md bg-ui-bg-subtle px-3 py-2"
-                    >
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <Text size="xsmall" weight="plus">
-                          {art.side_label}
-                        </Text>
-                        {art.print_url_inline_omitted ? (
-                          <Badge size="2xsmall" color="orange">
-                            Print file too large (inline)
-                          </Badge>
-                        ) : null}
-                        {art.mockup_url_inline_omitted ? (
-                          <Badge size="2xsmall" color="orange">
-                            Mockup too large (inline)
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        {art.print_url ? (
-                          <div className="rounded-lg border border-ui-border-base bg-ui-bg-base overflow-hidden">
-                            <img
-                              src={art.print_url}
-                              alt={`Print artwork ${art.side_label}`}
-                              className="mx-auto block max-h-48 w-auto object-contain bg-ui-bg-component p-2"
-                            />
-                            <div className="border-t border-ui-border-base px-3 py-2">
-                              <Text size="xsmall" className="text-ui-fg-subtle mb-1">
-                                Generated print file (not the customer upload)
-                              </Text>
-                              <a
-                                href={art.print_url}
-                                target="_blank"
-                                rel="noreferrer noopener"
-                                className="text-small text-blue-600 hover:underline break-all"
-                              >
-                                Open generated print PNG (right-click → Save as…)
-                              </a>
+                  {line.customer_original_files && line.customer_original_files.length > 0 ? (
+                    <div className="mt-3 rounded-md border border-ui-border-base bg-ui-bg-component px-3 py-2">
+                      <Text size="xsmall" weight="plus">
+                        Customer upload (original file — unchanged)
+                      </Text>
+                      <ul className="mt-2 list-none m-0 p-0 flex flex-col gap-y-2">
+                        {line.customer_original_files.map((f) => (
+                          <li key={f.url}>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="text-xsmall text-ui-fg-muted">{f.mime_type}</span>
+                              <span className="text-xsmall text-ui-fg-subtle truncate max-w-[200px]" title={f.file_name}>
+                                {f.file_name}
+                              </span>
                             </div>
-                          </div>
-                        ) : !art.print_url_inline_omitted ? (
-                          <Text size="xsmall" className="text-ui-fg-subtle">
-                            No print URL on record for this side.
-                          </Text>
-                        ) : null}
-                        {art.mockup_url ? (
-                          <div className="rounded-lg border border-ui-border-base bg-ui-bg-base overflow-hidden">
-                            <img
-                              src={art.mockup_url}
-                              alt={`Garment preview ${art.side_label}`}
-                              className="mx-auto block max-h-48 w-auto object-contain bg-ui-bg-component p-2"
-                            />
-                            <div className="border-t border-ui-border-base px-3 py-2">
-                              <Text size="xsmall" className="text-ui-fg-subtle mb-1">
-                                Garment mockup (JPEG)
-                              </Text>
-                              <a
-                                href={art.mockup_url}
-                                target="_blank"
-                                rel="noreferrer noopener"
-                                className="text-small text-blue-600 hover:underline break-all"
-                              >
-                                Open mockup JPEG (right-click → Save as…)
-                              </a>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        )}
+                            <a
+                              href={f.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="text-small text-blue-600 hover:underline break-all mt-0.5 inline-block"
+                            >
+                              Download original ({f.file_name})
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
 
-      </div>
+                  {line.artifacts.length === 0 ? (
+                    <Text size="xsmall" className="text-ui-fg-subtle mt-2">
+                      Customizer metadata present but no per-side artifacts (or render did not persist
+                      hosted URLs — check object storage).
+                    </Text>
+                  ) : null}
+
+                  <ul className="mt-2 flex flex-col gap-y-3 list-none p-0">
+                    {line.artifacts.map((art) => {
+                      const key = sideKey(line.line_item_id, art.side)
+                      const proofsForSide = allProofs.filter(
+                        (p) => p.line_item_id === line.line_item_id && p.side === art.side
+                      )
+                      return (
+                        <SideProofCard
+                          key={key}
+                          orderId={orderId}
+                          lineItemId={line.line_item_id}
+                          art={art}
+                          proofsForSide={proofsForSide}
+                          onProofsChange={handleProofsChange}
+                        />
+                      )
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </Container>
   )
@@ -320,4 +549,4 @@ export const config = defineWidgetConfig({
   zone: "order.details.after",
 })
 
-export default withWidgetBoundary(OrderCustomizerDownloadsWidget, "order-customizer-downloads")
+export default withWidgetBoundary(OrderCustomizerDownloadsWidget, "order-customizer-downloads")

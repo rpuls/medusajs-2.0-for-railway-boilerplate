@@ -106,14 +106,15 @@ export default async function orderArtworkStageChangedHandler({
   // manual rewind) needs the prior notification row removed first.
   const idempotencyKey = `artwork-email:${data.order_id}:${toStage}`
 
-  // Staff-uploaded revised proof takes priority over everything else.
   const revisedProofs = Array.isArray(orderMeta.revised_proofs)
-    ? (orderMeta.revised_proofs as Array<{ url?: string; uploaded_at?: string }>)
+    ? (orderMeta.revised_proofs as Array<{
+        id?: string
+        line_item_id?: string
+        side?: string
+        url?: string
+        uploaded_at?: string
+      }>)
     : []
-  const latestRevisedProofUrl =
-    revisedProofs
-      .filter((p) => typeof p?.url === "string" && (p.url as string).length > 0)
-      .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))[0]?.url ?? null
 
   const photos = Array.isArray(orderMeta.production_photos)
     ? (orderMeta.production_photos as Array<{ url?: string; uploaded_at?: string }>)
@@ -125,25 +126,58 @@ export default async function orderArtworkStageChangedHandler({
         (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
       )[0]?.url ?? null
 
-  // Revised proof wins; if none, fall back to auto-generated mockups from line items.
-  // mockupImages is only populated for awaiting_approval (and only when no revised proof exists).
+  // Build mockup images for awaiting_approval, merging per-side revised proofs.
+  // Backward compat: if proofs lack line_item_id (old format) fall back to the
+  // single-image proofImageUrl path so existing orders aren't broken.
+  const hasPerSideProofs = revisedProofs.some((p) => p.line_item_id)
   const mockupImages =
-    toStage === "awaiting_approval" && !latestRevisedProofUrl
+    toStage === "awaiting_approval"
       ? (() => {
-          const imgs = (order.items ?? [])
-            .flatMap((line: any) => {
-              const exp = buildLineCustomizerExport(line)
-              return (exp?.artifacts ?? []).filter(
-                (a: any) => a.mockup_url && !a.mockup_url_inline_omitted
-              )
-            })
-            .map((a: any) => ({
-              url: a.mockup_url as string,
+          const rawArtifacts = (order.items ?? []).flatMap((line: any) => {
+            const exp = buildLineCustomizerExport(line)
+            return (exp?.artifacts ?? [])
+              .filter((a: any) => a.mockup_url && !a.mockup_url_inline_omitted)
+              .map((a: any) => ({
+                lineItemId: line.id as string,
+                url: a.mockup_url as string,
+                side: a.side as string,
+                sideLabel: a.side_label ?? null,
+              }))
+          })
+          if (rawArtifacts.length === 0) return null
+
+          if (hasPerSideProofs) {
+            // Build map: `${line_item_id}:${side}` → latest proof url
+            const latestBySideKey = new Map<string, string>()
+            ;[...revisedProofs]
+              .filter((p) => p.line_item_id && p.side && p.url)
+              .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))
+              .forEach((p) => {
+                const k = `${p.line_item_id}:${p.side}`
+                if (!latestBySideKey.has(k)) latestBySideKey.set(k, p.url!)
+              })
+
+            return rawArtifacts.map((a) => ({
+              url: latestBySideKey.get(`${a.lineItemId}:${a.side}`) ?? a.url,
               side: a.side,
-              sideLabel: a.side_label ?? null,
+              sideLabel: a.sideLabel,
             }))
-          return imgs.length > 0 ? imgs : null
+          }
+
+          return rawArtifacts.map((a) => ({
+            url: a.url,
+            side: a.side,
+            sideLabel: a.sideLabel,
+          }))
         })()
+      : null
+
+  // Legacy: order-level proof (no line_item_id) replaces all — backward compat only
+  const latestRevisedProofUrl =
+    !hasPerSideProofs
+      ? revisedProofs
+          .filter((p) => typeof p?.url === "string" && (p.url as string).length > 0)
+          .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))[0]?.url ?? null
       : null
 
   // Inline helper for the generic stage-update fallback. Used directly for
@@ -207,6 +241,7 @@ export default async function orderArtworkStageChangedHandler({
                 content: "approve_button",
               }) ?? approvalUrl,
               mockupImages,
+              // Legacy fallback: old order-level proof (no line_item_id) replaces all images
               proofImageUrl: latestRevisedProofUrl ?? (mockupImages ? null : latestPhotoUrl),
               staffNote: null,
             },

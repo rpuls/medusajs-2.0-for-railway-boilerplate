@@ -62,24 +62,66 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
       )[0]?.url ?? null
 
-  // Staff-uploaded revised proof takes priority over auto-generated mockups.
   const revisedProofs = Array.isArray(meta.revised_proofs)
-    ? (meta.revised_proofs as Array<{ url?: string; uploaded_at?: string; note?: string | null }>)
+    ? (meta.revised_proofs as Array<{
+        line_item_id?: string
+        side?: string
+        url?: string
+        uploaded_at?: string
+        note?: string | null
+      }>)
     : []
-  const latestRevisedProof = revisedProofs
-    .filter((p) => typeof p?.url === "string" && p.url.length > 0)
-    .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))[0] ?? null
 
-  const mockupUrls = latestRevisedProof
-    ? []
-    : (order.items ?? [])
-        .flatMap((line: any) => {
-          const exp = buildLineCustomizerExport(line)
-          return (exp?.artifacts ?? []).filter(
-            (a) => a.mockup_url && !a.mockup_url_inline_omitted
-          )
-        })
-        .map((a: any) => ({ side: a.side, side_label: a.side_label, url: a.mockup_url as string }))
+  const hasPerSideProofs = revisedProofs.some((p) => p.line_item_id)
+
+  // Build mockup URL list, merging per-side revised proofs where available.
+  // Backward compat: if proofs lack line_item_id, fall back to single-image behaviour.
+  let mockupUrls: Array<{ side: string; side_label: string | null; url: string }> = []
+  let legacyProofUrl: string | null = null
+  let legacyProofNote: string | null = null
+
+  const rawArtifacts = (order.items ?? []).flatMap((line: any) => {
+    const exp = buildLineCustomizerExport(line)
+    return (exp?.artifacts ?? [])
+      .filter((a: any) => a.mockup_url && !a.mockup_url_inline_omitted)
+      .map((a: any) => ({
+        lineItemId: line.id as string,
+        side: a.side as string,
+        side_label: a.side_label as string | null,
+        url: a.mockup_url as string,
+      }))
+  })
+
+  if (hasPerSideProofs) {
+    const latestBySideKey = new Map<string, string>()
+    ;[...revisedProofs]
+      .filter((p) => p.line_item_id && p.side && p.url)
+      .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))
+      .forEach((p) => {
+        const k = `${p.line_item_id}:${p.side}`
+        if (!latestBySideKey.has(k)) latestBySideKey.set(k, p.url!)
+      })
+    mockupUrls = rawArtifacts.map((a) => ({
+      side: a.side,
+      side_label: a.side_label,
+      url: latestBySideKey.get(`${a.lineItemId}:${a.side}`) ?? a.url,
+    }))
+  } else {
+    const latestRevisedProof = revisedProofs
+      .filter((p) => typeof p?.url === "string" && p.url!.length > 0)
+      .sort((a, b) => ((a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1))[0] ?? null
+
+    if (latestRevisedProof?.url) {
+      legacyProofUrl = latestRevisedProof.url
+      legacyProofNote = latestRevisedProof.note ?? null
+    } else {
+      mockupUrls = rawArtifacts.map((a) => ({
+        side: a.side,
+        side_label: a.side_label,
+        url: a.url,
+      }))
+    }
+  }
 
   res.json({
     order_id: order.id,
@@ -94,8 +136,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       typeof meta.artwork_approver_name === "string"
         ? meta.artwork_approver_name
         : null,
-    latest_photo_url: latestRevisedProof?.url ?? latestPhotoUrl,
-    revised_proof_note: latestRevisedProof?.note ?? null,
+    latest_photo_url: legacyProofUrl ?? latestPhotoUrl,
+    revised_proof_note: legacyProofNote,
     mockup_urls: mockupUrls,
   })
 }
