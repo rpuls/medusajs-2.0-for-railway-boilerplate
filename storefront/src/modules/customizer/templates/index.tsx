@@ -786,6 +786,22 @@ export default function CustomizerTemplate({
   const sideLoadVersionRef = useRef(0)
   const productOptionsFromPdp = useProductOptionsOptional()
 
+  // Admin proof mode: `?adminProof=<orderId>:<lineItemId>:<side>` + `?proofArtwork=<encodedUrl>`
+  // Opens the customiser in a stripped-down mode for staff to reposition artwork,
+  // then save back to the order via window.parent.postMessage.
+  const adminProofParam = initialVariantSearchParams?.get("adminProof") ?? null
+  const proofArtworkParam = initialVariantSearchParams?.get("proofArtwork") ?? null
+  const [adminProofOrderId, adminProofLineItemId, adminProofSide] = (() => {
+    if (!adminProofParam) return [null, null, null]
+    const parts = adminProofParam.split(":")
+    return [parts[0] || null, parts[1] || null, parts[2] || null]
+  })()
+  const isAdminProofMode =
+    !!adminProofOrderId && !!adminProofLineItemId && !!adminProofSide
+  const adminProofAppliedRef = useRef(false)
+  const [adminProofSaving, setAdminProofSaving] = useState(false)
+  const [adminProofError, setAdminProofError] = useState<string | null>(null)
+
   // (productIsLongSleeve / allowedSizesForCurrentSide are computed below,
   // after `selectedProduct` is in scope — they were moved to fix a
   // temporal-dead-zone "Cannot access … before initialization" error.)
@@ -1570,6 +1586,44 @@ export default function CustomizerTemplate({
     void loadSide(sideToLoad)
     setHydrationApplied(true)
   }, [pendingHydration, hydrationApplied, canvasSize.width, canvasSize.height, product.variants])
+
+  // Admin proof mode: once the canvas is ready, switch to the target side and
+  // load the proof artwork image so staff can reposition before saving.
+  useEffect(() => {
+    if (!isAdminProofMode || adminProofAppliedRef.current) return
+    const canvas = fabricCanvasRef.current
+    if (!canvas || canvasSize.width <= 0 || canvasSize.height <= 0) return
+
+    adminProofAppliedRef.current = true
+
+    // Switch to the target side
+    const targetSide = adminProofSide as GarmentSide
+    if (currentSideRef.current !== targetSide) {
+      currentSideRef.current = targetSide
+      setCurrentSide(targetSide)
+    }
+
+    // Load the proof artwork image onto the canvas
+    const artworkUrl = proofArtworkParam ? decodeURIComponent(proofArtworkParam) : null
+    if (!artworkUrl) return
+
+    void (async () => {
+      try {
+        const imageObject = await FabricImage.fromURL(artworkUrl, { crossOrigin: "anonymous" })
+        const { width: naturalW, height: naturalH } = imageObject.getOriginalSize()
+        if (naturalW > 0 && naturalH > 0) {
+          imageObject.set({ width: naturalW, height: naturalH, scaleX: 1, scaleY: 1 })
+        }
+        imageObject.set({ customizerLabel: "Proof artwork" })
+        const area = printAreaRef.current
+        if (area) fitObjectToPrintArea(imageObject as any, area)
+        addCanvasObject(imageObject)
+      } catch {
+        // artwork load failed — staff can still use blank canvas or upload manually
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminProofMode, canvasSize.width, canvasSize.height])
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -2395,6 +2449,80 @@ export default function CustomizerTemplate({
     return {
       printUrl,
       mockupUrl,
+    }
+  }
+
+  /** Admin proof mode: render only the mockup for the current side and
+   *  post the result back to the parent admin widget via postMessage. */
+  const handleSaveProof = async () => {
+    if (!isAdminProofMode) return
+    setAdminProofSaving(true)
+    setAdminProofError(null)
+    try {
+      saveCurrentSide()
+      const side = currentSideRef.current
+      const sideObjects = sideLayoutsRef.current[side] ?? []
+      const canvasDims = {
+        width: Math.round(canvasSize.width),
+        height: Math.round(canvasSize.height),
+      }
+      const mockupGarmentUrl = garmentImageUrl ?? null
+
+      // Render only the mockup (no print file needed for proof)
+      const staticCanvas = new (fabric as any).StaticCanvas(null, {
+        width: canvasDims.width,
+        height: canvasDims.height,
+      })
+      await staticCanvas.loadFromJSON({ version: "7.0.0", objects: sideObjects })
+      const artworkSvg = staticCanvas.toSVG()
+      staticCanvas.dispose()
+
+      const garmentImageUrlForApi = resolveGarmentImageUrlForCustomizerRender(
+        mockupGarmentUrl,
+        defaultGarmentImage
+      )
+      const pa = getPrintArea(canvasDims.width, canvasDims.height, resolveScpPrintSizeForSide(side, scpPrintSizeId) as ScpPrintSizeId)
+      const payload = {
+        side,
+        artworkSvg,
+        garmentImageUrl: garmentImageUrlForApi,
+        placement: {
+          x: Math.max(0, Math.round(pa.x)),
+          y: Math.max(0, Math.round(pa.y)),
+          width: Math.max(1, Math.round(pa.width)),
+          height: Math.max(1, Math.round(pa.height)),
+        },
+        canvas: canvasDims,
+        tintColor: variantTintHexForRender ?? undefined,
+      }
+
+      const mockupResponse = await fetch("/api/customizer/render-mockup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const mockupBody = await mockupResponse.json().catch(() => ({}))
+      if (!mockupResponse.ok) {
+        throw new Error(mockupBody?.message ?? `Render failed (${mockupResponse.status})`)
+      }
+      const mockupUrl = extractRenderArtifactUrl(mockupBody) ?? extractRenderArtifactUrl((mockupBody as any)?.data)
+      if (!mockupUrl) throw new Error("Mockup URL not returned")
+
+      window.parent.postMessage(
+        {
+          type: "ADMIN_PROOF_SAVED",
+          orderId: adminProofOrderId,
+          lineItemId: adminProofLineItemId,
+          side,
+          mockupUrl,
+          artworkUrl: proofArtworkParam ? decodeURIComponent(proofArtworkParam) : null,
+        },
+        "*"
+      )
+    } catch (err) {
+      setAdminProofError(err instanceof Error ? err.message : "Save failed")
+    } finally {
+      setAdminProofSaving(false)
     }
   }
 
@@ -3253,6 +3381,29 @@ export default function CustomizerTemplate({
 
   const customizeRailPrintQtyAdvanced = (
     <>
+            {/* Admin proof mode: replace pricing/checkout with a Save Proof button */}
+            {isAdminProofMode ? (
+              <div className="space-y-3 rounded-xl border-2 border-blue-400 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-900">Admin proof mode</p>
+                <p className="text-xs text-blue-800">
+                  Adjust the artwork position and size, then click <strong>Save Proof</strong> to composite the mockup and send it back to the order.
+                </p>
+                {adminProofError ? (
+                  <p className="text-xs text-red-700 font-medium">{adminProofError}</p>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={adminProofSaving}
+                  onClick={handleSaveProof}
+                  className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] disabled:opacity-60"
+                >
+                  {adminProofSaving ? "Saving proof…" : "Save Proof"}
+                </button>
+              </div>
+            ) : null}
+
+            {isAdminProofMode ? null : (
+            <>
             <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-base">
@@ -3414,6 +3565,8 @@ export default function CustomizerTemplate({
                 />
               </div>
             </details>
+            </>
+            )}
     </>
   )
 
