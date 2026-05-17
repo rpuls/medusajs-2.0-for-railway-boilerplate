@@ -258,9 +258,20 @@ export default async function importAussiePacificFromApi({
   const stockBySkuFromCatalog = new Map<string, number>()
   let calibrationLogged = 0
 
+  let skippedRunOut = 0
   for (const product of products) {
     if (!product.style_code) {
       logger.warn(`Skipping product "${product.name}" — no style_code`)
+      continue
+    }
+    // run_out === true means AP has discontinued the style. We don't want
+    // these on the storefront at all, so skip the import entirely rather
+    // than landing them as draft products.
+    if (product.run_out === true) {
+      skippedRunOut++
+      logger.info(
+        `  Skipping ${product.style_code} (${product.name}) — run_out=true`
+      )
       continue
     }
     const handle = handleForProduct(product.style_code)
@@ -390,7 +401,7 @@ export default async function importAussiePacificFromApi({
     const productPayload: any = {
       title,
       handle,
-      status: product.run_out ? ProductStatus.DRAFT : ProductStatus.PUBLISHED,
+      status: ProductStatus.PUBLISHED,
       description: product.description ?? "",
       thumbnail,
       images: productImages,
@@ -425,7 +436,9 @@ export default async function importAussiePacificFromApi({
     })
   }
 
-  logger.info(`Prepared ${toCreate.length} product(s) for creation.`)
+  logger.info(
+    `Prepared ${toCreate.length} product(s) for creation. Skipped ${skippedRunOut} discontinued (run_out=true) style(s).`
+  )
 
   if (dryRun) {
     logger.info("Dry run — skipping createProductsWorkflow + inventory seed.")
@@ -467,19 +480,17 @@ export default async function importAussiePacificFromApi({
     for (const p of createdProducts) {
       const apProduct = apByHandle.get((p as any).handle)
       if (!apProduct) continue
-      const extraTags: string[] = apProduct.run_out ? ["Discontinued"] : []
       const { productType, tags } = classifyAussiePacificProduct(
         apProduct,
         unknownTaxonomy
       )
-      const combinedTags = Array.from(new Set([...tags, ...extraTags]))
-      if (!productType && !combinedTags.length) continue
+      if (!productType && !tags.length) continue
       try {
         await applyTypeAndTagsToProduct({
           productModule,
           productId: (p as any).id,
           productType,
-          tags: combinedTags,
+          tags,
           typeCache,
           tagCache,
         })
