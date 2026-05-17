@@ -1,6 +1,7 @@
 import { ArrowsPointingOut, Minus, Plus, XMark } from "@medusajs/icons"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 // ─── Mermaid lazy-loader ───────────────────────────────────────────────────────
 
@@ -122,12 +123,14 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
   const inlineRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const overlayDiagramRef = useRef<HTMLDivElement>(null)
-  const dragStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null)
+  const overlaySvgRef = useRef<SVGSVGElement | null>(null)
+  const naturalWidthRef = useRef<number>(1200)
+  // scroll positions at drag start
+  const dragStart = useRef<{ x: number; y: number; sl: number; st: number } | null>(null)
 
   const [err, setErr] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [scale, setScale] = useState(1)
-  const [translate, setTranslate] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
 
   // Inline render
@@ -140,7 +143,7 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
     return () => { gone = true }
   }, [inlineId, chart])
 
-  // Overlay render — re-runs each time overlay opens
+  // Overlay render — fires each time overlay opens; stores ref to SVG + natural width
   useEffect(() => {
     if (!open) return
     let gone = false
@@ -151,20 +154,33 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
           overlayDiagramRef.current.innerHTML = svg
           const svgEl = overlayDiagramRef.current.querySelector("svg")
           if (svgEl) {
+            // Mermaid sets max-width: Npx inline — read it as the natural rendered width
+            const mw = parseFloat(svgEl.style.maxWidth)
+            const vbw = svgEl.viewBox?.baseVal?.width ?? 0
+            const natW = mw > 10 ? mw : vbw > 10 ? vbw : 1200
+            naturalWidthRef.current = natW
+            overlaySvgRef.current = svgEl as SVGSVGElement
             svgEl.style.maxWidth = "none"
-            svgEl.style.width = "100%"
+            svgEl.style.display = "block"
+            svgEl.style.width = `${natW * scale}px`
             svgEl.style.height = "auto"
           }
         }
       })
       .catch(() => {})
     return () => { gone = true }
-  }, [open, overlayId, chart])
+  }, [open, overlayId, chart]) // deliberately excludes `scale` — handled by the effect below
+
+  // Resize SVG when scale changes without re-rendering
+  useEffect(() => {
+    if (!overlaySvgRef.current || !open) return
+    overlaySvgRef.current.style.width = `${naturalWidthRef.current * scale}px`
+  }, [scale, open])
 
   const handleClose = useCallback(() => {
     setOpen(false)
     setScale(1)
-    setTranslate({ x: 0, y: 0 })
+    overlaySvgRef.current = null
   }, [])
 
   // ESC to close
@@ -175,29 +191,29 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
     return () => window.removeEventListener("keydown", onKey)
   }, [open, handleClose])
 
-  // Wheel zoom (non-passive so we can preventDefault)
+  // Wheel zoom — non-passive so we can preventDefault and avoid page scroll
   useEffect(() => {
     if (!open) return
     const el = overlayRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const delta = e.deltaY > 0 ? -0.1 : 0.1
-      setScale((s) => Math.min(5, Math.max(0.4, +(s + delta).toFixed(2))))
+      const delta = e.deltaY > 0 ? -0.15 : 0.15
+      setScale((s) => Math.min(5, Math.max(0.2, +(s + delta).toFixed(2))))
     }
     el.addEventListener("wheel", onWheel, { passive: false })
     return () => el.removeEventListener("wheel", onWheel)
   }, [open])
 
-  // Drag pan — window listeners so fast moves don't escape the element
+  // Drag-to-scroll pan — manipulates scrollLeft/scrollTop so layout stays correct
   useEffect(() => {
     if (!dragging) return
     const onMove = (e: MouseEvent) => {
-      if (!dragStart.current) return
-      setTranslate({
-        x: dragStart.current.tx + (e.clientX - dragStart.current.x),
-        y: dragStart.current.ty + (e.clientY - dragStart.current.y),
-      })
+      const ds = dragStart.current
+      const el = overlayRef.current
+      if (!ds || !el) return
+      el.scrollLeft = ds.sl - (e.clientX - ds.x)
+      el.scrollTop = ds.st - (e.clientY - ds.y)
     }
     const onUp = () => setDragging(false)
     window.addEventListener("mousemove", onMove)
@@ -219,7 +235,7 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
     <div className="relative">
       {/* Expand button */}
       <button
-        onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); setOpen(true) }}
+        onClick={() => { setScale(1); setOpen(true) }}
         className="absolute top-2 right-2 z-10 flex items-center justify-center w-7 h-7 rounded border border-ui-border-base bg-ui-bg-base hover:bg-ui-bg-subtle text-ui-fg-muted hover:text-ui-fg-base shadow-sm"
         aria-label="Expand diagram"
         title="Expand fullscreen"
@@ -230,18 +246,16 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
       {/* Inline SVG */}
       <div ref={inlineRef} className="overflow-x-auto [&_svg]:max-w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:h-auto" />
 
-      {/* Fullscreen overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 z-[9999] flex flex-col bg-black/70"
-          onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
-        >
-          {/* Header bar */}
-          <div className="flex items-center justify-between shrink-0 px-4 py-2 bg-ui-bg-base border-b border-ui-border-base">
+      {/* Fullscreen overlay — portalled to document.body so fixed inset-0 covers the full
+          viewport even when an ancestor element has a CSS transform applied */}
+      {open && createPortal(
+        <div className="fixed inset-0 z-[9999] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between shrink-0 px-4 py-2 bg-ui-bg-base border-b border-ui-border-base shadow-sm">
             <span className="text-sm font-semibold text-ui-fg-base">{title ?? "Diagram"}</span>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setScale((s) => Math.min(5, +(s + 0.2).toFixed(2)))}
+                onClick={() => setScale((s) => Math.min(5, +(s + 0.25).toFixed(2)))}
                 className="flex items-center justify-center w-7 h-7 rounded hover:bg-ui-bg-subtle"
                 aria-label="Zoom in"
               >
@@ -251,14 +265,14 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
                 {Math.round(scale * 100)}%
               </span>
               <button
-                onClick={() => setScale((s) => Math.max(0.4, +(s - 0.2).toFixed(2)))}
+                onClick={() => setScale((s) => Math.max(0.2, +(s - 0.25).toFixed(2)))}
                 className="flex items-center justify-center w-7 h-7 rounded hover:bg-ui-bg-subtle"
                 aria-label="Zoom out"
               >
                 <Minus />
               </button>
               <button
-                onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }) }}
+                onClick={() => setScale(1)}
                 className="text-xs px-2 py-1 rounded hover:bg-ui-bg-subtle text-ui-fg-subtle"
               >
                 Reset
@@ -274,29 +288,29 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
             </div>
           </div>
 
-          {/* Scrollable + pannable area */}
+          {/* Scrollable diagram area — overflow:auto means zoom produces real scrollbars */}
           <div
             ref={overlayRef}
-            className="flex-1 overflow-auto"
+            className="flex-1 overflow-auto bg-white"
             style={{ cursor: dragging ? "grabbing" : "grab" }}
             onMouseDown={(e) => {
+              // Don't steal clicks on buttons inside the diagram (e.g. mermaid clickable nodes)
+              if ((e.target as HTMLElement).closest("button")) return
               setDragging(true)
-              dragStart.current = { x: e.clientX, y: e.clientY, tx: translate.x, ty: translate.y }
+              dragStart.current = {
+                x: e.clientX,
+                y: e.clientY,
+                sl: overlayRef.current?.scrollLeft ?? 0,
+                st: overlayRef.current?.scrollTop ?? 0,
+              }
             }}
           >
-            <div
-              style={{
-                transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
-                transformOrigin: "top center",
-                width: "fit-content",
-                minWidth: "100%",
-                padding: "2rem",
-              }}
-            >
+            <div className="p-8 min-w-max">
               <div ref={overlayDiagramRef} />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
