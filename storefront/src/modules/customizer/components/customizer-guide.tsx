@@ -90,12 +90,27 @@ export default function CustomizerGuide({
     setViewport({ w: window.innerWidth, h: window.innerHeight })
   }, [activeRef])
 
+  // After a step change, fire rect updates at several points to catch:
+  //   0ms   — immediate (handles simple cases)
+  //   150ms — after layout starts settling
+  //   350ms — after CSS grid column transition (300ms duration)
+  //   550ms — after Framer Motion entrance (400ms + 50ms delay)
+  // Without this, measuring immediately after pdpStep advances picks up
+  // stale coordinates from before the scroll + layout shift.
+  const scheduleRectUpdates = useCallback(() => {
+    const ids = [
+      setTimeout(updateRect, 0),
+      setTimeout(updateRect, 150),
+      setTimeout(updateRect, 350),
+      setTimeout(updateRect, 550),
+    ]
+    return () => ids.forEach(clearTimeout)
+  }, [updateRect])
+
   useLayoutEffect(() => {
     if (!active) return
-    // Defer one tick to let Framer Motion finish painting newly-entered steps
-    const id = setTimeout(updateRect, 0)
-    return () => clearTimeout(id)
-  }, [active, guideStep, updateRect])
+    return scheduleRectUpdates()
+  }, [active, guideStep, scheduleRectUpdates])
 
   useEffect(() => {
     if (!active) return
@@ -103,10 +118,14 @@ export default function CustomizerGuide({
     if (activeRef.current) ro.observe(activeRef.current)
     const sidebar = sidebarScrollRef.current
     sidebar?.addEventListener("scroll", updateRect, { passive: true })
+    // Track window scroll too — "Customize this product" scrolls the whole
+    // page to the canvas, which invalidates every getBoundingClientRect value.
+    window.addEventListener("scroll", updateRect, { passive: true })
     window.addEventListener("resize", updateRect, { passive: true })
     return () => {
       ro.disconnect()
       sidebar?.removeEventListener("scroll", updateRect)
+      window.removeEventListener("scroll", updateRect)
       window.removeEventListener("resize", updateRect)
     }
   }, [active, guideStep, updateRect, activeRef, sidebarScrollRef])
@@ -119,7 +138,8 @@ export default function CustomizerGuide({
     if (pdpStep > guideStep) {
       const next = pdpStep as 1 | 2 | 3 | 4
       setGuideStep(next)
-      // Scroll the newly spotlit card into view
+      // Scroll the newly spotlit card into view, then re-measure rect
+      // once the scroll has settled.
       const targetRef =
         next === 1
           ? stepRefs.step1
@@ -308,46 +328,43 @@ export default function CustomizerGuide({
   // ------------------------------------------------------------------
   return (
     <>
-      {/* Trigger button */}
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => {
-          phCapture("guide_started")
-          capturedStartRef.current = true
-          handleOpen()
-        }}
-        aria-label="Open the step-by-step guide"
-        aria-expanded={active}
-        className={`relative flex shrink-0 items-center gap-1 rounded-lg border border-ui-border-base bg-ui-bg-base px-2.5 py-1.5 text-xs font-medium text-ui-fg-subtle shadow-sm transition-colors hover:bg-ui-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-fg-base ${
-          active ? "opacity-0 pointer-events-none" : ""
-        }`}
-      >
+      {/* Trigger button — wrapper holds the pulse ring outside overflow:hidden context */}
+      <div className={`relative shrink-0 ${active ? "invisible pointer-events-none" : ""}`}>
         {showTriggerPulse && (
-          <span className="absolute -inset-1 rounded-xl animate-ping bg-ui-fg-base/20" />
+          <span className="absolute -inset-1.5 rounded-xl animate-ping bg-ui-fg-base/15 pointer-events-none" />
         )}
-        <svg
-          width="13"
-          height="13"
-          viewBox="0 0 13 13"
-          fill="none"
-          aria-hidden
-          className="shrink-0"
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => {
+            phCapture("guide_started")
+            capturedStartRef.current = true
+            handleOpen()
+          }}
+          aria-label="Open the step-by-step guide"
+          aria-expanded={active}
+          className="flex items-center gap-1 rounded-lg border border-ui-border-base bg-ui-bg-base px-2.5 py-1.5 text-xs font-medium text-ui-fg-subtle shadow-sm transition-colors hover:bg-ui-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-fg-base whitespace-nowrap"
         >
-          <circle cx="6.5" cy="6.5" r="6" stroke="currentColor" strokeWidth="1.2" />
-          <text
-            x="6.5"
-            y="9.5"
-            textAnchor="middle"
-            fontSize="7"
-            fill="currentColor"
-            fontWeight="600"
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden
+            className="shrink-0"
           >
-            ?
-          </text>
-        </svg>
-        Need help?
-      </button>
+            <circle cx="6" cy="6" r="5.4" stroke="currentColor" strokeWidth="1.2" />
+            <path
+              d="M5.1 4.6C5.1 4.1 5.5 3.7 6 3.7s.9.4.9.9c0 .4-.2.7-.6.9L6 5.8v.7"
+              stroke="currentColor"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+            />
+            <circle cx="6" cy="7.9" r=".5" fill="currentColor" />
+          </svg>
+          Need help?
+        </button>
+      </div>
 
       {/* Visually-hidden announcer for screen readers */}
       <span
