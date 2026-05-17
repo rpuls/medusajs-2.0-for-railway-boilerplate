@@ -381,6 +381,30 @@ const ProductBulkDeletePage = () => {
           </div>
         ) : (
           <>
+            {/* Pagination (top) */}
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-ui-border-base">
+              <Text size="small" className="text-ui-fg-muted">
+                Page {pageIndex + 1} of {pageCount}
+              </Text>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={!canPrev}
+                  onClick={() => setOffset(Math.max(0, offset - pageSize))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={!canNext}
+                  onClick={() => setOffset(offset + pageSize)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
             <div className="overflow-x-auto px-6 py-2">
               <Table>
                 <Table.Header>
