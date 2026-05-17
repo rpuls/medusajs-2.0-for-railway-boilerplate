@@ -1,5 +1,3 @@
-import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Photo } from "@medusajs/icons"
 import {
   Badge,
   Button,
@@ -290,9 +288,7 @@ const LookbookPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Lookbook",
-  icon: Photo,
-})
+// Page is now embedded as "Lookbook" tab in Studio & Lookbook;
+// direct URL /app/lookbook still works for deep links
 
 export default LookbookPage

@@ -1,5 +1,3 @@
-import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Map } from "@medusajs/icons"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { type ReactNode, useEffect, useId, useRef, useState } from "react"
 
@@ -941,9 +939,7 @@ const SystemMapPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "System map",
-  icon: Map,
-})
+// Page is now embedded as "System map" tab in Help & guide;
+// direct URL /app/system-map still works for deep links
 
 export default SystemMapPage

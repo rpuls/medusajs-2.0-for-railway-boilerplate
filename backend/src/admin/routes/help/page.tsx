@@ -4,9 +4,11 @@ import {
   Badge,
   Container,
   Heading,
+  Tabs,
   Text,
 } from "@medusajs/ui"
 import { useEffect, useState } from "react"
+import SystemMapPage from "../system-map/page"
 
 /**
  * In-admin staff guide. Renders an embedded copy of `Docs/STAFF_GUIDE.md`
@@ -277,6 +279,7 @@ const SECTIONS: Section[] = [
 ]
 
 const HelpPage = () => {
+  const [activeTab, setActiveTab] = useState<"guide" | "system-map">("guide")
   const [active, setActive] = useState<string>(SECTIONS[0].id)
 
   useEffect(() => {
@@ -301,15 +304,24 @@ const HelpPage = () => {
     <Container className="p-0">
       <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-base">
         <div>
-          <Heading level="h1">Staff guide</Heading>
+          <Heading level="h1">Help & guide</Heading>
           <Text size="xsmall" className="text-ui-fg-muted">
-            How to use everything in the admin. Update <code>Docs/STAFF_GUIDE.md</code> when behaviour changes.
+            Staff guide and system documentation
           </Text>
         </div>
         <Badge color="blue">v1</Badge>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-0">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "guide" | "system-map")}>
+        <div className="px-6 pt-4 border-b border-ui-border-base">
+          <Tabs.List>
+            <Tabs.Trigger value="guide">Guide</Tabs.Trigger>
+            <Tabs.Trigger value="system-map">System map</Tabs.Trigger>
+          </Tabs.List>
+        </div>
+
+        <Tabs.Content value="guide">
+          <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-0">
         <nav className="border-r border-ui-border-base p-4 lg:sticky lg:top-0 lg:self-start lg:max-h-[80vh] lg:overflow-y-auto">
           <ul className="flex flex-col gap-y-1 text-sm">
             {SECTIONS.map((s) => (
@@ -347,7 +359,7 @@ const HelpPage = () => {
             </Heading>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                <a href="/app/system-map" className="underline font-medium">System map</a> — interactive diagram of every service, module, event bus, cron, and how they connect. Live in the admin.
+                <span className="font-medium">System map</span> — available as the <strong>System map tab</strong> above. Interactive diagram of every service, module, event bus, cron, and how they connect.
               </li>
               <li>
                 <code>Docs/STAFF_GUIDE.md</code> — full version of this page with more detail per section.
@@ -358,7 +370,13 @@ const HelpPage = () => {
             </ul>
           </div>
         </div>
-      </div>
+        </div>
+        </Tabs.Content>
+
+        <Tabs.Content value="system-map" className="p-0">
+          <SystemMapPage />
+        </Tabs.Content>
+      </Tabs>
     </Container>
   )
 }

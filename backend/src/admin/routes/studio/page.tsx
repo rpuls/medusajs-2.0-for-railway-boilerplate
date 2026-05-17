@@ -1,5 +1,3 @@
-import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Sparkles } from "@medusajs/icons"
 import {
   Badge,
   Container,
@@ -129,9 +127,7 @@ const StudioPage = () => {
   )
 }
 
-export const config = defineRouteConfig({
-  label: "Studio",
-  icon: Sparkles,
-})
+// Page is now embedded as "Studio" tab in Studio & Lookbook;
+// direct URL /app/studio still works for deep links
 
 export default StudioPage
