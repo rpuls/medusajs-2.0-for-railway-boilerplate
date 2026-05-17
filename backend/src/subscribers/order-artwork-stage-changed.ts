@@ -4,8 +4,6 @@ import {
   IOrderModuleService,
 } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
-import { randomUUID } from "crypto"
-import { hostname } from "os"
 import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
 import { tagUrl } from "../lib/email-utm"
 import { buildLineCustomizerExport } from "../lib/customizer-order-artifacts"
@@ -20,7 +18,6 @@ import {
 import { subjectForStage } from "../modules/email-notifications/templates/order-production-stage"
 import { signArtworkApproval } from "../services/artwork-approval/sign"
 
-const PROCESS_TAG = `${hostname()}/pid${process.pid}`
 const STOREFRONT_URL = process.env.STOREFRONT_URL?.replace(/\/$/, "")
 const STOREFRONT_DEFAULT_COUNTRY_CODE =
   process.env.STOREFRONT_DEFAULT_COUNTRY_CODE?.toLowerCase()
@@ -100,39 +97,14 @@ export default async function orderArtworkStageChangedHandler({
 
   const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
 
-  // Dedup via Medusa's Locking module (in-memory by default). Each invocation
-  // tries to acquire a (order, stage)-scoped lock with a unique ownerId; only
-  // the first succeeds, all others throw and bail out.
-  //
-  // Caveat: the default in-memory provider is per-process. If Railway is
-  // running >1 backend instance and both end up subscribing to the same
-  // BullMQ queue (BullMQ should make this impossible but we've been wrong
-  // before), the lock won't dedupe across instances — the PROCESS_TAG log
-  // line will reveal that case so we can switch to a Postgres-backed
-  // provider.
-  let lockingModuleService: any
-  try {
-    lockingModuleService = container.resolve(Modules.LOCKING)
-  } catch (lockResolveErr) {
-    logger.warn(
-      `${ARTWORK_STAGE_EVENT}: locking module not available (${(lockResolveErr as Error).message}). Proceeding without dedup. [${PROCESS_TAG}] [v=2026-05-17-locking]`
-    )
-  }
-  const lockKey = `artwork-email:${data.order_id}:${toStage}`
-  const lockOwner = randomUUID()
-  if (lockingModuleService) {
-    try {
-      await lockingModuleService.acquire(lockKey, { ownerId: lockOwner, expire: 300 })
-    } catch (acquireErr) {
-      logger.warn(
-        `${ARTWORK_STAGE_EVENT}: lock already held for ${lockKey}, suppressing duplicate ${toStage} email for ${data.order_id}. [${PROCESS_TAG}] [v=2026-05-17-locking] err=${(acquireErr as Error).message}`
-      )
-      return
-    }
-  }
-  logger.info(
-    `${ARTWORK_STAGE_EVENT}: acquired lock ${lockKey} (owner=${lockOwner}) — sending email. [${PROCESS_TAG}] [v=2026-05-17-locking]`
-  )
+  // Dedup via Medusa's built-in idempotency_key on the notification table.
+  // A UNIQUE index on (idempotency_key WHERE deleted_at IS NULL) means two
+  // parallel createNotifications calls race at the DB level — exactly one
+  // INSERT wins, the other hits the unique constraint and the notification
+  // module silently skips it. No locks, no metadata stamps, no race window.
+  // Key is per-(order, stage, channel) so a future legit re-send (e.g. on a
+  // manual rewind) needs the prior notification row removed first.
+  const idempotencyKey = `artwork-email:${data.order_id}:${toStage}`
 
   // Staff-uploaded revised proof takes priority over everything else.
   const revisedProofs = Array.isArray(orderMeta.revised_proofs)
@@ -182,6 +154,7 @@ export default async function orderArtworkStageChangedHandler({
       to: order.email,
       channel: "email",
       template: EmailTemplates.ORDER_PRODUCTION_STAGE,
+      idempotency_key: idempotencyKey,
       data: {
         emailOptions: {
           replyTo: SUPPORT_REPLY_TO_EMAIL,
@@ -219,6 +192,7 @@ export default async function orderArtworkStageChangedHandler({
           to: order.email,
           channel: "email",
           template: EmailTemplates.ARTWORK_APPROVAL,
+          idempotency_key: idempotencyKey,
           data: {
             emailOptions: {
               replyTo: SUPPORT_REPLY_TO_EMAIL,
