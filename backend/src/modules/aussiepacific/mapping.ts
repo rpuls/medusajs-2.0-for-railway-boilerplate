@@ -10,6 +10,18 @@ import {
   AussiePacificVariant,
 } from "./types"
 
+/**
+ * Tolerate AP returning collections as either an array or an object keyed
+ * by id. Returns a plain array in either case (empty if the value is
+ * missing or some other shape).
+ */
+export const toArray = <T>(value: unknown): T[] => {
+  if (!value) return []
+  if (Array.isArray(value)) return value as T[]
+  if (typeof value === "object") return Object.values(value as Record<string, T>)
+  return []
+}
+
 export const slugify = (s: string) =>
   (s || "")
     .toLowerCase()
@@ -69,7 +81,7 @@ const sortImages = (imgs: AussiePacificImage[]): AussiePacificImage[] =>
 export const buildGarmentImagesForVariant = (
   variant: AussiePacificVariant
 ): { front: string; model_image?: string; all: string[] } => {
-  const sorted = sortImages(variant.images ?? [])
+  const sorted = sortImages(toArray<AussiePacificImage>(variant.images))
   const all = sorted.map(imageUrl).filter(Boolean)
 
   const front = all.find((u) => !/talent|model|lifestyle/i.test(u)) ?? all[0] ?? ""
@@ -96,9 +108,9 @@ export const collectImageUrls = (product: AussiePacificProduct): string[] => {
       urls.push(url)
     }
   }
-  for (const top of sortImages(product.images ?? [])) push(top)
-  for (const v of product.variants ?? []) {
-    for (const img of sortImages(v.images ?? [])) push(img)
+  for (const top of sortImages(toArray<AussiePacificImage>(product.images))) push(top)
+  for (const v of toArray<AussiePacificVariant>(product.variants)) {
+    for (const img of sortImages(toArray<AussiePacificImage>(v.images))) push(img)
   }
   return urls
 }

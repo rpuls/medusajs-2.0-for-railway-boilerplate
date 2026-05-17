@@ -59,6 +59,7 @@ import {
   imageUrl,
   normalizeStockLevel,
   titleCase,
+  toArray,
 } from "../modules/aussiepacific/mapping"
 import { BRAND_MODULE } from "../modules/brand"
 import { classifyAussiePacificProduct } from "../lib/product-taxonomy"
@@ -205,6 +206,38 @@ export default async function importAussiePacificFromApi({
   if (limit) products = products.slice(0, limit)
   logger.info(`Fetched ${products.length} product(s).`)
 
+  // One-time debug log of the first product's shape so we can see what AP
+  // actually returns vs what the docs imply. Only fires when dryRun + a
+  // product was fetched.
+  if (dryRun && products[0]) {
+    const sample = products[0] as any
+    const keys = Object.keys(sample)
+    const variantsType = Array.isArray(sample.variants)
+      ? `array(${sample.variants.length})`
+      : sample.variants && typeof sample.variants === "object"
+        ? `object(keys=${Object.keys(sample.variants).slice(0, 5).join(",")})`
+        : typeof sample.variants
+    const imagesType = Array.isArray(sample.images)
+      ? `array(${sample.images.length})`
+      : sample.images && typeof sample.images === "object"
+        ? `object(keys=${Object.keys(sample.images).slice(0, 5).join(",")})`
+        : typeof sample.images
+    logger.info(
+      `[debug] first product shape: keys=[${keys.join(",")}], variants=${variantsType}, images=${imagesType}`
+    )
+    // First variant shape (if any)
+    const firstVariant = Array.isArray(sample.variants)
+      ? sample.variants[0]
+      : sample.variants && typeof sample.variants === "object"
+        ? Object.values(sample.variants)[0]
+        : null
+    if (firstVariant) {
+      logger.info(
+        `[debug] first variant shape: keys=[${Object.keys(firstVariant as object).join(",")}], sample=${JSON.stringify(firstVariant).slice(0, 500)}`
+      )
+    }
+  }
+
   // 2. Existing-handle skip-list
   const allHandles = products.map((p) => handleForProduct(p.style_code))
   const { data: existing } = await query.graph({
@@ -236,7 +269,7 @@ export default async function importAussiePacificFromApi({
       continue
     }
 
-    const variants = (product.variants ?? []).filter(
+    const variants = toArray<AussiePacificVariant>(product.variants).filter(
       (v): v is AussiePacificVariant => !!v?.sku
     )
     if (!variants.length) {
@@ -315,7 +348,7 @@ export default async function importAussiePacificFromApi({
       const titleParts = [v.colour, v.size].filter(Boolean)
       const variantTitle = (titleParts.join(" / ") as string) || v.sku
 
-      const variantImageUrl = imageUrl(v.images?.[0])
+      const variantImageUrl = imageUrl(toArray<any>(v.images)[0])
 
       productVariants.push({
         title: variantTitle,

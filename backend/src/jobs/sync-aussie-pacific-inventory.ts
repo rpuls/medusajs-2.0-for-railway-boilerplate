@@ -6,7 +6,8 @@ import {
 } from "@medusajs/medusa/core-flows"
 import { AUSSIEPACIFIC_MODULE } from "../modules/aussiepacific"
 import AussiePacificService from "../modules/aussiepacific/service"
-import { normalizeStockLevel } from "../modules/aussiepacific/mapping"
+import { normalizeStockLevel, toArray } from "../modules/aussiepacific/mapping"
+import type { AussiePacificVariant } from "../modules/aussiepacific/types"
 import { withJobContext, getContextLogger } from "../lib/job-context-wrapper"
 
 const AUSSIEPACIFIC_LOCATION_NAME = "Aussie Pacific Warehouse"
@@ -66,7 +67,7 @@ const handler = async function syncAussiePacificInventory(
   // 2. Build sku -> qty map.
   const stockBySku = new Map<string, number>()
   for (const product of products) {
-    for (const v of product.variants ?? []) {
+    for (const v of toArray<AussiePacificVariant>(product.variants)) {
       if (!v?.sku) continue
       stockBySku.set(v.sku, normalizeStockLevel(v.stock_level))
     }
