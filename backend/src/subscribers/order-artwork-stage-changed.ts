@@ -97,6 +97,31 @@ export default async function orderArtworkStageChangedHandler({
 
   const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
 
+  // Idempotency guard: if we already sent an email for this exact stage transition
+  // within the last 2 minutes, skip. Guards against duplicate fires from BullMQ
+  // retries, automation rules, or any other unknown double-trigger source.
+  const idempotencyKey = `artwork_email_sent_at_${toStage}`
+  const sentAt = orderMeta[idempotencyKey] as string | undefined
+  if (sentAt) {
+    const sentMs = Date.parse(sentAt)
+    if (Number.isFinite(sentMs) && Date.now() - sentMs < 120_000) {
+      logger.warn(
+        `${ARTWORK_STAGE_EVENT}: suppressing duplicate ${toStage} email for ${data.order_id} (already sent at ${sentAt})`
+      )
+      return
+    }
+  }
+  // Stamp before sending so a second concurrent invocation sees it immediately.
+  try {
+    await orderModuleService.updateOrders(data.order_id, {
+      metadata: { ...orderMeta, [idempotencyKey]: new Date().toISOString() },
+    })
+  } catch (stampError) {
+    logger.warn(
+      `${ARTWORK_STAGE_EVENT}: failed to stamp idempotency key for ${data.order_id}: ${(stampError as Error).message}`
+    )
+  }
+
   // Staff-uploaded revised proof takes priority over everything else.
   const revisedProofs = Array.isArray(orderMeta.revised_proofs)
     ? (orderMeta.revised_proofs as Array<{ url?: string; uploaded_at?: string }>)
