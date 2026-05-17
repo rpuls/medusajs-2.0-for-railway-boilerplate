@@ -28,6 +28,12 @@ const brandImageLinks: BrandImageLink[] = [
     imageAlt: "Biz Collection uniforms and apparel",
   },
   {
+    name: "Aussie Pacific",
+    href: "/store?brand=Aussie%20Pacific",
+    imageSrc: "/images/brands/aussie-pacific-banner.png",
+    imageAlt: "Aussie Pacific workwear and casualwear",
+  },
+  {
     name: "DNC Workwear",
     href: "/dnc",
     imageSrc: "/images/brands/dnc-banner.png",
