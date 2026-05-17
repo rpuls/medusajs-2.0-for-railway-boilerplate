@@ -4,7 +4,8 @@ import {
   IOrderModuleService,
 } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
-import IORedis from "ioredis"
+import { randomUUID } from "crypto"
+import { hostname } from "os"
 import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
 import { tagUrl } from "../lib/email-utm"
 import { buildLineCustomizerExport } from "../lib/customizer-order-artifacts"
@@ -19,47 +20,10 @@ import {
 import { subjectForStage } from "../modules/email-notifications/templates/order-production-stage"
 import { signArtworkApproval } from "../services/artwork-approval/sign"
 
+const PROCESS_TAG = `${hostname()}/pid${process.pid}`
 const STOREFRONT_URL = process.env.STOREFRONT_URL?.replace(/\/$/, "")
 const STOREFRONT_DEFAULT_COUNTRY_CODE =
   process.env.STOREFRONT_DEFAULT_COUNTRY_CODE?.toLowerCase()
-
-// Lazy singleton Redis client — used only for the atomic dedup lock below.
-// Reuses the same REDIS_URL that the event bus connects to. If REDIS_URL is
-// unset we fall back to a no-op lock (single-instance dev only).
-let _redis: IORedis | null = null
-const getRedis = (): IORedis | null => {
-  if (_redis) return _redis
-  const url = process.env.REDIS_URL
-  if (!url) return null
-  try {
-    _redis = new IORedis(url, { maxRetriesPerRequest: 3, lazyConnect: false })
-    _redis.on("error", () => {
-      /* swallow — the email path will fall back to metadata-based dedup */
-    })
-    return _redis
-  } catch {
-    return null
-  }
-}
-
-/**
- * Atomic dedup: returns true if we got the lock (first sender), false if it's
- * already held. Uses Redis SET key NX EX ttl, the canonical distributed-lock
- * primitive. Race-proof across BullMQ retries, multiple Medusa instances,
- * and parallel admin clicks. Falls back to "true" (no lock) if Redis is
- * unavailable — better to send than to silently swallow.
- */
-async function acquireEmailLock(orderId: string, stage: string): Promise<boolean> {
-  const redis = getRedis()
-  if (!redis) return true
-  const key = `email-lock:artwork:${stage}:${orderId}`
-  try {
-    const result = await redis.set(key, new Date().toISOString(), "EX", 300, "NX")
-    return result === "OK"
-  } catch {
-    return true
-  }
-}
 
 function buildPortalUrl(orderId: string): string | null {
   if (!STOREFRONT_URL) return null
@@ -136,18 +100,38 @@ export default async function orderArtworkStageChangedHandler({
 
   const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
 
-  // Atomic Redis lock — only one invocation per (order, stage) within 5 min
-  // gets through. Race-proof unlike a metadata-based check, which has a
-  // read-then-write window two parallel invocations can both pass through.
-  const gotLock = await acquireEmailLock(data.order_id, toStage)
-  if (!gotLock) {
+  // Dedup via Medusa's Locking module (in-memory by default). Each invocation
+  // tries to acquire a (order, stage)-scoped lock with a unique ownerId; only
+  // the first succeeds, all others throw and bail out.
+  //
+  // Caveat: the default in-memory provider is per-process. If Railway is
+  // running >1 backend instance and both end up subscribing to the same
+  // BullMQ queue (BullMQ should make this impossible but we've been wrong
+  // before), the lock won't dedupe across instances — the PROCESS_TAG log
+  // line will reveal that case so we can switch to a Postgres-backed
+  // provider.
+  let lockingModuleService: any
+  try {
+    lockingModuleService = container.resolve(Modules.LOCKING)
+  } catch (lockResolveErr) {
     logger.warn(
-      `${ARTWORK_STAGE_EVENT}: duplicate ${toStage} fire for ${data.order_id} — lock already held, skipping send. [v=2026-05-17-redis-lock]`
+      `${ARTWORK_STAGE_EVENT}: locking module not available (${(lockResolveErr as Error).message}). Proceeding without dedup. [${PROCESS_TAG}] [v=2026-05-17-locking]`
     )
-    return
+  }
+  const lockKey = `artwork-email:${data.order_id}:${toStage}`
+  const lockOwner = randomUUID()
+  if (lockingModuleService) {
+    try {
+      await lockingModuleService.acquire(lockKey, { ownerId: lockOwner, expire: 300 })
+    } catch (acquireErr) {
+      logger.warn(
+        `${ARTWORK_STAGE_EVENT}: lock already held for ${lockKey}, suppressing duplicate ${toStage} email for ${data.order_id}. [${PROCESS_TAG}] [v=2026-05-17-locking] err=${(acquireErr as Error).message}`
+      )
+      return
+    }
   }
   logger.info(
-    `${ARTWORK_STAGE_EVENT}: acquired lock for ${data.order_id} stage=${toStage}, proceeding. [v=2026-05-17-redis-lock]`
+    `${ARTWORK_STAGE_EVENT}: acquired lock ${lockKey} (owner=${lockOwner}) — sending email. [${PROCESS_TAG}] [v=2026-05-17-locking]`
   )
 
   // Staff-uploaded revised proof takes priority over everything else.
