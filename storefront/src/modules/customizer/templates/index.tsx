@@ -1100,6 +1100,11 @@ export default function CustomizerTemplate({
     return resolveGarmentSwatchColor(label)
   }, [selectedProduct, selectedVariant])
 
+  // resolveGarmentSwatchColor may return hsl(...) for unknown colours (valid CSS for
+  // the PDP swatch, but the backend render endpoint requires a strict #RRGGBB hex).
+  const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
+  const variantTintHexForRender = HEX_COLOR_RE.test(variantTintHex ?? "") ? variantTintHex : null
+
   const nonSizeOptions = useMemo(
     () => (selectedProduct ? getNonSizeOptions(selectedProduct) : []),
     [selectedProduct]
@@ -2360,7 +2365,7 @@ export default function CustomizerTemplate({
       // Backend ignores this for non-sleeve sides; when set on a sleeve it
       // recolours the white placeholder so the mockup picks up the variant
       // colour instead of staying white-on-black.
-      tintColor: variantTintHex ?? undefined,
+      tintColor: variantTintHexForRender ?? undefined,
     }
 
     const [printResponse, mockupResponse] = await Promise.all([
