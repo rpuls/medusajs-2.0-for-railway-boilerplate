@@ -1,11 +1,15 @@
+import { ArrowsPointingOut, Minus, Plus, XMark } from "@medusajs/icons"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
-import { type ReactNode, useEffect, useId, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react"
 
 // ─── Mermaid lazy-loader ───────────────────────────────────────────────────────
 
 type MermaidAPI = {
   initialize: (cfg: Record<string, unknown>) => void
-  render: (id: string, def: string) => Promise<{ svg: string }>
+  render: (id: string, def: string) => Promise<{
+    svg: string
+    bindFunctions?: (el: Element) => void
+  }>
 }
 
 let _m: MermaidAPI | null = null
@@ -52,7 +56,7 @@ const loadMermaid = (): Promise<MermaidAPI> => {
 
         // Typography
         fontFamily: 'Inter, "system-ui", -apple-system, sans-serif',
-        fontSize: "13px",
+        fontSize: "14px",
 
         // Sequence diagrams
         actorBkg: "#f5f3ff",
@@ -100,7 +104,7 @@ const loadMermaid = (): Promise<MermaidAPI> => {
         critBorderColor: "#ef4444",
         todayLineColor: "#ef4444",
       },
-      flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" },
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis", rankSpacing: 60, nodeSpacing: 30 },
       sequence: { useMaxWidth: true, mirrorActors: false },
     })
     _m = api
@@ -109,24 +113,100 @@ const loadMermaid = (): Promise<MermaidAPI> => {
   return _p
 }
 
-const MermaidDiagram = ({ chart }: { chart: string }) => {
+const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => {
   const reactId = useId()
-  const id = `mmd${reactId.replace(/\W/g, "")}`
-  const ref = useRef<HTMLDivElement>(null)
-  const [err, setErr] = useState<string | null>(null)
+  const baseId = `mmd${reactId.replace(/\W/g, "")}`
+  const inlineId = `${baseId}i`
+  const overlayId = `${baseId}o`
 
+  const inlineRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const overlayDiagramRef = useRef<HTMLDivElement>(null)
+  const dragStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null)
+
+  const [err, setErr] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [scale, setScale] = useState(1)
+  const [translate, setTranslate] = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+
+  // Inline render
   useEffect(() => {
     let gone = false
     loadMermaid()
-      .then((m) => m.render(id, chart))
-      .then(({ svg }) => {
-        if (!gone && ref.current) ref.current.innerHTML = svg
-      })
-      .catch((e) => {
-        if (!gone) setErr(String(e))
-      })
+      .then((m) => m.render(inlineId, chart))
+      .then(({ svg }) => { if (!gone && inlineRef.current) inlineRef.current.innerHTML = svg })
+      .catch((e) => { if (!gone) setErr(String(e)) })
     return () => { gone = true }
-  }, [id, chart])
+  }, [inlineId, chart])
+
+  // Overlay render — re-runs each time overlay opens
+  useEffect(() => {
+    if (!open) return
+    let gone = false
+    loadMermaid()
+      .then((m) => m.render(overlayId, chart))
+      .then(({ svg }) => {
+        if (!gone && overlayDiagramRef.current) {
+          overlayDiagramRef.current.innerHTML = svg
+          const svgEl = overlayDiagramRef.current.querySelector("svg")
+          if (svgEl) {
+            svgEl.style.maxWidth = "none"
+            svgEl.style.width = "100%"
+            svgEl.style.height = "auto"
+          }
+        }
+      })
+      .catch(() => {})
+    return () => { gone = true }
+  }, [open, overlayId, chart])
+
+  const handleClose = useCallback(() => {
+    setOpen(false)
+    setScale(1)
+    setTranslate({ x: 0, y: 0 })
+  }, [])
+
+  // ESC to close
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [open, handleClose])
+
+  // Wheel zoom (non-passive so we can preventDefault)
+  useEffect(() => {
+    if (!open) return
+    const el = overlayRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? -0.1 : 0.1
+      setScale((s) => Math.min(5, Math.max(0.4, +(s + delta).toFixed(2))))
+    }
+    el.addEventListener("wheel", onWheel, { passive: false })
+    return () => el.removeEventListener("wheel", onWheel)
+  }, [open])
+
+  // Drag pan — window listeners so fast moves don't escape the element
+  useEffect(() => {
+    if (!dragging) return
+    const onMove = (e: MouseEvent) => {
+      if (!dragStart.current) return
+      setTranslate({
+        x: dragStart.current.tx + (e.clientX - dragStart.current.x),
+        y: dragStart.current.ty + (e.clientY - dragStart.current.y),
+      })
+    }
+    const onUp = () => setDragging(false)
+    window.addEventListener("mousemove", onMove)
+    window.addEventListener("mouseup", onUp)
+    return () => {
+      window.removeEventListener("mousemove", onMove)
+      window.removeEventListener("mouseup", onUp)
+    }
+  }, [dragging])
 
   if (err)
     return (
@@ -134,7 +214,92 @@ const MermaidDiagram = ({ chart }: { chart: string }) => {
         Diagram render error — {err}
       </div>
     )
-  return <div ref={ref} className="overflow-x-auto [&_svg]:max-w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:h-auto" />
+
+  return (
+    <div className="relative">
+      {/* Expand button */}
+      <button
+        onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); setOpen(true) }}
+        className="absolute top-2 right-2 z-10 flex items-center justify-center w-7 h-7 rounded border border-ui-border-base bg-ui-bg-base hover:bg-ui-bg-subtle text-ui-fg-muted hover:text-ui-fg-base shadow-sm"
+        aria-label="Expand diagram"
+        title="Expand fullscreen"
+      >
+        <ArrowsPointingOut />
+      </button>
+
+      {/* Inline SVG */}
+      <div ref={inlineRef} className="overflow-x-auto [&_svg]:max-w-full [&_svg]:mx-auto [&_svg]:block [&_svg]:h-auto" />
+
+      {/* Fullscreen overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col bg-black/70"
+          onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
+        >
+          {/* Header bar */}
+          <div className="flex items-center justify-between shrink-0 px-4 py-2 bg-ui-bg-base border-b border-ui-border-base">
+            <span className="text-sm font-semibold text-ui-fg-base">{title ?? "Diagram"}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setScale((s) => Math.min(5, +(s + 0.2).toFixed(2)))}
+                className="flex items-center justify-center w-7 h-7 rounded hover:bg-ui-bg-subtle"
+                aria-label="Zoom in"
+              >
+                <Plus />
+              </button>
+              <span className="text-xs text-ui-fg-subtle tabular-nums w-10 text-center">
+                {Math.round(scale * 100)}%
+              </span>
+              <button
+                onClick={() => setScale((s) => Math.max(0.4, +(s - 0.2).toFixed(2)))}
+                className="flex items-center justify-center w-7 h-7 rounded hover:bg-ui-bg-subtle"
+                aria-label="Zoom out"
+              >
+                <Minus />
+              </button>
+              <button
+                onClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }) }}
+                className="text-xs px-2 py-1 rounded hover:bg-ui-bg-subtle text-ui-fg-subtle"
+              >
+                Reset
+              </button>
+              <button
+                onClick={handleClose}
+                className="flex items-center gap-1 rounded px-2 py-1 text-ui-fg-subtle hover:text-ui-fg-base hover:bg-ui-bg-subtle"
+                aria-label="Close"
+              >
+                <XMark />
+                <span className="text-xs">Close</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable + pannable area */}
+          <div
+            ref={overlayRef}
+            className="flex-1 overflow-auto"
+            style={{ cursor: dragging ? "grabbing" : "grab" }}
+            onMouseDown={(e) => {
+              setDragging(true)
+              dragStart.current = { x: e.clientX, y: e.clientY, tx: translate.x, ty: translate.y }
+            }}
+          >
+            <div
+              style={{
+                transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+                transformOrigin: "top center",
+                width: "fit-content",
+                minWidth: "100%",
+                padding: "2rem",
+              }}
+            >
+              <div ref={overlayDiagramRef} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Section definitions ───────────────────────────────────────────────────────
@@ -151,8 +316,9 @@ const SECTIONS: Section[] = [
   {
     id: "big-picture",
     title: "The big picture",
-    diagram: `flowchart TB
+    diagram: `flowchart LR
     subgraph CUST["Customer touchpoints"]
+        direction TB
         STORE[Storefront catalog]
         CUSTOMIZER[Fabric.js customizer]
         ACCOUNT["/account dashboard"]
@@ -161,6 +327,7 @@ const SECTIONS: Section[] = [
     end
 
     subgraph CORE["Medusa core"]
+        direction TB
         CART[(Cart)]
         ORDER[(Order)]
         CUSTOMER[(Customer)]
@@ -168,6 +335,7 @@ const SECTIONS: Section[] = [
     end
 
     subgraph CUSTOM["SC PRINTS modules"]
+        direction TB
         DESIGN[(Design + design_version)]
         WISHLIST[(Wishlist)]
         QUOTE[(Quote + events)]
@@ -176,10 +344,11 @@ const SECTIONS: Section[] = [
         LOOKBOOK[(Lookbook)]
         ORG[(Organisation + members)]
         GROUP[(Group order + participants)]
-        WORKSPACE[(customer_tag + customer_note + order_comment)]
+        WORKSPACE[(customer_tag + note + comment)]
     end
 
     subgraph EVENTS["Event bus"]
+        direction TB
         EV_PLACED[order.placed]
         EV_STAGE[order.production_stage_changed]
         EV_ART[order.artwork_stage_changed]
@@ -187,6 +356,7 @@ const SECTIONS: Section[] = [
     end
 
     subgraph SUBS["Subscribers"]
+        direction TB
         SUB_EMAIL[Email sender]
         SUB_AUTO[Automation rule engine]
         SUB_PERKS[Snapshot perks + tax_exempt]
@@ -195,6 +365,7 @@ const SECTIONS: Section[] = [
     end
 
     subgraph CRONS["Daily / weekly crons"]
+        direction TB
         CRON_CART[Abandoned cart]
         CRON_WB[Win-back]
         CRON_NPS[NPS request]
@@ -207,6 +378,7 @@ const SECTIONS: Section[] = [
     end
 
     subgraph OUT["Outbound channels"]
+        direction TB
         RESEND[Resend email]
         SLACK[Slack webhook]
         POSTHOG[PostHog analytics]
@@ -215,7 +387,8 @@ const SECTIONS: Section[] = [
         STRIPE[Stripe]
     end
 
-    subgraph ADMIN["Admin"]
+    subgraph ADMIN["Admin (reads from core + SC modules)"]
+        direction TB
         STUDIO[Studio dashboard]
         ORDER_PAGE[Order detail widgets]
         CUSTOMER_PAGE[Customer detail widgets]
@@ -266,15 +439,8 @@ const SECTIONS: Section[] = [
 
     EMAIL_REPLY -.inbox+ord alias.-> WORKSPACE
 
-    STUDIO -.reads.-> ORDER
-    STUDIO -.reads.-> CUSTOMER
-    STUDIO -.reads.-> QUOTE
-    STUDIO -.reads.-> WORKSPACE
-    ORDER_PAGE -.reads.-> ORDER
-    ORDER_PAGE -.reads.-> RECIPE
-    ORDER_PAGE -.reads.-> REJECT
-    CUSTOMER_PAGE -.reads.-> POSTHOG
-    REPORTS -.reads.-> ORDER
+    CORE --> ADMIN
+    CUSTOM --> ADMIN
 
     classDef ext fill:#fef3c7,stroke:#92400e;
     classDef cron fill:#dbeafe,stroke:#1e40af;
@@ -683,7 +849,7 @@ const SECTIONS: Section[] = [
   {
     id: "print-queue",
     title: "Print queue optimiser",
-    diagram: `flowchart TB
+    diagram: `flowchart LR
     subgraph IN[Inputs]
         ORDERS[(In-flight orders received to in_production)]
         LINES[Line item metadata customizerDesign / decorationDesign]
@@ -895,7 +1061,7 @@ const SystemMapPage = () => {
             How every service, module, event, and cron connects. Source of truth: <code>Docs/BACKEND_FLOW.md</code>
           </Text>
         </div>
-        <Badge color="blue">11 diagrams</Badge>
+        <Badge color="blue">10 diagrams</Badge>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr]">
@@ -926,9 +1092,16 @@ const SystemMapPage = () => {
               </Heading>
               <div className="mb-4 h-px bg-ui-border-base" />
               {s.diagram && (
-                <div className="rounded-xl border border-ui-border-base bg-white p-6 shadow-sm overflow-hidden">
-                  <MermaidDiagram chart={s.diagram} />
-                </div>
+                <>
+                  <div className="rounded-xl border border-ui-border-base bg-white p-6 shadow-sm overflow-hidden">
+                    <MermaidDiagram chart={s.diagram} title={s.title} />
+                  </div>
+                  <p className="mt-1.5 text-center">
+                    <span className="inline-flex items-center gap-1 text-xs text-ui-fg-muted select-none">
+                      <ArrowsPointingOut className="w-3 h-3" /> Click ↗ to expand fullscreen
+                    </span>
+                  </p>
+                </>
               )}
               {s.body && <div className="mt-4">{s.body}</div>}
             </section>
