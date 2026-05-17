@@ -23,6 +23,9 @@ export interface OrderProductionStageTemplateProps {
     url: string
     caption?: string | null
   } | null
+  /** Mockup images from the customizer — shown in awaiting_approval emails so
+   *  customers can see exactly what they're approving without logging in. */
+  mockupImages?: { url: string; side: string; sideLabel?: string | null }[] | null
   /** Optional internal note from the staff member who changed the stage. Not shown to customer. */
   preview?: string
 }
@@ -61,7 +64,7 @@ const stageCopy: Partial<Record<ProductionStage, StageCopy>> = {
         </Text>
       </>
     ),
-    cta: { label: 'View order' },
+    cta: { label: 'Approve artwork' },
   },
   in_production: {
     subjectLine: 'Good news — your order is on the press',
@@ -94,7 +97,7 @@ export function subjectForStage(
 
 export const OrderProductionStageTemplate: React.FC<OrderProductionStageTemplateProps> & {
   PreviewProps: OrderProductionStageTemplateProps
-} = ({ order, stage, customerFirstName, portalUrl, productionPhoto, preview }) => {
+} = ({ order, stage, customerFirstName, portalUrl, productionPhoto, mockupImages, preview }) => {
   const copy = stageCopy[stage]
   const firstName = customerFirstName?.trim() || 'there'
   const heading = copy?.heading ?? PRODUCTION_STAGE_LABEL[stage]
@@ -128,6 +131,34 @@ export const OrderProductionStageTemplate: React.FC<OrderProductionStageTemplate
             <strong>{PRODUCTION_STAGE_LABEL[stage]}</strong>.
           </Text>
         )}
+
+        {stage === 'awaiting_approval' && mockupImages && mockupImages.length > 0 ? (
+          <Section style={{ margin: '20px 0' }}>
+            {mockupImages.map((img) => (
+              <Section key={img.side} style={{ margin: '0 0 16px' }}>
+                {img.sideLabel ? (
+                  <Text
+                    style={{
+                      margin: '0 0 6px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: '#888',
+                    }}
+                  >
+                    {img.sideLabel}
+                  </Text>
+                ) : null}
+                <Img
+                  src={img.url}
+                  alt={img.sideLabel ?? img.side}
+                  style={{ maxWidth: '100%', borderRadius: '6px' }}
+                />
+              </Section>
+            ))}
+          </Section>
+        ) : null}
 
         {productionPhoto?.url ? (
           <Section style={{ margin: '20px 0', textAlign: 'center' }}>
@@ -198,7 +229,8 @@ OrderProductionStageTemplate.PreviewProps = {
   } as any,
   stage: 'awaiting_approval',
   customerFirstName: 'Sam',
-  portalUrl: 'https://example.com/account/orders/test-order-id',
+  portalUrl: 'https://example.com/artwork-approval/test-order-id?sig=abc123',
+  mockupImages: null,
 }
 
 export default OrderProductionStageTemplate

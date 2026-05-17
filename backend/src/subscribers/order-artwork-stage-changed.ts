@@ -6,6 +6,7 @@ import {
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { SUPPORT_REPLY_TO_EMAIL } from "../lib/constants"
 import { tagUrl } from "../lib/email-utm"
+import { buildLineCustomizerExport } from "../lib/customizer-order-artifacts"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 import {
   ARTWORK_STAGE_EVENT,
@@ -71,7 +72,9 @@ export default async function orderArtworkStageChangedHandler({
   let order: any
   try {
     order = await orderModuleService.retrieveOrder(data.order_id, {
-      relations: ["shipping_address"],
+      relations: toStage === "awaiting_approval"
+        ? ["shipping_address", "items"]
+        : ["shipping_address"],
     })
   } catch (error) {
     logger.error(
@@ -92,9 +95,6 @@ export default async function orderArtworkStageChangedHandler({
   const displayId = (order as { display_id?: string | number }).display_id ?? data.order_id
   const firstName = order.shipping_address?.first_name ?? null
 
-  // Surface the latest production photo as the proof preview if one
-  // was uploaded. Falls back to no preview when staff haven't snapped
-  // anything yet.
   const orderMeta = (order.metadata ?? {}) as Record<string, unknown>
   const photos = Array.isArray(orderMeta.production_photos)
     ? (orderMeta.production_photos as Array<{
@@ -109,17 +109,68 @@ export default async function orderArtworkStageChangedHandler({
         (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
       )[0]?.url ?? null
 
+  // Collect customizer mockup images from line items for the approval email
+  // so the customer can see exactly what they're approving.
+  const mockupImages =
+    toStage === "awaiting_approval"
+      ? (() => {
+          const imgs = (order.items ?? [])
+            .flatMap((line: any) => {
+              const exp = buildLineCustomizerExport(line)
+              return (exp?.artifacts ?? []).filter(
+                (a: any) => a.mockup_url && !a.mockup_url_inline_omitted
+              )
+            })
+            .map((a: any) => ({
+              url: a.mockup_url as string,
+              side: a.side,
+              sideLabel: a.side_label ?? null,
+            }))
+          return imgs.length > 0 ? imgs : null
+        })()
+      : null
+
+  // Inline helper for the generic stage-update fallback. Used directly for
+  // non-approval stages, and as a backstop when the awaiting_approval flow
+  // can't build a signed approval URL (e.g. STOREFRONT_URL unset on Railway).
+  const sendGenericStageEmail = async () => {
+    await notificationModuleService.createNotifications({
+      to: order.email,
+      channel: "email",
+      template: EmailTemplates.ORDER_PRODUCTION_STAGE,
+      data: {
+        emailOptions: {
+          replyTo: SUPPORT_REPLY_TO_EMAIL,
+          subject: subjectForStage(toStage, displayId),
+        },
+        order,
+        stage: toStage,
+        customerFirstName: firstName,
+        portalUrl: tagUrl(buildPortalUrl(data.order_id), {
+          medium: "transactional",
+          campaign: `artwork_stage_${toStage}`,
+          content: "view_order",
+        }),
+      },
+    })
+  }
+
   try {
     if (toStage === "awaiting_approval") {
-      // Use the dedicated approval template — gives the customer a
-      // signed one-click "Approve" button instead of the generic
-      // production-stage update.
-      const approvalUrl = buildApprovalUrl(data.order_id)
-      if (!approvalUrl) {
+      // Preferred path: dedicated approval template with a signed
+      // one-click "Approve" button and mockup images.
+      let approvalUrl: string | null = null
+      try {
+        approvalUrl = buildApprovalUrl(data.order_id)
+      } catch (signError) {
         logger.warn(
-          `${ARTWORK_STAGE_EVENT}: cannot build approval URL (STOREFRONT_URL unset?); skipping artwork approval email for ${data.order_id}.`
+          `${ARTWORK_STAGE_EVENT}: failed to sign approval URL for ${data.order_id} (${
+            (signError as Error).message
+          }); falling back to generic stage email.`
         )
-      } else {
+      }
+
+      if (approvalUrl) {
         await notificationModuleService.createNotifications({
           to: order.email,
           channel: "email",
@@ -137,33 +188,25 @@ export default async function orderArtworkStageChangedHandler({
                 campaign: "artwork_approval",
                 content: "approve_button",
               }) ?? approvalUrl,
-              proofImageUrl: latestPhotoUrl,
+              mockupImages,
+              proofImageUrl: mockupImages ? null : latestPhotoUrl,
               staffNote: null,
             },
             preview: `Your proof is ready for sign-off — order #${displayId}.`,
           },
         })
+      } else {
+        // Fallback: STOREFRONT_URL is unset (or signing failed). Send the
+        // generic stage-update email so the customer still gets notified
+        // their artwork is ready, even if they have to click through to
+        // the portal manually instead of using a one-click approve link.
+        logger.warn(
+          `${ARTWORK_STAGE_EVENT}: cannot build approval URL (STOREFRONT_URL unset?); sending generic stage email for ${data.order_id} instead. Fix env to restore one-click approve.`
+        )
+        await sendGenericStageEmail()
       }
     } else {
-      await notificationModuleService.createNotifications({
-        to: order.email,
-        channel: "email",
-        template: EmailTemplates.ORDER_PRODUCTION_STAGE,
-        data: {
-          emailOptions: {
-            replyTo: SUPPORT_REPLY_TO_EMAIL,
-            subject: subjectForStage(toStage, displayId),
-          },
-          order,
-          stage: toStage,
-          customerFirstName: firstName,
-          portalUrl: tagUrl(buildPortalUrl(data.order_id), {
-            medium: "transactional",
-            campaign: `artwork_stage_${toStage}`,
-            content: "view_order",
-          }),
-        },
-      })
+      await sendGenericStageEmail()
     }
   } catch (error) {
     logger.error(

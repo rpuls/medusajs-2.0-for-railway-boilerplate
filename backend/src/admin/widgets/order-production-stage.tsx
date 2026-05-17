@@ -2,6 +2,8 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Button, Container, Heading, Input, Text, Textarea } from "@medusajs/ui"
+
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
@@ -237,7 +239,20 @@ const OrderProductionStageWidget = ({ data }: DetailWidgetProps<AdminOrder>) => 
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <div>
-          <Heading level="h2">Production stage</Heading>
+          <Heading level="h2" className="flex items-center">
+            Production stage
+            <HelpTooltip
+              text={{
+                title: "Production stage",
+                body: "Move this order through the production pipeline. Emails fire automatically at key milestones.",
+                bullets: [
+                  "Stages that email the customer: Awaiting Approval, In Production.",
+                  "Moving a stage backwards suppresses the email for that transition.",
+                  "Artwork approval and blanks ordering run in parallel — both tracks show here.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle mt-1">
             Artwork approval and blanks ordering run in parallel. Customer emails fire on
             milestones flagged below.

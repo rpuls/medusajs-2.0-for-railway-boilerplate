@@ -2,6 +2,8 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 import type { DetailWidgetProps, AdminOrder } from "@medusajs/framework/types"
 import { Container, Heading, Text } from "@medusajs/ui"
+
+import { HelpTooltip } from "../components/reports/help-tooltip"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { sdk } from "../lib/sdk"
@@ -94,7 +96,19 @@ const OrderLinePrintNotesWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   return (
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
-        <Heading level="h2">Print notes (customer)</Heading>
+        <Heading level="h2" className="flex items-center">
+          Print notes (customer)
+          <HelpTooltip
+            text={{
+              title: "Print notes (customer)",
+              body: "Free-text instructions the customer typed during checkout, saved in each line item's metadata. Read-only — these are what the customer asked for.",
+              bullets: [
+                "Common uses: Pantone colour preferences, placement nudges, 'match our previous order' references.",
+                "If a line has no print notes metadata it won't appear here.",
+              ],
+            }}
+          />
+        </Heading>
         {rows.length > 0 ? (
           <Text size="xsmall" className="text-ui-fg-subtle">
             {rows.length} {rows.length === 1 ? "line" : "lines"}

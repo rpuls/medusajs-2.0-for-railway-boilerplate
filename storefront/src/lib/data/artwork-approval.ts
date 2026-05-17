@@ -9,6 +9,7 @@ export type ArtworkApprovalState = {
   artwork_approved_at: string | null
   artwork_approver_name: string | null
   latest_photo_url: string | null
+  mockup_urls: { side: string; side_label?: string | null; url: string }[]
 }
 
 export async function getArtworkApproval(

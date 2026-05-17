@@ -74,6 +74,8 @@ import {
   isBeanieGarmentProduct,
   isColorOptionTitle,
   isHatGarmentProduct,
+  isPufferJacketProduct,
+  isVestGarmentProduct,
   isLongSleeveGarmentProduct,
 } from "@modules/products/lib/variant-options"
 import { resolveGarmentSwatchColor } from "@modules/products/lib/garment-swatch-colors"
@@ -899,6 +901,14 @@ export default function CustomizerTemplate({
     () => isBeanieGarmentProduct(selectedProduct),
     [selectedProduct]
   )
+  const productIsPuffer = useMemo(
+    () => isPufferJacketProduct(selectedProduct),
+    [selectedProduct]
+  )
+  const productIsVest = useMemo(
+    () => isVestGarmentProduct(selectedProduct),
+    [selectedProduct]
+  )
   /**
    * Sides the customer can print on for this product. Hats: front only —
    * the curved crown is the single realistic transfer location. Bottom-
@@ -909,6 +919,7 @@ export default function CustomizerTemplate({
    */
   const allowedPrintSides = useMemo<GarmentSide[]>(() => {
     if (productIsHat) return ["front"]
+    if (productIsVest) return ["front", "back", "printed_tag"]
     const productTags = getStoreProductTagValues(selectedProduct).map((t) => t.toLowerCase())
     const productTitleLower = (selectedProduct.title ?? "").toLowerCase()
     const isFrontBackOnlyProduct =
@@ -921,7 +932,7 @@ export default function CustomizerTemplate({
     return isFrontBackOnlyProduct
       ? ["front", "back"]
       : ["front", "back", "left_sleeve", "right_sleeve", "printed_tag"]
-  }, [productIsHat, selectedProduct])
+  }, [productIsHat, productIsVest, selectedProduct])
   const allowedSizesForCurrentSide = useMemo(
     () =>
       getAllowedScpPrintSizesForSide(currentSide, {
@@ -1028,11 +1039,11 @@ export default function CustomizerTemplate({
    * explicit method (e.g. restored from a saved design / re-order).
    */
   useEffect(() => {
-    if (!productIsBeanie) return
+    if (!productIsBeanie && !productIsPuffer) return
     if (sideDecorationMethods[currentSide]) return
     setSideDecorationMethods((prev) => ({ ...prev, [currentSide]: "embroidery" }))
     setSizingDoneSides((prev) => ({ ...prev, [currentSide]: true }))
-  }, [productIsBeanie, currentSide, sideDecorationMethods])
+  }, [productIsBeanie, productIsPuffer, currentSide, sideDecorationMethods])
   const showPdpLabeledOptionsStep = Boolean(integratedPdpSlots) && pdpHasVariantOptions
   const embedPdpPrintStepNumber = showPdpLabeledOptionsStep ? 2 : 1
   const embedPdpQuantityStepNumber = showPdpLabeledOptionsStep ? 3 : 2
@@ -3258,9 +3269,9 @@ export default function CustomizerTemplate({
                 side={currentSide}
                 value={
                   sideDecorationMethods[currentSide] ??
-                  (productIsBeanie ? "embroidery" : "print")
+                  (productIsBeanie || productIsPuffer ? "embroidery" : "print")
                 }
-                availableMethods={productIsBeanie ? ["embroidery"] : ["print", "embroidery"]}
+                availableMethods={productIsBeanie || productIsPuffer ? ["embroidery"] : ["print", "embroidery"]}
                 onChange={(side, method) => {
                   setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))
                   if (method === "embroidery") {
@@ -4064,10 +4075,10 @@ export default function CustomizerTemplate({
                       side={currentSide}
                       value={
                         sideDecorationMethods[currentSide] ??
-                        (productIsBeanie ? "embroidery" : "print")
+                        (productIsBeanie || productIsPuffer ? "embroidery" : "print")
                       }
                       availableMethods={
-                        productIsBeanie ? ["embroidery"] : ["print", "embroidery"]
+                        productIsBeanie || productIsPuffer ? ["embroidery"] : ["print", "embroidery"]
                       }
                       onChange={(side, method) => {
                         setSideDecorationMethods((prev) => ({ ...prev, [side]: method }))

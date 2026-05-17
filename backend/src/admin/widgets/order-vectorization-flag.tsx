@@ -4,6 +4,8 @@ import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Badge, Container, Heading, Text } from "@medusajs/ui"
 import { useMemo } from "react"
 
+import { HelpTooltip } from "../components/reports/help-tooltip"
+
 type Line = {
   id: string
   product_title?: string | null
@@ -38,7 +40,20 @@ const OrderVectorizationFlagWidget = ({ data }: DetailWidgetProps<AdminOrder>) =
     <Container className="divide-y p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <div>
-          <Heading level="h2">Vectorization requested</Heading>
+          <Heading level="h2" className="flex items-center">
+            Vectorization requested
+            <HelpTooltip
+              text={{
+                title: "Vectorization requested",
+                body: "The customer's artwork failed the live DPI check in the customizer and they accepted the vectorization add-on service.",
+                bullets: [
+                  "Check the cart for an 'Artwork Vectorization Service' line — the fee should already be charged.",
+                  "Complete the redraw or upscale before moving the order to In Production.",
+                  "Once done, this flag is informational only — there is no automated clear.",
+                ],
+              }}
+            />
+          </Heading>
           <Text size="small" className="text-ui-fg-subtle mt-1">
             The customer accepted the upscaling/vectorization service when their artwork failed
             the live DPI check. Charge the agreed fee + redraw before sending to the press.

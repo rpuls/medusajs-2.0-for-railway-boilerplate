@@ -63,6 +63,7 @@ interface SceneState {
   flybys: Flyby[]; flybySprites: HTMLCanvasElement[]; nextFlybyMs: number
   logoImg: HTMLImageElement | null; logoW: number; logoH: number
   logoPixels: LogoPixel[] | null; logoCols: number; logoRows: number; logoPixelSize: number
+  earthImg: HTMLImageElement | null; earthFrames: number
 }
 
 // ─── Planet sprite helpers ────────────────────────────────────────────────────
@@ -448,7 +449,10 @@ export default function SpaceHero({ className, style }: { className?: string; st
       initialized: false,
     }))
     const logoImg = new Image(); logoImg.src = "/branding/sc-prints-logo-transparent.png"
-    return { planets, comets: [], nextCometMs: randomBetween(3000, 7000), flybys: [], flybySprites: [], nextFlybyMs: randomBetween(8000, 18000), logoImg, logoW: 0, logoH: 0, logoPixels: null, logoCols: 0, logoRows: 0, logoPixelSize: 0 }
+    const earthImg = new Image()
+    earthImg.src = "/branding/earth-spritesheet.png"
+    earthImg.onload = () => { if (stateRef.current) stateRef.current.earthFrames = Math.round(earthImg.naturalWidth / earthImg.naturalHeight) }
+    return { planets, comets: [], nextCometMs: randomBetween(3000, 7000), flybys: [], flybySprites: [], nextFlybyMs: randomBetween(8000, 18000), logoImg, logoW: 0, logoH: 0, logoPixels: null, logoCols: 0, logoRows: 0, logoPixelSize: 0, earthImg, earthFrames: 0 }
   }, [])
 
   const drawStars = useCallback((canvas: HTMLCanvasElement, w: number, h: number, dpr: number) => {
@@ -488,6 +492,7 @@ export default function SpaceHero({ className, style }: { className?: string; st
     let lastTs = performance.now(), elapsed = 0
 
     const LOGO_SAMPLE_COLS = 72, LOGO_DISPLAY_COLS = 64
+    const EARTH_FRAME_MS = 80  // 30 frames over 2.4 s = 80 ms/frame
 
     const calcLogoSize = () => {
       if (!state.logoImg || state.logoImg.naturalWidth === 0) return
@@ -681,9 +686,30 @@ export default function SpaceHero({ className, style }: { className?: string; st
         const ps = state.logoPixelSize
         const offX = cx - (state.logoCols * ps) / 2
         const offY = cy + floatY - (state.logoRows * ps) / 2
-        ctx.fillStyle = "#FFFFFF"
+        const logoW = state.logoCols * ps
+        const logoH = state.logoRows * ps
+
+        ctx.save()
+        ctx.beginPath()
         for (const { lx, ly } of state.logoPixels)
-          ctx.fillRect(Math.round(offX + lx * ps), Math.round(offY + ly * ps), ps, ps)
+          ctx.rect(Math.round(offX + lx * ps), Math.round(offY + ly * ps), ps, ps)
+        ctx.clip()
+
+        if (state.earthImg?.complete && state.earthFrames > 0) {
+          const frameSize = state.earthImg.naturalHeight  // each frame is square
+          const frame = Math.floor(elapsed / EARTH_FRAME_MS) % state.earthFrames
+          const tileH = logoH
+          const tileW = tileH  // frames are square
+          ctx.imageSmoothingEnabled = true
+          for (let tx = offX; tx < offX + logoW; tx += tileW)
+            ctx.drawImage(state.earthImg, frame * frameSize, 0, frameSize, frameSize, tx, offY, tileW, tileH)
+        } else {
+          ctx.fillStyle = "#FFFFFF"
+          for (const { lx, ly } of state.logoPixels)
+            ctx.fillRect(Math.round(offX + lx * ps), Math.round(offY + ly * ps), ps, ps)
+        }
+
+        ctx.restore()
       } else if (state.logoImg?.complete && state.logoW > 0) {
         ctx.save(); ctx.globalCompositeOperation = "screen"; ctx.imageSmoothingEnabled = false
         ctx.drawImage(state.logoImg, Math.round(cx - state.logoW / 2), Math.round(cy + floatY - state.logoH / 2), state.logoW, state.logoH)

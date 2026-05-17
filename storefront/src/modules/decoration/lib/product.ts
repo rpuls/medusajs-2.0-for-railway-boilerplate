@@ -1,4 +1,5 @@
 import { HttpTypes } from "@medusajs/types"
+import { isPufferJacketProduct } from "@modules/products/lib/variant-options"
 import type { DecorationMethod } from "./types"
 
 const ALL_METHODS: DecorationMethod[] = [
@@ -42,6 +43,10 @@ export const getEnabledDecorationMethods = (
   }
 
   if (resolved.length === 0 && truthy(metadata.embroidery_enabled)) {
+    resolved = ["embroidery"]
+  }
+
+  if (resolved.length === 0 && isPufferJacketProduct(product)) {
     resolved = ["embroidery"]
   }
 
