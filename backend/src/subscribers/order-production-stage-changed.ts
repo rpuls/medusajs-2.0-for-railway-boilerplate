@@ -102,6 +102,12 @@ export default async function orderProductionStageChangedHandler({
     ? { url: latestPhoto.url as string, caption: latestPhoto.caption ?? null }
     : null
 
+  const emailPortalUrl = tagUrl(buildPortalUrl(data.order_id), {
+    medium: "transactional",
+    campaign: `production_stage_${data.to_stage}`,
+    content: "view_order",
+  })
+
   const watchers = readWatchers(orderMeta).filter(
     (w) => w.toLowerCase() !== String(order.email).toLowerCase()
   )
@@ -122,11 +128,7 @@ export default async function orderProductionStageChangedHandler({
           stage: data.to_stage,
           customerFirstName: firstName,
           productionPhoto,
-          portalUrl: tagUrl(buildPortalUrl(data.order_id), {
-            medium: "transactional",
-            campaign: `production_stage_${data.to_stage}`,
-            content: "view_order",
-          }),
+          portalUrl: emailPortalUrl,
         },
       })
     }

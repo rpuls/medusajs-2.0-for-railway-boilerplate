@@ -10,6 +10,7 @@ import {
   type ProductionStageChangedEvent,
 } from "../../../lib/production-stage"
 import { getPostHog } from "../../../lib/posthog"
+import { buildLineCustomizerExport } from "../../../lib/customizer-order-artifacts"
 import { verifyArtworkApproval } from "../../../services/artwork-approval/sign"
 
 const schema = z.object({
@@ -46,7 +47,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const orderModuleService: IOrderModuleService = req.scope.resolve(Modules.ORDER)
   let order: any
   try {
-    order = await orderModuleService.retrieveOrder(orderId)
+    order = await orderModuleService.retrieveOrder(orderId, { relations: ["items"] })
   } catch {
     return res.status(404).json({ error: "not_found" })
   }
@@ -60,6 +61,15 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       .sort((a, b) =>
         (a.uploaded_at ?? "") < (b.uploaded_at ?? "") ? 1 : -1
       )[0]?.url ?? null
+
+  const mockupUrls = (order.items ?? [])
+    .flatMap((line: any) => {
+      const exp = buildLineCustomizerExport(line)
+      return (exp?.artifacts ?? []).filter(
+        (a) => a.mockup_url && !a.mockup_url_inline_omitted
+      )
+    })
+    .map((a: any) => ({ side: a.side, side_label: a.side_label, url: a.mockup_url as string }))
 
   res.json({
     order_id: order.id,
@@ -75,6 +85,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         ? meta.artwork_approver_name
         : null,
     latest_photo_url: latestPhotoUrl,
+    mockup_urls: mockupUrls,
   })
 }
 

@@ -54,7 +54,27 @@ const ApprovalForm = ({ orderId, sig, initial }: Props) => {
             : "Approve your artwork"}
       </h1>
 
-      {initial.latest_photo_url ? (
+      {initial.mockup_urls && initial.mockup_urls.length > 0 ? (
+        <div className="mt-6 space-y-4">
+          {initial.mockup_urls.map((img) => (
+            <div key={img.side}>
+              {img.side_label ? (
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.1em] text-ui-fg-subtle">
+                  {img.side_label}
+                </p>
+              ) : null}
+              <img
+                src={img.url}
+                alt={img.side_label ?? img.side}
+                className="w-full rounded-lg border border-[rgba(26,26,46,0.08)]"
+              />
+            </div>
+          ))}
+          <p className="text-xs text-ui-fg-subtle">
+            Zoom in on a phone to check colours and placement.
+          </p>
+        </div>
+      ) : initial.latest_photo_url ? (
         <div className="mt-6">
           <img
             src={initial.latest_photo_url}
