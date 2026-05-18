@@ -331,144 +331,64 @@ const SECTIONS: Section[] = [
     id: "big-picture",
     title: "The big picture",
     diagram: `flowchart LR
-    subgraph CUST["Customer touchpoints"]
-        direction TB
-        STORE[Storefront catalog]
-        CUSTOMIZER[Fabric.js customizer]
-        ACCOUNT["/account dashboard"]
-        BYO[BYO inquiry form]
-        EMAIL_REPLY[Reply to email]
-    end
+    CUST[Customer touchpoints]
+    CORE[Orders and catalog]
+    CUSTOM[SC custom modules]
+    REACTIONS[Events and reactions]
+    CRONS[Scheduled crons]
+    OUT[External services]
+    ADMIN[Admin dashboard]
 
-    subgraph CORE["Medusa core"]
-        direction TB
-        CART[(Cart)]
-        ORDER[(Order)]
-        CUSTOMER[(Customer)]
-        PRODUCT[(Product)]
-    end
-
-    subgraph CUSTOM["SC PRINTS modules"]
-        direction TB
-        DESIGN[(Design + design_version)]
-        WISHLIST[(Wishlist)]
-        QUOTE[(Quote + events)]
-        RECIPE[(Print recipe)]
-        REJECT[(Production reject)]
-        LOOKBOOK[(Lookbook)]
-        ORG[(Organisation + members)]
-        GROUP[(Group order + participants)]
-        WORKSPACE[(customer_tag + note + comment)]
-    end
-
-    subgraph EVENTS["Event bus"]
-        direction TB
-        EV_PLACED[order.placed]
-        EV_STAGE[order.production_stage_changed]
-        EV_ART[order.artwork_stage_changed]
-        EV_CREATED[customer.created]
-    end
-
-    subgraph SUBS["Subscribers"]
-        direction TB
-        SUB_EMAIL[Email sender]
-        SUB_AUTO[Automation rule engine]
-        SUB_PERKS[Snapshot perks + tax_exempt]
-        SUB_STAGE_STAMP[Stamp initial stage]
-        SUB_PHOTO[Attach latest photo]
-    end
-
-    subgraph CRONS["Daily / weekly crons"]
-        direction TB
-        CRON_CART[Abandoned cart]
-        CRON_WB[Win-back]
-        CRON_NPS[NPS request]
-        CRON_REORDER[Reorder reminders]
-        CRON_STALE[Stale order scan]
-        CRON_CROSS[Cross-sell refresh]
-        CRON_PH[PostHog cohort sync]
-        CRON_INV[Supplier inventory]
-        CRON_SEO[SEO analytics]
-    end
-
-    subgraph OUT["Outbound channels"]
-        direction TB
-        RESEND[Resend email]
-        SLACK[Slack webhook]
-        POSTHOG[PostHog analytics]
-        GA4[Google Analytics 4]
-        SHIPSTATION[ShipStation]
-        STRIPE[Stripe]
-    end
-
-    subgraph ADMIN["Admin (reads from core + SC modules)"]
-        direction TB
-        STUDIO[Studio dashboard]
-        ORDER_PAGE[Order detail widgets]
-        CUSTOMER_PAGE[Customer detail widgets]
-        REPORTS[Reports]
-        GANTT[Production calendar]
-        QUOTE_PAGE[Quote pipeline]
-    end
-
-    STORE --> CART
-    CUSTOMIZER --> CART
-    CART --> ORDER
-    BYO --> QUOTE
-    ACCOUNT -.reads.-> ORDER
-    ACCOUNT -.reads.-> DESIGN
-    ACCOUNT -.reads.-> WISHLIST
-
-    ORDER --> EV_PLACED
-    EV_PLACED --> SUB_EMAIL
-    EV_PLACED --> SUB_AUTO
-    EV_PLACED --> SUB_PERKS
-    EV_PLACED --> SUB_STAGE_STAMP
-
-    ORDER --> EV_STAGE
-    EV_STAGE --> SUB_EMAIL
-    EV_STAGE --> SUB_PHOTO
-
-    CUSTOMER --> EV_CREATED
-    EV_CREATED --> SUB_AUTO
-
-    SUB_EMAIL --> RESEND
-    SUB_AUTO --> WORKSPACE
-    SUB_AUTO --> ORDER
-    SUB_PERKS --> ORDER
-    SUB_STAGE_STAMP --> ORDER
-
-    CRON_CART --> RESEND
-    CRON_WB --> RESEND
-    CRON_NPS --> RESEND
-    CRON_REORDER --> RESEND
-    CRON_STALE --> ORDER
-    CRON_STALE --> SLACK
-    CRON_CROSS --> PRODUCT
-    CRON_PH --> WORKSPACE
-
-    CUSTOMIZER -.identify+events.-> POSTHOG
-    STORE -.pageview+ecom.-> GA4
-    STORE -.pageview+ecom.-> POSTHOG
-
-    EMAIL_REPLY -.inbox+ord alias.-> WORKSPACE
-
-    CORE --> ADMIN
-    CUSTOM --> ADMIN
+    CUST -->|"cart + inquiries"| CORE
+    CORE -->|"emits events"| REACTIONS
+    REACTIONS -->|"notify"| OUT
+    CRONS -->|"scheduled sends"| OUT
+    CRONS -.->|"reads"| CORE
+    CUSTOM <-->|"linked"| CORE
+    CORE -.->|"read by"| ADMIN
+    CUSTOM -.->|"read by"| ADMIN
+    CUST -.->|"analytics"| OUT
 
     classDef ext fill:#fef3c7,stroke:#92400e;
     classDef cron fill:#dbeafe,stroke:#1e40af;
     classDef sub fill:#e0e7ff,stroke:#3730a3;
-    class RESEND,SLACK,POSTHOG,GA4,SHIPSTATION,STRIPE ext;
-    class CRON_CART,CRON_WB,CRON_NPS,CRON_REORDER,CRON_STALE,CRON_CROSS,CRON_PH,CRON_INV,CRON_SEO cron;
-    class SUB_EMAIL,SUB_AUTO,SUB_PERKS,SUB_STAGE_STAMP,SUB_PHOTO sub;`,
+    class OUT ext;
+    class CRONS cron;
+    class REACTIONS sub;`,
     body: (
-      <ul className="text-sm list-disc pl-5 space-y-1 text-ui-fg-subtle mt-2">
-        <li><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 border border-amber-800 mr-1" /> <strong>Yellow</strong> = external service (Resend, Slack, PostHog…)</li>
-        <li><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-800 mr-1" /> <strong>Blue</strong> = cron job (runs on a schedule)</li>
-        <li><span className="inline-block w-3 h-3 rounded-sm bg-indigo-100 border border-indigo-800 mr-1" /> <strong>Indigo</strong> = subscriber (fires on an event)</li>
-        <li>Solid arrows = primary data flow. Dotted = reads from / captures into (no write to source).</li>
-      </ul>
+      <div className="mt-3 grid grid-cols-1 small:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div>
+          <p className="font-semibold text-ui-fg-base">Customer touchpoints</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">Storefront catalog, Fabric.js customizer, /account dashboard, BYO inquiry form, inbound email replies</p>
+        </div>
+        <div>
+          <p className="font-semibold text-ui-fg-base">Orders and catalog</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">Medusa core: cart → order lifecycle, customer, product — the central data spine everything else reads from</p>
+        </div>
+        <div>
+          <p className="font-semibold text-ui-fg-base">SC custom modules</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">design, wishlist, quote, print recipe, production reject, lookbook, organisation, group order, customer_tag / note / comment</p>
+        </div>
+        <div>
+          <p className="font-semibold text-ui-fg-base"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-indigo-100 border border-indigo-800 mr-1 align-middle" />Events and reactions</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">order.placed · stage_changed · artwork_changed · customer.created → email sender, automation rules, perks snapshot, stage stamps, photo attach</p>
+        </div>
+        <div>
+          <p className="font-semibold text-ui-fg-base"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-800 mr-1 align-middle" />Scheduled crons</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">Abandoned cart, win-back, NPS request, reorder reminders, stale-order scan, cross-sell refresh, PostHog cohort sync, supplier inventory, SEO analytics</p>
+        </div>
+        <div>
+          <p className="font-semibold text-ui-fg-base"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-800 mr-1 align-middle" />External services</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">Resend (email), Slack (alerts), PostHog (analytics + cohorts), GA4 (e-commerce tracking), ShipStation, Stripe, Meilisearch</p>
+        </div>
+        <div>
+          <p className="font-semibold text-ui-fg-base">Admin dashboard</p>
+          <p className="text-ui-fg-subtle text-xs mt-0.5">Studio, order detail widgets, customer detail widgets, reports, production calendar, quote pipeline — all read-only consumers</p>
+        </div>
+        <div className="text-ui-fg-muted text-xs pt-1 border-t border-ui-border-base col-span-full">
+          Solid arrows = primary data flow. Dotted = reads from (no write to source).
+        </div>
+      </div>
     ),
   },
 
