@@ -1975,9 +1975,11 @@ type Props = {
    * - `"bright"`: keep light pixels (white logo on dark / transparent background)
    * - `"dark"`: keep dark pixels (dark logo on light background, or photographic content
    *   where the dark areas should form the particle silhouette)
+   * - `"alpha"`: keep every opaque pixel (alpha > 128) — ideal for full-bleed photos
+   *   where both bright and dark areas should be covered
    * - `"auto"` (default): inspect the image and pick whichever is dominant
    */
-  inkPolarity?: "auto" | "bright" | "dark"
+  inkPolarity?: "auto" | "bright" | "dark" | "alpha"
   /**
    * Tailwind class for the embedded section background. Default `bg-black`.
    * Set to e.g. `"bg-ui-fg-base"` to seamlessly blend with the site header.
@@ -2377,34 +2379,38 @@ export default function HomeParticleLogoHero({
     try {
       /** Polarity selection. If the caller forced one via `inkPolarity`, use it. Otherwise
        * auto-detect by inspecting the drawn image on a mid-grey background. */
-      const polarity =
-        inkPolarity !== "auto"
-          ? inkPolarity
-          : detectImagePolarity(
-              W,
-              H,
-              dpr,
-              img,
-              wCss,
-              hCss,
-              dxCss,
-              dyCss,
-              dwCss,
-              dhCss
-            )
-      if (polarity === "dark") {
-        candidates = gatherDarkInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
-        if (candidates.length === 0) {
-          candidates = gatherBrightInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
-        }
-      } else {
-        candidates = gatherBrightInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
-        if (candidates.length === 0) {
-          candidates = gatherDarkInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
-        }
-      }
-      if (candidates.length === 0) {
+      if (inkPolarity === "alpha") {
         candidates = gatherAlphaCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
+      } else {
+        const polarity =
+          inkPolarity !== "auto"
+            ? inkPolarity
+            : detectImagePolarity(
+                W,
+                H,
+                dpr,
+                img,
+                wCss,
+                hCss,
+                dxCss,
+                dyCss,
+                dwCss,
+                dhCss
+              )
+        if (polarity === "dark") {
+          candidates = gatherDarkInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
+          if (candidates.length === 0) {
+            candidates = gatherBrightInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
+          }
+        } else {
+          candidates = gatherBrightInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
+          if (candidates.length === 0) {
+            candidates = gatherDarkInkCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
+          }
+        }
+        if (candidates.length === 0) {
+          candidates = gatherAlphaCandidates(W, H, dpr, img, wCss, hCss, dxCss, dyCss, dwCss, dhCss)
+        }
       }
     } catch {
       setLoadFailed(true)

@@ -995,6 +995,14 @@ export type NewmixTunerExperienceProps = {
   bodyClassWhileMounted?: string
   /** Override the image rasterized into particle homes. Defaults to SC Prints wordmark. */
   logoSrc?: string
+  /** Photographic colour source — each particle samples its colour from this image at its
+   * home position. Takes precedence over the gradient presets when set. */
+  wordmarkImageSrc?: string | null
+  /** Polarity passed to HomeParticleLogoHero. Use `"alpha"` for full-bleed photos so
+   * every opaque pixel becomes a particle home regardless of brightness. */
+  inkPolarity?: "auto" | "bright" | "dark" | "alpha"
+  /** Canvas presentation mode forwarded to HomeParticleLogoHero. */
+  presentation?: "embedded" | "fullscreen"
 }
 
 type LsKeys = {
@@ -1105,6 +1113,9 @@ export default function NewmixTunerExperience(
     sectionAriaLabel = "SC Prints — particle flow",
     bodyClassWhileMounted = "particle-flow-page",
     logoSrc,
+    wordmarkImageSrc,
+    inkPolarity,
+    presentation = "embedded",
   } = props
   /** Memoize keys so the load* identity is stable. */
   const lsKeys = useMemo(() => buildLsKeys(lsKeyPrefix), [lsKeyPrefix])
@@ -1303,17 +1314,20 @@ export default function NewmixTunerExperience(
       <style dangerouslySetInnerHTML={{ __html: bodyHideCss }} />
 
       <HomeParticleLogoHero
-        presentation="embedded"
+        presentation={presentation}
         interactionMode="newmix"
         animatedParticleCap={appliedParticleCount}
         sectionAriaLabel={sectionAriaLabel}
         newmixLiveTuning={effectiveTuning}
-        wordmarkGradient={{
-          angleDeg: activeGradient.angleDeg,
-          stops: activeGradient.stops,
-        }}
+        wordmarkGradient={
+          wordmarkImageSrc
+            ? null
+            : { angleDeg: activeGradient.angleDeg, stops: activeGradient.stops }
+        }
+        wordmarkImageSrc={wordmarkImageSrc ?? null}
         particleDrawSize={effectiveRender.particleDrawSize}
         {...(logoSrc ? { logoSrc } : {})}
+        {...(inkPolarity ? { inkPolarity } : {})}
       />
 
       {!open && (
