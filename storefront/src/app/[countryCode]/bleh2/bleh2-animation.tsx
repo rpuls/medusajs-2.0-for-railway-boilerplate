@@ -28,6 +28,7 @@ export default function Bleh2Animation() {
       <HomeParticleThree
         logoSrc="/branding/bleh-image.png"
         particleCount={140000}
+        logoFit="cover"
       />
     </>
   )

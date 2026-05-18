@@ -1003,6 +1003,8 @@ export type NewmixTunerExperienceProps = {
   inkPolarity?: "auto" | "bright" | "dark" | "alpha"
   /** Canvas presentation mode forwarded to HomeParticleLogoHero. */
   presentation?: "embedded" | "fullscreen"
+  /** Controls how the image fills the canvas — forwarded to HomeParticleLogoHero. */
+  logoFit?: "contain" | "cover"
 }
 
 type LsKeys = {
@@ -1116,6 +1118,7 @@ export default function NewmixTunerExperience(
     wordmarkImageSrc,
     inkPolarity,
     presentation = "embedded",
+    logoFit,
   } = props
   /** Memoize keys so the load* identity is stable. */
   const lsKeys = useMemo(() => buildLsKeys(lsKeyPrefix), [lsKeyPrefix])
@@ -1328,6 +1331,7 @@ export default function NewmixTunerExperience(
         particleDrawSize={effectiveRender.particleDrawSize}
         {...(logoSrc ? { logoSrc } : {})}
         {...(inkPolarity ? { inkPolarity } : {})}
+        {...(logoFit ? { logoFit } : {})}
       />
 
       {!open && (

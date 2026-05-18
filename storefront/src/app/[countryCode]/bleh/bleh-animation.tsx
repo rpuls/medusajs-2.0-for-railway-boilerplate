@@ -14,6 +14,7 @@ export default function BlehAnimation() {
       wordmarkImageSrc="/branding/bleh-image.png"
       inkPolarity="alpha"
       presentation="fullscreen"
+      logoFit="cover"
     />
   )
 }

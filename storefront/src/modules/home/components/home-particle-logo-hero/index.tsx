@@ -2012,6 +2012,12 @@ type Props = {
    * Useful for live-tuning UIs that expose particle size as a slider.
    */
   particleDrawSize?: number | null
+  /**
+   * Controls how the source image fills the canvas.
+   * - `"contain"` (default): scale to fit within the canvas with padding — full image visible
+   * - `"cover"`: scale to fill the canvas edge-to-edge — sides may be cropped
+   */
+  logoFit?: "contain" | "cover"
 }
 
 export default function HomeParticleLogoHero({
@@ -2030,6 +2036,7 @@ export default function HomeParticleLogoHero({
   wordmarkImageSrc = null,
   wordmarkImageBrightness = 1,
   particleDrawSize = null,
+  logoFit = "contain",
 }: Props) {
   const presentationRef = useRef(presentation)
   presentationRef.current = presentation
@@ -2355,7 +2362,10 @@ export default function HomeParticleLogoHero({
     const nh = img.naturalHeight
     const isFsBuild = presentationRef.current === "fullscreen"
     const pad = isFsBuild ? FULLSCREEN_LOGO_PAD : 0.985
-    const baseLogoScale = Math.min((W * pad) / nw, (H * pad) / nh)
+    const baseLogoScale =
+      logoFit === "cover"
+        ? Math.max(W / nw, H / nh)
+        : Math.min((W * pad) / nw, (H * pad) / nh)
     const logoScale = isFsBuild
       ? baseLogoScale
       : baseLogoScale * EMBEDDED_LOGO_BOOST_SCALE
@@ -2712,7 +2722,7 @@ export default function HomeParticleLogoHero({
         y: sb.y,
       }
     }
-  }, [logoImg, wordmarkImgState, reduceParallax, animatedParticleCap, interactionMode])
+  }, [logoImg, wordmarkImgState, reduceParallax, animatedParticleCap, interactionMode, logoFit])
 
   buildRef.current = build
 

@@ -115,6 +115,7 @@ type ParticleFieldProps = {
   height: number
   particleCount: number
   tuningRef: React.MutableRefObject<ThreeTuning>
+  logoFit?: "contain" | "cover"
 }
 
 function ParticleField({
@@ -123,6 +124,7 @@ function ParticleField({
   height,
   particleCount,
   tuningRef,
+  logoFit = "contain",
 }: ParticleFieldProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const { size, camera } = useThree()
@@ -515,20 +517,22 @@ function ParticleField({
     }
   })
 
-  /** Auto-fit camera so the whole wordmark fits both axes. */
+  /** Auto-fit camera — contain keeps full image visible; cover fills viewport edge-to-edge. */
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera
     if (cam.isPerspectiveCamera == null) return
-    const fitMargin = 0.85
+    const fitMargin = logoFit === "cover" ? 1.0 : 0.85
     const vFov = (cam.fov * Math.PI) / 180
     const tanHalfFov = Math.tan(vFov / 2)
     const distForHeight = height / fitMargin / (2 * tanHalfFov)
     const distForWidth = width / fitMargin / (2 * tanHalfFov * cam.aspect)
-    const dist = Math.max(distForHeight, distForWidth)
+    const dist = logoFit === "cover"
+      ? Math.min(distForHeight, distForWidth)
+      : Math.max(distForHeight, distForWidth)
     cam.position.set(0, 0, dist)
     cam.lookAt(0, 0, 0)
     cam.updateProjectionMatrix()
-  }, [width, height, size.width, size.height, camera])
+  }, [width, height, size.width, size.height, camera, logoFit])
 
   return (
     <>
@@ -667,10 +671,12 @@ function DebugCursorHistory({
 type Props = {
   logoSrc?: string
   particleCount?: number
+  logoFit?: "contain" | "cover"
 }
 
 export default function HomeParticleThree({
   logoSrc = "/branding/sc-prints-logo-transparent.png",
+  logoFit = "contain",
 }: Props) {
   const [stipple, setStipple] = useState<{
     points: StipplePoint[]
@@ -709,7 +715,7 @@ export default function HomeParticleThree({
   }
 
   return (
-    <div className="relative h-[80vh] w-full bg-black">
+    <div className={`relative w-full bg-black ${logoFit === "cover" ? "h-screen" : "h-[80vh]"}`}>
       <Canvas
         camera={{ position: [0, 0, 1000], fov: 35, near: 1, far: 5000 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
@@ -723,6 +729,7 @@ export default function HomeParticleThree({
               height={stipple.height}
               particleCount={tuning.particleCount}
               tuningRef={tuningRef}
+              logoFit={logoFit}
             />
           )}
         </Suspense>
