@@ -982,7 +982,11 @@ export function getGarmentImageUrlForPrintSide(
   // full unfiltered pool when strict URL colour matching finds nothing (e.g. AP images whose
   // filenames don't embed the colour name).
   const poolBack = colorFilteredBack.length > 0 ? colorFilteredBack : backOrdered
-  const preferredBack = poolBack.find((u) => garmentUrlLooksLikeBack(u)) ?? poolBack[0]
+  // Prefer an explicitly back-patterned URL. If none is identifiable, use positional
+  // detection: exclude the declared front URL and take the next variant image (AP stores
+  // flat images in index order, so the second flat is typically the back).
+  const nonFront = poolBack.filter((u) => u !== parsed.front)
+  const preferredBack = poolBack.find((u) => garmentUrlLooksLikeBack(u)) ?? nonFront[0]
 
   if (preferredBack) {
     const resolved = resolveToStoreUrl(preferredBack)
