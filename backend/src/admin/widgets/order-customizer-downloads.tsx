@@ -8,6 +8,59 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { HelpTooltip } from "../components/reports/help-tooltip"
 import type { RevisedProof } from "../../api/admin/orders/[id]/revised-proof/route"
 
+/** Fetches a cross-origin URL as a blob and triggers a native Save dialog. */
+function triggerBlobDownload(url: string, fileName: string): Promise<void> {
+  return fetch(url, { mode: "cors", credentials: "omit" })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      return r.blob()
+    })
+    .then((blob) => {
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = objectUrl
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
+    })
+}
+
+function DownloadLink({
+  href,
+  fileName,
+  label,
+}: {
+  href: string
+  fileName: string
+  label: string
+}) {
+  const [state, setState] = useState<"idle" | "downloading" | "error">("idle")
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setState("downloading")
+    triggerBlobDownload(href, fileName)
+      .then(() => setState("idle"))
+      .catch(() => {
+        // CORS blocked or network error — fall back to new tab
+        window.open(href, "_blank", "noreferrer")
+        setState("idle")
+      })
+  }
+
+  return (
+    <a
+      href={href}
+      onClick={handleClick}
+      className="text-small text-blue-600 hover:underline break-all"
+    >
+      {state === "downloading" ? "Downloading…" : label}
+    </a>
+  )
+}
+
 function adminCustomizerDownloadPath(orderId: string) {
   return `/admin/orders/${orderId}/customizer-download`
 }
@@ -179,14 +232,11 @@ const SideProofCard = ({
               {selected === "original" ? "Customer artwork / print file" : "Proof artwork"}
             </Text>
             {displayedArtworkUrl && (
-              <a
+              <DownloadLink
                 href={displayedArtworkUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-small text-blue-600 hover:underline break-all"
-              >
-                Open artwork (right-click → Save as…)
-              </a>
+                fileName={selected === "original" ? "artwork.png" : "proof-artwork.png"}
+                label="Download artwork"
+              />
             )}
 
             {/* Customise position — single action, routes all proof creation through the iframe */}
@@ -265,14 +315,11 @@ const SideProofCard = ({
                   {selected === "original" ? "Garment mockup (JPEG)" : "Revised mockup"}
                 </Text>
                 {displayedMockupUrl && (
-                  <a
+                  <DownloadLink
                     href={displayedMockupUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-small text-blue-600 hover:underline break-all"
-                  >
-                    Open {selected === "original" ? "mockup JPEG" : "revised mockup"} (right-click → Save as…)
-                  </a>
+                    fileName={selected === "original" ? "mockup.jpg" : "revised-mockup.jpg"}
+                    label={`Download ${selected === "original" ? "mockup" : "revised mockup"}`}
+                  />
                 )}
               </div>
             </div>
@@ -575,14 +622,11 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
                                   {f.file_name}
                                 </span>
                               </div>
-                              <a
+                              <DownloadLink
                                 href={f.url}
-                                target="_blank"
-                                rel="noreferrer noopener"
-                                className="text-small text-blue-600 hover:underline break-all mt-0.5 inline-block"
-                              >
-                                Download original ({f.file_name})
-                              </a>
+                                fileName={f.file_name}
+                                label={`Download original (${f.file_name})`}
+                              />
                             </li>
                           ))}
                         </ul>
