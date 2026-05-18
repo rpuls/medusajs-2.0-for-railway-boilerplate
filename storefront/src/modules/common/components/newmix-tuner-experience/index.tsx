@@ -993,6 +993,8 @@ export type NewmixTunerExperienceProps = {
   /** Body class applied while this experience is mounted, used to hide the
    * site footer + chat widget so they don't overlap the tuner panel. */
   bodyClassWhileMounted?: string
+  /** Override the image rasterized into particle homes. Defaults to SC Prints wordmark. */
+  logoSrc?: string
 }
 
 type LsKeys = {
@@ -1102,6 +1104,7 @@ export default function NewmixTunerExperience(
     initialGradientId = DEFAULT_GRADIENT_ID,
     sectionAriaLabel = "SC Prints — particle flow",
     bodyClassWhileMounted = "particle-flow-page",
+    logoSrc,
   } = props
   /** Memoize keys so the load* identity is stable. */
   const lsKeys = useMemo(() => buildLsKeys(lsKeyPrefix), [lsKeyPrefix])
@@ -1310,6 +1313,7 @@ export default function NewmixTunerExperience(
           stops: activeGradient.stops,
         }}
         particleDrawSize={effectiveRender.particleDrawSize}
+        {...(logoSrc ? { logoSrc } : {})}
       />
 
       {!open && (
