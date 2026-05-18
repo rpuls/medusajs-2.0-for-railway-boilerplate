@@ -43,6 +43,7 @@ const serviceMinimums: Record<string, string> = {
   "digital-transfers": "Minimum run: 1 unit",
   embroidery: "Minimum run: 1 unit",
   "uv-printing": "Minimum run: Custom quoted",
+  "uv-dtf": "Minimum run: 1 unit",
 }
 
 const SERVICES_HERO_TITLE =

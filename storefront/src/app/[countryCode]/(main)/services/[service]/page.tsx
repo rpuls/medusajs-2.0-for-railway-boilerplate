@@ -12,6 +12,7 @@ import { getServiceBySlug } from "@modules/services/data"
 const SERVICE_PLACEHOLDER_IMAGES_BY_SLUG: Record<string, string[]> = {
   "digital-transfers": Array(3).fill("/placeholders/services/digital-transfers.svg"),
   "uv-printing": Array(3).fill("/placeholders/services/uv-printing.svg"),
+  "uv-dtf": Array(3).fill("/placeholders/services/uv-printing.svg"),
 }
 
 type ServiceGalleryImage = {

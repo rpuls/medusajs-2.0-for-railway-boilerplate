@@ -16,7 +16,7 @@ export default function HeroOverlay() {
       <div className="content-container relative">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-            Custom Apparel · Victoria, AU
+            Custom Apparel · NSW, AU
           </p>
           <h1
             id="hero-headline"

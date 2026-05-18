@@ -90,6 +90,26 @@ export const services: ServiceItem[] = [
     typicalTurnaround:
       "Generally 5-10 business days, based on substrate type, quantity, and finishing requirements.",
   },
+  {
+    slug: "uv-dtf",
+    title: "UV DTF",
+    shortDescription:
+      "Full-colour UV transfers for hard goods and curved surfaces — bottles, tumblers, helmets, signage, and more.",
+    heroDescription:
+      "UV DTF pairs the colour fidelity of UV printing with the flexibility of a transfer. We print your artwork onto a clear UV-cured film that's then applied to almost any hard surface — including the curves direct UV printing struggles with. Perfect for branded drinkware, signage accents, and promo runs where shape gets in the way.",
+    bulletPoints: [
+      "Wraps around curved surfaces — bottles, tumblers, helmets, mugs",
+      "High-resolution full-colour artwork including gradients and white",
+      "Durable, scratch- and water-resistant finish",
+      "Low minimums — great for short runs and prototypes",
+    ],
+    bestFor:
+      "Branded drinkware, promo accessories, and any hard goods with curves or odd shapes where direct UV printing isn't practical.",
+    notIdealFor:
+      "Soft textile garments — DTF transfers, screen print, or embroidery are better matched to fabric.",
+    typicalTurnaround:
+      "Typically 3-7 business days after artwork sign-off, depending on quantity and finish requirements.",
+  },
 ]
 
 export const getServiceBySlug = (slug: string) =>

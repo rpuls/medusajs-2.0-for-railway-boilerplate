@@ -65,7 +65,7 @@ const STEPS: Step[] = [
     number: "03",
     title: "We print in-house",
     description:
-      "Production happens at our Victoria studio — screen print, embroidery, transfer or UV.",
+      "Production happens at our NSW studio — screen print, embroidery, transfer or UV.",
     Icon: PrintIcon,
   },
   {
@@ -73,7 +73,7 @@ const STEPS: Step[] = [
     number: "04",
     title: "Delivery or pickup",
     description:
-      "Australia-wide shipping or in-store pickup from our Victoria studio.",
+      "Australia-wide shipping or in-store pickup from our NSW studio.",
     Icon: DeliveredIcon,
   },
 ]

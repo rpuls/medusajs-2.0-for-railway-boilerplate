@@ -52,9 +52,9 @@ export async function generateMetadata({
 }
 
 const TRUST_ITEMS = [
-  "Victoria-based",
-  "Quotes within 24h",
-  "From 24 garments",
+  "NSW-based studio",
+  "Australia-wide shipping",
+  "Order from 1 garment",
   "In-house design & proofs",
 ]
 
@@ -96,24 +96,6 @@ const LocationIcon = ({ className }: StatIconProps) => (
   </svg>
 )
 
-const ClockIcon = ({ className }: StatIconProps) => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    aria-hidden
-  >
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7v5l3 2" />
-  </svg>
-)
-
 const StackIcon = ({ className }: StatIconProps) => (
   <svg
     width="24"
@@ -133,11 +115,31 @@ const StackIcon = ({ className }: StatIconProps) => (
   </svg>
 )
 
+const TruckIcon = ({ className }: StatIconProps) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <rect x="2" y="7" width="11" height="10" rx="1" />
+    <path d="M13 10h4l4 4v3h-8" />
+    <circle cx="7" cy="18" r="1.6" />
+    <circle cx="17" cy="18" r="1.6" />
+  </svg>
+)
+
 const WHY_STATS = [
   { value: "10+ yrs", label: "Printing experience", Icon: ExperienceIcon },
-  { value: "Victoria, AU", label: "Local studio", Icon: LocationIcon },
-  { value: "24 hrs", label: "Quote turnaround", Icon: ClockIcon },
-  { value: "From 24", label: "Minimum order", Icon: StackIcon },
+  { value: "NSW, AU", label: "Local studio", Icon: LocationIcon },
+  { value: "Aus-wide", label: "Shipping", Icon: TruckIcon },
+  { value: "From 1", label: "Garment minimum", Icon: StackIcon },
 ]
 
 export default async function Home({
