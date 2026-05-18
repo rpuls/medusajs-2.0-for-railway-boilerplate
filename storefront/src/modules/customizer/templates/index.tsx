@@ -3270,7 +3270,7 @@ export default function CustomizerTemplate({
                       {selectedProduct?.title ? `Design your ${selectedProduct.title}` : "Design your product"}
                     </p>
                   </div>
-                  {!embedded && pickerProducts && pickerProducts.length > 0 ? (
+                  {pickerProducts && pickerProducts.length > 0 ? (
                     <CustomizerProductPicker
                       products={pickerProducts}
                       currentHandle={selectedProduct?.handle ?? null}

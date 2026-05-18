@@ -1,14 +1,23 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomerTier } from "@lib/data/customer-tier"
 import { getMyDesign } from "@lib/data/designs"
 import { retrieveOrder } from "@lib/data/orders"
 import { getProductsList } from "@lib/data/products"
+import { getRegion } from "@lib/data/regions"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
-import { extractDefaultGarmentFromProduct } from "@modules/customizer/lib/default-garment"
-import CustomizerTemplate from "@modules/customizer/templates"
+import EmbeddedProductCustomizer from "@modules/customizer/components/embedded-product-customizer"
+import ImageGallery from "@modules/products/components/image-gallery"
+import PdpCustomizerBoundary from "@modules/products/components/pdp-customizer-boundary"
+import PdpLayoutGrid from "@modules/products/components/pdp-layout-grid"
+import ProductActions from "@modules/products/components/product-actions"
+import { CustomizeModeProvider } from "@modules/products/context/customize-mode-context"
+import { PrintPlacementProvider } from "@modules/products/context/print-placement-context"
 import { ProductOptionsProvider } from "@modules/products/context/product-options-context"
+import ProductActionsWrapper from "@modules/products/templates/product-actions-wrapper"
+import ProductInfo from "@modules/products/templates/product-info"
 
 type MetadataProps = {
   params: Promise<{ countryCode: string }>
@@ -146,13 +155,10 @@ export default async function CustomizerPage({ params, searchParams }: Customize
 
   // Resolution order:
   //   1. Explicit ?handle= (deep link / "Change product" picker)
-  //   2. ?reorder=<orderId>:<lineItemId> → original line's product (BUG FIX)
-  //   3. ?design=<savedId> → saved design's base product   (BUG FIX)
+  //   2. ?reorder=<orderId>:<lineItemId> → original line's product
+  //   3. ?design=<savedId> → saved design's base product
   //   4. Configured env default
   //   5. First shirt-like product in catalog
-  // Without #2 and #3, customers re-ordering a tee or re-editing a saved
-  // hoodie design would land on the configured default (a duffel bag in
-  // this catalog) and have to manually swap.
   let effectiveHandleFromUrl: string | null = handleFromQuery
   if (!effectiveHandleFromUrl && reorderRef) {
     effectiveHandleFromUrl = await resolveReorderHandle(reorderRef)
@@ -163,8 +169,6 @@ export default async function CustomizerPage({ params, searchParams }: Customize
       response: { products: byQuery },
     } = await getProductsList({
       countryCode,
-      // `handle` filter is accepted by Medusa at runtime but isn't declared in
-      // the SDK's StoreProductParams preview types — cast to silence drift.
       queryParams: {
         handle: effectiveHandleFromUrl,
         limit: 1,
@@ -206,11 +210,14 @@ export default async function CustomizerPage({ params, searchParams }: Customize
     notFound()
   }
 
-  // Catalog list for the in-customizer "Change product" picker. Customers
-  // landing on /customizer (e.g. via the account dashboard or a saved-design
-  // re-edit) need a way to swap to a different garment without back-buttoning
-  // to the catalog. Trimmed to thumbnail + handle + title to keep the payload
-  // small — full product data is fetched on actual switch.
+  const region = await getRegion(countryCode)
+  if (!region) {
+    notFound()
+  }
+
+  // Catalog list for the in-customizer "Change product" picker — same behavior
+  // as before so customers who land here directly can switch garments without
+  // back-buttoning to the catalog.
   const {
     response: { products: catalogForPicker },
   } = await getProductsList({
@@ -230,18 +237,63 @@ export default async function CustomizerPage({ params, searchParams }: Customize
     }))
     .filter((p) => p.handle.length > 0)
 
-  const defaultGarment = extractDefaultGarmentFromProduct(customizerProduct)
   const tier = await getCustomerTier()
 
-  return (
-    <ProductOptionsProvider product={customizerProduct}>
-      <CustomizerTemplate
-        defaultGarmentImage={defaultGarment?.url ?? null}
-        defaultGarmentTitle={defaultGarment?.title ?? null}
-        product={customizerProduct}
-        pickerProducts={pickerProducts}
-        tier={tier}
+  // Slots are server-rendered then handed to the client customizer template so
+  // the gallery + variant pickers participate in the same unified PDP layout
+  // grid as on real product pages.
+  const gallerySlot = (
+    <ImageGallery
+      product={customizerProduct}
+      images={customizerProduct?.images || []}
+      thumbnail={customizerProduct?.thumbnail || null}
+      heroLayout
+    />
+  )
+
+  const variantPickersSlot = (
+    <Suspense
+      fallback={
+        <ProductActions
+          disabled={true}
+          product={customizerProduct}
+          region={region}
+          hideInlinePurchaseControls
+        />
+      }
+    >
+      <ProductActionsWrapper
+        id={customizerProduct.id}
+        region={region}
+        hideInlinePurchaseControls
       />
-    </ProductOptionsProvider>
+    </Suspense>
+  )
+
+  return (
+    <div className="content-container py-6 relative" data-testid="customizer-container">
+      <PrintPlacementProvider>
+        <ProductOptionsProvider product={customizerProduct}>
+          <CustomizeModeProvider>
+            <PdpLayoutGrid
+              asideSlot={<ProductInfo product={customizerProduct} />}
+              customizerSlot={
+                <PdpCustomizerBoundary>
+                  <EmbeddedProductCustomizer
+                    product={customizerProduct}
+                    integratedPdpSlots={{
+                      gallery: gallerySlot,
+                      variantPickers: variantPickersSlot,
+                    }}
+                    pickerProducts={pickerProducts}
+                    tier={tier}
+                  />
+                </PdpCustomizerBoundary>
+              }
+            />
+          </CustomizeModeProvider>
+        </ProductOptionsProvider>
+      </PrintPlacementProvider>
+    </div>
   )
 }

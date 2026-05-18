@@ -18,13 +18,30 @@ type Props = {
   }
   /** Logged-in customer's tier, resolved by the server parent. */
   tier?: Tier | null
+  /**
+   * Optional product list for the in-canvas "Change garment" picker. Used by the
+   * standalone /customizer page so customers can swap garments without going
+   * back to the catalog; PDP usage typically omits this since the URL already
+   * scopes the customizer to a specific product.
+   */
+  pickerProducts?: Array<{
+    id: string
+    handle: string
+    title: string
+    thumbnail: string | null
+  }>
 }
 
 /**
  * Logo customizer on the PDP: variant selection can live in `integratedPdpSlots.variantPickers`
  * so it aligns with ProductActions; canvas shows the garment mockup for the synced variant.
  */
-export default function EmbeddedProductCustomizer({ product, integratedPdpSlots, tier = null }: Props) {
+export default function EmbeddedProductCustomizer({
+  product,
+  integratedPdpSlots,
+  tier = null,
+  pickerProducts,
+}: Props) {
   const productOptions = useProductOptionsOptional()
 
   const syncVariantId = useMemo(() => {
@@ -50,6 +67,7 @@ export default function EmbeddedProductCustomizer({ product, integratedPdpSlots,
       defaultGarmentImage={defaultGarment?.url ?? null}
       defaultGarmentTitle={defaultGarment?.title ?? null}
       product={product}
+      pickerProducts={pickerProducts}
       tier={tier}
     />
   )
