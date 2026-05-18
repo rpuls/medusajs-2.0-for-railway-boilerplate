@@ -292,6 +292,104 @@ const SECTIONS: Section[] = [
     ),
   },
   {
+    id: "supplier-integrations",
+    title: "Supplier API integrations",
+    body: (
+      <>
+        <Text>
+          Three supplier APIs back our garment catalog: <strong>AS Colour</strong>, <strong>FashionBiz</strong>, and <strong>Aussie Pacific</strong>. They share the same shape — a one-off product import script, a recurring inventory sync at a dedicated stock location, brand assignment, and (when the supplier exposes one) order forwarding for dropship. Differences are in the API shape, sync cadence, and whether the supplier accepts orders programmatically.
+        </Text>
+
+        <Text className="mt-3 font-semibold">At a glance</Text>
+        <div className="mt-2 overflow-hidden rounded-md border border-ui-border-base">
+          <table className="w-full text-sm">
+            <thead className="bg-ui-bg-subtle text-ui-fg-subtle">
+              <tr>
+                <th className="px-3 py-1.5 text-left font-medium">Supplier</th>
+                <th className="px-3 py-1.5 text-left font-medium">Auth</th>
+                <th className="px-3 py-1.5 text-left font-medium">Inventory sync</th>
+                <th className="px-3 py-1.5 text-left font-medium">Cost convention</th>
+                <th className="px-3 py-1.5 text-left font-medium">Dropship</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ui-border-base">
+              <tr>
+                <td className="px-3 py-1">AS Colour</td>
+                <td className="px-3 py-1"><code>Subscription-Key</code> header</td>
+                <td className="px-3 py-1">Hourly (delta)</td>
+                <td className="px-3 py-1">Ex-GST, no adjustment</td>
+                <td className="px-3 py-1">Yes — Order API</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-1">FashionBiz</td>
+                <td className="px-3 py-1"><code>Authorization: Token</code></td>
+                <td className="px-3 py-1">Daily 04:00 UTC (full sweep)</td>
+                <td className="px-3 py-1">1-99 tier × <code>FASHIONBIZ_COST_ADJUSTMENT</code> (1.15× in prod)</td>
+                <td className="px-3 py-1">No — supplier has no order endpoint</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-1">Aussie Pacific</td>
+                <td className="px-3 py-1"><code>Authorization: Bearer</code></td>
+                <td className="px-3 py-1">Daily 05:00 UTC (full sweep)</td>
+                <td className="px-3 py-1">Ex-GST, no adjustment</td>
+                <td className="px-3 py-1">Yes — POST <code>/order</code> (submit-only, no status)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <Text className="mt-4 font-semibold">AS Colour</Text>
+        <Text size="xsmall" className="text-ui-fg-muted">
+          Base URL <code>api.ascolour.com.au/v1</code> — API support at <a href="mailto:api@ascolour.com" className="underline">api@ascolour.com</a>.
+        </Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>What their API exposes</strong> — Catalog (products, colours, variants, images), Inventory (delta via <code>updatedAt:min</code> + full SKU lookup), Pricelist (wholesale costs, Bearer-authed), Authentication (login → Bearer token), and an Order API for dropship.</li>
+          <li><strong>What we pull</strong> — initial import via <code>src/scripts/import-as-colour-from-api.ts</code> creates one Medusa product per style and links it to the AS Colour Brand. Hourly stock delta at <em>AS Colour Warehouse</em> uses the <code>updatedAt:min</code> filter so we only pull what's changed. Pricelist drives <code>variant.metadata.cost_price_ex_gst_minor</code>, which feeds the public quantity ladder and the tier-pricing system.</li>
+          <li><strong>What we push</strong> — dropship orders via <code>POST /v1/orders</code>. Trigger from the order detail page → <em>AS Colour dropship</em> widget; backend posts shipping address + SKU lines and stamps AS Colour's response on order metadata.</li>
+          <li><strong>Quirk: discontinued styles</strong> — AS Colour appends <code>S</code> to a styleCode when it's superseded. The importer skips these by default. Set <code>IMPORT_INCLUDE_DISCONTINUED=1</code> only for one-off historical imports.</li>
+          <li><strong>Where to look when it breaks</strong> — Railway logs for the <code>sync-ascolour-inventory</code> job; the dropship widget surfaces any send-to-AS-Colour error inline.</li>
+        </ul>
+
+        <Text className="mt-4 font-semibold">FashionBiz</Text>
+        <Text size="xsmall" className="text-ui-fg-muted">
+          Base URL <code>fashionbizapis.com/api/v3</code> — covers Biz Collection, Biz Care, Biz Corporates, Syzmik.
+        </Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>What their API exposes</strong> — <code>/products</code> (with three wholesale tiers per variant: <code>1-99</code>, <code>100-499</code>, <code>500</code>) and <code>/stock</code>. No order endpoint, no webhooks.</li>
+          <li><strong>What we pull</strong> — initial import via <code>src/scripts/import-fashionbiz-from-api.ts</code> creates products linked to the four FashionBiz brand entities. Daily stock sweep at 04:00 UTC against <em>FashionBiz Warehouse</em>; because FashionBiz has no <code>updated_at</code> filter, every sync is a full catalog walk.</li>
+          <li><strong>What we push</strong> — nothing. FashionBiz has no public order endpoint, so dropship orders are still placed manually through their portal.</li>
+          <li><strong>Cost calibration (important)</strong> — the API's <code>1-99</code> tier is a published price, but FashionBiz's distributor storefront charges trade customers ~15% above that. Production sets <code>FASHIONBIZ_COST_ADJUSTMENT=1.15</code> so our retail ladder is built off the cost we'll actually be billed. Without the multiplier the storefront under-prices garments by ~15%. Raw 3-tier array + applied multiplier are preserved on <code>variant.metadata.raw_prices</code> and <code>variant.metadata.cost_adjustment</code> for audit.</li>
+          <li><strong>Idempotency</strong> — create-only, keyed by handle (e.g. <code>biz-collection-p400ms</code>). Existing handles are skipped, so re-running the importer to refresh existing products is a no-op until an update path is added.</li>
+        </ul>
+
+        <Text className="mt-4 font-semibold">Aussie Pacific</Text>
+        <Text size="xsmall" className="text-ui-fg-muted">
+          Base URL <code>api.aussiepacific.com.au/api/v1</code> — full docs at <a href="https://api.aussiepacific.com.au/docs/" className="underline" target="_blank" rel="noreferrer">api.aussiepacific.com.au/docs</a>.
+        </Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>What their API exposes</strong> — <code>/check</code> (auth ping), <code>/products</code> (with optional <code>include=variants,files,images</code>), get-product-by-style-code, get-variant-by-SKU, and <code>POST /order</code> for dropship.</li>
+          <li><strong>What we pull</strong> — initial import via <code>src/scripts/import-aussie-pacific-from-api.ts</code>; daily stock sweep at 05:00 UTC against <em>Aussie Pacific Warehouse</em> (no <code>updated_at</code> filter — full walk every day). Per-variant cost varies within a style, so each variant gets its own price ladder; the first 5 styles per import emit a calibration log line so operators can spot-check the ex-GST assumption against AP invoices before going wide.</li>
+          <li><strong>What we push</strong> — dropship orders via <code>POST /order</code>, from either the order-detail widget or the dedicated <a href="/app/dropship/aussie-pacific" className="underline">Aussie Pacific Orders</a> dashboard.</li>
+          <li><strong>Quirk: run-out items skipped</strong> — products with <code>run_out === true</code> are skipped at import time (one log line per skipped style).</li>
+          <li><strong>Quirk: AP gives us nothing back</strong> — no GET order endpoint, no shipment endpoint, no webhooks. After we send a dropship order AP returns a reference and that's it. Operators reconcile shipment progress via AP's email confirmations or distributor portal until AP adds a status endpoint.</li>
+          <li><strong>Tag mapping</strong> — AP's <code>main_category</code> (Ladies / Mens / Kids / Unisex) maps to a demographic. <code>sub_category</code> drives the Medusa <code>product_type</code> via strict alias matching, so unknown values resolve to <code>null</code> rather than leaking demographic strings through as types.</li>
+        </ul>
+
+        <Text className="mt-4 font-semibold">Common ops</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Where do I check a sync ran?</strong> Railway logs filtered to <code>sync-ascolour-inventory</code> / <code>sync-fashionbiz-inventory</code> / <code>sync-aussie-pacific-inventory</code>. Each job logs the SKU count it touched.</li>
+          <li><strong>How do I import a new supplier brand or backfill?</strong> Run the importer on Railway: <code>cd /app/.medusa/server &amp;&amp; npx medusa exec src/scripts/import-&lt;supplier&gt;-from-api.js</code>. Locally, swap <code>.js</code> for <code>.ts</code> and use the <code>backend</code> working directory.</li>
+          <li><strong>How do I confirm a supplier is configured?</strong> Each supplier's module only registers when its API token env var is set (<code>ASCOLOUR_SUBSCRIPTION_KEY</code>, <code>FASHIONBIZ_API_TOKEN</code>, <code>AUSSIE_PACIFIC_API_TOKEN</code>). If the token is missing the cron is a silent no-op rather than an error.</li>
+          <li><strong>A supplier's portal shows a price that doesn't match what we billed against</strong> — check the cost-adjustment env var (<code>FASHIONBIZ_COST_ADJUSTMENT</code>, <code>AUSSIE_PACIFIC_COST_ADJUSTMENT</code>) and the <code>variant.metadata.cost_adjustment</code> field on a recent import. If the multiplier is wrong, raising it and re-importing corrects the cost cascade.</li>
+        </ul>
+
+        <Text size="xsmall" className="text-ui-fg-muted mt-3">
+          Deeper detail — endpoint payloads, module file paths, env-var defaults — lives in <code>CLAUDE.md</code> at the repo root and the supplier folders under <code>backend/src/modules/</code> (<code>ascolour</code>, <code>fashionbiz</code>, <code>aussiepacific</code>).
+        </Text>
+      </>
+    ),
+  },
+  {
     id: "automatic",
     title: "What runs automatically (no action needed)",
     body: (
@@ -305,7 +403,7 @@ const SECTIONS: Section[] = [
           <li><strong>Win-back</strong> — Mondays 00:00 UTC. Drifting / at-risk / lost customers.</li>
           <li><strong>Cross-sell refresh</strong> — daily 02:00 UTC. Walks orders, counts co-purchases, writes to product metadata.</li>
           <li><strong>PostHog cohort sync</strong> — daily 03:30 UTC. Reconciles cohort memberships to customer tags.</li>
-          <li><strong>Supplier inventory sync</strong> — AS Colour hourly, FashionBiz daily.</li>
+          <li><strong>Supplier inventory sync</strong> — AS Colour hourly, FashionBiz daily 04:00 UTC, Aussie Pacific daily 05:00 UTC. See <a href="#supplier-integrations" className="underline">Supplier API integrations</a> for what each sync touches.</li>
         </ul>
       </>
     ),
