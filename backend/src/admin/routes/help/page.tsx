@@ -69,15 +69,91 @@ const SECTIONS: Section[] = [
   },
   {
     id: "customer-detail",
-    title: "Customer detail — the four widgets",
+    title: "Customer detail — the widgets",
     body: (
       <ul className="list-disc pl-5 text-sm space-y-1">
         <li><strong>Lifetime value</strong> — LTV / orders / AOV / last-order tiles. &quot;Suggest VIP tag&quot; appears once they cross the threshold.</li>
         <li><strong>Tags + notes</strong> — coloured labels (VIP, Wholesale, Tricky) and pinnable internal notes. Add a snooze date to a note for follow-up reminders.</li>
         <li><strong>Tax status</strong> — mark tax-exempt (council, NFP, school) so invoices render without GST. Snapshots to orders at placement.</li>
+        <li><strong>Customer pricing tier</strong> — drop a known/repeat customer onto a tier (Platinum 1.10× → Member 1.45× of cost). They&apos;ll see a flat below-retail price on every product after sign-in. Detail in the <em>Pricing tiers</em> section below.</li>
         <li><strong>Customer journey</strong> — unified timeline of PostHog events + orders + NPS + saved designs + tag changes. Use before a sales call.</li>
         <li><strong>Order list</strong> — Medusa standard.</li>
       </ul>
+    ),
+  },
+  {
+    id: "pricing-tiers",
+    title: "Pricing tiers — discounted pricing for known customers",
+    body: (
+      <>
+        <Text>
+          Eight customer tiers let you give known/valued customers a flat below-retail price without exposing the rate on the public storefront. A tiered customer who logs in sees <strong>one flat price per variant</strong> on the PDP and inside the customizer — the public 5-band quantity ladder is hidden for them.
+        </Text>
+
+        <Text className="mt-3 font-semibold">The 8 tiers</Text>
+        <Text size="xsmall" className="text-ui-fg-muted">
+          Multiplier is applied to ex-GST cost and produces the GST-inclusive selling price (same convention as today&apos;s public ladder, which uses cost × 1.65 as its floor).
+        </Text>
+        <div className="mt-2 overflow-hidden rounded-md border border-ui-border-base">
+          <table className="w-full text-sm">
+            <thead className="bg-ui-bg-subtle text-ui-fg-subtle">
+              <tr>
+                <th className="px-3 py-1.5 text-left font-medium">Tier</th>
+                <th className="px-3 py-1.5 text-left font-medium">Multiplier</th>
+                <th className="px-3 py-1.5 text-left font-medium">Example: cost $5.40 →</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ui-border-base">
+              <tr><td className="px-3 py-1">Platinum</td><td className="px-3 py-1 tabular-nums">1.10×</td><td className="px-3 py-1 tabular-nums">$5.94</td></tr>
+              <tr><td className="px-3 py-1">Gold Plus</td><td className="px-3 py-1 tabular-nums">1.15×</td><td className="px-3 py-1 tabular-nums">$6.21</td></tr>
+              <tr><td className="px-3 py-1">Gold</td><td className="px-3 py-1 tabular-nums">1.20×</td><td className="px-3 py-1 tabular-nums">$6.48</td></tr>
+              <tr><td className="px-3 py-1">Silver Plus</td><td className="px-3 py-1 tabular-nums">1.25×</td><td className="px-3 py-1 tabular-nums">$6.75</td></tr>
+              <tr><td className="px-3 py-1">Silver</td><td className="px-3 py-1 tabular-nums">1.30×</td><td className="px-3 py-1 tabular-nums">$7.02</td></tr>
+              <tr><td className="px-3 py-1">Bronze Plus</td><td className="px-3 py-1 tabular-nums">1.35×</td><td className="px-3 py-1 tabular-nums">$7.29</td></tr>
+              <tr><td className="px-3 py-1">Bronze</td><td className="px-3 py-1 tabular-nums">1.40×</td><td className="px-3 py-1 tabular-nums">$7.56</td></tr>
+              <tr><td className="px-3 py-1">Member</td><td className="px-3 py-1 tabular-nums">1.45×</td><td className="px-3 py-1 tabular-nums">$7.83</td></tr>
+              <tr className="bg-ui-bg-subtle/40 text-ui-fg-subtle">
+                <td className="px-3 py-1">Public retail (no tier)</td>
+                <td className="px-3 py-1 tabular-nums">1.65× – 2.20×</td>
+                <td className="px-3 py-1 tabular-nums">$8.91 (100+) – $11.88 (1-9)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <Text className="mt-4 font-semibold">Who sees what</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Anonymous visitors</strong> — public 5-band quantity ladder. Unchanged.</li>
+          <li><strong>Signed-in customers with no tier</strong> — public 5-band quantity ladder. Unchanged.</li>
+          <li><strong>Signed-in customers with a tier</strong> — single flat price (<em>cost × tier multiplier</em>) on PDP, customizer, cart, and checkout. The quantity ladder is hidden so they don&apos;t see retail rates they aren&apos;t paying.</li>
+        </ul>
+
+        <Text className="mt-4 font-semibold">Assigning a tier</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li>Open the customer&apos;s detail page → <strong>Customer pricing tier</strong> widget in the right sidebar.</li>
+          <li>Pick the tier from the dropdown → <em>Save</em>. The change takes effect on the customer&apos;s next page load (existing carts may need a refresh).</li>
+          <li>Set the dropdown to &quot;No tier&quot; to remove tier pricing and put them back on the public ladder.</li>
+          <li>If a customer ever lands in <em>two</em> tier groups, the widget surfaces a warning + a one-click &quot;Clear all tier memberships&quot; button. The highest-margin tier wins until you fix it.</li>
+        </ul>
+
+        <Text className="mt-4 font-semibold">Where the numbers come from</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li>Each product variant has a canonical ex-GST cost in <code>metadata.cost_price_ex_gst_minor</code>. Every importer (AS Colour, FashionBiz, Aussie Pacific, DNC) writes it.</li>
+          <li>A <strong>nightly cron at 06:00 UTC</strong> regenerates all 8 tier price lists from current cost, after the supplier inventory + cost syncs finish. So if a supplier raises wholesale, tier prices follow within ~24h.</li>
+          <li>Plumbing under the hood: 8 Medusa CustomerGroups (named &quot;Tier: Platinum&quot; … &quot;Tier: Member&quot;) backed by 8 PriceLists (type=OVERRIDE) scoped to the matching group. The customer&apos;s group is auto-injected into pricing context on every store request — no custom middleware.</li>
+        </ul>
+
+        <Text className="mt-4 font-semibold">What customers see</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li>On the PDP price block: &quot;Your <em>&lt;Tier&gt;</em> pricing&quot; tag below the headline price. Bulk-discount ladder is hidden.</li>
+          <li>In the customizer&apos;s pricing panel: a green pill at the top with &quot;Your <em>&lt;Tier&gt;</em> pricing — $X.XX / unit — flat rate, no quantity ladder.&quot;</li>
+          <li>At checkout: the tier price flows natively through Medusa&apos;s calculated_price, so cart subtotal, totals, and tax invoice all match what the customer was shown.</li>
+        </ul>
+
+        <Text size="xsmall" className="text-ui-fg-muted mt-3">
+          Margin sanity check: Platinum (1.10× cost inc-GST) leaves ~0% margin after GST — reserve it for top accounts. Member (1.45×) is the entry tier and still ~30% below the lowest public retail tier (1.65× at qty 100+).
+        </Text>
+      </>
     ),
   },
   {
@@ -242,6 +318,7 @@ const SECTIONS: Section[] = [
         <div><strong>What needs my attention today?</strong> <a href="/app/studio" className="underline">/app/studio</a></div>
         <div><strong>Mark a customer tax-exempt</strong> Customer detail → Tax status</div>
         <div><strong>Tag a customer VIP</strong> Customer detail → Tags</div>
+        <div><strong>Give a customer tier pricing</strong> Customer detail → Customer pricing tier</div>
         <div><strong>Generate accept link for a quote</strong> Quote detail → top right</div>
         <div><strong>Plan the week</strong> <a href="/app/production" className="underline">Production → Production calendar tab</a></div>
         <div><strong>Group today&apos;s press setups</strong> <a href="/app/production" className="underline">Production → Print queue tab</a></div>
@@ -273,6 +350,7 @@ const SECTIONS: Section[] = [
         <div><dt className="font-semibold inline">Snooze</dt> <dd className="inline">— a customer note with a future &quot;remind me&quot; date.</dd></div>
         <div><dt className="font-semibold inline">Org</dt> <dd className="inline">— school / club / business — a group of customers sharing identity.</dd></div>
         <div><dt className="font-semibold inline">Recipe</dt> <dd className="inline">— reusable production settings (mesh count, ink, etc.).</dd></div>
+        <div><dt className="font-semibold inline">Pricing tier</dt> <dd className="inline">— customer-group-scoped flat price (cost × 1.10 to 1.45). Hides the public quantity ladder for that customer.</dd></div>
       </dl>
     ),
   },
