@@ -204,8 +204,20 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     context,
   })
 
+  // AP products store every variant image at the product level (~60 images per
+  // style) because the AP API nests images per variant. Listing cards don't need
+  // product.images — they read garment_images.front from variant metadata.
+  // Strip the array here so the listing payload isn't 10× larger than other brands.
+  // The PDP uses a different route and still receives the full image gallery.
+  const trimmedProducts = (products ?? []).map((p: any) => {
+    if (p.metadata?.source === "aussiepacific") {
+      return { ...p, images: [] }
+    }
+    return p
+  })
+
   res.json({
-    products: products ?? [],
+    products: trimmedProducts,
     count: metadata?.count ?? 0,
     offset: q.offset,
     limit: q.limit,

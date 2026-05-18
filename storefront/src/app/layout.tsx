@@ -107,6 +107,13 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <ViewTransitions>
       <html lang="en" data-mode="light" className="scroll-smooth">
+        <head>
+          <link
+            rel="preconnect"
+            href="https://aussiepacific-images.s3.ap-southeast-2.amazonaws.com"
+            crossOrigin="anonymous"
+          />
+        </head>
         <body
           className={`${plusJakartaSans.className} antialiased selection:bg-[#FF2E63] selection:text-[#EEEEEE]`}
         >

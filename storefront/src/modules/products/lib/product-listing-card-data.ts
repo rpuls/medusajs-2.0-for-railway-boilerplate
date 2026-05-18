@@ -86,11 +86,16 @@ export function buildProductListingCardData(
     const imageUrl =
       getPrimaryGarmentImageUrl(product, variant) ?? catalogFallback ?? ""
     const slug = toTitleSlug(colorValue)
-    const swatchPhotoUrl = slug ? swatchPhotoMap.get(slug) : undefined
+    const rawSwatchPhotoUrl = slug ? swatchPhotoMap.get(slug) : undefined
+    // Route through Next.js image optimizer: Vercel CDN caches after first load,
+    // serves WebP at 80px instead of the raw 800-1500px origin image.
+    const swatchPhotoUrl = rawSwatchPhotoUrl
+      ? `/_next/image?url=${encodeURIComponent(rawSwatchPhotoUrl)}&w=80&q=40`
+      : undefined
     return {
       colorLabel: colorValue,
       imageUrl,
-      swatchPhotoUrl: swatchPhotoUrl ?? undefined,
+      swatchPhotoUrl,
     }
   })
   const defaultImageUrl =
