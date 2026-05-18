@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import MarketingHero from "@modules/common/components/marketing-hero"
+import SectionHeader from "@modules/common/components/section-header"
 
 type MetadataProps = {
   params: Promise<{ countryCode: string }>
@@ -32,6 +32,23 @@ export async function generateMetadata({ params }: MetadataProps): Promise<Metad
   }
 }
 
+const ArrowRightIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M3 8h10M9 4l4 4-4 4" />
+  </svg>
+)
+
 type FaqItem = {
   question: string
   answer: string
@@ -51,12 +68,12 @@ const FAQ_SECTIONS: FaqSection[] = [
       {
         question: "Do you have a minimum quantity?",
         answer:
-          "Yes. Minimums vary by service. Screen printing starts at 50 units, while embroidery and digital transfers can start from 1 unit.",
+          "No — you can order from a single garment. Minimums vary by decoration method: screen printing typically starts at 50 units (because of setup costs), while embroidery, digital transfers, UV DTF, and UV printing can start from 1 unit.",
       },
       {
         question: "What services do you provide?",
         answer:
-          "We provide screen printing, embroidery, digital transfers, UV printing, neck labels, fold and bag, and order support services.",
+          "Screen printing, embroidery, digital transfers, UV printing, UV DTF, and 3D print design. We also handle in-house artwork and digital proofs.",
       },
       {
         question: "Can I mix garment sizes in one run?",
@@ -66,12 +83,12 @@ const FAQ_SECTIONS: FaqSection[] = [
       {
         question: "Do you source garments?",
         answer:
-          "Yes. We can source garments from a range of local and international suppliers, or you can provide your own subject to approval.",
+          "Yes. We source garments from a range of local and international suppliers, or you can provide your own subject to approval (see our BYO page).",
       },
       {
         question: "What is your typical turnaround?",
         answer:
-          "Typical turnaround is around 10 business days once artwork approval and payment are completed. Peak periods may take longer.",
+          "Typical turnaround is around 7-10 business days once artwork approval and payment are completed. Peak periods may take longer.",
       },
     ],
   },
@@ -155,7 +172,7 @@ const FAQ_SECTIONS: FaqSection[] = [
       {
         question: "Is delivery included in pricing?",
         answer:
-          "Delivery is quoted separately unless otherwise specified. We confirm shipping options when your order is finalized.",
+          "Delivery is quoted separately unless otherwise specified. We confirm shipping options when your order is finalised.",
       },
       {
         question: "Do you offer pickup?",
@@ -199,47 +216,60 @@ export default async function FaqPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
       />
-      <MarketingHero
-        eyebrow="FAQ"
-        title="Frequently Asked Questions"
-        subtitle="Still unsure about artwork, minimums, or timelines? Start here. If you need help with a specific order, our team is happy to assist."
-      >
-        <div className="mt-6 flex flex-wrap gap-3">
+
+      <header className="mx-auto max-w-3xl text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary)]/70">
+          FAQ
+        </p>
+        <h1 className="page-title-marketing mt-3 tracking-tight">
+          Frequently Asked Questions
+        </h1>
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-ui-fg-subtle small:text-lg">
+          Still unsure about artwork, minimums, or timelines? Start here. If
+          you need help with a specific order, our team is happy to assist.
+        </p>
+        <div className="mt-7 flex flex-wrap justify-center gap-2">
           {FAQ_SECTIONS.map((section) => (
             <a
               key={section.id}
               href={`#${section.id}`}
-              className="inline-flex rounded-full border border-ui-border-base bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ui-fg-base transition hover:border-[var(--brand-secondary)]"
+              className="inline-flex rounded-full border border-ui-border-base bg-white px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ui-fg-base transition hover:border-[var(--brand-secondary)]/60 hover:text-[var(--brand-secondary)]"
             >
               {section.title}
             </a>
           ))}
         </div>
-      </MarketingHero>
+      </header>
 
-      <div className="mt-10 space-y-6">
+      <div className="mx-auto mt-12 max-w-3xl space-y-5">
         {FAQ_SECTIONS.map((section) => (
           <section
             key={section.id}
             id={section.id}
             className="scroll-mt-24 rounded-2xl border border-ui-border-base bg-white p-6 small:p-8"
           >
-            <h2 className="border-l-4 border-[var(--brand-secondary)] pl-4 text-2xl font-semibold text-ui-fg-base">
-              {section.title}
-            </h2>
-            <div className="mt-5 space-y-3">
+            <SectionHeader
+              eyebrow={`Section · ${section.title}`}
+              title={section.title}
+            />
+            <div className="mt-2 space-y-3">
               {section.items.map((item) => (
                 <details
                   key={item.question}
-                  className="group rounded-xl border border-ui-border-base bg-ui-bg-subtle p-4"
+                  className="group rounded-xl border border-ui-border-base bg-ui-bg-subtle p-4 transition hover:border-[var(--brand-secondary)]/35"
                 >
-                  <summary className="cursor-pointer list-none pr-8 text-sm font-semibold text-ui-fg-base">
-                    {item.question}
-                    <span className="ml-2 inline-block text-[var(--brand-secondary)] transition-transform group-open:rotate-45">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-3 text-sm font-semibold text-ui-fg-base">
+                    <span>{item.question}</span>
+                    <span
+                      aria-hidden
+                      className="shrink-0 text-lg leading-none text-[var(--brand-secondary)] transition-transform group-open:rotate-45"
+                    >
                       +
                     </span>
                   </summary>
-                  <p className="mt-3 text-sm leading-6 text-ui-fg-subtle">{item.answer}</p>
+                  <p className="mt-3 text-sm leading-6 text-ui-fg-subtle">
+                    {item.answer}
+                  </p>
                 </details>
               ))}
             </div>
@@ -247,27 +277,35 @@ export default async function FaqPage({
         ))}
       </div>
 
-      <section className="mt-10 rounded-2xl border border-ui-border-base bg-white p-7 small:p-9">
-        <h2 className="text-2xl font-semibold text-ui-fg-base">Need a custom quote?</h2>
-        <p className="mt-3 text-sm text-ui-fg-subtle">
-          Send through your artwork, quantities, and preferred garment style and we will help you
-          choose the right production method.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <LocalizedClientLink
-            href="/contact"
-            className="inline-flex rounded-lg bg-ui-fg-base px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black"
-          >
-            Contact Support
-          </LocalizedClientLink>
-          <LocalizedClientLink
-            href="/services"
-            className="inline-flex rounded-lg border border-ui-border-base bg-ui-bg-subtle px-5 py-2.5 text-sm font-semibold text-ui-fg-base transition hover:border-[var(--brand-secondary)]"
-          >
-            View Services
-          </LocalizedClientLink>
+      <div className="mx-auto mt-12 max-w-3xl">
+        <div className="rounded-2xl border border-ui-border-base bg-ui-bg-subtle p-8 text-center small:p-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            Still need help?
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold text-ui-fg-base small:text-3xl">
+            Need a custom quote?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-ui-fg-subtle">
+            Send through your artwork, quantities, and preferred garment style
+            and we&apos;ll help you choose the right production method.
+          </p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <LocalizedClientLink
+              href="/contact"
+              className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+            >
+              Contact support
+              <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/services"
+              className="inline-flex items-center rounded-lg border border-ui-border-base bg-white px-6 py-3 text-sm font-semibold text-ui-fg-base transition hover:bg-ui-bg-subtle"
+            >
+              View services
+            </LocalizedClientLink>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
   )
 }
