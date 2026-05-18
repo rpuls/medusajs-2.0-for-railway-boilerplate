@@ -6,7 +6,6 @@
  *   - sideLayouts: per-side Fabric.js JSON — every placed image/text object
  *     with full transform data; the biggest field by far on a decorated line
  *   - prints: per-image print specs (one object per placed Fabric object)
- *   - customerOriginalFiles: uploaded source-file refs
  *
  * What's KEPT (small but UI-critical):
  *   - artifacts: hosted mockup URLs per decorated side. These are short URL
@@ -14,6 +13,8 @@
  *     getCustomizerMockupArtifacts() to render the design preview thumbnail.
  *     Stripping these broke the visible-preview in cart, which is the whole
  *     reason customers can tell their custom item apart from a blank one.
+ *   - customerOriginalFiles: small array of { url, fileName, mimeType } for
+ *     storefront download links. URLs are already public-read, array is tiny.
  *   - pricing.server: per-line pricing snapshot (used by admin tooling)
  *   - printNotes: free-text instructions for production
  *   - sideDecorationMethods: one string per side, tiny
@@ -53,10 +54,10 @@ function stripOneLineItem<T extends { metadata?: unknown; variant?: unknown }>(i
         ...(design as Record<string, unknown>),
       }
       // Drop the actual size-bombs only. Keep artifacts (URLs, small) so the
-      // cart Item component can render its mockup preview thumbnail.
+      // cart Item component can render its mockup preview thumbnail, and keep
+      // customerOriginalFiles so the storefront order page can show download links.
       delete designLite.sideLayouts
       delete designLite.prints
-      delete designLite.customerOriginalFiles
       next = {
         ...next,
         metadata: {

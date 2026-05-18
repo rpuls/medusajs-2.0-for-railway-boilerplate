@@ -108,6 +108,34 @@ const Item = ({ item, currencyCode }: ItemProps) => {
                   : customizerMetadata.printNotes}
               </Text>
             ) : null}
+            {customizerMetadata.customerOriginalFiles &&
+            customizerMetadata.customerOriginalFiles.length > 0 ? (
+              <div className="mt-3 border-t pt-3">
+                <Text className="txt-small-plus font-semibold mb-2">
+                  Download your files
+                </Text>
+                <div className="space-y-2">
+                  {customizerMetadata.customerOriginalFiles.map((file) => (
+                    <a
+                      key={file.url}
+                      href={file.url}
+                      download={file.fileName}
+                      className="flex items-center gap-2 text-blue-600 hover:underline text-sm"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M12 2a1 1 0 011 1v6h2.586a1 1 0 01.707 1.707l-5 5a1 1 0 01-1.414 0l-5-5A1 1 0 015.414 9H8V3a1 1 0 011-1h3z" />
+                        <path d="M3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                      </svg>
+                      {file.fileName}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </>
         )}
       </Table.Cell>
