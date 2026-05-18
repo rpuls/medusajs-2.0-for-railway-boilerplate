@@ -7,7 +7,6 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import SectionHeader from "@modules/common/components/section-header"
 import { iconBase } from "@modules/common/icons/icon-base"
 import ByoInquiryForm from "@modules/home/components/byo-inquiry-form"
-import ScrollExpandingSection from "@modules/home/components/scroll-expanding-section"
 
 const lora = Lora({
   subsets: ["latin"],
@@ -221,14 +220,7 @@ export default async function ByoPage({
         </header>
       </section>
 
-      {/* 2. Scroll-expanding marketing section */}
-      <ScrollExpandingSection
-        eyebrow="Bring your own"
-        title="We decorate what you bring"
-        primaryCta={{ href: "#byo-inquiry", label: "Contact us" }}
-      />
-
-      {/* 3. What "BYO" means — short intro */}
+      {/* 2. What "BYO" means — short intro */}
       <section className="content-container py-12 small:py-16">
         <div className="mx-auto max-w-3xl rounded-2xl border border-ui-border-base bg-white p-8 small:p-10">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
