@@ -1,9 +1,12 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Image from "next/image"
+import type { SVGProps } from "react"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import MarketingHero from "@modules/common/components/marketing-hero"
+import SectionHeader from "@modules/common/components/section-header"
+import { iconBase } from "@modules/common/icons/icon-base"
 import { getServiceBySlug } from "@modules/services/data"
 
 const SERVICE_PLACEHOLDER_IMAGES_BY_SLUG: Record<string, string[]> = {
@@ -56,6 +59,61 @@ const SCREEN_PRINTING_GALLERY: ServiceGalleryImage[] = [
   },
 ]
 
+const ArrowRightIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M3 8h10M9 4l4 4-4 4" />
+  </svg>
+)
+
+const ArrowLeftIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M13 8H3M7 4L3 8l4 4" />
+  </svg>
+)
+
+const ThumbsUpIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...iconBase} {...props} width="22" height="22">
+    <path d="M12 13V8a3 3 0 016 0v5h4a2 2 0 012 2l-2 9a2 2 0 01-2 2H8V13z" />
+    <rect x="3" y="13" width="5" height="13" rx="1" />
+  </svg>
+)
+
+const ThumbsDownIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...iconBase} {...props} width="22" height="22">
+    <path d="M12 19v5a3 3 0 006 0v-5h4a2 2 0 002-2l-2-9a2 2 0 00-2-2H8v13z" />
+    <rect x="3" y="6" width="5" height="13" rx="1" />
+  </svg>
+)
+
+const ClockIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...iconBase} {...props} width="22" height="22">
+    <circle cx="16" cy="16" r="11" />
+    <path d="M16 9v7l4 3" />
+  </svg>
+)
+
 type Props = {
   params: Promise<{
     countryCode: string
@@ -107,9 +165,10 @@ export default async function ServiceDetailPage({ params }: Props) {
     <div className="content-container py-14 small:py-20">
       <LocalizedClientLink
         href="/services"
-        className="text-sm font-semibold text-ui-fg-base underline underline-offset-4"
+        className="group inline-flex items-center gap-1.5 text-sm font-semibold text-ui-fg-base underline underline-offset-4 transition hover:text-[var(--brand-secondary)]"
       >
-        ← Back to services
+        <ArrowLeftIcon className="transition-transform group-hover:-translate-x-0.5" />
+        Back to services
       </LocalizedClientLink>
 
       <div className="mt-6">
@@ -118,18 +177,30 @@ export default async function ServiceDetailPage({ params }: Props) {
           eyebrowVariant="muted"
           title={service.title}
           subtitle={service.heroDescription}
-        />
+        >
+          <div className="mt-7 flex flex-wrap gap-3">
+            <LocalizedClientLink
+              href="/contact"
+              className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+            >
+              Get a quote
+              <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/store"
+              className="inline-flex items-center rounded-lg border border-ui-border-base bg-white px-6 py-3 text-sm font-semibold text-ui-fg-base transition hover:bg-ui-bg-subtle"
+            >
+              Browse blanks
+            </LocalizedClientLink>
+          </div>
+        </MarketingHero>
       </div>
 
-      <section className="mt-8">
-        <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
-            Service Gallery
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold text-ui-fg-base">
-            Recent style references
-          </h2>
-        </div>
+      <section className="mt-12">
+        <SectionHeader
+          eyebrow="Service gallery"
+          title="Recent style references"
+        />
 
         <div className="overflow-hidden rounded-2xl border border-ui-border-base bg-ui-bg-subtle">
           <div className="relative h-[420px] small:h-[520px]">
@@ -221,51 +292,66 @@ export default async function ServiceDetailPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="mt-10 grid gap-8 large:grid-cols-[2fr_1fr]">
-        <div className="rounded-xl border border-ui-border-base bg-white p-6">
-          <h2 className="text-xl font-semibold text-ui-fg-base">Why choose {service.title}?</h2>
-          <ul className="mt-4 space-y-3 text-sm text-ui-fg-subtle">
+      <section className="mt-12 grid gap-6 large:grid-cols-[2fr_1fr]">
+        <div className="rounded-xl border border-ui-border-base bg-white p-6 small:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            Why choose this method
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-ui-fg-base">
+            Why choose {service.title}?
+          </h2>
+          <ul className="mt-5 space-y-3 text-sm text-ui-fg-subtle">
             {service.bulletPoints.map((point) => (
               <li key={point} className="flex gap-3">
-                <span className="mt-1 inline-block h-2 w-2 rounded-full bg-ui-fg-base" />
+                <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-secondary)]" />
                 <span>{point}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <aside className="rounded-xl border border-ui-border-base bg-white p-6">
-          <h3 className="text-base font-semibold text-ui-fg-base">Not sure which method is right?</h3>
+        <aside className="rounded-xl border border-ui-border-base bg-ui-bg-subtle p-6 small:p-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            Not sure?
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-ui-fg-base">
+            Which method is right?
+          </h3>
           <p className="mt-3 text-sm text-ui-fg-subtle">
-            Tell us your garment, artwork, quantity, and deadline. We will recommend the best
-            method and provide a practical quote for production.
+            Tell us your garment, artwork, quantity, and deadline. We&apos;ll
+            recommend the best method and provide a practical quote for
+            production.
           </p>
           <LocalizedClientLink
             href="/contact"
-            className="mt-5 inline-flex rounded-lg bg-ui-fg-base px-4 py-2 text-sm font-semibold text-white transition hover:bg-black"
+            className="group mt-5 inline-flex items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
           >
             Request service quote
+            <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
           </LocalizedClientLink>
         </aside>
       </section>
 
-      <section className="mt-8 grid gap-4 small:grid-cols-3">
-        <article className="rounded-xl border border-ui-border-base bg-white p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+      <section className="mt-12 grid gap-4 small:grid-cols-3">
+        <article className="group rounded-xl border border-ui-border-base bg-white p-6 transition hover:-translate-y-0.5 hover:border-[var(--brand-secondary)]/40 hover:shadow-sm">
+          <ThumbsUpIcon className="text-[var(--brand-accent)] transition-colors group-hover:text-[var(--brand-secondary)]" />
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
             Best for
           </p>
           <p className="mt-2 text-sm text-ui-fg-subtle">{service.bestFor}</p>
         </article>
 
-        <article className="rounded-xl border border-ui-border-base bg-white p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+        <article className="group rounded-xl border border-ui-border-base bg-white p-6 transition hover:-translate-y-0.5 hover:border-[var(--brand-secondary)]/40 hover:shadow-sm">
+          <ThumbsDownIcon className="text-ui-fg-muted transition-colors group-hover:text-[var(--brand-secondary)]" />
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
             Not ideal for
           </p>
           <p className="mt-2 text-sm text-ui-fg-subtle">{service.notIdealFor}</p>
         </article>
 
-        <article className="rounded-xl border border-ui-border-base bg-white p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-muted">
+        <article className="group rounded-xl border border-ui-border-base bg-white p-6 transition hover:-translate-y-0.5 hover:border-[var(--brand-secondary)]/40 hover:shadow-sm">
+          <ClockIcon className="text-[var(--brand-accent)] transition-colors group-hover:text-[var(--brand-secondary)]" />
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
             Typical turnaround
           </p>
           <p className="mt-2 text-sm text-ui-fg-subtle">{service.typicalTurnaround}</p>
