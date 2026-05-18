@@ -107,20 +107,46 @@ function extractCustomizerOriginals(
     | Record<string, unknown>
     | undefined
   if (!design || typeof design !== "object") return []
-  const files = design.customerOriginalFiles
-  if (!Array.isArray(files)) return []
 
   const notes =
     typeof design.printNotes === "string" && design.printNotes.trim()
       ? design.printNotes
       : null
 
+  // Primary: customerOriginalFiles (populated when the per-upload MinIO archive succeeds)
+  const files = design.customerOriginalFiles
+  if (Array.isArray(files) && files.length > 0) {
+    const out: Array<{ url: string; name: string | null; notes: string | null }> = []
+    for (const f of files as CustomerOriginalFile[]) {
+      const url = typeof f?.url === "string" ? f.url.trim() : ""
+      if (!url) continue
+      const name = typeof f?.fileName === "string" ? f.fileName : null
+      out.push({ url, name, notes })
+    }
+    if (out.length > 0) return out
+  }
+
+  // Fallback: scan sideLayouts Fabric JSON for image objects with hosted URLs.
+  // customerOriginalFiles is absent on items added before the field was introduced
+  // or when the original-file upload failed; the canvas src is the same MinIO URL
+  // (set by sanitizeCustomizerDesignForCart), so it works as an equivalent source.
+  const sideLayouts = design.sideLayouts
+  if (!Array.isArray(sideLayouts)) return []
+  const seen = new Set<string>()
   const out: Array<{ url: string; name: string | null; notes: string | null }> = []
-  for (const f of files as CustomerOriginalFile[]) {
-    const url = typeof f?.url === "string" ? f.url.trim() : ""
-    if (!url) continue
-    const name = typeof f?.fileName === "string" ? f.fileName : null
-    out.push({ url, name, notes })
+  for (const layout of sideLayouts as unknown[]) {
+    const objects = (layout as Record<string, unknown>)?.objects
+    if (!Array.isArray(objects)) continue
+    for (const obj of objects as unknown[]) {
+      const o = obj as Record<string, unknown>
+      if (o.type !== "image") continue
+      const src = typeof o.src === "string" ? o.src.trim() : ""
+      if (!src || src.startsWith("data:") || src === "[omitted-image-data]") continue
+      if (!src.startsWith("http")) continue
+      if (seen.has(src)) continue
+      seen.add(src)
+      out.push({ url: src, name: null, notes })
+    }
   }
   return out
 }
