@@ -36,21 +36,6 @@ const EmbroideryIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
-const NeckTagsIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg {...iconBase} {...props}>
-    <path d="M16 4l-7 5v6a7 7 0 0014 0V9z" />
-    <circle cx="16" cy="13" r="1.25" />
-    <path d="M16 14v6" />
-  </svg>
-)
-
-const FoldBagIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg {...iconBase} {...props}>
-    <path d="M7 11l9-5 9 5v10l-9 5-9-5z" />
-    <path d="M7 11l9 5 9-5M16 16v10" />
-  </svg>
-)
-
 const WarehousingIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...iconBase} {...props}>
     <path d="M4 12l12-6 12 6v14H4z" />
@@ -94,24 +79,6 @@ const SERVICES: Service[] = [
     Icon: EmbroideryIcon,
   },
   {
-    id: "neck_tags",
-    title: "Neck Tags",
-    description: "Branded labels & care tags",
-    Icon: NeckTagsIcon,
-  },
-  {
-    id: "fold_bag",
-    title: "Fold & Bag",
-    description: "Retail-ready presentation",
-    Icon: FoldBagIcon,
-  },
-  {
-    id: "warehousing_fulfillment",
-    title: "Warehousing & Fulfilment",
-    description: "Hold, pick, pack, ship",
-    Icon: WarehousingIcon,
-  },
-  {
     id: "uv_printing",
     title: "UV Printing",
     description: "Hard goods & promo items",
@@ -123,26 +90,43 @@ const SERVICES: Service[] = [
     description: "In-house artwork & proofs",
     Icon: DesignIcon,
   },
+  {
+    id: "warehousing_fulfillment",
+    title: "Warehousing & Fulfilment",
+    description: "Hold, pick, pack, ship",
+    Icon: WarehousingIcon,
+  },
 ]
+
+const COLS_LARGE = 3
+const COLS_SMALL = 2
 
 export default function HomeCoreServicesLordicons() {
   return (
-    <div className="mt-8 grid grid-cols-1 small:grid-cols-2 large:grid-cols-4 border border-ui-border-base rounded-lg overflow-hidden bg-white">
+    <div className="mt-8 grid grid-cols-1 small:grid-cols-2 large:grid-cols-3 border border-ui-border-base rounded-lg overflow-hidden bg-white">
       {SERVICES.map((service, index) => {
         const { Icon } = service
-        const colInLarge = index % 4
-        const rowInLarge = Math.floor(index / 4)
-        const colInSmall = index % 2
+        const isLastRowLarge =
+          index >= SERVICES.length - (SERVICES.length % COLS_LARGE || COLS_LARGE)
+        const isLastColLarge = (index + 1) % COLS_LARGE === 0
+        const isLastRowSmall =
+          index >= SERVICES.length - (SERVICES.length % COLS_SMALL || COLS_SMALL)
+        const isLastColSmall = (index + 1) % COLS_SMALL === 0
+
         return (
           <article
             key={service.id}
             className={[
               "group relative p-6 transition-colors hover:bg-ui-bg-subtle",
               "border-ui-border-base",
-              colInSmall < 1 ? "small:border-r large:border-r-0" : "",
-              colInLarge < 3 ? "large:border-r" : "",
-              rowInLarge === 0 ? "large:border-b" : "",
-              index < SERVICES.length - 1 ? "border-b small:border-b" : "",
+              // Mobile: 1 col, border-b except last
+              index < SERVICES.length - 1 ? "border-b small:border-b-0" : "",
+              // Tablet (small): 2 cols
+              !isLastColSmall ? "small:border-r large:border-r-0" : "",
+              !isLastRowSmall ? "small:border-b large:border-b-0" : "",
+              // Desktop (large): 3 cols
+              !isLastColLarge ? "large:border-r" : "",
+              !isLastRowLarge ? "large:border-b" : "",
             ]
               .filter(Boolean)
               .join(" ")}

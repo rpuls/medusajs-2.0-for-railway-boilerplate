@@ -58,11 +58,86 @@ const TRUST_ITEMS = [
   "In-house design & proofs",
 ]
 
+type StatIconProps = { className?: string }
+
+const ExperienceIcon = ({ className }: StatIconProps) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <circle cx="12" cy="8" r="6" />
+    <path d="M8.5 13L7 22l5-3 5 3-1.5-9" />
+  </svg>
+)
+
+const LocationIcon = ({ className }: StatIconProps) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M12 22s-7-6.5-7-12a7 7 0 1114 0c0 5.5-7 12-7 12z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </svg>
+)
+
+const ClockIcon = ({ className }: StatIconProps) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+)
+
+const StackIcon = ({ className }: StatIconProps) => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M3 7l9-4 9 4-9 4-9-4z" />
+    <path d="M3 12l9 4 9-4" />
+    <path d="M3 17l9 4 9-4" />
+  </svg>
+)
+
 const WHY_STATS = [
-  { value: "10+ yrs", label: "Printing experience" },
-  { value: "Victoria, AU", label: "Local studio" },
-  { value: "24 hrs", label: "Quote turnaround" },
-  { value: "From 24", label: "Minimum order" },
+  { value: "10+ yrs", label: "Printing experience", Icon: ExperienceIcon },
+  { value: "Victoria, AU", label: "Local studio", Icon: LocationIcon },
+  { value: "24 hrs", label: "Quote turnaround", Icon: ClockIcon },
+  { value: "From 24", label: "Minimum order", Icon: StackIcon },
 ]
 
 export default async function Home({
@@ -163,9 +238,23 @@ export default async function Home({
             action={
               <LocalizedClientLink
                 href="/store"
-                className="text-sm font-semibold text-ui-fg-base underline underline-offset-4"
+                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-ui-fg-base underline underline-offset-4 transition hover:text-[var(--brand-secondary)]"
               >
                 View all products
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                >
+                  <path d="M3 8h10M9 4l4 4-4 4" />
+                </svg>
               </LocalizedClientLink>
             }
           />
@@ -218,19 +307,23 @@ export default async function Home({
           />
 
           <ul className="mt-8 grid list-none grid-cols-2 gap-4 p-0 small:grid-cols-4">
-            {WHY_STATS.map((stat) => (
-              <li
-                key={stat.label}
-                className="rounded-lg border border-ui-border-base bg-white p-6 text-center"
-              >
-                <p className="text-2xl font-semibold text-ui-fg-base small:text-3xl">
-                  {stat.value}
-                </p>
-                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-subtle">
-                  {stat.label}
-                </p>
-              </li>
-            ))}
+            {WHY_STATS.map((stat) => {
+              const { Icon } = stat
+              return (
+                <li
+                  key={stat.label}
+                  className="group flex flex-col items-center rounded-lg border border-ui-border-base bg-white p-6 text-center transition hover:-translate-y-0.5 hover:border-[var(--brand-secondary)]/40 hover:shadow-sm"
+                >
+                  <Icon className="text-[var(--brand-secondary)]/70 transition-colors group-hover:text-[var(--brand-secondary)]" />
+                  <p className="mt-3 text-2xl font-semibold text-ui-fg-base small:text-3xl">
+                    {stat.value}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-subtle">
+                    {stat.label}
+                  </p>
+                </li>
+              )
+            })}
           </ul>
 
           <div className="mt-10 rounded-2xl border border-ui-border-base bg-ui-bg-subtle p-8 text-center small:p-10">
@@ -244,9 +337,23 @@ export default async function Home({
             <div className="mt-7 flex justify-center">
               <LocalizedClientLink
                 href="/contact"
-                className="inline-flex rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+                className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
               >
                 Start a quote
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                >
+                  <path d="M3 8h10M9 4l4 4-4 4" />
+                </svg>
               </LocalizedClientLink>
             </div>
           </div>
