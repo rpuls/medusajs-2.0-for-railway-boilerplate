@@ -122,11 +122,27 @@ const StoreTemplate = async ({
         }
       />
       <div className="w-full">
-        <div className="mb-8">
-          <h1 className="page-title-catalog" data-testid="store-page-title">
+        <header className="mb-8 border-l-4 border-[var(--brand-secondary)] pl-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            {matchedBrand || isRamo ? "Brand catalog" : brand ? "Filtered catalog" : "Catalog"}
+          </p>
+          <h1
+            className="page-title-catalog mt-2"
+            data-testid="store-page-title"
+          >
             {catalogTitle}
           </h1>
-        </div>
+          {brandData.brand?.description ? (
+            <p className="mt-3 max-w-2xl text-sm text-ui-fg-subtle small:text-base">
+              {brandData.brand.description}
+            </p>
+          ) : !brand ? (
+            <p className="mt-3 max-w-2xl text-sm text-ui-fg-subtle small:text-base">
+              Browse our full range of garments &mdash; filter by brand, type,
+              or fabric to narrow things down.
+            </p>
+          ) : null}
+        </header>
         {isAsColour && pageNumber === 1 ? <AsColourStoreUgcMasonry /> : null}
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
