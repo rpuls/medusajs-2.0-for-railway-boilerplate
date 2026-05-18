@@ -97,7 +97,61 @@ type LinePayload = {
 
 type DownloadPayload = {
   order_id?: string
+  display_id?: number | string | null
   lines?: LinePayload[]
+}
+
+// ─── Filename helpers ────────────────────────────────────────────────────────
+
+const BRAND_PREFIXES = [
+  "as-colour-",
+  "aussie-pacific-",
+  "biz-collection-",
+  "biz-care-",
+  "biz-corporates-",
+  "syzmik-",
+  "fashionbiz-",
+  "good-mates-",
+]
+
+function garmentCodeFromHandle(handle: string | null | undefined): string {
+  if (!handle) return "product"
+  for (const prefix of BRAND_PREFIXES) {
+    if (handle.startsWith(prefix)) return handle.slice(prefix.length)
+  }
+  // Unknown handle: use last hyphen-segment
+  return handle.split("-").pop() || handle
+}
+
+function slugify(str: string): string {
+  return str
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .slice(0, 30)
+}
+
+/**
+ * Builds a filename following the convention:
+ *   {order#}-{customer}-{printposition}-{garmentcode}[-{suffix}].{ext}
+ */
+function buildFileName({
+  displayId,
+  customerSlug,
+  side,
+  garmentCode,
+  suffix,
+  ext,
+}: {
+  displayId: string
+  customerSlug: string
+  side: string
+  garmentCode: string
+  suffix?: string
+  ext: string
+}): string {
+  const parts = [displayId, customerSlug, side, garmentCode]
+  if (suffix) parts.push(suffix)
+  return `${parts.join("-")}.${ext}`
 }
 
 function sideKey(lineItemId: string, side: string) {
@@ -127,6 +181,10 @@ type SideProofCardProps = {
   customerOriginalFileUrl?: string | null
   onProofsChange: (updated: RevisedProof[]) => void
   onCustomisePosition: ((artworkUrl: string | null) => void) | null
+  /** Naming context for downloaded files */
+  displayId: string
+  customerSlug: string
+  garmentCode: string
 }
 
 const SideProofCard = ({
@@ -137,6 +195,9 @@ const SideProofCard = ({
   customerOriginalFileUrl,
   onProofsChange,
   onCustomisePosition,
+  displayId,
+  customerSlug,
+  garmentCode,
 }: SideProofCardProps) => {
   const key = sideKey(lineItemId, art.side)
 
@@ -234,7 +295,14 @@ const SideProofCard = ({
             {displayedArtworkUrl && (
               <DownloadLink
                 href={displayedArtworkUrl}
-                fileName={selected === "original" ? "artwork.png" : "proof-artwork.png"}
+                fileName={buildFileName({
+                  displayId,
+                  customerSlug,
+                  side: art.side,
+                  garmentCode,
+                  suffix: selected === "original" ? undefined : "proof",
+                  ext: "png",
+                })}
                 label="Download artwork"
               />
             )}
@@ -317,7 +385,14 @@ const SideProofCard = ({
                 {displayedMockupUrl && (
                   <DownloadLink
                     href={displayedMockupUrl}
-                    fileName={selected === "original" ? "mockup.jpg" : "revised-mockup.jpg"}
+                    fileName={buildFileName({
+                      displayId,
+                      customerSlug,
+                      side: art.side,
+                      garmentCode,
+                      suffix: selected === "original" ? "mockup" : "proof-mockup",
+                      ext: "jpg",
+                    })}
                     label={`Download ${selected === "original" ? "mockup" : "revised mockup"}`}
                   />
                 )}
@@ -371,6 +446,16 @@ const CustomiserModal = ({ src, onClose }: CustomiserModalProps) => (
 
 const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   const orderId = data?.id
+
+  // Build naming context from the order object
+  const displayId = String((data as any)?.display_id ?? orderId ?? "order")
+  const customerSlug = (() => {
+    const order = data as any
+    const firstName = order?.customer?.first_name ?? order?.billing_address?.first_name ?? ""
+    const lastName = order?.customer?.last_name ?? order?.billing_address?.last_name ?? ""
+    const full = `${firstName}${lastName}`
+    return slugify(full) || slugify(order?.email ?? "") || "customer"
+  })()
   const [payload, setPayload] = useState<DownloadPayload | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -614,21 +699,36 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
                           Customer upload (original file — unchanged)
                         </Text>
                         <ul className="mt-2 list-none m-0 p-0 flex flex-col gap-y-2">
-                          {line.customer_original_files.map((f) => (
-                            <li key={f.url}>
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                <span className="text-xsmall text-ui-fg-muted">{f.mime_type}</span>
-                                <span className="text-xsmall text-ui-fg-subtle truncate max-w-[200px]" title={f.file_name}>
-                                  {f.file_name}
-                                </span>
-                              </div>
-                              <DownloadLink
-                                href={f.url}
-                                fileName={f.file_name}
-                                label={`Download original (${f.file_name})`}
-                              />
-                            </li>
-                          ))}
+                          {line.customer_original_files.map((f, idx) => {
+                            const gc = garmentCodeFromHandle(line.product_handle)
+                            const ext = f.mime_type === "image/svg+xml" ? "svg"
+                              : f.mime_type === "image/jpeg" ? "jpg" : "png"
+                            const suffix = line.customer_original_files!.length > 1
+                              ? `original-${idx + 1}`
+                              : "original"
+                            const dlName = buildFileName({
+                              displayId,
+                              customerSlug,
+                              side: gc,
+                              garmentCode: suffix,
+                              ext,
+                            })
+                            return (
+                              <li key={f.url}>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                  <span className="text-xsmall text-ui-fg-muted">{f.mime_type}</span>
+                                  <span className="text-xsmall text-ui-fg-subtle truncate max-w-[200px]" title={f.file_name}>
+                                    {f.file_name}
+                                  </span>
+                                </div>
+                                <DownloadLink
+                                  href={f.url}
+                                  fileName={dlName}
+                                  label="Download original"
+                                />
+                              </li>
+                            )
+                          })}
                         </ul>
                       </div>
                     ) : null}
@@ -648,6 +748,7 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
                         )
                         const customerOriginalFileUrl =
                           line.customer_original_files?.[0]?.url ?? null
+                        const garmentCode = garmentCodeFromHandle(line.product_handle)
 
                         // Build customiser URL — requires storefront URL + product handle + variant ID
                         const makeCustomiserCb = (artworkUrl: string | null) => {
@@ -669,6 +770,9 @@ const OrderCustomizerDownloadsWidget = ({ data }: DetailWidgetProps<AdminOrder>)
                             customerOriginalFileUrl={customerOriginalFileUrl}
                             onProofsChange={handleProofsChange}
                             onCustomisePosition={canCustomise ? makeCustomiserCb : null}
+                            displayId={displayId}
+                            customerSlug={customerSlug}
+                            garmentCode={garmentCode}
                           />
                         )
                       })}
