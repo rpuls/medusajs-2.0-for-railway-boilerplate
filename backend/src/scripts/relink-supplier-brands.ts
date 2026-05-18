@@ -37,6 +37,9 @@ export default async function relinkSupplierBrands({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const link = container.resolve(ContainerRegistrationKeys.LINK) as any
+  const pgConnection = container.resolve(
+    ContainerRegistrationKeys.PG_CONNECTION
+  ) as any
   const brandService = container.resolve(BRAND_MODULE) as any
 
   const dryRun =
@@ -44,6 +47,39 @@ export default async function relinkSupplierBrands({ container }: ExecArgs) {
 
   if (dryRun) {
     logger.info("[relink-supplier-brands] DRY RUN — no links will be created.")
+  }
+
+  // Pre-flight: confirm we resolved a real link service. Past runs that "succeeded"
+  // produced 0 rows in the DB — likely because `link` was undefined and the calls
+  // silently no-op'd. Fail loudly if we can't find the service.
+  if (!link || typeof link.create !== "function") {
+    logger.error(
+      `[relink-supplier-brands] container.resolve(LINK) returned ${typeof link}; ` +
+        `link.create is ${typeof link?.create}. Aborting — links cannot be created.`
+    )
+    return
+  }
+  logger.info(
+    `[relink-supplier-brands] Link service resolved OK. Methods: ${Object.keys(link).join(", ")}`
+  )
+
+  // Pre-flight: confirm the link table exists. If sync-links never ran, the table is
+  // missing and every create call will fail. Knex throws on missing tables.
+  try {
+    const countRow: { count?: string } | undefined = await pgConnection(
+      "product_product_brand_brand"
+    )
+      .count({ count: "*" })
+      .first()
+    logger.info(
+      `[relink-supplier-brands] product_product_brand_brand currently has ${countRow?.count ?? "?"} row(s) before run.`
+    )
+  } catch (err: any) {
+    logger.error(
+      `[relink-supplier-brands] Cannot read product_product_brand_brand table: ${err?.message ?? err}. ` +
+        `Run "npx medusa db:sync-links" then re-run this script.`
+    )
+    return
   }
 
   // Build brand-handle → brand-id lookup
@@ -126,14 +162,23 @@ export default async function relinkSupplierBrands({ container }: ExecArgs) {
           [BRAND_MODULE]: { brand_id: brandId },
         })
         counts.linked++
-        logger.info(`[relink-supplier-brands] Linked ${handle} → ${match.brandHandle}`)
+        if (counts.linked <= 5 || counts.linked % 50 === 0) {
+          logger.info(
+            `[relink-supplier-brands] Linked ${handle} → ${match.brandHandle} (cumulative: ${counts.linked})`
+          )
+        }
       } catch (err: any) {
         if (err?.message?.includes("Cannot create multiple links")) {
           counts.alreadyLinked++
         } else {
           counts.errors++
+          // Log every error in full — past silent failures are exactly what we're
+          // trying to surface here. Stack included for first 5 errors.
+          const detail = counts.errors <= 5
+            ? err?.stack ?? `${err?.message ?? err}`
+            : err?.message ?? err
           logger.warn(
-            `[relink-supplier-brands] Failed to link ${handle}: ${err?.message ?? err}`
+            `[relink-supplier-brands] Failed to link ${handle} → ${match.brandHandle}: ${detail}`
           )
         }
       }
@@ -142,6 +187,35 @@ export default async function relinkSupplierBrands({ container }: ExecArgs) {
     totalProcessed += page.length
     if (page.length < PAGE_SIZE) break
     offset += page.length
+  }
+
+  // Post-run verification: count actual rows in the link table per brand. The previous
+  // "Linked: 345" log was misleading because counts.linked was incremented even when
+  // link.create() silently no-op'd. This count is from the database directly.
+  if (!dryRun) {
+    try {
+      const rows: Array<{ brand_id: string; count: string }> = await pgConnection(
+        "product_product_brand_brand"
+      )
+        .whereNull("deleted_at")
+        .groupBy("brand_id")
+        .select("brand_id")
+        .count("* as count")
+      const total = rows.reduce((s, r) => s + parseInt(r.count ?? "0", 10), 0)
+      logger.info(
+        `[relink-supplier-brands] Post-run link table state: ${total} total row(s) across ${rows.length} brand(s).`
+      )
+      const brandNameById = new Map(allBrands.map((b) => [b.id, b.handle]))
+      for (const r of rows) {
+        logger.info(
+          `[relink-supplier-brands]   ${brandNameById.get(r.brand_id) ?? r.brand_id}: ${r.count} link(s)`
+        )
+      }
+    } catch (err: any) {
+      logger.warn(
+        `[relink-supplier-brands] Post-run verification query failed: ${err?.message ?? err}`
+      )
+    }
   }
 
   logger.info(

@@ -37,6 +37,9 @@ const HANDLE_PREFIX_TO_BRAND: Array<{ prefix: string; brandHandle: string }> = [
 export default async function verifyBrandLinks({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
+  const pgConnection = container.resolve(
+    ContainerRegistrationKeys.PG_CONNECTION
+  ) as any
   const brandService = container.resolve(BRAND_MODULE) as any
 
   const allBrands = (await brandService.listBrands({})) as Array<{
@@ -103,16 +106,17 @@ export default async function verifyBrandLinks({ container }: ExecArgs) {
       continue
     }
 
-    // Count actual link rows for this brand via the link engine.
-    const linkRes = await query.graph({
-      entity: "product_brand",
-      fields: ["product_id"],
-      filters: { brand_id: brand.id },
-      pagination: { take: 10_000, skip: 0 },
-    })
+    // Count actual link rows for this brand via Knex on the link table — matches the
+    // brand-products route's data source, so what we count here is what users see.
+    const linkRows: Array<{ product_id: string }> = await pgConnection(
+      "product_product_brand_brand"
+    )
+      .where({ brand_id: brand.id })
+      .whereNull("deleted_at")
+      .select("product_id")
     const linkedIds = new Set<string>(
-      ((linkRes.data ?? []) as Array<{ product_id?: string }>)
-        .map((r) => r.product_id)
+      linkRows
+        .map((r) => r?.product_id)
         .filter((id): id is string => typeof id === "string" && id.length > 0)
     )
 
