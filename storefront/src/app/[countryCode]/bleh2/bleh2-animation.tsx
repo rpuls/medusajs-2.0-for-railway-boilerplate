@@ -29,6 +29,7 @@ export default function Bleh2Animation() {
         logoSrc="/branding/bleh-image.png"
         particleCount={140000}
         logoFit="cover"
+        useImageColors
       />
     </>
   )

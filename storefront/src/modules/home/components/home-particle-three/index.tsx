@@ -116,6 +116,7 @@ type ParticleFieldProps = {
   particleCount: number
   tuningRef: React.MutableRefObject<ThreeTuning>
   logoFit?: "contain" | "cover"
+  useImageColors?: boolean
 }
 
 function ParticleField({
@@ -125,6 +126,7 @@ function ParticleField({
   particleCount,
   tuningRef,
   logoFit = "contain",
+  useImageColors = false,
 }: ParticleFieldProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const { size, camera } = useThree()
@@ -178,17 +180,23 @@ function ParticleField({
       trailHash[i] =
         (((wx | 0) * 2654435761) ^ ((wy | 0) * 1597334677)) >>> 0
 
-      const t = sp.u
-      const segCount = WORDMARK_GRADIENT_STOPS.length - 1
-      const segPos = t * segCount
-      let segIdx = Math.floor(segPos)
-      if (segIdx >= segCount) segIdx = segCount - 1
-      const localT = segPos - segIdx
-      const c1 = WORDMARK_GRADIENT_STOPS[segIdx]!
-      const c2 = WORDMARK_GRADIENT_STOPS[segIdx + 1]!
-      colors[i3 + 0] = (c1[0] + (c2[0] - c1[0]) * localT) / 255
-      colors[i3 + 1] = (c1[1] + (c2[1] - c1[1]) * localT) / 255
-      colors[i3 + 2] = (c1[2] + (c2[2] - c1[2]) * localT) / 255
+      if (useImageColors && sp.r !== undefined) {
+        colors[i3 + 0] = sp.r
+        colors[i3 + 1] = sp.g!
+        colors[i3 + 2] = sp.b!
+      } else {
+        const t = sp.u
+        const segCount = WORDMARK_GRADIENT_STOPS.length - 1
+        const segPos = t * segCount
+        let segIdx = Math.floor(segPos)
+        if (segIdx >= segCount) segIdx = segCount - 1
+        const localT = segPos - segIdx
+        const c1 = WORDMARK_GRADIENT_STOPS[segIdx]!
+        const c2 = WORDMARK_GRADIENT_STOPS[segIdx + 1]!
+        colors[i3 + 0] = (c1[0] + (c2[0] - c1[0]) * localT) / 255
+        colors[i3 + 1] = (c1[1] + (c2[1] - c1[1]) * localT) / 255
+        colors[i3 + 2] = (c1[2] + (c2[2] - c1[2]) * localT) / 255
+      }
     }
 
     /** Per-particle trailing state.
@@ -672,11 +680,15 @@ type Props = {
   logoSrc?: string
   particleCount?: number
   logoFit?: "contain" | "cover"
+  /** When true, sample each particle's colour directly from the source image
+   * instead of using the gradient. Ideal for photos. */
+  useImageColors?: boolean
 }
 
 export default function HomeParticleThree({
   logoSrc = "/branding/sc-prints-logo-transparent.png",
   logoFit = "contain",
+  useImageColors = false,
 }: Props) {
   const [stipple, setStipple] = useState<{
     points: StipplePoint[]
@@ -692,7 +704,7 @@ export default function HomeParticleThree({
 
   useEffect(() => {
     let cancelled = false
-    sampleWordmarkStipple(logoSrc, 1024)
+    sampleWordmarkStipple(logoSrc, 1024, 128, useImageColors)
       .then((result) => {
         if (cancelled) return
         setStipple(result)
@@ -730,6 +742,7 @@ export default function HomeParticleThree({
               particleCount={tuning.particleCount}
               tuningRef={tuningRef}
               logoFit={logoFit}
+              useImageColors={useImageColors}
             />
           )}
         </Suspense>

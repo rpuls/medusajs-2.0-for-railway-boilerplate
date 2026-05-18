@@ -6,14 +6,27 @@
  * particle scene then picks N of these as home positions and colors them via
  * the gradient axis projection.
  */
-export type StipplePoint = { x: number; y: number; u: number; v: number }
+export type StipplePoint = {
+  x: number
+  y: number
+  u: number
+  v: number
+  /** Normalised RGB (0–1) sampled from the source image. Only present when
+   * `sampleColors = true` is passed to `sampleWordmarkStipple`. */
+  r?: number
+  g?: number
+  b?: number
+}
 
 export async function sampleWordmarkStipple(
   src: string,
   /** Render size of the offscreen canvas — controls stipple density.
    * 1024 = ~50-150k candidates depending on logo coverage. */
   renderSize = 1024,
-  alphaThreshold = 128
+  alphaThreshold = 128,
+  /** When true, sample the RGB of each pixel and store it on the point as
+   * normalised r/g/b (0–1). Used for photo-coloured particle clouds. */
+  sampleColors = false
 ): Promise<{
   points: StipplePoint[]
   width: number
@@ -46,14 +59,16 @@ export async function sampleWordmarkStipple(
   const points: StipplePoint[] = []
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const a = data[(y * width + x) * 4 + 3]!
+      const base = (y * width + x) * 4
+      const a = data[base + 3]!
       if (a > alphaThreshold) {
-        points.push({
-          x,
-          y,
-          u: x / width,
-          v: y / height,
-        })
+        const pt: StipplePoint = { x, y, u: x / width, v: y / height }
+        if (sampleColors) {
+          pt.r = data[base]! / 255
+          pt.g = data[base + 1]! / 255
+          pt.b = data[base + 2]! / 255
+        }
+        points.push(pt)
       }
     }
   }
