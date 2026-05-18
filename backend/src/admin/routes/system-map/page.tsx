@@ -686,28 +686,15 @@ const SECTIONS: Section[] = [
     id: "data-ownership",
     title: "What writes where (data ownership map)",
     diagram: `flowchart LR
-    subgraph CORE_TABLES["Core Medusa tables"]
+    subgraph CORE["Core tables (what writes)"]
+        direction TB
         T_ORDER[order]
         T_CUSTOMER[customer]
-        T_CART[cart]
         T_PRODUCT[product]
     end
 
-    subgraph CUSTOM_TABLES["SC PRINTS tables"]
-        T_DESIGN[design / design_version]
-        T_WISHLIST[wishlist_item]
-        T_QUOTE[quote / quote_event]
-        T_RECIPE[print_recipe]
-        T_REJECT[production_reject]
-        T_LOOKBOOK[lookbook_item]
-        T_ORG[organisation / organisation_member]
-        T_GROUP[group_order / group_order_participant]
-        T_TAG[customer_tag]
-        T_NOTE[customer_note]
-        T_COMMENT[order_comment]
-    end
-
-    subgraph META["Stored on order.metadata"]
+    subgraph META["order.metadata (what gets written)"]
+        direction TB
         M_STAGE[production_stage_*]
         M_ARTWORK[artwork_stage_*]
         M_BLANKS[blanks_stage_*]
@@ -721,7 +708,8 @@ const SECTIONS: Section[] = [
         M_RECIPE_LINKS[print_recipe_ids]
     end
 
-    subgraph CUST_META["Stored on customer.metadata"]
+    subgraph CUST_META["customer.metadata"]
+        direction TB
         CM_CONSENT[marketing_consent_*]
         CM_TAX[tax_exempt + reason]
         CM_LAST_WINBACK[last_winback_sent_at]
@@ -729,7 +717,8 @@ const SECTIONS: Section[] = [
         CM_LAST_REORDER[last_reorder_reminder_sent_at]
     end
 
-    subgraph PRODUCT_META["Stored on product.metadata"]
+    subgraph PRODUCT_META["product.metadata"]
+        direction TB
         PM_XSELL[cross_sell_product_ids]
     end
 
@@ -753,10 +742,15 @@ const SECTIONS: Section[] = [
 
     T_PRODUCT --> PM_XSELL`,
     body: (
-      <Text size="small" className="text-ui-fg-subtle mt-2">
-        Rule of thumb: <strong>read/written in many places, queried for reports</strong> → new table.{" "}
-        <strong>Snapshot of a moment in time, read in one or two places</strong> → metadata on order / customer / product.
-      </Text>
+      <>
+        <Text size="small" className="text-ui-fg-subtle mt-2">
+          Rule of thumb: <strong>read/written in many places, queried for reports</strong> → new table.{" "}
+          <strong>Snapshot of a moment in time, read in one or two places</strong> → metadata on order / customer / product.
+        </Text>
+        <Text size="small" className="text-ui-fg-subtle mt-2">
+          <strong>SC PRINTS custom tables</strong> (own rows, not metadata): design / design_version, wishlist_item, quote / quote_event, print_recipe, production_reject, lookbook_item, organisation / organisation_member, group_order / group_order_participant, customer_tag, customer_note, order_comment.
+        </Text>
+      </>
     ),
   },
 
