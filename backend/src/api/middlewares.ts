@@ -54,5 +54,15 @@ export default defineMiddlewares({
         sizeLimit: "1mb",
       },
     },
+    {
+      // Stripe webhook for admin-created Payment Links. Stripe signs the raw
+      // body, so we must preserve it for `stripe.webhooks.constructEvent`.
+      matcher: "/hooks/stripe-payment-link",
+      methods: ["POST"],
+      bodyParser: {
+        preserveRawBody: true,
+        sizeLimit: "1mb",
+      },
+    },
   ],
 })

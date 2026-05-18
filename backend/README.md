@@ -24,6 +24,17 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 - Regions must include the **`pp_stripe_stripe`** payment provider for Stripe at checkout. The seed script adds it automatically when both Stripe env vars are set before running migrations/seed; otherwise add Stripe under **Settings → Regions** in Medusa Admin.
 - **Smoke-test checkout:** With test keys, complete an order using Stripe’s test card `4242424242424242`, any future expiry, any CVC; confirm the payment appears authorized/captured and the order shows as paid in Admin.
 
+### Stripe Payment Links (admin-created post-order payments)
+
+For deposits, balances, or one-off payments where staff send the customer a hosted Stripe URL **after** the order exists, configure a **second** Stripe webhook endpoint separate from the cart-checkout one above:
+
+- **Endpoint URL:** `{your-backend-origin}/hooks/stripe-payment-link`
+- **Subscribe to:** `checkout.session.completed` (and only that — Medusa already handles cart PaymentIntents via the other endpoint)
+- **Signing secret env var:** `STRIPE_PAYMENT_LINK_WEBHOOK_SECRET` (`whsec_...`) — distinct from `STRIPE_WEBHOOK_SECRET`. Restart the backend after setting.
+- **Local dev:** `stripe listen --forward-to localhost:9000/hooks/stripe-payment-link` and use the printed secret.
+- **Admin UI:** the "Stripe payment links" section on each order's detail page (inside the Deposit widget) lets staff create / copy / deactivate links. When a customer pays a link, the webhook auto-records a captured Payment against the order — no manual reconciliation.
+- **Provider attribution:** Stripe-Payment-Link captures show up in the Payments section of the order with `provider_id = pp_system_default` (Medusa's internal "manual" provider). The Payment Mix report reads `payment.metadata.real_gateway` to attribute revenue back to Stripe.
+
 ### Publishable key endpoint (`/key-exchange`)
 
 The backend exposes **`GET /key-exchange`**, which returns the publishable Store API key titled **Webshop** when present. For production, set **`KEY_EXCHANGE_SECRET`** in `.env` and send it as header **`x-medusa-key-exchange-secret`** (or query **`?secret=`**) on every request; requests without a matching secret receive **401**. If **`KEY_EXCHANGE_SECRET`** is unset, behavior matches older setups (no extra auth).

@@ -272,6 +272,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/stripe-payment-link",
+    },
+
+    {
       resolve: "./src/modules/production-reject",
     },
 

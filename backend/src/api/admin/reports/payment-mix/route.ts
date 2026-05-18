@@ -41,12 +41,23 @@ const PAYPAL_HEADLINE_FEE_PCT = (() => {
   return Number.isFinite(n) && n > 0 ? n : 2.6
 })()
 
-const detectGateway = (providerId: string | null | undefined): string => {
+const detectGateway = (
+  providerId: string | null | undefined,
+  paymentMetadata: Record<string, unknown> | null | undefined
+): string => {
+  // Payments captured via our Stripe Payment Link webhook are recorded
+  // through `markPaymentCollectionAsPaidWorkflow`, which hard-codes
+  // `provider_id = "pp_system_default"`. We stamp `metadata.real_gateway`
+  // at capture time so the report still buckets them under "stripe".
+  const realGateway = paymentMetadata?.real_gateway
+  if (typeof realGateway === "string" && realGateway.includes("stripe")) {
+    return "stripe"
+  }
   if (!providerId) return "(unknown)"
   const p = providerId.toLowerCase()
   if (p.includes("stripe")) return "stripe"
   if (p.includes("paypal")) return "paypal"
-  if (p.includes("manual")) return "manual"
+  if (p.includes("manual") || p.includes("system_default")) return "manual"
   return p
 }
 
@@ -72,6 +83,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         "payment_collections.payments.amount",
         "payment_collections.payments.provider_id",
         "payment_collections.payments.data",
+        "payment_collections.payments.metadata",
       ],
       pagination: { take: 5000, skip: 0 },
     })
@@ -166,7 +178,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const seenGateways = new Set<string>()
     for (const c of collections) {
       for (const p of (c?.payments ?? []) as any[]) {
-        const gateway = detectGateway(p?.provider_id)
+        const gateway = detectGateway(p?.provider_id, p?.metadata)
         if (!seenGateways.has(gateway)) {
           seenGateways.add(gateway)
         }

@@ -170,6 +170,7 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | `POSTHOG_PERSONAL_API_KEY` | Optional. PostHog **Personal** API Key (Settings → Personal API keys). Required for the Reports page PostHog tile to render live numbers. Different from `POSTHOG_API_KEY` (which is the Project key used to *send* events). | unset — tile shows setup hint |
 | `POSTHOG_PROJECT_ID` | Optional. Numeric PostHog project ID (visible in URLs like `app.posthog.com/project/12345/...`). Required alongside `POSTHOG_PERSONAL_API_KEY`. | unset |
 | `POSTHOG_HOST` | Optional. PostHog instance host. Use `https://us.i.posthog.com` (default), `https://eu.i.posthog.com`, or your self-hosted URL. | `https://us.i.posthog.com` |
+| `STRIPE_PAYMENT_LINK_WEBHOOK_SECRET` | Signing secret for the dedicated Stripe webhook that handles admin-created Payment Links. Configure a **second** Stripe webhook endpoint at `{backend}/hooks/stripe-payment-link` subscribed to `checkout.session.completed`. Distinct from `STRIPE_WEBHOOK_SECRET` (Medusa's checkout flow). When unset, the admin "Create payment link" button is hidden and the webhook returns 503. | unset — payment-link feature disabled |
 
 | `FASHIONBIZ_API_TOKEN` | Optional. FashionBiz Public API v3 token (Authorization: `Token <token>`). Required to enable the FashionBiz importer + nightly stock sync. When unset, the FashionBiz module is not registered and the cron is a no-op. | unset |
 | `FASHIONBIZ_BRANCH` | Optional. FashionBiz country shorthand: `au`, `nz`, or `ca`. | `au` |
@@ -203,6 +204,35 @@ All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.)
    - Copy the **variant ID** (not product ID) into `NEXT_PUBLIC_VECTORIZATION_VARIANT_ID`
 5. Add the new env vars from the table above.
 6. Restart both apps.
+
+## Stripe payment links — auto-link to orders
+
+Staff create a Stripe-hosted Payment Link for an order (deposit / balance / full / one-off "manual") from the order-deposit widget. When the customer pays, a dedicated webhook receives `checkout.session.completed`, creates a fresh `payment_collection` against the order, runs `markPaymentCollectionAsPaidWorkflow`, and stamps a summary entry on `order.metadata.stripe_payment_links[]`. No manual reconciliation against the Stripe dashboard.
+
+| Component | Path |
+| --- | --- |
+| Module + service + migration | [backend/src/modules/stripe-payment-link/](backend/src/modules/stripe-payment-link/) |
+| Stripe SDK wrapper + create-link + webhook handler | [backend/src/services/stripe-payment-link/](backend/src/services/stripe-payment-link/) |
+| Admin API — create / list links | [backend/src/api/admin/orders/\[id\]/payment-link/route.ts](backend/src/api/admin/orders/[id]/payment-link/route.ts) |
+| Admin API — deactivate link | [backend/src/api/admin/orders/\[id\]/payment-link/\[link_id\]/route.ts](backend/src/api/admin/orders/[id]/payment-link/[link_id]/route.ts) |
+| Webhook endpoint | [backend/src/api/hooks/stripe-payment-link/route.ts](backend/src/api/hooks/stripe-payment-link/route.ts) |
+| Raw-body middleware registration | [backend/src/api/middlewares.ts](backend/src/api/middlewares.ts) |
+| Admin widget (extends deposit widget) | [backend/src/admin/widgets/order-deposit.tsx](backend/src/admin/widgets/order-deposit.tsx) |
+| Payment-mix report tweak (attribute via metadata.real_gateway) | [backend/src/api/admin/reports/payment-mix/route.ts](backend/src/api/admin/reports/payment-mix/route.ts) |
+
+**Why a second webhook endpoint?** Medusa's built-in Stripe provider owns `/hooks/payment/stripe_stripe` and tries to match every PaymentIntent against an existing cart-checkout payment_session. Payment Links don't have one, so we route them through a separate endpoint with its own signing secret. Configure two Stripe webhook endpoints in the dashboard:
+- Existing: `{backend}/hooks/payment/stripe_stripe` (Medusa-owned, cart checkout)
+- New: `{backend}/hooks/stripe-payment-link` subscribed to **only** `checkout.session.completed`
+
+**Why a new `payment_collection` per link?** `markPaymentCollectionAsPaidWorkflow` requires `status === "not_paid"`, so we can't append to the cart's existing collection. Each link = one collection = one Payment row.
+
+**Provider attribution caveat**: `markPaymentCollectionAsPaidWorkflow` hard-codes `provider_id = "pp_system_default"`. The handler stamps `payment.metadata.real_gateway = "stripe_payment_link"`; the payment-mix report reads that metadata so revenue is bucketed under Stripe.
+
+**Idempotency**: two layers. (1) `stripe_payment_link_event` table — Stripe event ID as PK; unique-violation on insert returns 200 `{idempotent: true}`. (2) row.status === "paid" short-circuits inside the handler. Belt-and-braces: `restrictions.completed_sessions.limit = 1` on the Stripe Payment Link prevents a single link being paid twice.
+
+**Local dev**: `stripe listen --forward-to localhost:9000/hooks/stripe-payment-link` (Stripe CLI) — the printed `whsec_...` is your `STRIPE_PAYMENT_LINK_WEBHOOK_SECRET`. Note this is a separate secret from `STRIPE_WEBHOOK_SECRET`.
+
+**Quote-anchored links**: the data model + webhook already support `quote_id` (handler looks up `quote.metadata.cart_id → order` if the quote has converted). Admin UI on the quote detail page is deferred to v1.1.
 
 ## SEO analytics page (GSC + GA4)
 

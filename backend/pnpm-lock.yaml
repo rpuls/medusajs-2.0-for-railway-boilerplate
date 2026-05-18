@@ -103,6 +103,9 @@ importers:
       sharp:
         specifier: ^0.34.4
         version: 0.34.5
+      stripe:
+        specifier: ^15.12.0
+        version: 15.12.0
       ulid:
         specifier: ^3.0.2
         version: 3.0.2

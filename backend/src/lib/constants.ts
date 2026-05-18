@@ -45,6 +45,20 @@ export const STORE_CORS = process.env.STORE_CORS ?? ""
 export const REDIS_URL = process.env.REDIS_URL
 export const STRIPE_API_KEY = process.env.STRIPE_API_KEY
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
+/**
+ * Signing secret for the *dedicated* Stripe webhook that handles admin-created
+ * Payment Links (deposit / balance / quote / manual scenarios).
+ *
+ * Distinct from `STRIPE_WEBHOOK_SECRET` (which Medusa's checkout flow uses).
+ * Configure a second webhook endpoint in Stripe dashboard pointed at
+ * `{backend}/hooks/stripe-payment-link` subscribed to `checkout.session.completed`.
+ *
+ * When unset, the admin "Create payment link" button is hidden and the webhook
+ * endpoint returns 503. This keeps dev environments without Stripe config
+ * quiet.
+ */
+export const STRIPE_PAYMENT_LINK_WEBHOOK_SECRET =
+  process.env.STRIPE_PAYMENT_LINK_WEBHOOK_SECRET
 export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID
 export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET
 export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID
