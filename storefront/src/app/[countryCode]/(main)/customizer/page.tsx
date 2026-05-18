@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
+import { getCustomerTier } from "@lib/data/customer-tier"
 import { getMyDesign } from "@lib/data/designs"
 import { retrieveOrder } from "@lib/data/orders"
 import { getProductsList } from "@lib/data/products"
@@ -230,6 +231,7 @@ export default async function CustomizerPage({ params, searchParams }: Customize
     .filter((p) => p.handle.length > 0)
 
   const defaultGarment = extractDefaultGarmentFromProduct(customizerProduct)
+  const tier = await getCustomerTier()
 
   return (
     <ProductOptionsProvider product={customizerProduct}>
@@ -238,6 +240,7 @@ export default async function CustomizerPage({ params, searchParams }: Customize
         defaultGarmentTitle={defaultGarment?.title ?? null}
         product={customizerProduct}
         pickerProducts={pickerProducts}
+        tier={tier}
       />
     </ProductOptionsProvider>
   )

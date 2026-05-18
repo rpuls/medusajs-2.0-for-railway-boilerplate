@@ -24,6 +24,7 @@ import {
   stockWarningMessage,
   type VariantStockState,
 } from "@modules/products/lib/variant-stock"
+import { TIER_GROUP_NAME_PREFIX, type Tier } from "@lib/customer-tiers"
 
 type PricingPanelProps = {
   currencyCode: string
@@ -92,6 +93,14 @@ type PricingPanelProps = {
    * doesn't otherwise know about variants.
    */
   stockBySize?: Record<string, VariantStockState | undefined>
+  /**
+   * Logged-in customer's pricing tier. When set, the panel shows a
+   * "Your <tier> pricing" callout above the size matrix. The public quantity
+   * ladder is already suppressed upstream (parent passes empty
+   * `bulkPricingTiers`), and `pricing.discountedUnitPriceCents` reflects the
+   * tier price baked into Medusa's calculated_price for this customer.
+   */
+  tier?: Tier | null
 }
 
 const formatMoney = (amount: number, currencyCode: string) =>
@@ -133,6 +142,7 @@ export default function PricingPanel({
   isSavingDesign = false,
   aggregatedCartQuantity,
   stockBySize,
+  tier = null,
 }: PricingPanelProps) {
   const ctaLabel = primaryCtaLabel ?? "Add to cart"
   const ctaLoadingLabel = primaryCtaLoadingLabel ?? "Adding..."
@@ -212,6 +222,17 @@ export default function PricingPanel({
           </p>
         </div>
       )}
+
+      {tier ? (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-900">
+          <p className="text-xs font-semibold uppercase tracking-wide">
+            Your {tier.name.slice(TIER_GROUP_NAME_PREFIX.length)} pricing
+          </p>
+          <p className="mt-0.5 text-[11px] text-emerald-800">
+            {formatMoney(checkoutUnitCents, currencyCode)} / unit — flat rate, no quantity ladder.
+          </p>
+        </div>
+      ) : null}
 
       {hidePrintSizeSelector ? null : printSizeSelect}
 

@@ -25,6 +25,7 @@ import {
   resolveScpPrintSizeForSide,
   type ScpPrintSizeId,
 } from "@modules/customizer/lib/scp-dtf-print-pricing"
+import type { Tier } from "@lib/customer-tiers"
 import { HttpTypes } from "@medusajs/types"
 
 type ProductActionsProps = {
@@ -32,6 +33,7 @@ type ProductActionsProps = {
   region: HttpTypes.StoreRegion
   disabled?: boolean
   hideInlinePurchaseControls?: boolean
+  tier?: Tier | null
 }
 
 const PDP_LOCATION_OPTIONS: Array<{ side: PrintPlacementSide; label: string }> = [
@@ -62,6 +64,7 @@ export default function ProductActions({
   region,
   disabled,
   hideInlinePurchaseControls = false,
+  tier = null,
 }: ProductActionsProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [quantity, setQuantity] = useState(1)
@@ -387,7 +390,12 @@ export default function ProductActions({
         ) : null}
 
         {!hideInlinePurchaseControls ? (
-          <ProductPrice product={product} variant={selectedVariant} quantity={quantity} />
+          <ProductPrice
+            product={product}
+            variant={selectedVariant}
+            quantity={quantity}
+            tier={tier}
+          />
         ) : null}
 
         {!hideInlinePurchaseControls ? (

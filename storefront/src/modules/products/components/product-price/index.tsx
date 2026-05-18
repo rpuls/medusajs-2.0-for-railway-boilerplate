@@ -6,6 +6,7 @@ import {
   resolveHeadlineMinorAmount,
 } from "@lib/util/resolve-display-minor"
 import { convertToLocale } from "@lib/util/money"
+import { TIER_GROUP_NAME_PREFIX, type Tier } from "@lib/customer-tiers"
 import { HttpTypes } from "@medusajs/types"
 
 type BulkTier = {
@@ -94,10 +95,12 @@ export default function ProductPrice({
   product,
   variant,
   quantity = 1,
+  tier = null,
 }: {
   product: HttpTypes.StoreProduct
   variant?: HttpTypes.StoreProductVariant
   quantity?: number
+  tier?: Tier | null
 }) {
   const { cheapestPrice, variantPrice } = getProductPrice({
     product,
@@ -105,7 +108,10 @@ export default function ProductPrice({
   })
 
   const selectedPrice = variant ? variantPrice : cheapestPrice
-  const bulkTiers = getBulkPricingTiers(variant)
+  // Tier customers see a flat price (already reflected in calculated_price
+  // via the matching customer_group-scoped PriceList) — hide the quantity
+  // ladder so they aren't confused about which tier they're getting.
+  const bulkTiers = tier ? [] : getBulkPricingTiers(variant)
   const selectedQuantity = Math.max(1, quantity)
   const activeBulkTier =
     variant && bulkTiers.length ? resolveTierForQuantity(bulkTiers, selectedQuantity) : null
@@ -166,6 +172,8 @@ export default function ProductPrice({
   const scaledTierMinor = (tier: BulkTier) => Math.round(tier.amount * bulkMinorScale)
   const baseTierAmount = scaledTierMinor(bulkTiers[0] ?? { min_quantity: 1, amount: activeUnitAmount })
 
+  const tierLabel = tier ? tier.name.slice(TIER_GROUP_NAME_PREFIX.length) : null
+
   return (
     <div className="flex flex-col text-ui-fg-base">
       <span
@@ -181,6 +189,11 @@ export default function ProductPrice({
           {activeUnitPrice}
         </span>
       </span>
+      {tier ? (
+        <span className="text-xs text-ui-fg-interactive font-medium">
+          Your {tierLabel} pricing
+        </span>
+      ) : null}
       {headlineUsesBulkTier ? (
         <span className="text-xs text-ui-fg-subtle">
           Bulk tier {formatTierRange(activeBulkTier)} applied at qty {selectedQuantity}

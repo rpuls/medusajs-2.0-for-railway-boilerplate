@@ -2,7 +2,8 @@
   "scripts": {
     "generate-as-colour-website-pricing-import-csv": "pnpm --dir backend run generate-as-colour-website-pricing-import-csv --",
     "strip-product-import-supplemental": "pnpm --dir backend run strip-product-import-supplemental --",
-    "check-production-stage-sync": "node scripts/check-production-stage-sync.mjs"
+    "check-production-stage-sync": "node scripts/check-production-stage-sync.mjs",
+    "check-customer-tiers-sync": "node scripts/check-customer-tiers-sync.mjs"
   },
   "dependencies": {
     "d3-force": "^3.0.0",

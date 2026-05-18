@@ -42,7 +42,7 @@ import {
   FashionBizColour,
   FashionBizProduct,
 } from "../modules/fashionbiz/types"
-import { priceLadderFromFashionBiz } from "../modules/fashionbiz/pricing"
+import { priceLadderFromFashionBiz, resolveFashionBizCost } from "../modules/fashionbiz/pricing"
 import type { PriceLadder } from "../utils/bulk-price-ladder"
 import {
   tierMinorToPriceSetRows,
@@ -312,6 +312,8 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
         continue
       }
       const tierMinor = ladderToTierMinor(ladder)
+      const fbCost = resolveFashionBizCost(product.prices, costAdjustment)
+      const fbCostMinor = fbCost !== null ? Math.round(fbCost * 100) : null
 
       const colours = (product.colors ?? []).filter(
         (c): c is FashionBizColour => !!c && (c.sizes?.length ?? 0) > 0
@@ -386,6 +388,9 @@ export default async function importFashionBizFromApi({ container, args }: ExecA
               bulk_pricing: tierMinorToBulkPricingMetadata(tierMinor, "fashionbiz-api"),
               raw_prices: product.prices ?? [],
               cost_adjustment: costAdjustment,
+              // Canonical ex-GST cost in minor units — read by the tier-pricing
+              // regen job. See `backend/src/lib/customer-tiers.ts`.
+              ...(fbCostMinor !== null ? { cost_price_ex_gst_minor: fbCostMinor } : {}),
               garment_images: buildGarmentImagesForColour(colour),
               garment_color: colour.name,
             },

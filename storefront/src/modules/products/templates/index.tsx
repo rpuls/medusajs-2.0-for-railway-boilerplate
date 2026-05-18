@@ -10,6 +10,7 @@ import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import EmbeddedProductCustomizer from "@modules/customizer/components/embedded-product-customizer"
+import { getCustomerTier } from "@lib/data/customer-tier"
 import MobileCustomizeCta from "@modules/products/components/mobile-customize-cta"
 import PdpCustomizerBoundary from "@modules/products/components/pdp-customizer-boundary"
 import DtfAutoBuilderTemplate, {
@@ -29,7 +30,7 @@ type ProductTemplateProps = {
   countryCode: string
 }
 
-const ProductTemplate: React.FC<ProductTemplateProps> = ({
+const ProductTemplate: React.FC<ProductTemplateProps> = async ({
   product,
   region,
   countryCode,
@@ -37,6 +38,8 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   if (!product || !product.id) {
     return null
   }
+
+  const tier = await getCustomerTier()
 
   if (isDtfAutoBuilderProduct(product)) {
     return (
@@ -117,6 +120,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                         gallery: gallerySlot,
                         variantPickers: variantPickersSlot,
                       }}
+                      tier={tier}
                     />
                   </PdpCustomizerBoundary>
                 }

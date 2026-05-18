@@ -380,6 +380,11 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
           ...(tierMinor
             ? { bulk_pricing: tierMinorToBulkPricingMetadata(tierMinor, "ascolour-api") }
             : {}),
+          // Canonical ex-GST cost in minor units — read by the tier-pricing
+          // regen job. See `backend/src/lib/customer-tiers.ts`.
+          ...(cost !== undefined
+            ? { cost_price_ex_gst_minor: Math.round(cost * 100) }
+            : {}),
         },
       }
     })

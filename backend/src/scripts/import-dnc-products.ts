@@ -604,6 +604,9 @@ export default async function importDncProducts({ container, args }: ExecArgs) {
       const meta: Record<string, unknown> = {
         dnc_product_code: v.sku,
         dnc_cost_price_ex_gst_minor: costMinor,
+        // Canonical ex-GST cost in minor units — read by the tier-pricing
+        // regen job. See `backend/src/lib/customer-tiers.ts`.
+        cost_price_ex_gst_minor: costMinor,
         bulk_pricing: buildTierMetadata(tiers),
         ...(garmentColor ? { garment_color: garmentColor } : {}),
       }
@@ -750,6 +753,9 @@ export default async function importDncProducts({ container, args }: ExecArgs) {
           ...existingMeta,
           bulk_pricing: buildTierMetadata(tiers),
           dnc_cost_price_ex_gst_minor: costMinor,
+          // Canonical ex-GST cost in minor units — read by the tier-pricing
+          // regen job. See `backend/src/lib/customer-tiers.ts`.
+          cost_price_ex_gst_minor: costMinor,
         }
 
         const priceSetId = vrow.price_set?.id

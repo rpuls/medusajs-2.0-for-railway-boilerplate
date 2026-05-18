@@ -383,6 +383,9 @@ export default async function importAussiePacificFromApi({
             "aussiepacific-api"
           ),
           cost_adjustment: costAdjustment,
+          // Canonical ex-GST cost in minor units — read by the tier-pricing
+          // regen job. See `backend/src/lib/customer-tiers.ts`.
+          cost_price_ex_gst_minor: Math.round(ladderResult.cost * 100),
           garment_images: buildGarmentImagesForVariant(v),
           garment_color: v.colour ?? null,
         },

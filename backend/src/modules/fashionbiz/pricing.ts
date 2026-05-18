@@ -19,6 +19,20 @@ export function priceLadderFromFashionBiz(
   prices: FashionBizPrice[] | undefined | null,
   costAdjustment: number = 1.0
 ): PriceLadder | null {
+  const cost = resolveFashionBizCost(prices, costAdjustment)
+  return cost === null ? null : buildPriceLadder(cost)
+}
+
+/**
+ * Resolve the adjusted ex-GST cost (AUD major units) for a FashionBiz
+ * product. Returns the same number that's fed into `buildPriceLadder()`.
+ * Importers persist this as `variant.metadata.cost_price_ex_gst_minor` so
+ * the tier-pricing regeneration job has a single canonical input.
+ */
+export function resolveFashionBizCost(
+  prices: FashionBizPrice[] | undefined | null,
+  costAdjustment: number = 1.0
+): number | null {
   if (!prices?.length) return null
   // Prefer the "1-99" tier; fall back to the lowest-quantity tier if the
   // brand uses a different first-tier label (e.g. good-mates uses "Gold").
@@ -29,5 +43,5 @@ export function priceLadderFromFashionBiz(
   if (!Number.isFinite(cost) || cost <= 0) return null
   const adjustment =
     Number.isFinite(costAdjustment) && costAdjustment > 0 ? costAdjustment : 1.0
-  return buildPriceLadder(cost * adjustment)
+  return cost * adjustment
 }

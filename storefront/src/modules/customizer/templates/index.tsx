@@ -28,6 +28,7 @@ import {
 } from "@modules/customizer/lib/artifact-url"
 import { resolveGarmentImageUrlForCustomizerRender } from "@modules/customizer/lib/garment-url-for-render"
 import { calculatePricing } from "@modules/customizer/lib/pricing"
+import { TIER_GROUP_NAME_PREFIX, type Tier } from "@lib/customer-tiers"
 import {
   DEFAULT_SCP_PRINT_SIZE_ID,
   SCP_A6_ONLY_SIDES,
@@ -181,6 +182,12 @@ type CustomizerTemplateProps = {
    * their product up front and never show the picker.
    */
   pickerProducts?: CustomizerPickerProduct[]
+  /**
+   * Logged-in customer's pricing tier, resolved server-side. When set, the
+   * customizer shows a flat tier price ("Your Gold pricing $X.XX/unit") and
+   * hides the public quantity ladder. `null` for guests / untiered customers.
+   */
+  tier?: Tier | null
 }
 
 // Visual-only dimensions used to scale the dashed print-area guide on the
@@ -587,6 +594,7 @@ export default function CustomizerTemplate({
   pdpSyncedVariantId = null,
   integratedPdpSlots,
   pickerProducts,
+  tier = null,
 }: CustomizerTemplateProps) {
   const params = useParams()
   const router = useRouter()
@@ -1156,9 +1164,12 @@ export default function CustomizerTemplate({
     (selectedVariant as any)?.prices?.[0]?.currency_code ??
     "usd"
   const basePriceCents = resolveVariantPrice(selectedVariant, selectedProduct)
+  // Tier customers see a flat tier price (already baked into calculated_price
+  // via the matching customer_group-scoped PriceList). Suppress the public
+  // quantity ladder so they don't see retail bands they aren't paying.
   const bulkPricingTiers = useMemo(
-    () => resolveVariantBulkPricingTiers(selectedVariant),
-    [selectedVariant]
+    () => (tier ? [] : resolveVariantBulkPricingTiers(selectedVariant)),
+    [selectedVariant, tier]
   )
 
   const productBrand = useMemo(() => {
@@ -3523,6 +3534,7 @@ export default function CustomizerTemplate({
               isSavingDesign={isSavingDesign}
               aggregatedCartQuantity={aggregatedCartQuantity}
               stockBySize={stockBySize}
+              tier={tier}
             />
 
             <details className="group rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
@@ -4447,6 +4459,7 @@ export default function CustomizerTemplate({
                 primaryCtaLoadingLabel={editLineItemId ? "Updating..." : undefined}
                 aggregatedCartQuantity={aggregatedCartQuantity}
                 stockBySize={stockBySize}
+                tier={tier}
               />
               <div className="space-y-2 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
                 <label
