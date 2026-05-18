@@ -59,6 +59,19 @@ export const imageUrl = (img: AussiePacificImage | undefined): string => {
   return (img.filename ?? img.url ?? img.src ?? img.path ?? "") as string
 }
 
+const urlIsBack = (url: string): boolean => {
+  const lower = url.toLowerCase()
+  return (
+    /\bback\b/.test(lower.replace(/[^a-z0-9]+/g, " ")) ||
+    lower.includes("_back") ||
+    lower.includes("-back") ||
+    lower.includes("back.")
+  )
+}
+
+const urlIsModelShot = (url: string): boolean =>
+  /talent|model|lifestyle/i.test(url)
+
 /** Score an image so flat garment shots sort before model/lifestyle. */
 const flatnessScore = (img: AussiePacificImage): number => {
   const url = imageUrl(img).toLowerCase()
@@ -84,20 +97,37 @@ const sortImages = (imgs: AussiePacificImage[]): AussiePacificImage[] =>
 
 /**
  * Build the `garment_images` metadata block for a single colour variant.
- * Picks a single front URL (preferring flat over model shots), keeps the
+ * Picks front/back URLs (preferring flat over model shots), keeps the
  * deduped list of every image associated with the variant.
+ *
+ * Back detection: checks `image_type` field first (in case AP ever exposes
+ * "back" type values), then falls back to URL keyword heuristics.
  */
 export const buildGarmentImagesForVariant = (
   variant: AussiePacificVariant
-): { front: string; model_image?: string; all: string[] } => {
+): { front: string; back?: string; model_image?: string; all: string[] } => {
   const sorted = sortImages(toArray<AussiePacificImage>(variant.images))
   const all = sorted.map(imageUrl).filter(Boolean)
 
-  const front = all.find((u) => !/talent|model|lifestyle/i.test(u)) ?? all[0] ?? ""
-  const modelUrl = all.find((u) => /talent|model|lifestyle/i.test(u)) ?? undefined
+  const front =
+    all.find((u) => !urlIsModelShot(u) && !urlIsBack(u)) ??
+    all.find((u) => !urlIsModelShot(u)) ??
+    all[0] ??
+    ""
+
+  const backByType = sorted.find((img) =>
+    (img.image_type ?? "").toLowerCase().includes("back")
+  )
+  const backUrl =
+    (backByType ? imageUrl(backByType) : undefined) ??
+    all.find(urlIsBack) ??
+    undefined
+
+  const modelUrl = all.find(urlIsModelShot) ?? undefined
 
   return {
     front,
+    ...(backUrl ? { back: backUrl } : {}),
     ...(modelUrl ? { model_image: modelUrl } : {}),
     all,
   }

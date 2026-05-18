@@ -124,6 +124,50 @@ describe("Aussie Pacific mapping helpers", () => {
       expect(result.front).toBe("")
       expect(result.all).toEqual([])
     })
+
+    it("sets back when a URL contains '_back'", () => {
+      const result = buildGarmentImagesForVariant({
+        sku: "3312-MRN-10",
+        images: [
+          { url: "https://cdn/N3312_FLAT_01.jpg" },
+          { url: "https://cdn/N3312_FLAT_back_01.jpg" },
+        ],
+      })
+      expect(result.back).toBe("https://cdn/N3312_FLAT_back_01.jpg")
+      expect(result.front).toBe("https://cdn/N3312_FLAT_01.jpg")
+    })
+
+    it("sets back when image_type contains 'back'", () => {
+      const result = buildGarmentImagesForVariant({
+        sku: "3312-MRN-10",
+        images: [
+          { url: "https://cdn/img1.jpg", image_type: "flat_front" },
+          { url: "https://cdn/img2.jpg", image_type: "flat_back" },
+        ],
+      })
+      expect(result.back).toBe("https://cdn/img2.jpg")
+      expect(result.front).toBe("https://cdn/img1.jpg")
+    })
+
+    it("does not set back when no back image is identifiable", () => {
+      const result = buildGarmentImagesForVariant({
+        sku: "1300-BLK-S",
+        images: [{ url: "https://cdn/AP1300_PRODUCT_FLAT_01.jpg" }],
+      })
+      expect(result.back).toBeUndefined()
+    })
+
+    it("front excludes back URLs when a non-back flat is available", () => {
+      const result = buildGarmentImagesForVariant({
+        sku: "3312-MRN-10",
+        images: [
+          { url: "https://cdn/N3312_back.jpg" },
+          { url: "https://cdn/N3312_front.jpg" },
+        ],
+      })
+      expect(result.front).toBe("https://cdn/N3312_front.jpg")
+      expect(result.back).toBe("https://cdn/N3312_back.jpg")
+    })
   })
 
   describe("collectImageUrls", () => {

@@ -978,16 +978,11 @@ export function getGarmentImageUrlForPrintSide(
   ].filter((u): u is string => typeof u === "string" && u.length > 0)
 
   const colorFilteredBack = selectedColor ? backOrdered.filter(matchesColor) : backOrdered
-  const poolBack =
-    selectedColor && colorFilteredBack.length === 0
-      ? []
-      : colorFilteredBack.length
-        ? colorFilteredBack
-        : backOrdered
-  const preferredBack =
-    selectedColor && !poolBack.length
-      ? undefined
-      : poolBack.find((u) => garmentUrlLooksLikeBack(u)) ?? poolBack[0]
+  // Variant images are already colour-scoped via garment_images metadata; fall back to the
+  // full unfiltered pool when strict URL colour matching finds nothing (e.g. AP images whose
+  // filenames don't embed the colour name).
+  const poolBack = colorFilteredBack.length > 0 ? colorFilteredBack : backOrdered
+  const preferredBack = poolBack.find((u) => garmentUrlLooksLikeBack(u)) ?? poolBack[0]
 
   if (preferredBack) {
     const resolved = resolveToStoreUrl(preferredBack)
@@ -1007,7 +1002,9 @@ export function getGarmentImageUrlForPrintSide(
 
   if (validImages.length >= 2) {
     const second = validImages[1]?.url
-    if (second && matchesColor(second)) {
+    // Last resort: colour path already exhausted above; use the second gallery image
+    // unconditionally rather than falling back to the front.
+    if (second) {
       return second
     }
   }
