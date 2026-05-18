@@ -168,7 +168,17 @@ export default async function relinkSupplierBrands({ container }: ExecArgs) {
           )
         }
       } catch (err: any) {
-        if (err?.message?.includes("Cannot create multiple links")) {
+        const msg = (err?.message ?? "").toLowerCase()
+        // Both error shapes mean "this exact pair already exists":
+        // - "Cannot create multiple links": Medusa's pre-insert validator
+        // - "duplicate key value violates unique constraint": Postgres on the actual insert
+        // After the isList fix the script will hit the duplicate-key path for the
+        // 6 pairs that linked before the fix, then create the remaining 339 cleanly.
+        if (
+          msg.includes("cannot create multiple links") ||
+          msg.includes("duplicate key") ||
+          msg.includes("unique constraint")
+        ) {
           counts.alreadyLinked++
         } else {
           counts.errors++
