@@ -15,6 +15,7 @@ export default async function PaginatedProducts({
   page,
   collectionId,
   categoryId,
+  brandHandle,
   productsIds,
   minPrice,
   maxPrice,
@@ -32,6 +33,18 @@ export default async function PaginatedProducts({
   page: number
   collectionId?: string
   categoryId?: string
+  /**
+   * Brand handle for the dedicated brand-products endpoint. When set, the underlying
+   * data layer fetches via `/store/brands/<handle>/products` (paginated, sales-channel
+   * scoped, with proper pricing). The right shape for brand listings — the old
+   * `productsIds` approach broke for big brands because passing hundreds of UUIDs in
+   * the URL exceeded proxy length limits.
+   */
+  brandHandle?: string
+  /**
+   * Explicit product ID allowlist. Used by Meilisearch results (bounded to a small page
+   * of IDs). Do NOT use for brand pages — use `brandHandle` instead.
+   */
   productsIds?: string[]
   minPrice?: number
   maxPrice?: number
@@ -105,6 +118,7 @@ export default async function PaginatedProducts({
       fabric,
     } as ProductFilters,
     countryCode,
+    brandHandle,
   })
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)

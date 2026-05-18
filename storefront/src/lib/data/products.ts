@@ -2,6 +2,7 @@ import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { cache } from "react"
 import { getRegion } from "./regions"
+import { getBrandProducts } from "./brands"
 import { nextHeaders } from "./sdk-helpers"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { ProductFilters } from "@modules/store/components/refinement-list/types"
@@ -105,10 +106,17 @@ export const getProductsList = cache(async function ({
   pageParam = 1,
   queryParams,
   countryCode,
+  brandHandle,
 }: {
   pageParam?: number
   queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
   countryCode: string
+  /**
+   * When set, fetches via the dedicated brand endpoint instead of the generic product list.
+   * Avoids the 10KB-URL problem where passing many product IDs as ?id= query params
+   * exceeded proxy URL limits for large brands (AS Colour ~250 products).
+   */
+  brandHandle?: string
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -125,6 +133,27 @@ export const getProductsList = cache(async function ({
       nextPage: null,
     }
   }
+
+  if (brandHandle) {
+    const orderParam = (queryParams as any)?.order as string | undefined
+    const typeIdRaw = (queryParams as any)?.type_id as string | string[] | undefined
+    const tagIdRaw = (queryParams as any)?.tag_id as string | string[] | undefined
+    const { products, count } = await getBrandProducts(brandHandle, {
+      limit,
+      offset,
+      order: orderParam,
+      region_id: region.id,
+      type_id: typeIdRaw,
+      tag_id: tagIdRaw,
+    })
+    const nextPage = count > offset + products.length ? pageParam + 1 : null
+    return {
+      response: { products, count },
+      nextPage,
+      queryParams,
+    }
+  }
+
   return sdk.store.product
     .list(
       {
@@ -245,12 +274,14 @@ export const getProductsListWithSort = cache(async function ({
   sortBy = "created_at",
   filters,
   countryCode,
+  brandHandle,
 }: {
   page?: number
   queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
   sortBy?: SortOptions
   filters?: ProductFilters
   countryCode: string
+  brandHandle?: string
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -290,6 +321,7 @@ export const getProductsListWithSort = cache(async function ({
         limit,
       },
       countryCode,
+      brandHandle,
     })
     const { products, count } = response
     const offsetStart = (resolvedPage - 1) * limit
@@ -312,6 +344,7 @@ export const getProductsListWithSort = cache(async function ({
         limit: CLIENT_FILTER_PAGE_BATCH,
       },
       countryCode,
+      brandHandle,
     })
     const batchProducts = batch.response.products
     const total = batch.response.count

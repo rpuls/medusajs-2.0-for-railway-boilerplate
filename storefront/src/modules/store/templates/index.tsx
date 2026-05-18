@@ -47,9 +47,9 @@ const StoreTemplate = async ({
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
-  // Derive a candidate handle from the URL brand param so we can fetch product IDs
-  // in parallel with other data (before listBrands resolves). Converts "AS Colour" →
-  // "as-colour", "Biz Collection" → "biz-collection", etc.
+  // Derive a candidate handle from the URL brand param. Converts "AS Colour" → "as-colour",
+  // "Biz Collection" → "biz-collection", etc. The dedicated brand endpoint resolves the
+  // brand entity server-side; we don't need to fetch its product IDs here anymore.
   const brandHandleGuess = brand
     ? brand.trim().toLowerCase().replace(/\s+/g, "-")
     : null
@@ -60,17 +60,14 @@ const StoreTemplate = async ({
     listBrands(),
     brandHandleGuess
       ? retrieveBrandByHandle(brandHandleGuess)
-      : Promise.resolve({ brand: null, children: [], product_ids: [] }),
+      : Promise.resolve({ brand: null, children: [] }),
   ])
 
-  // product_ids from the brand route is server-side brand filtering — avoids relying on
-  // Medusa's *brand field expansion which only resolves for 1 product per brand entity.
-  const brandProductIds: string[] | undefined =
-    brandData.brand != null
-      ? brandData.product_ids.length > 0
-        ? brandData.product_ids
-        : ["__no_match__"]
-      : undefined
+  // If the requested brand handle exists on the backend, we route the product list
+  // through the dedicated /store/brands/<handle>/products endpoint (server-side join,
+  // pagination, sales-channel scoping). Otherwise we render the unfiltered catalog.
+  const resolvedBrandHandle: string | undefined =
+    brandData.brand?.handle ?? undefined
 
   const matchedBrand = brand
     ? brands.find(
@@ -135,11 +132,11 @@ const StoreTemplate = async ({
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
-            productsIds={brandProductIds}
+            brandHandle={resolvedBrandHandle}
             minPrice={minPrice}
             maxPrice={maxPrice}
             inStock={inStock}
-            brand={brandProductIds !== undefined ? undefined : brand}
+            brand={resolvedBrandHandle ? undefined : brand}
             fabric={fabric}
             tagId={tagId}
             typeId={typeId}
