@@ -141,10 +141,6 @@ a.checkout-nav-link--subtle:hover {
     animation: picture-marquee 46s linear infinite;
   }
 
-  .value-marquee-track {
-    animation: value-marquee 28s linear infinite;
-  }
-
   .instagram-feed-track {
     animation: instagram-feed-marquee 70s linear infinite;
   }
@@ -161,15 +157,6 @@ a.checkout-nav-link--subtle:hover {
     }
     100% {
       transform: translateX(calc(-50% - 1rem));
-    }
-  }
-
-  @keyframes value-marquee {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-50%);
     }
   }
 

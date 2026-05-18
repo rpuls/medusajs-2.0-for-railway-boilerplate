@@ -2,23 +2,13 @@
 
 import type { SVGProps } from "react"
 
+import { iconBase } from "@modules/common/icons/icon-base"
+
 type Service = {
   id: string
   title: string
   description: string
   Icon: (props: SVGProps<SVGSVGElement>) => JSX.Element
-}
-
-const iconBase: SVGProps<SVGSVGElement> = {
-  width: 32,
-  height: 32,
-  viewBox: "0 0 32 32",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.75,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": true,
 }
 
 const ScreenPrintIcon = (props: SVGProps<SVGSVGElement>) => (

@@ -13,8 +13,10 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import HomeCoreServicesLordicons from "@modules/home/components/home-core-services-lordicons"
 import HowOrderWorksSection from "@modules/home/components/how-order-works-section"
 import SpaceHero from "@modules/home/components/space-hero"
+import HeroOverlay from "@modules/home/components/space-hero/hero-overlay"
 import InstagramFeedStrip from "@modules/home/components/instagram-feed-strip"
 import ScrollingPictureBar from "@modules/home/components/scrolling-picture-bar"
+import SectionHeader from "@modules/common/components/section-header"
 import ProductListingCard from "@modules/products/components/product-listing-card"
 import { buildProductListingCardData } from "@modules/products/lib/product-listing-card-data"
 
@@ -49,11 +51,18 @@ export async function generateMetadata({
   }
 }
 
-const VALUE_PROPS = [
-  "Volume pricing for teams & businesses",
-  "Consistent colour and finish you can trust",
-  "Huge range of apparel and promo products",
-  "In-house design and digital proofs",
+const TRUST_ITEMS = [
+  "Victoria-based",
+  "Quotes within 24h",
+  "From 24 garments",
+  "In-house design & proofs",
+]
+
+const WHY_STATS = [
+  { value: "10+ yrs", label: "Printing experience" },
+  { value: "Victoria, AU", label: "Local studio" },
+  { value: "24 hrs", label: "Quote turnaround" },
+  { value: "From 24", label: "Minimum order" },
 ]
 
 export default async function Home({
@@ -116,41 +125,50 @@ export default async function Home({
         />
 
         {/* 1. Hero */}
-        <SpaceHero style={{ height: "100vh" }} />
+        <section className="relative h-screen min-h-[600px] w-full overflow-hidden">
+          <SpaceHero style={{ position: "absolute", inset: 0, height: "100%" }} />
+          <HeroOverlay />
+        </section>
 
-        {/* 2. Value props reassurance strip — immediately under hero */}
-        <section className="overflow-hidden border-b border-ui-border-base bg-ui-bg-subtle py-4">
-          <div className="value-marquee-track flex min-w-max gap-6 whitespace-nowrap px-6 text-sm font-semibold uppercase tracking-[0.12em] text-ui-fg-base">
-            {[...VALUE_PROPS, ...VALUE_PROPS].map((value, index) => (
-              <span
-                key={`${value}-${index}`}
-                className="flex items-center gap-6"
-              >
-                {value}
-                <span className="text-ui-fg-muted">|</span>
-              </span>
+        {/* 2. Trust strip — immediately under hero */}
+        <section className="border-y border-ui-border-base bg-ui-bg-base">
+          <ul className="content-container flex list-none flex-wrap items-center justify-center gap-x-8 gap-y-2 px-0 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-subtle small:text-sm">
+            {TRUST_ITEMS.map((item) => (
+              <li key={item} className="flex items-center gap-2">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-[var(--brand-accent)]"
+                  aria-hidden
+                >
+                  <polyline points="3 8 7 12 13 4" />
+                </svg>
+                {item}
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
 
         {/* 3. Featured products — on screen within 2–3 scrolls */}
         <section className="content-container py-12">
-          <div className="mb-6 flex items-end justify-between">
-            <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
-                Featured range
-              </p>
-              <h2 className="mt-2 text-3xl font-semibold text-ui-fg-base">
-                Popular garments to start your order
-              </h2>
-            </div>
-            <LocalizedClientLink
-              href="/store"
-              className="text-sm font-semibold text-ui-fg-base underline underline-offset-4"
-            >
-              View all products
-            </LocalizedClientLink>
-          </div>
+          <SectionHeader
+            eyebrow="Featured range"
+            title="Popular garments to start your order"
+            action={
+              <LocalizedClientLink
+                href="/store"
+                className="text-sm font-semibold text-ui-fg-base underline underline-offset-4"
+              >
+                View all products
+              </LocalizedClientLink>
+            }
+          />
 
           <ul className="no-scrollbar flex list-none snap-x gap-5 overflow-x-auto pb-2">
             {products.map((product) => {
@@ -181,47 +199,54 @@ export default async function Home({
 
         {/* 5. Services — shown while customer is in discovery mode */}
         <section className="content-container py-14">
-          <div className="border-l-4 border-[var(--brand-secondary)] pl-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
-              Decoration &amp; finishing
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold text-ui-fg-base">
-              Services we offer on your order
-            </h2>
-          </div>
+          <SectionHeader
+            eyebrow="Decoration & finishing"
+            title="Services we offer on your order"
+          />
           <HomeCoreServicesLordicons />
         </section>
 
         {/* 6. How to order — once the customer has seen what's available */}
         <HowOrderWorksSection />
 
-        {/* 7. Bulk order CTA — when the customer is closest to a decision */}
+        {/* 7. Why SC Prints + single closing CTA */}
         <section className="content-container py-16">
-          <div className="rounded-2xl border border-ui-border-base bg-ui-bg-subtle p-8 small:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
-              Prefer to talk it through?
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold text-ui-fg-base">
-              Help for bulk orders, quotes, and artwork
-            </h2>
-            <p className="mt-4 max-w-3xl text-ui-fg-subtle">
-              Ordering online is not always the right fit. Our Victoria-based
-              team can help with pricing, garment selection, proofs, and
-              production timelines—whether you are kitting out a crew or
-              fulfilling a large retail run.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <a
-                href="mailto:info@scprints.com.au"
-                className="inline-flex rounded-lg border border-ui-border-base bg-white px-5 py-3 text-sm font-semibold text-ui-fg-base transition hover:bg-ui-bg-subtle"
+          <SectionHeader
+            eyebrow="Why SC Prints"
+            title="Built for teams that need it right."
+            align="center"
+          />
+
+          <ul className="mt-8 grid list-none grid-cols-2 gap-4 p-0 small:grid-cols-4">
+            {WHY_STATS.map((stat) => (
+              <li
+                key={stat.label}
+                className="rounded-lg border border-ui-border-base bg-white p-6 text-center"
               >
-                Email the team
-              </a>
+                <p className="text-2xl font-semibold text-ui-fg-base small:text-3xl">
+                  {stat.value}
+                </p>
+                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-subtle">
+                  {stat.label}
+                </p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-10 rounded-2xl border border-ui-border-base bg-ui-bg-subtle p-8 text-center small:p-10">
+            <h3 className="text-2xl font-semibold text-ui-fg-base small:text-3xl">
+              Talk to our team about your run.
+            </h3>
+            <p className="mx-auto mt-3 max-w-xl text-ui-fg-subtle">
+              Pricing, garment selection, artwork &mdash; we&apos;ll come back
+              within one business day.
+            </p>
+            <div className="mt-7 flex justify-center">
               <LocalizedClientLink
                 href="/contact"
-                className="inline-flex rounded-lg bg-ui-fg-base px-5 py-3 text-sm font-semibold text-white transition hover:bg-black"
+                className="inline-flex rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
               >
-                Contact form
+                Start a quote
               </LocalizedClientLink>
             </div>
           </div>
