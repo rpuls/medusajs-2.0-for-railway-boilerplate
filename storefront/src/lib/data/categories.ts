@@ -28,11 +28,14 @@ export const getCategoriesList = cache(async function (
 export const getCategoryByHandle = cache(async function (
   categoryHandle: string[]
 ) {
-
+  // `+category_children` includes the immediate sub-category list so the
+  // landing page can render its drill-down without a second round trip.
   return sdk.store.category.list(
-    // TODO: Look into fixing the type
-    // @ts-ignore
-    { handle: categoryHandle },
+    // @ts-ignore — SDK preview types lag the handle param
+    {
+      handle: categoryHandle,
+      fields: "+category_children,+parent_category",
+    },
     CATEGORIES_FETCH_INIT
   )
 })

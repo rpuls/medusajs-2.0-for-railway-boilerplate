@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 
-import InteractiveLink from "@modules/common/components/interactive-link"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { ProductFilters } from "@modules/store/components/refinement-list/types"
 import PaginatedProducts from "@modules/store/templates/paginated-products"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
 
 export default function CategoryTemplate({
@@ -36,76 +35,101 @@ export default function CategoryTemplate({
 
   const category = categories[categories.length - 1]
   const parents = categories.slice(0, categories.length - 1)
+  const children = (category?.category_children ?? []).filter(
+    (c) => c?.handle && c?.name
+  )
 
   if (!category || !countryCode) notFound()
 
   return (
-    <div
-      className="flex flex-col small:flex-row small:items-start small:gap-x-10 py-6 content-container"
-      data-testid="category-container"
-    >
-      <RefinementList
-        sortBy={sort}
-        filters={{
-          minPrice,
-          maxPrice,
-          inStock,
-          brand,
-          fabric,
-        } as ProductFilters}
-        data-testid="sort-by-container"
-      />
-      <div className="w-full">
-        <div className="mb-8 flex flex-row flex-wrap items-baseline gap-x-4 gap-y-2 text-ui-fg-subtle small:text-base">
-          {parents &&
-            parents.map((parent) => (
-              <span key={parent.id} className="text-small-regular text-ui-fg-subtle">
-                <LocalizedClientLink
-                  className="mr-4 hover:text-black"
-                  href={`/categories/${parent.handle}`}
-                  data-testid="sort-by-link"
-                >
-                  {parent.name}
-                </LocalizedClientLink>
-                /
-              </span>
-            ))}
-          <h1 className="page-title-catalog text-ui-fg-base" data-testid="category-page-title">
-            {category.name}
-          </h1>
-        </div>
-        {category.description && (
-          <div className="mb-8 text-base-regular">
-            <p>{category.description}</p>
-          </div>
-        )}
-        {category.category_children && (
-          <div className="mb-8 text-base-large">
-            <ul className="grid grid-cols-1 gap-2">
-              {category.category_children?.map((c) => (
-                <li key={c.id}>
-                  <InteractiveLink href={`/categories/${c.handle}`}>
-                    {c.name}
-                  </InteractiveLink>
-                </li>
+    <>
+      <section
+        className="content-container border-b border-ui-border-base py-10 small:py-14"
+        data-testid="category-hero"
+      >
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-fg-muted">
+          {parents.length > 0 ? (
+            <>
+              {parents.map((parent, idx) => (
+                <span key={parent.id}>
+                  <LocalizedClientLink
+                    href={`/categories/${parent.handle}`}
+                    className="hover:text-ui-fg-base"
+                  >
+                    {parent.name}
+                  </LocalizedClientLink>
+                  {idx < parents.length - 1 ? (
+                    <span aria-hidden> / </span>
+                  ) : null}
+                </span>
               ))}
-            </ul>
-          </div>
-        )}
-        <Suspense fallback={<SkeletonProductGrid />}>
-          <PaginatedProducts
-            sortBy={sort}
-            page={pageNumber}
-            categoryId={category.id}
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            inStock={inStock}
-            brand={brand}
-            fabric={fabric}
-            countryCode={countryCode}
-          />
-        </Suspense>
+            </>
+          ) : (
+            "Shop by category"
+          )}
+        </p>
+        <h1
+          className="mt-2 text-3xl font-semibold tracking-tight text-ui-fg-base small:text-4xl"
+          data-testid="category-page-title"
+        >
+          {category.name}
+        </h1>
+        {category.description ? (
+          <p className="mt-3 max-w-2xl text-base text-ui-fg-subtle small:text-lg">
+            {category.description}
+          </p>
+        ) : null}
+
+        {children.length > 0 ? (
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {children.map((c) => (
+              <li key={c.id}>
+                <LocalizedClientLink
+                  href={`/categories/${category.handle}/${c.handle}`}
+                  className="rounded-full border border-ui-border-base bg-ui-bg-subtle px-3 py-1 text-small-regular text-ui-fg-base hover:bg-ui-bg-subtle-hover"
+                  data-testid={`category-child-${c.handle}-link`}
+                >
+                  {c.name}
+                </LocalizedClientLink>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <div
+        className="content-container flex flex-col small:flex-row small:items-start small:gap-x-10 py-6"
+        data-testid="category-container"
+      >
+        <RefinementList
+          sortBy={sort}
+          filters={
+            {
+              minPrice,
+              maxPrice,
+              inStock,
+              brand,
+              fabric,
+            } as ProductFilters
+          }
+          data-testid="sort-by-container"
+        />
+        <div className="w-full">
+          <Suspense fallback={<SkeletonProductGrid />}>
+            <PaginatedProducts
+              sortBy={sort}
+              page={pageNumber}
+              categoryId={category.id}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              inStock={inStock}
+              brand={brand}
+              fabric={fabric}
+              countryCode={countryCode}
+            />
+          </Suspense>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
