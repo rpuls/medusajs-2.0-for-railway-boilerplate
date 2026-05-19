@@ -691,8 +691,8 @@ All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [bac
 ## First-time setup checklist
 
 1. `cd backend && pnpm install && cd ../storefront && pnpm install`
-2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace, report-alert, report-annotation, search-log, stripe-payment-link, …).
-3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises the customer↔design, customer↔wishlist, and product↔brand link tables.
+2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace (now incl. Phase 6 `crm_owner_assignment` + `crm_owner_rotation` and Phase 8 `email_suppression`), report-alert, report-annotation, search-log, stripe-payment-link, task (Phase 7), …).
+3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises customer↔design, customer↔wishlist, product↔brand AND the new CRM links: customer↔crm_owner_assignment, order↔crm_owner_assignment (Phase 6), customer↔task, order↔task, quote↔task, organisation↔task (Phase 7).
 4. **Seed customer tiers** (B2B pricing): `cd backend && npx medusa exec src/scripts/seed-customer-tiers.ts` — creates the 8 "Tier: X" customer groups + matching price-list overrides.
 5. **Bootstrap shop categories** (mega-menu): `cd backend && npx medusa exec src/scripts/setup-shop-categories.ts` — creates the audience × garment-type tree and back-fills existing products.
 6. **Create the vectorization service product** in Medusa admin (Phase 4):
@@ -703,7 +703,9 @@ All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [bac
    - Copy the **variant ID** (not product ID) into `NEXT_PUBLIC_VECTORIZATION_VARIANT_ID`
 7. Add the env vars from the tables above (at minimum: Resend, NPS_LINK_SECRET, STOREFRONT_URL).
 8. Configure the **second** Stripe webhook endpoint for payment links if used (see "Stripe payment links" section below).
-9. Restart both apps.
+9. **Populate the owner rotation table** (Phase 6) at `/app/rotation` — add at least one teammate so `pickNextOwner()` has a target before flipping `OWNER_AUTOSTAMP_ENABLED=true`.
+10. **Activate the CRM phase env gates** as you're ready (all default OFF except `QUOTE_CONVERSION_ENABLED`): `QUOTE_EXPIRY_CRON_ENABLED`, `EMAIL_SUPPRESSION_TABLE_ENABLED`, `OWNER_AUTOSTAMP_ENABLED`, `TASKS_OVERDUE_CRON_ENABLED`, `AUTOMATION_EXPANDED_TRIGGERS_ENABLED`. Set `UNSUBSCRIBE_LINK_SECRET` in prod before sending any marketing email containing the new footer.
+11. Restart both apps.
 
 ## Stripe payment links — auto-link to orders
 
