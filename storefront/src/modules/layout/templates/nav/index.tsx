@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import Image from "next/image"
 import { MagnifyingGlassMini } from "@medusajs/icons"
 
+import { MEDUSA_BACKEND_URL } from "@lib/config"
 import { listBrands } from "@lib/data/brands"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
@@ -19,6 +20,9 @@ import SideMenu, {
 
 const MENU_BRAND_CAP = 8
 const MENU_BEST_SELLER_CAP = 3
+const MENU_BEST_SELLER_WINDOW_DAYS = 30
+
+const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 
 const parseBestSellerHandles = (raw: string | undefined): string[] => {
   if (!raw) return []
@@ -27,6 +31,34 @@ const parseBestSellerHandles = (raw: string | undefined): string[] => {
     .map((h) => h.trim())
     .filter(Boolean)
     .slice(0, MENU_BEST_SELLER_CAP)
+}
+
+const fetchTopSellingProducts = async (
+  regionId: string
+): Promise<HttpTypes.StoreProduct[]> => {
+  const params = new URLSearchParams({
+    days: String(MENU_BEST_SELLER_WINDOW_DAYS),
+    limit: String(MENU_BEST_SELLER_CAP),
+    region_id: regionId,
+  })
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+  try {
+    const res = await fetch(
+      `${MEDUSA_BACKEND_URL}/store/products/top-selling?${params.toString()}`,
+      {
+        headers,
+        next: { tags: ["top-selling-products"], revalidate: 1800 },
+      }
+    )
+    if (!res.ok) return []
+    const data = (await res.json()) as {
+      products?: HttpTypes.StoreProduct[]
+    }
+    return data.products ?? []
+  } catch {
+    return []
+  }
 }
 
 const buildBestSellerItem = (
@@ -141,15 +173,23 @@ async function NavSideMenu() {
 
   const menuRegion = regions?.[0]
   let bestSellerItems: SideMenuBestSellerItem[] = []
-  if (menuRegion && bestSellerHandles.length > 0) {
-    const fetched = await Promise.all(
-      bestSellerHandles.map((handle) =>
-        getProductByHandle(handle, menuRegion.id).catch(() => null)
+  if (menuRegion) {
+    // Operator override: env-var handles win when set so we can pin specific
+    // hero products. Otherwise pull live top-N by line-item count over the
+    // last MENU_BEST_SELLER_WINDOW_DAYS days.
+    if (bestSellerHandles.length > 0) {
+      const fetched = await Promise.all(
+        bestSellerHandles.map((handle) =>
+          getProductByHandle(handle, menuRegion.id).catch(() => null)
+        )
       )
-    )
-    bestSellerItems = fetched
-      .filter((p): p is HttpTypes.StoreProduct => p != null)
-      .map(buildBestSellerItem)
+      bestSellerItems = fetched
+        .filter((p): p is HttpTypes.StoreProduct => p != null)
+        .map(buildBestSellerItem)
+    } else {
+      const liveProducts = await fetchTopSellingProducts(menuRegion.id)
+      bestSellerItems = liveProducts.map(buildBestSellerItem)
+    }
   }
 
   const menuCollectionLinks = [...collections]
