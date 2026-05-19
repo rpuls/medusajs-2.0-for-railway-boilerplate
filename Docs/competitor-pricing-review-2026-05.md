@@ -27,31 +27,37 @@
 
 ---
 
-## 2. The five players at a glance
+## 2. Competitors at a glance
 
-| Dimension | SC Prints | The Colour Cartel | PrintPod | The Print Bar | Create Apparel |
-|---|---|---|---|---|---|
-| **PDP architecture** | Hybrid (info + integrated customizer) | Static-matrix-first | Traditional e-com | Customizer-as-PDP | Designer-first (no PDP) |
-| **Online designer** | ✅ Fabric.js multi-side | ❌ (artwork post-order) | ✅ `/designer/customize` | ✅ live designer | ✅ `/designer/customize` |
-| **Public pricing matrix** | partial (DecorationEstimator + tier ladder) | ✅ **best in class** | bulk-pack per-unit price | flat $8.50/side DTG | ❌ |
-| **Garment price visible** | ✅ in-customizer | ✅ on PDP + matrix | ✅ on PDP | ✅ "From $X" | hidden in designer |
-| **Embroidery tier published** | ✅ in-customizer | ✅ on PDP | ❌ | ❌ | ❌ |
-| **Same-day option** | ❌ | ❌ | ❌ | ✅ +$11 | ✅ (separate page) |
-| **Production ETA on PDP** | ✅ 10-12 days + live queue status | ✅ 10-15 days | ❌ | ✅ 7 days | ❌ |
-| **Trust badge strip** | ❌ | ✅ 8 badges | ❌ | partial | ❌ |
-| **BNPL hook on PDP** | ❌ | ❌ | ✅ Afterpay 4-pay | ❌ | ❌ |
-| **Brand name surfaced** | ❌ (data exists, not rendered) | ✅ "Vendor: ASColour" | ✅ AS Colour logo | ✅ "AS COLOUR" header | partial |
-| **Cross-sells on PDP** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ |
-| **Live DPI warning** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ |
-| **Vectorization upsell** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ |
-| **Save designs to account** | ✅ "My Designs" | n/a | unknown | implied | unknown |
-| **Re-order rehydration** | ✅ | ❌ | unknown | unknown | unknown |
-| **Server-rendered print files** | ✅ Sharp pipeline | n/a | unknown | unknown | unknown |
-| **Production stage tracker (post-order)** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ |
-| **Supplier-API live stock** | ✅ AS Colour + FashionBiz + AP | unknown | unknown | unknown | unknown |
-| **Brand catalog depth** | medium (AS Colour + FashionBiz + AP) | widest (Nike, Adidas, FJ premium) | narrow | medium (incl. Gildan) | narrow |
-| **Minimums** | digital ≥ 1, screen 50+ | screen 20+, embroidery 10+ | bulk packs 25-100 | digital 0, BYO/corp 20 | unclear |
-| **Turnaround standard** | 10-12 days | 10-15 days | "fast" | 7 days | 10-14 std / 3-5 express |
+Originally five players (us + four direct competitors). Extended in May 2026 to include Tee Junction, The T-Shirt Co and Garment Printing — direct competitors on the designer-tool and bulk-printing axes. Cells marked "unknown" mean we don't have data yet (most often: no operator screenshot of that specific feature).
+
+| Dimension | SC Prints | The Colour Cartel | PrintPod | The Print Bar | Create Apparel | Tee Junction | The T-Shirt Co | Garment Printing |
+|---|---|---|---|---|---|---|---|---|
+| **PDP architecture** | Hybrid (info + integrated customizer) | Static-matrix-first | Traditional e-com | Customizer-as-PDP | Designer-first (no PDP) | Customizer-as-PDP | Hybrid (tier table + designer) | Traditional + dual CTA |
+| **Online designer** | ✅ Fabric.js multi-side | ❌ (artwork post-order) | ✅ `/designer/customize` | ✅ live designer | ✅ `/designer/customize` | ✅ "START DESIGNING" | ✅ "PERSONALISE" | ✅ "START DESIGNING" |
+| **Public pricing matrix** | partial (DecorationEstimator + tier ladder) | ✅ **best in class** | bulk-pack per-unit price | flat $8.50/side DTG | ❌ | implied (Discounts tab) | ✅ embedded on PDP | ✅ split blank + print |
+| **Garment price visible** | ✅ in-customizer | ✅ on PDP + matrix | ✅ on PDP | ✅ "From $X" | hidden in designer | ✅ "From $29.95" bundled | ✅ $21.95 + 4-tier table | ✅ split |
+| **Embroidery tier published** | ✅ in-customizer | ✅ on PDP | ❌ | ❌ | ❌ | unknown | unknown | unknown |
+| **Same-day option** | ❌ | ❌ | ❌ | ✅ +$11 | ✅ (separate page) | unknown | ✅ RUSH (before 12pm Mon-Fri) | unknown |
+| **Production ETA on PDP** | ✅ 10-12 days + live queue status | ✅ 10-15 days | ❌ | ✅ 7 days | ❌ | unknown | ✅ 3-5 days | partial (≤15 days in ads) |
+| **Trust badge strip** | ❌ | ✅ 8 badges | ❌ | partial | ❌ | partial | ✅ 4 icons | partial |
+| **BNPL hook on PDP** | ❌ | ❌ | ✅ Afterpay 4-pay | ❌ | ❌ | unknown | ✅ Zip | unknown |
+| **Brand name surfaced** | ❌ (data exists, not rendered) | ✅ "Vendor: ASColour" | ✅ AS Colour logo | ✅ "AS COLOUR" header | partial | ✅ in title | ✅ "GILDAN" eyebrow | ✅ "GILDAN 64000" eyebrow |
+| **Cross-sells on PDP** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ | partial ("Related Products" tab) | ❌ visible | ❌ visible |
+| **Live DPI warning** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Vectorization upsell** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Save designs to account** | ✅ "My Designs" | n/a | unknown | implied | unknown | implied (T-Shirt Designer in footer) | unknown | unknown |
+| **Re-order rehydration** | ✅ | ❌ | unknown | unknown | unknown | unknown | unknown | unknown |
+| **Server-rendered print files** | ✅ Sharp pipeline | n/a | unknown | unknown | unknown | unknown | unknown | unknown |
+| **Production stage tracker (post-order)** | ✅ **unique** | ❌ | ❌ | ❌ | ❌ | not advertised | not advertised | not advertised |
+| **Public review rating on site** | ❌ | "Satisfaction Guarantee" badge | ❌ | ❌ | ❌ | unknown | unknown | ✅ Trustpilot 4.3/5 |
+| **Multi-size quantity grid on PDP** | ❌ (in-customizer only) | ❌ | ❌ | ❌ | ❌ | partial ("Add Another Size") | ❌ visible | ✅ XS–3XL grid on PDP |
+| **Supplier-API live stock** | ✅ AS Colour + FashionBiz + AP | unknown | unknown | unknown | unknown | unknown | unknown | unknown |
+| **Warehousing / 3PL fulfillment** | ❌ | ✅ **NEW** (launched May 2026 — see §9) | ❌ | ❌ | ✅ POD/dropship | ❌ | ❌ | ❌ |
+| **Brand catalog depth** | medium (AS Colour + FashionBiz + AP) | widest (Nike, Adidas, FJ premium) | narrow | medium (incl. Gildan) | narrow | AS Colour-focused | Gildan-focused | multi-brand wide |
+| **Minimums** | digital ≥ 1, screen 50+ | screen 20+, embroidery 10+ | bulk packs 25-100 | digital 0, BYO/corp 20 | unclear | unknown | 0 ("No minimums or setup fees") | "no minimum order*" |
+| **Turnaround standard** | 10-12 days | 10-15 days | "fast" | 7 days | 10-14 std / 3-5 express | unknown | 3-5 days + RUSH same-day | up to 15 days |
+| **Geo / fulfilment base** | NSW (workshop) | Victoria | unknown | Queensland | unknown | Melbourne | Brisbane | Sydney (Castle Hill) |
 
 ---
 
@@ -101,19 +107,35 @@ Cartel's "small print" decoration cost lands roughly in line with our A6 tier �
 
 All figures **inc-GST AUD** unless marked. Cost-basis assumptions noted — correct me and I'll re-run.
 
-**AS Colour tee**
+**AS Colour Staple Tee** (plus equivalent across competitors)
 
-| Qty | SC Prints (Staple Tee, cost ~$9.50 ex) | Cartel (Basic Tee 5051) | Print Bar (Staple Tee 5001) | PrintPod (Promo Block Tee) |
-|---|---|---|---|---|
-| 1 | $20.90 | $20.79 ($18.90 ex) | $17.89 ("From") | quote |
-| 25 | $17.77 | $15.60 (qty 20 tier) | unknown | $16.01 (bulk pack) |
-| 50 | $16.72 | $14.55 (qty 50 tier) | unknown | likely cheaper |
-| 100 | $15.68 | $13.52 (qty 100 tier) | unknown | unknown |
-| 1000 | $15.68 (no 1000 tier) | $10.40 (qty 1000 tier) | unknown | unknown |
+| Qty | SC Prints (Staple Tee, cost ~$9.50 ex) | Cartel (Basic Tee 5051) | Print Bar (Staple Tee 5001) | PrintPod (Promo Block Tee) | Tee Junction (Staple Tee) |
+|---|---|---|---|---|---|
+| 1 | $20.90 | $20.79 ($18.90 ex) | $17.89 ("From") | quote | $29.95 *bundled with 1 DTF print* |
+| 25 | $17.77 | $15.60 (qty 20 tier) | unknown | $16.01 (bulk pack) | unknown (Discounts tab implies tier) |
+| 50 | $16.72 | $14.55 (qty 50 tier) | unknown | likely cheaper | unknown |
+| 100 | $15.68 | $13.52 (qty 100 tier) | unknown | unknown | unknown |
+| 1000 | $15.68 (no 1000 tier) | $10.40 (qty 1000 tier) | unknown | unknown | unknown |
 
 Cartel beats us on the blank at every quantity tier from 20 units up. Their discount ramp (0/10/20/25/30/35/40/45/50%) is more aggressive than ours (~0/10/15/20/25%, derived from our 2.20 → 1.65 multiplier range).
 
-**Caveats**: AS Colour Basic Tee 5051 ≠ Staple Tee 5001 (similar fit, both AS Colour, cost probably within $1). PrintPod's "Promo Block Tee" is their economy line.
+**Caveats**:
+- AS Colour Basic Tee 5051 ≠ Staple Tee 5001 (similar fit, both AS Colour, cost probably within $1).
+- PrintPod's "Promo Block Tee" is their economy line.
+- Tee Junction's $29.95 is presented as "Digital DTF Printing from $29.95" — a bundle (blank + 1 DTF print), so it's not directly comparable to the blank-only Print Bar "From $17.89" or Cartel's matrix base.
+
+**The T-Shirt Co — Gildan Essential Tee** (different blank, separately published tier — for reference):
+
+A genuine bundled tier table is visible on their PDP (Gildan Essential Tee, price includes 1 print, inc-GST):
+
+| Qty | Discount on blank | Price /unit |
+|---|---|---|
+| 1–9 | 0% | A$21.95 |
+| 10–19 | 10% | A$19.76 |
+| 20–49 | 15% | A$18.66 |
+| 50+ | 20% | A$17.56 |
+
+Not directly comparable to AS Colour pricing (Gildan blanks are cheaper than AS Colour), but it tells us where the **AU budget tier sits** with a published transparent ladder. Backs Suggested Move #12 (consider adding Gildan as a budget label to plug a catalog gap). Repeated in §7 with the PDP context.
 
 **AS Colour Heavy Hoodie**
 
@@ -306,49 +328,58 @@ FOOTER (move from main nav):
 
 ### 4b. PDP architecture — five distinct approaches
 
-| Approach | Provider | The product page is… |
-|---|---|---|
-| **Customizer-as-PDP** | The Print Bar | The customizer canvas + side configurator. No traditional product description above the fold. |
-| **Static-matrix-first** | The Colour Cartel | The pricing matrix is the centrepiece. Customizer entry is a click-through ("Add Custom Options & Calculate Pricing"). |
-| **Traditional e-com** | PrintPod | Standard Shopify-style PDP. Customizer is a separate `/designer/customize/<id>` route. |
-| **Designer-first / no PDP** | Create Apparel | Catalog goes straight to `/designer/customize/<id>`. No intermediate page. |
-| **Hybrid PDP + integrated customizer** | **SC Prints** | Sidebar with product info + production ETA + decoration estimator. Customizer expands into the main column when engaged. Closest to Print Bar architecturally but with more context visible. |
+| Approach | Primary example | Also seen on | The product page is… |
+|---|---|---|---|
+| **Customizer-as-PDP** | The Print Bar | Tee Junction | The customizer canvas + side configurator. No traditional product description above the fold. |
+| **Static-matrix-first** | The Colour Cartel | — | The pricing matrix is the centrepiece. Customizer entry is a click-through ("Add Custom Options & Calculate Pricing"). |
+| **Traditional e-com** | PrintPod | The T-Shirt Co (with embedded tier), Garment Printing (with dual CTA) | Standard Shopify-style PDP. Customizer is a separate `/designer/customize/<id>` route. |
+| **Designer-first / no PDP** | Create Apparel | — | Catalog goes straight to `/designer/customize/<id>`. No intermediate page. |
+| **Hybrid PDP + integrated customizer** | **SC Prints** | — | Sidebar with product info + production ETA + decoration estimator. Customizer expands into the main column when engaged. Closest to Print Bar architecturally but with more context visible. |
+
+Each of the new players slots into an existing pattern — they don't introduce a new architectural category — but pick distinctive elements within their bucket (Garment Printing's dual CTA, T-Shirt Co's inline tier table, Tee Junction's massive in-PDP colour grid). See §7 for per-player PDP detail.
 
 ### 4c. PDP feature comparison
 
-| Dimension | SC Prints | Print Bar | Cartel | PrintPod | Create Apparel |
-|---|---|---|---|---|---|
-| Above-fold price | "From $X" + bulk tier table | "From $X + Decorations" | $X single + full matrix | "$X (Y each)" + bulk-pack | $X live in designer |
-| Static pricing matrix on PDP | partial | ❌ | ✅ best in class | ✅ package | ❌ |
-| Image gallery | Hero + variant-aware thumbnails | Customizer canvas as image | Multi-colour thumbnails | Multi-image w/ lifestyle shots | Single canvas view |
-| Variant pickers pre-customizer | ✅ swatches + size pills | ✅ swatches + XS-5XL grid | only via customizer | ✅ swatches + size dropdown | only via designer |
-| "+N colours" overflow | ❌ | ✅ "+60" | ❌ | ❌ | ❌ |
-| Decoration method visible | ✅ DecorationEstimator | ✅ in-flow picker + "Change method" link | ✅ tabs at bottom | ❌ | hidden |
-| Same-day badge | ❌ | ✅ "$11 extra" toggle | ❌ | ❌ | ❌ (separate page) |
-| Production ETA on PDP | ✅ 10-12 days + live queue status | ✅ 7 days | ✅ 10-15 days | ❌ | ❌ |
-| Trust badge strip | partial (ETA only) | partial | ✅ **8 badges** | ❌ | ❌ |
-| Brand name surfaced | ❌ (data exists, not rendered) | ✅ "AS COLOUR" header | ✅ "Vendor: ASColour" | ✅ AS Colour logo | partial |
-| Reviews / social proof | ❌ | ❌ | "Satisfaction Guarantee" badge | ❌ | ❌ |
-| **Cross-sells on PDP** | **✅ unique** | ❌ | ❌ | ❌ | ❌ |
-| BNPL hook | ❌ | ❌ | ❌ | ✅ Afterpay 4-pay | ❌ |
-| Stock indication | ✅ `!` icons on OOS | not visible | "Contact Us" at 1000+ | standard e-com | standard e-com |
-| Mobile sticky CTA | ✅ | likely | n/a | n/a | n/a |
-| Schema.org JSON-LD | ✅ Product + Brand + Offer | unknown | unknown | unknown | unknown |
+| Dimension | SC Prints | Print Bar | Cartel | PrintPod | Create Apparel | Tee Junction | The T-Shirt Co | Garment Printing |
+|---|---|---|---|---|---|---|---|---|
+| Above-fold price | "From $X" + bulk tier table | "From $X + Decorations" | $X single + full matrix | "$X (Y each)" + bulk-pack | $X live in designer | "Digital DTF Printing from $29.95" (bundled) | $21.95 + 4-tier table inline | Split: "Blank from $10.99 / Printing from $20.99" |
+| Static pricing matrix on PDP | partial | ❌ | ✅ best in class | ✅ package | ❌ | implied (Discounts tab) | ✅ 4-tier inline | ✅ split (blank + print) |
+| Image gallery | Hero + variant-aware thumbnails | Customizer canvas as image | Multi-colour thumbnails | Multi-image w/ lifestyle shots | Single canvas view | Hero + Front/Back thumbnails | Hero + lifestyle shots in carousel | Hero + Front/Back/Sleeves tiles |
+| Variant pickers pre-customizer | ✅ swatches + size pills | ✅ swatches + XS-5XL grid | only via customizer | ✅ swatches + size dropdown | only via designer | ✅ massive ~70-swatch grid | ✅ swatches + size pills | ✅ 2 swatches + size grid |
+| "+N colours" overflow | ❌ | ✅ "+60" | ❌ | ❌ | ❌ | ❌ (shows everything in-page) | ❌ | n/a (narrow palette) |
+| Decoration method visible | ✅ DecorationEstimator | ✅ in-flow picker + "Change method" link | ✅ tabs at bottom | ❌ | hidden | implied (CTA labelled "Digital DTF Printing") | ✅ "DTG print method" accordion | implied |
+| Same-day badge | ❌ | ✅ "$11 extra" toggle | ❌ | ❌ | ❌ (separate page) | unknown | ✅ "RUSH service" (before 12pm) | unknown |
+| Production ETA on PDP | ✅ 10-12 days + live queue status | ✅ 7 days | ✅ 10-15 days | ❌ | ❌ | unknown | ✅ 3-5 days | partial (≤15 days in ads) |
+| Trust badge strip | partial (ETA only) | partial | ✅ **8 badges** | ❌ | ❌ | partial (footer icons) | ✅ 4 icons (Free Ship / No mins / Full Colour / Double-sided) | partial |
+| Brand name surfaced | ❌ (data exists, not rendered) | ✅ "AS COLOUR" header | ✅ "Vendor: ASColour" | ✅ AS Colour logo | partial | ✅ "AS Colour" in title | ✅ "GILDAN" eyebrow | ✅ "GILDAN 64000" eyebrow |
+| Style/SKU code shown | partial (in metadata only) | ❌ | ✅ "SKU: 5051" | partial | ❌ | partial (in URL) | ❌ visible | ✅ "GILDAN 64000" |
+| Reviews / social proof | ❌ | ❌ | "Satisfaction Guarantee" badge | ❌ | ❌ | unknown | unknown | ✅ Trustpilot 4.3/5 (footer) |
+| **Cross-sells on PDP** | **✅ unique** | ❌ | ❌ | ❌ | ❌ | partial ("Related Products" tab) | ❌ visible | ❌ visible |
+| BNPL hook | ❌ | ❌ | ❌ | ✅ Afterpay 4-pay | ❌ | unknown | ✅ Zip "from $10/week" | unknown |
+| Multi-size quantity grid on PDP | ❌ | ❌ | ❌ | ❌ | ❌ | partial ("Add Another Size") | ❌ | ✅ XS–3XL with qty boxes |
+| Educational accordions | ❌ | ❌ | partial (description tabs) | ❌ | ❌ | partial (tabs) | ✅ 6 accordion blocks | ❌ |
+| Dual CTA (Design + Quote) | ❌ | ❌ | implied (matrix calc + custom calc) | ❌ | ❌ | ❌ | ❌ | ✅ "Start Designing" + "Request a quote" |
+| Stock indication | ✅ `!` icons on OOS | not visible | "Contact Us" at 1000+ | standard e-com | standard e-com | unknown | unknown | unknown |
+| Mobile sticky CTA | ✅ | likely | n/a | n/a | n/a | unknown | unknown | unknown |
+| Schema.org JSON-LD | ✅ Product + Brand + Offer | unknown | unknown | unknown | unknown | unknown | unknown | unknown |
+| Local-fulfilment signal | ❌ | ❌ | ❌ | ❌ | ❌ | "Printed with love in Melbourne" eyebrow | ✅ "Pickup at Brisbane facility" | ❌ |
 
 ### 4d. Customizer feature comparison
 
-| Feature | SC Prints | Print Bar | PrintPod | Create Apparel | Cartel |
-|---|---|---|---|---|---|
-| Multi-side designer | ✅ | ✅ Front/Back/L+R sleeve | ✅ Front L/Back/L sleeve | ✅ Body/Back/L+R sleeve | n/a |
-| Decoration method picker | ✅ DecorationEstimator | ✅ in-flow + "Change method" | implied | implied | n/a |
-| Live per-unit price | ✅ | ✅ | ✅ | ✅ | n/a |
-| **Live DPI warning** | **✅ unique** | ❌ | ❌ | ❌ | n/a |
-| **Vectorization upsell** | **✅ unique** | ❌ | ❌ | ❌ | n/a |
-| Save designs to account | ✅ "My Designs" | implied | unknown | unknown | n/a |
-| Re-order rehydration | ✅ | unknown | unknown | unknown | n/a |
-| **Server-rendered print files** | **✅ Sharp pipeline** | unknown | unknown | unknown | n/a |
-| Background removal | partial | ✅ marketed | unknown | unknown | n/a |
-| Turnaround in-flow | partial | ✅ "7 business days" | unknown | unknown | n/a |
+| Feature | SC Prints | Print Bar | PrintPod | Create Apparel | Cartel | Tee Junction | The T-Shirt Co | Garment Printing |
+|---|---|---|---|---|---|---|---|---|
+| Multi-side designer | ✅ | ✅ Front/Back/L+R sleeve | ✅ Front L/Back/L sleeve | ✅ Body/Back/L+R sleeve | n/a | likely ✅ (Front+Back thumbnails on PDP) | likely ✅ ("custom printed on FRONT and BACK") | ✅ Front/Back/Sleeves |
+| Decoration method picker | ✅ DecorationEstimator | ✅ in-flow + "Change method" | implied | implied | n/a | CTA labels method ("Digital DTF Printing") | partial (separate DTG accordion) | implied |
+| Live per-unit price | ✅ | ✅ | ✅ | ✅ | n/a | ✅ "From $29.95" | ✅ $21.95 + tier visible | ✅ split blank/print |
+| **Live DPI warning** | **✅ unique** | ❌ | ❌ | ❌ | n/a | ❌ | ❌ | ❌ |
+| **Vectorization upsell** | **✅ unique** | ❌ | ❌ | ❌ | n/a | ❌ | ❌ | ❌ |
+| Save designs to account | ✅ "My Designs" | implied | unknown | unknown | n/a | implied (T-Shirt Designer link in footer) | unknown | unknown |
+| Re-order rehydration | ✅ | unknown | unknown | unknown | n/a | unknown | unknown | unknown |
+| **Server-rendered print files** | **✅ Sharp pipeline** | unknown | unknown | unknown | n/a | unknown | unknown | unknown |
+| Background removal | partial | ✅ marketed | unknown | unknown | n/a | unknown | unknown | unknown |
+| Turnaround in-flow | partial | ✅ "7 business days" | unknown | unknown | n/a | unknown | ✅ "3-5 business days" | partial |
+| Multi-size order from designer | ✅ | ✅ size grid | unknown | unknown | n/a | ✅ "Add Another Size" | ✅ size pills | ✅ XS-3XL grid |
+| Same-day toggle in flow | ❌ | ✅ +$11 same-day | ❌ | ❌ | n/a | unknown | ✅ RUSH | ❌ |
 
 ### 4e. Post-order experience
 
