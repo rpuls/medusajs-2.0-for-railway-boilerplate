@@ -5,6 +5,7 @@ import Help from "@modules/order/components/help"
 import Items from "@modules/order/components/items"
 import OnboardingCta from "@modules/order/components/onboarding-cta"
 import OrderDetails from "@modules/order/components/order-details"
+import ReceiptDownloadButton from "@modules/order/components/receipt-download-button"
 import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import TrackingList from "@modules/order/components/tracking-list"
@@ -95,6 +96,7 @@ export default async function OrderCompletedTemplate({
             >
               View my orders
             </LocalizedClientLink>
+            <ReceiptDownloadButton orderId={order.id} />
           </div>
         </div>
       </div>
