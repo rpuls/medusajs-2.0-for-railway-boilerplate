@@ -434,9 +434,129 @@ None of the competitor sites surface post-order tracking on landing or shop page
 13. **Consider a same-day or express tier** with a flat surcharge similar to Print Bar's +$11.
 14. **A/B test transparency vs. quote-funnel** on a corporate landing page — does "here's the price" outperform "request a quote" for our buyer mix?
 
+### Tier 4 — Marketing, SEO, paid acquisition
+
+15. **City-specific landing pages** (`/locations/melbourne/custom-printing`, `/locations/sydney/custom-printing`, etc.) — templated set of 4-6 metros, each capturing local search intent for "[service] in [city]" queries. Programmatic generation from a small city list + a stable template.
+16. **AS Colour-as-SEO-asset.** Rewrite `/brands/as-colour` title + H1 + meta description to lean into the AS Colour brand name explicitly. Spin out service pages like `/services/as-colour-dtg-printing` and `/services/as-colour-custom-embroidery` to capture brand-product searches we're already qualified to win.
+17. **Top-of-funnel content hub** — four to six long-form posts ("DTF vs DTG", "How to start a clothing brand in Australia", "Print-on-demand on Shopify: AU guide", "AS Colour blanks explained", "Bulk screen-print vs DTG: which fits your job"). Builds search authority, earns backlinks, and warms cold traffic.
+18. **Meta retargeting for cart-abandoners** — dynamic ads showing the customer's own design back to them + a small discount code. Closes the loop on customers who designed but didn't check out — usually the cheapest paid channel by ROAS.
+19. **Branded-search defence on Google Ads** — bid on "SC Prints" so we own the SERP for our own brand name. Cheap (low CPC on branded terms) and protects against competitor bid-jacking.
+
 ---
 
-## 7. Caveats & method notes
+## 7. The wider competitive landscape
+
+The four players we deep-dived on (Cartel, PrintPod, Print Bar, Create Apparel) are our most direct competitors — they show up in the same search results, target the same customers, and run similar offerings. But the AU market has additional players worth knowing about, even if a full pricing-and-PDP benchmark isn't warranted for each:
+
+| Competitor | Location | Distinguishing characteristic | Why they matter |
+|---|---|---|---|
+| **Tee Junction** ([teejunction.com.au](https://teejunction.com.au)) | National (online-first) | Online designer + AS Colour blanks + Shopify POD integration | Closest mirror of The Print Bar; massive AU player on the designer-tool axis. Direct competitor on the same product/UX dimensions. |
+| **The T-Shirt Co** ([thetshirtco.com.au](https://thetshirtco.com.au)) | Brisbane | Eco-positioned DTG on Kornit machines; no setup fees | Direct local competitor to The Print Bar in Queensland. "Ethical / zero-waste" angle resonates with younger creators we'd also like to reach. |
+| **Garment Printing** ([garmentprinting.com.au](https://garmentprinting.com.au)) | Sydney | Corporate uniforms, team wear, volume discounts | Plays squarely in the segment Cartel's Industries vertical dominates. Less self-serve, more sales-led — overlap with where we want our /industries pages to land. |
+| **OGO Print on Demand** ([ogo.com.au](https://ogo.com.au)) | Melbourne | POD / dropshipping focus, Shopify-first | Direct competitor to PrintPod and Create Apparel on the "start a clothing brand" segment. Not currently a segment we play in heavily. |
+| **Printify / Printful / Threadless** | Global, with AU fulfilment partners (e.g. Gelato) | International POD giants | Compete for the side-hustle / small-creator market with brand recognition and global creator-tool ecosystems we can't match. |
+
+**Implications**
+
+- The AU "online apparel customizer + AS Colour blanks" market is genuinely crowded. Tee Junction, The T-Shirt Co, Print Bar, and SC Prints all play similar games. Differentiation has to come from operational quality (production stage tracker, DPI warning, supplier-API live stock, vectorization upsell) or from pricing — not just "we have a designer".
+- The POD / dropshipping segment (PrintPod, Create Apparel, OGO, global giants) is a distinct sub-market. Real participation needs Shopify-integration tooling we don't have today; partial entry needs at least an API/webhook story for incoming dropship orders.
+- The corporate-uniform segment (Garment Printing, Cartel's Industries) is largely a B2B sales motion. Won less on self-serve UX, more on account management. Our new `/industries/*` landing pages are the right inbound surface — but conversion will rely on outbound + relationship-building, not just on the page.
+
+---
+
+## 8. SEO playbook (what the market does)
+
+The AU custom-print space is fiercely competitive on organic search. Top performers run a handful of repeatable patterns:
+
+### A. Local-SEO city pages
+
+**The play**: Customers search "t-shirt printing Brisbane", "custom hoodies Melbourne", "screen printing Sydney" — not just "custom shirts". Print Bar's "Brisbane T-Shirt Printing", The T-Shirt Co's city service pages, Tee Junction's location-targeted URLs all capture this intent.
+
+**Our position**: Single brand-level presence — no per-city landing pages. Easy gap to close: programmatic `/locations/<city>/custom-printing` (4-6 metros, templated copy). Captures "[service] in [city]" long-tail at low cost. *See Suggested Move #15.*
+
+### B. AS Colour as an SEO asset
+
+**The play**: AS Colour is the gold-standard wholesale blank in AU. Search volume for "AS Colour custom printing" is substantial. Tee Junction and Create Apparel place "AS Colour" prominently in H1s, URL slugs, page titles.
+
+**Our position**: We have an AS Colour Brand entity, a `/brands/as-colour` landing page, **and** we run a live-stock API integration with AS Colour — strongest possible authority signal. We're underselling this in copy. Quick rewrite of the brand-page metadata + new service pages would capture searches we should already be ranking for. *See Suggested Move #16.*
+
+### C. Platform + technique long-tail content
+
+**The play**: Creators and small businesses search "print on demand Shopify Australia", "DTF vs DTG", "how to start a clothing brand in Australia". Competitors publish blog posts + dedicated landing pages targeting these phrases, capturing top-of-funnel traffic that converts later in the customer journey.
+
+**Our position**: We have specialty pages (DTF builder, 3D Print Design, CMYK guide) but no proper top-of-funnel education content. Adding 4-6 hub posts would close the gap. *See Suggested Move #17.*
+
+### D. UX dwell-time as a ranking signal
+
+**The play**: Customizers retain users for 10-20 minutes. Google reads that as engagement and gives the page a baseline ranking boost without any other intervention.
+
+**Our position**: Our customizer is in this league (Fabric.js, multi-side, save-design, DPI warning, server-rendered print files), so the dwell-time signal works in our favour. The risk is mobile performance: if the customizer is slow on mobile, dwell becomes bounce. Worth measuring + optimising — Lighthouse pass on `/customizer` would tell us where we stand.
+
+### E. Existing SEO foundations we already have
+
+- Schema.org JSON-LD on PDPs (Product + Brand + Offer)
+- `/sitemap` route
+- Country-prefixed routes (`[countryCode]`)
+- Brand landing pages (`/brands/[handle]`)
+- Industry landing pages (recently shipped — `/industries/[slug]`)
+
+Solid base. Gaps to close are city pages, AS-Colour-as-SEO-asset, top-of-funnel educational content — all surfaced as Tier 4 suggested moves.
+
+---
+
+## 9. Paid acquisition playbook (what the market does)
+
+Competitors run multi-channel paid acquisition. Common patterns:
+
+### Google Ads
+
+**Search (high-intent, transactional)**
+- Bid targets: "custom hoodies no minimum", "bulk screen printing near me", "cheap custom t-shirts", "custom uniforms [city]"
+- Bottom-of-funnel — the searcher has commercial intent and just needs to choose a supplier
+
+**Performance Max / Shopping**
+- Image ads showing a blank tee with a printed graphic, "From $25"
+- Wins clicks by surfacing pricing upfront in the SERP, before the user even visits the site
+
+### Meta Ads (Facebook + Instagram)
+
+**"Start your brand" creator angle (top-of-funnel)**
+- Video ads targeting 18-34s: "Want to start a clothing brand but no money for inventory? Try our Australian POD service."
+- Funnel target: free design tool / "design your first tee" CTA. Used heavily by Create Apparel and OGO.
+
+**User-Generated Content (mid-funnel trust)**
+- Unboxing videos: creator films receiving a shirt, holds up to camera, stretches the fabric to demonstrate the print doesn't crack.
+- These typically outperform brand-produced creative by 2-3× on CTR in the apparel category.
+
+**B2B carousel ads (Industries angle)**
+- Carousels showing hi-vis workwear, hospitality aprons, corporate polos.
+- Targeted at "Small Business Owner" interest signals in Meta's audience tools.
+
+**Abandoned-cart retargeting (closing the loop)**
+- Customer designs a shirt, walks away. Dynamic ad shows their actual design back to them + a discount code: "Forget something? Finish your custom design today and get 10% off with code PRINT10."
+
+### Where SC Prints currently sits
+
+I couldn't find a public Meta Ad Library presence or clear Google Ads patterns for us from the outside. That means one of:
+
+1. **Not running paid yet** → everything above is greenfield opportunity
+2. **Running paid quietly** → worth auditing for the same patterns
+
+If (1), the highest-ROI starting points based on what the market does:
+
+- **Branded-search defence on Google** — bid on "SC Prints" so we own that SERP (Suggested Move #19)
+- **AS Colour + city long-tail terms** on Google — low CPC, high commercial intent
+- **Meta retargeting for cart-abandoners** (Suggested Move #18) — closes the loop on the designs people abandon
+- **Industry-targeted Meta** for the new `/industries/*` landing pages — direct path from B2B audience to a relevant landing page
+
+### Intel sources worth using
+
+- **[Meta Ad Library](https://www.facebook.com/ads/library/)** — filter to Australia + search "the print bar", "tee junction", "the colour cartel". Shows every active creative they're running right now. Reverse-engineer the hooks that look like they're working (high-engagement videos, retargeting offers, B2B pivots).
+- **[Ahrefs free keyword generator](https://ahrefs.com/keyword-generator)** or [Ubersuggest](https://neilpatel.com/ubersuggest/) — drop in theprintbar.com / teejunction.com.au to see their top organic pages and estimated traffic. Map against ours to find content gaps.
+
+---
+
+## 10. Caveats & method notes
 
 - **The first pass of this review missed Cartel's per-product pricing matrix** because WebFetch only ingested their homepage. The operator-supplied screenshot revealed it. Treat WebFetch summaries of competitor sites as a starting point, not a complete picture.
 - **Cost-basis assumptions** for AS Colour Staple Tee ($9.50 ex-GST), Heavy Hood ($22 ex-GST), and a generic polo ($13 ex-GST) are estimates. If real landed costs differ by $1, every tier shifts $1.65-2.20.
@@ -451,10 +571,13 @@ None of the competitor sites surface post-order tracking on landing or shop page
 
 ---
 
-## 8. Worth following up on
+## 11. Worth following up on
 
 - **Visit Cartel's other PDPs** to confirm the matrix is universal (not just on Basic Tee).
 - **Test a PrintPod bulk-pack order** end-to-end to confirm whether decoration is included in the package price.
+- **Pull a Meta Ad Library snapshot** for The Print Bar / Tee Junction / Colour Cartel / Create Apparel — capture what creative is currently active and what hooks they're testing. Worth doing monthly.
+- **Run Tee Junction and The T-Shirt Co URLs through Ahrefs** (free or paid) to see their highest-traffic organic pages — map against ours to find content gaps.
+- **Compare directly against Tee Junction and The T-Shirt Co** on pricing — they're closer mirrors of our designer-tool play than the four we deep-dived on, but their per-product pages may be similarly opaque without manual probing.
 - **Pull our actual landed costs** from the AS Colour API and re-run every cell in this review.
 - **Side-by-side customizer test sessions**: place an identical order through SC Prints, Cartel, Print Bar, PrintPod, Create Apparel — capture screenshots and pain points.
 - **Build the static-pricing-matrix PDP component** — the highest-leverage smallest-implementation move on the suggested-moves list.
