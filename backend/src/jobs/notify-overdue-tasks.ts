@@ -1,7 +1,14 @@
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  Modules,
+} from "@medusajs/framework/utils"
 import type { MedusaContainer } from "@medusajs/framework/types"
 
-import { TASKS_OVERDUE_CRON_ENABLED } from "../lib/constants"
+import {
+  ADMIN_PUBLIC_URL,
+  BACKEND_URL,
+  TASKS_OVERDUE_CRON_ENABLED,
+} from "../lib/constants"
 import { TASK_MODULE } from "../modules/task"
 import { writeAudit } from "../lib/audit-log"
 import { AUDIT_ACTION, AUDIT_ENTITY } from "../lib/audit-entities"
@@ -10,6 +17,7 @@ import {
   type TaskRow,
 } from "../services/tasks/build-candidates"
 import { captureEvent } from "../lib/posthog"
+import { EmailTemplates } from "../modules/email-notifications/templates"
 
 /**
  * Daily 09:00 UTC. Opt-in via `TASKS_OVERDUE_CRON_ENABLED=true`.
@@ -86,21 +94,92 @@ export default async function notifyOverdueTasksJob(container: MedusaContainer) 
         }
       }
 
+      const daysOverdue = Math.max(
+        0,
+        Math.round(
+          (now.getTime() -
+            (task.due_at ? new Date(task.due_at).getTime() : now.getTime())) /
+            86400000
+        )
+      )
+
       try {
         captureEvent(task.assignee_user_id, "task_overdue_notified", {
           task_id: id,
-          days_overdue: Math.max(
-            0,
-            Math.round(
-              (now.getTime() -
-                (task.due_at ? new Date(task.due_at).getTime() : now.getTime())) /
-                86400000
-            )
-          ),
+          days_overdue: daysOverdue,
         })
       } catch {
         /* best-effort */
       }
+
+      // Resolve assignee email + send the overdue notification email.
+      try {
+        const userService = container.resolve(Modules.USER) as any
+        const user = await userService.retrieveUser(task.assignee_user_id)
+        const assigneeEmail =
+          typeof user?.email === "string" ? user.email : null
+        if (assigneeEmail) {
+          const notificationService = container.resolve(
+            Modules.NOTIFICATION
+          ) as any
+          const taskUrl = ADMIN_PUBLIC_URL
+            ? `${ADMIN_PUBLIC_URL.replace(/\/$/, "")}/app/tasks`
+            : `${BACKEND_URL.replace(/\/$/, "")}/app/tasks`
+          await notificationService.createNotifications({
+            to: assigneeEmail,
+            channel: "email",
+            template: EmailTemplates.TASK_OVERDUE,
+            data: {
+              emailOptions: {
+                subject: `Overdue task: ${task.title}`,
+              },
+              task: {
+                title: task.title,
+                body: task.body ?? null,
+                daysOverdue,
+                priority: task.priority ?? "normal",
+                dueAt: task.due_at
+                  ? new Date(task.due_at).toISOString()
+                  : null,
+                anchor: task.order_id
+                  ? {
+                      kind: "order",
+                      id: task.order_id,
+                      displayId: null,
+                      label: null,
+                    }
+                  : task.customer_id
+                    ? {
+                        kind: "customer",
+                        id: task.customer_id,
+                        label: null,
+                      }
+                    : task.quote_id
+                      ? {
+                          kind: "quote",
+                          id: task.quote_id,
+                          publicId: null,
+                        }
+                      : task.organisation_id
+                        ? {
+                            kind: "organisation",
+                            id: task.organisation_id,
+                            name: null,
+                          }
+                        : { kind: "none" },
+                taskUrl,
+              },
+            },
+          })
+        }
+      } catch (err: any) {
+        // Soft-fail: audit + PostHog signals are still surfaced for the
+        // /app/tasks page. Email is best-effort.
+        logger.warn(
+          `notify-overdue-tasks: email send failed for task ${id}: ${err?.message ?? err}`
+        )
+      }
+
       notified += 1
     } catch (err: any) {
       logger.warn(

@@ -57,6 +57,21 @@ import {
   BottleShopOrderTemplate,
   isBottleShopOrderData,
 } from './bottle-shop-order'
+import {
+  TASK_OVERDUE,
+  TaskOverdueEmail,
+  isTaskOverdueData,
+} from './task-overdue'
+import {
+  STALE_ORDER_OWNER_ALERT,
+  StaleOrderOwnerAlertEmail,
+  isStaleOrderOwnerAlertData,
+} from './stale-order-owner-alert'
+import {
+  STALE_ORDER_MANAGER_ESCALATION,
+  StaleOrderManagerEscalationEmail,
+  isStaleOrderManagerEscalationData,
+} from './stale-order-manager-escalation'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -72,6 +87,9 @@ export const EmailTemplates = {
   NPS_REQUEST,
   ARTWORK_APPROVAL,
   BOTTLE_SHOP_ORDER,
+  TASK_OVERDUE,
+  STALE_ORDER_OWNER_ALERT,
+  STALE_ORDER_MANAGER_ESCALATION,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -195,6 +213,33 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <BottleShopOrderTemplate {...data} />
 
+    case EmailTemplates.TASK_OVERDUE:
+      if (!isTaskOverdueData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.TASK_OVERDUE}"`
+        )
+      }
+      return <TaskOverdueEmail {...data} />
+
+    case EmailTemplates.STALE_ORDER_OWNER_ALERT:
+      if (!isStaleOrderOwnerAlertData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.STALE_ORDER_OWNER_ALERT}"`
+        )
+      }
+      return <StaleOrderOwnerAlertEmail {...data} />
+
+    case EmailTemplates.STALE_ORDER_MANAGER_ESCALATION:
+      if (!isStaleOrderManagerEscalationData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.STALE_ORDER_MANAGER_ESCALATION}"`
+        )
+      }
+      return <StaleOrderManagerEscalationEmail {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -215,4 +260,7 @@ export {
   NpsRequestEmail,
   ArtworkApprovalEmail,
   BottleShopOrderTemplate,
+  TaskOverdueEmail,
+  StaleOrderOwnerAlertEmail,
+  StaleOrderManagerEscalationEmail,
 }

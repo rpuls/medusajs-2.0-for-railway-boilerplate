@@ -4,14 +4,41 @@ import {
   Modules,
 } from "@medusajs/framework/utils"
 
-import { STALE_ORDER_ESCALATION_DAYS, STALE_ORDER_MANAGER_EMAIL } from "../../lib/constants"
+import {
+  ADMIN_PUBLIC_URL,
+  BACKEND_URL,
+  STALE_ORDER_ESCALATION_DAYS,
+  STALE_ORDER_MANAGER_EMAIL,
+} from "../../lib/constants"
 import { getOwner } from "../../lib/crm-owners"
 import { AUDIT_ACTION, AUDIT_ENTITY } from "../../lib/audit-entities"
 import { writeAudit } from "../../lib/audit-log"
 import { TASK_MODULE } from "../../modules/task"
 import { captureEvent } from "../../lib/posthog"
+import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 import type { StaleOrderEntry } from "./scan"
+
+const buildOrderAdminUrl = (orderId: string): string => {
+  const root = ADMIN_PUBLIC_URL ?? BACKEND_URL
+  return `${root.replace(/\/$/, "")}/app/orders/${orderId}`
+}
+
+const resolveUserEmail = async (
+  container: MedusaContainer,
+  userId: string | null
+): Promise<{ email: string; label: string } | null> => {
+  if (!userId) return null
+  try {
+    const userService = container.resolve(Modules.USER) as any
+    const user = await userService.retrieveUser(userId)
+    if (!user?.email) return null
+    const name = [user.first_name, user.last_name].filter(Boolean).join(" ").trim()
+    return { email: user.email, label: name || user.email }
+  } catch {
+    return null
+  }
+}
 
 export type NotifyResult = {
   tasks_created: number
@@ -124,6 +151,40 @@ export async function notifyStaleOrders(
       } catch {
         /* best-effort */
       }
+
+      // Send the email. Best-effort — audit + task + PostHog already
+      // landed so a failed send doesn't lose the signal.
+      try {
+        const owner = await resolveUserEmail(container, ownerUserId)
+        if (owner) {
+          const notificationService = container.resolve(
+            Modules.NOTIFICATION
+          ) as any
+          await notificationService.createNotifications({
+            to: owner.email,
+            channel: "email",
+            template: EmailTemplates.STALE_ORDER_OWNER_ALERT,
+            data: {
+              emailOptions: {
+                subject: `Stale order #${e.display_id ?? e.order_id.slice(-6)} — ${e.days_in_stage}d in ${e.stage}`,
+              },
+              alert: {
+                orderDisplayId: e.display_id,
+                orderId: e.order_id,
+                stage: e.stage,
+                daysInStage: e.days_in_stage,
+                customerEmail: e.email,
+                orderUrl: buildOrderAdminUrl(e.order_id),
+              },
+            },
+          })
+        }
+      } catch (err: any) {
+        logger.warn(
+          `stale-orders/notify: owner email send failed for ${e.order_id}: ${err?.message ?? err}`
+        )
+      }
+
       ownersNotified += 1
     }
 
@@ -159,6 +220,46 @@ export async function notifyStaleOrders(
           } catch {
             /* best-effort */
           }
+
+          // Send the manager escalation email to every address in the
+          // comma-separated env var.
+          try {
+            const recipients = STALE_ORDER_MANAGER_EMAIL.split(",")
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0)
+            if (recipients.length > 0) {
+              const owner = await resolveUserEmail(container, ownerUserId)
+              const notificationService = container.resolve(
+                Modules.NOTIFICATION
+              ) as any
+              for (const to of recipients) {
+                await notificationService.createNotifications({
+                  to,
+                  channel: "email",
+                  template: EmailTemplates.STALE_ORDER_MANAGER_ESCALATION,
+                  data: {
+                    emailOptions: {
+                      subject: `Escalation: order #${e.display_id ?? e.order_id.slice(-6)} stale ${e.days_in_stage}d`,
+                    },
+                    escalation: {
+                      orderDisplayId: e.display_id,
+                      orderId: e.order_id,
+                      stage: e.stage,
+                      daysInStage: e.days_in_stage,
+                      ownerLabel: owner?.label ?? null,
+                      customerEmail: e.email,
+                      orderUrl: buildOrderAdminUrl(e.order_id),
+                    },
+                  },
+                })
+              }
+            }
+          } catch (err: any) {
+            logger.warn(
+              `stale-orders/notify: manager email send failed for ${e.order_id}: ${err?.message ?? err}`
+            )
+          }
+
           managersEscalated += 1
         }
       } catch (err: any) {
