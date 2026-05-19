@@ -1,5 +1,7 @@
 import { defineMiddlewares } from "@medusajs/framework/http"
 
+import { smartVariantSearchMiddleware } from "./middlewares/smart-variant-search"
+
 /**
  * Default Express JSON limit is ~100kb; customizer render payloads include
  * base64 image data and exceed that. Without this, Medusa logs
@@ -9,6 +11,14 @@ const CUSTOMIZER_BODY_LIMIT = "32mb"
 
 export default defineMiddlewares({
   routes: [
+    {
+      // Multi-term smart variant search: turns "staple black" into a
+      // matching variant-id filter so staff don't have to type SKUs to find
+      // the variant they want. See ./middlewares/smart-variant-search.ts.
+      matcher: "/admin/product-variants",
+      methods: ["GET"],
+      middlewares: [smartVariantSearchMiddleware],
+    },
     {
       matcher: "/store/customizer/render-print",
       methods: ["POST"],
