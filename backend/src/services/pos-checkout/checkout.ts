@@ -10,6 +10,18 @@ import {
   markPaymentCollectionAsPaid,
 } from "@medusajs/medusa/core-flows"
 
+import {
+  ASCOLOUR_WORKSHOP_ADDRESS_1,
+  ASCOLOUR_WORKSHOP_ADDRESS_2,
+  ASCOLOUR_WORKSHOP_CITY,
+  ASCOLOUR_WORKSHOP_COMPANY,
+  ASCOLOUR_WORKSHOP_COUNTRY_CODE,
+  ASCOLOUR_WORKSHOP_FIRST_NAME,
+  ASCOLOUR_WORKSHOP_LAST_NAME,
+  ASCOLOUR_WORKSHOP_PHONE,
+  ASCOLOUR_WORKSHOP_STATE,
+  ASCOLOUR_WORKSHOP_ZIP,
+} from "../../lib/constants"
 import { createPaymentLink } from "../stripe-payment-link"
 import type { Scenario } from "../stripe-payment-link/create-link"
 
@@ -34,6 +46,11 @@ export type POSCheckoutInput = {
   payment_method: "cash" | "stripe_link"
   created_by_user_id: string
   pos_session_id: string
+  promo_codes?: string[]
+  /** Manual whole-of-sale discount in cents, applied as an order-wide
+   *  ad-hoc promotion line. Use when staff want to mark a sale down
+   *  without a saved promotion. */
+  discount_cents?: number | null
   metadata?: Record<string, unknown>
 }
 
@@ -57,11 +74,33 @@ const isCashAllowed = (input: POSCheckoutInput): boolean =>
   input.payment_method === "cash"
 
 /**
+ * The studio's own address. Used as both billing AND shipping on POS
+ * draft orders so Medusa's tax engine has a country/region/postal code
+ * to compute against — without it, GST silently lands at 0 because
+ * tax rules typically require an address context. The customer never
+ * sees this address; it's stamped on the order solely for tax math.
+ */
+const buildStudioAddress = () => ({
+  first_name: ASCOLOUR_WORKSHOP_FIRST_NAME ?? "Walk-in",
+  last_name: ASCOLOUR_WORKSHOP_LAST_NAME ?? "Customer",
+  company: ASCOLOUR_WORKSHOP_COMPANY,
+  address_1: ASCOLOUR_WORKSHOP_ADDRESS_1 ?? "",
+  address_2: ASCOLOUR_WORKSHOP_ADDRESS_2 ?? undefined,
+  city: ASCOLOUR_WORKSHOP_CITY ?? "",
+  province: ASCOLOUR_WORKSHOP_STATE ?? "",
+  postal_code: ASCOLOUR_WORKSHOP_ZIP ?? "",
+  country_code: (ASCOLOUR_WORKSHOP_COUNTRY_CODE ?? "AU").toLowerCase(),
+  phone: ASCOLOUR_WORKSHOP_PHONE ?? undefined,
+})
+
+/**
  * Run an end-to-end POS checkout:
  *
  *  1. createOrderWorkflow(is_draft_order=true) — same call as the
  *     built-in admin Create Draft Order route. Items carry an
  *     optional `unit_price` override for negotiated walk-in prices.
+ *     Promo codes pass through `promo_codes` for stacking real
+ *     Medusa promotions on top of the sale.
  *  2. convertDraftOrderWorkflow — flips the draft into a pending
  *     order so downstream payment/fulfillment can attach.
  *  3a. Cash: create a payment_collection for the total, link to the
@@ -84,6 +123,37 @@ export const checkoutPOSSession = async (
     throw new Error("POS checkout requires at least one line item")
   }
 
+  // Build a synthetic "manual discount" line when staff applied an
+  // ad-hoc discount. Negative-priced item lands as a non-product line
+  // with metadata flagging it. Cleaner than mutating every line's
+  // unit_price proportionally and keeps the original prices auditable.
+  const discountCents = Math.max(0, Math.round(input.discount_cents ?? 0))
+
+  const lineItemPayloads: any[] = input.items.map((it) => ({
+    title: it.product_title,
+    variant_id: it.variant_id ?? undefined,
+    quantity: it.quantity,
+    ...(typeof it.unit_price_cents === "number"
+      ? { unit_price: it.unit_price_cents / 100 }
+      : {}),
+    metadata: {
+      ...(it.metadata ?? {}),
+      pos_line_kind: it.kind,
+    },
+  }))
+
+  if (discountCents > 0) {
+    lineItemPayloads.push({
+      title: "Walk-in discount",
+      quantity: 1,
+      unit_price: -(discountCents / 100),
+      metadata: {
+        pos_line_kind: "discount",
+        pos_manual_discount: true,
+      },
+    })
+  }
+
   // 1. Build draft order input.
   const draftInput: any = {
     region_id: input.region_id,
@@ -91,6 +161,12 @@ export const checkoutPOSSession = async (
     currency_code: input.currency_code ?? undefined,
     customer_id: input.customer_id ?? undefined,
     email: input.email ?? undefined,
+    shipping_address: buildStudioAddress(),
+    billing_address: buildStudioAddress(),
+    promo_codes:
+      input.promo_codes && input.promo_codes.length > 0
+        ? input.promo_codes
+        : undefined,
     status: OrderStatus.DRAFT,
     is_draft_order: true,
     no_notification: true,
@@ -98,20 +174,12 @@ export const checkoutPOSSession = async (
       pos_session_id: input.pos_session_id,
       pos_user_id: input.created_by_user_id,
       payment_method: input.payment_method,
+      ...(discountCents > 0
+        ? { pos_manual_discount_cents: discountCents }
+        : {}),
       ...(input.metadata ?? {}),
     },
-    items: input.items.map((it) => ({
-      title: it.product_title,
-      variant_id: it.variant_id ?? undefined,
-      quantity: it.quantity,
-      ...(typeof it.unit_price_cents === "number"
-        ? { unit_price: it.unit_price_cents / 100 }
-        : {}),
-      metadata: {
-        ...(it.metadata ?? {}),
-        pos_line_kind: it.kind,
-      },
-    })),
+    items: lineItemPayloads,
   }
 
   // 2. Create draft → convert to order.

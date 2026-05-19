@@ -262,7 +262,20 @@ const SECTIONS: Section[] = [
         <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
           <li><strong>Standard products</strong> — search by name, SKU, or handle in the left panel. Single-variant products add directly; multi-variant products expand so you can pick size/colour.</li>
           <li><strong>Custom designs</strong> — click <strong>+ Add custom design</strong> above the search. A popup opens with the full storefront customizer keyed to the current sale. Design the artwork, click <strong>Add to cart</strong>, the popup closes and the line appears in the till within ~2 seconds tagged <strong>Custom</strong>.</li>
+          <li><strong>Override a price</strong> — click the price on any cart line to edit it. Useful for negotiated walk-in pricing without leaving the till.</li>
           <li>Same standard variant added twice auto-merges (quantity bump). Custom lines always stay separate.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Discounts &amp; promo codes</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Promo codes</strong> — type any saved Medusa promotion code into the Promo codes field and click Add. Multiple codes can stack. The discount is applied during checkout.</li>
+          <li><strong>Manual discount</strong> — type a dollar value (e.g. 10.00) into the Manual discount field for an ad-hoc whole-of-sale markdown. Stored as a transparent &quot;Walk-in discount&quot; line on the order so the bookkeeping is clean.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Customer (or walk-in)</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>With customer</strong> — search by email or name, or click <strong>+ New customer</strong> to create one inline. When an existing customer is picked, a <strong>Repeat last order</strong> button appears that copies their most recent order&apos;s items into the cart (custom designs skipped).</li>
+          <li><strong>Walk-in (no email)</strong> — for true scan-and-go. Toggle <strong>+ Walk-in (no email)</strong> next to the customer label. The order lands against a configurable walk-in inbox (default <code>walkin@scprints.com.au</code>) and you can still email the receipt afterwards.</li>
         </ul>
 
         <Text className="mt-3 font-semibold">Payment</Text>
@@ -273,12 +286,19 @@ const SECTIONS: Section[] = [
 
         <Text className="mt-3 font-semibold">After payment</Text>
         <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Email receipt</strong> — type any address into the receipt modal and click Send. Sends the standard order-placed email — handy if the customer wanted email but you didn&apos;t capture it upfront.</li>
+          <li><strong>Customer walked out with goods → mark delivered</strong> — fast-forwards the order through every production stage (artwork → blanks → production → delivered) in a single click. Use only for stock-item pickups; custom jobs should progress organically so the customer still gets the artwork-approval email etc.</li>
           <li><strong>Open order</strong> — jumps to the standard order detail page. Everything works as normal: production stages advance, mockup PDFs render, customizer downloads work, customer-facing emails fire on stage changes.</li>
           <li><strong>New transaction</strong> — wipes the till state and starts a fresh session for the next walk-in.</li>
         </ul>
 
+        <Text className="mt-3 font-semibold">Parking sales (multi-customer)</Text>
+        <Text size="small">
+          Click <strong>Park sale</strong> in the checkout panel if a customer wants to think about it or another walk-in interrupts. The cart saves against the current session and a fresh empty session opens for the next customer. A <strong>Parked (N)</strong> dropdown appears at the top of the page listing your parked sales — click to resume any of them. Each staff member only sees their own parked sales.
+        </Text>
+
         <Text size="xsmall" className="text-ui-fg-muted mt-3">
-          POS sessions last 4 hours, so a customer can step out and come back later without losing their cart. POS orders count toward LTV like any other order. Cash payments are tagged <code>pos_cash</code> in the payment-mix report so revenue buckets under &quot;Cash&quot; instead of Stripe. If the popup customizer is blocked, allow popups for the admin domain.
+          POS sessions last 4 hours and auto-tidy hourly. POS orders count toward LTV like any other order. Cash payments are tagged <code>pos_cash</code> in the payment-mix report so revenue buckets under &quot;Cash&quot; instead of Stripe. The studio&apos;s address is stamped on every POS order so GST computes correctly (the customer never sees it). If the popup customizer is blocked, allow popups for the admin domain.
         </Text>
       </>
     ),

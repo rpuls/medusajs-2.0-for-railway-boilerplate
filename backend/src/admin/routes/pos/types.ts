@@ -78,3 +78,10 @@ export type POSCheckoutResult = {
     payment_link_id?: string | null
   }
 }
+
+export type POSDiscount = {
+  promo_codes: string[]
+  /** Manual whole-of-sale discount in cents. Distinct from
+   *  variant-level price overrides on individual lines. */
+  manual_discount_cents: number
+}

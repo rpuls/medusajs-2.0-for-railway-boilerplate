@@ -382,21 +382,38 @@ Admin page at `/app/pos` for in-store walk-in sales. Three-panel layout: product
 | Migration | [backend/src/modules/pos-session/migrations/Migration20270401000000.ts](backend/src/modules/pos-session/migrations/Migration20270401000000.ts) |
 | Checkout service (draft → order + payment) | [backend/src/services/pos-checkout/checkout.ts](backend/src/services/pos-checkout/checkout.ts) |
 | Admin REST — sessions CRUD | [backend/src/api/admin/pos/sessions/route.ts](backend/src/api/admin/pos/sessions/route.ts) + [\[id\]/route.ts](backend/src/api/admin/pos/sessions/[id]/route.ts) |
-| Admin REST — admin-side item append | [backend/src/api/admin/pos/sessions/\[id\]/items/route.ts](backend/src/api/admin/pos/sessions/[id]/items/route.ts) |
 | Admin REST — checkout | [backend/src/api/admin/pos/checkout/route.ts](backend/src/api/admin/pos/checkout/route.ts) |
+| Admin REST — fast-forward to delivered | [backend/src/api/admin/pos/orders/\[id\]/fast-forward/route.ts](backend/src/api/admin/pos/orders/[id]/fast-forward/route.ts) |
+| Admin REST — email receipt | [backend/src/api/admin/pos/orders/\[id\]/email-receipt/route.ts](backend/src/api/admin/pos/orders/[id]/email-receipt/route.ts) |
+| Admin REST — last-order lookup | [backend/src/api/admin/pos/customers/\[id\]/last-order/route.ts](backend/src/api/admin/pos/customers/[id]/last-order/route.ts) |
 | Store REST — customizer relay target | [backend/src/api/store/pos-sessions/\[id\]/items/route.ts](backend/src/api/store/pos-sessions/[id]/items/route.ts) |
+| Hourly cleanup cron | [backend/src/jobs/expire-pos-sessions.ts](backend/src/jobs/expire-pos-sessions.ts) |
 | Admin POS page | [backend/src/admin/routes/pos/page.tsx](backend/src/admin/routes/pos/page.tsx) |
 | Admin POS components | [backend/src/admin/routes/pos/components/](backend/src/admin/routes/pos/components/) |
 | Storefront customizer POS-mode hook | [storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx) — search `isPOSMode` |
 | Storefront bridge route | [storefront/src/app/api/pos-bridge/items/route.ts](storefront/src/app/api/pos-bridge/items/route.ts) |
 
-**Order shape**: a POS sale lands as a real Medusa order with `metadata.pos_session_id`, `metadata.pos_user_id`, `metadata.payment_method`. Each line item carries `metadata.pos_line_kind = "standard" | "customizer"`. Customizer lines preserve the full `customizerDesign` (`CustomizerMetadata`) shape so all the existing admin widgets (mockup PDF, customizer downloads, print details) work without a POS-specific branch.
+**Order shape**: a POS sale lands as a real Medusa order with `metadata.pos_session_id`, `metadata.pos_user_id`, `metadata.payment_method`. Each line item carries `metadata.pos_line_kind = "standard" | "customizer" | "discount"`. Customizer lines preserve the full `customizerDesign` (`CustomizerMetadata`) shape so all the existing admin widgets (mockup PDF, customizer downloads, print details) work without a POS-specific branch.
 
 **Payment attribution**: cash payments stamp `payment.metadata.real_gateway = "pos_cash"`; card payments inherit `real_gateway = "stripe_payment_link"` via the existing handle-webhook flow. The payment-mix report buckets revenue accordingly.
 
+**Tax address**: every POS draft order ships with `shipping_address = billing_address` defaulted to the studio's own address (read from the existing `ASCOLOUR_WORKSHOP_*` env vars — same physical SC Prints address used for AS Colour / Aussie Pacific dropships). Without an address Medusa's tax engine silently lands at 0; with the studio address the local GST rules compute correctly for the in-store sale.
+
+**Manual discounts and promo codes**: staff can apply a whole-of-sale manual discount (cents) and/or any number of Medusa promo codes per sale. The manual discount lands as a synthetic `pos_line_kind = "discount"` line with a negative `unit_price`; promo codes flow through `createOrderWorkflow`'s `promo_codes` field so saved promotion rules apply normally. Unit-price overrides per line are also supported — click the price in the cart to edit.
+
+**Walk-in customer (no email)**: the checkout panel has a "+ Walk-in (no email)" toggle that skips customer selection. The backend defaults the order email to `POS_WALKIN_EMAIL` (default `walkin@scprints.com.au`) so Medusa's draft-order validator is satisfied; the standard order-placed email goes to that inbox but staff can also send a real receipt to the customer post-sale via the "Email receipt" field in the receipt modal.
+
+**Fast-forward to delivered**: receipt modal has a "Customer walked out with goods → mark delivered" button that calls `POST /admin/pos/orders/:id/fast-forward`. Stamps all three production tracks (artwork=approved, blanks=blanks_arrived, production=delivered) and emits the stage-changed events so existing subscribers (emails, automation, audit) fire as if staff had clicked through each stage. Use only for stock-item pickups — custom jobs should still progress organically.
+
+**Repeat last order**: after a customer is selected in checkout, "Repeat last order" pulls the line items from their most recent non-cancelled order (`GET /admin/pos/customers/:id/last-order`) and appends them to the cart. Standard items repeat as-is; customizer items are skipped (they'd need the customizer popup to re-attach Fabric metadata) and the count is reported in the toast.
+
+**Park sale**: multi-customer use is supported via session swapping. Clicking "Park sale" persists the current cart to the session (still `status = "active"`), opens a fresh session, and clears the page state. The previous session shows up in the "Parked (N)" dropdown at the top of the page; resuming swaps the active session and rehydrates its items. Each staff member only sees their own parked sales (`owned_by_me=1` filter).
+
 **Auth on the bridge route**: the storefront `/api/pos-bridge/items` route accepts requests with no auth header — the POS session ID itself is the capability (26-char ULID, 4-hour TTL). Acceptable for an in-store tool: worst case someone guesses a session ID and adds bogus lines, which staff immediately rejects on screen. Promote to a signed bridge-token if POS ever runs on a public guest network.
 
-**Config**: `POS_SESSION_TTL_HOURS` (default 4) controls how long an unfinished session stays "active" before it auto-expires. The customizer popup needs `STOREFRONT_URL` and `STOREFRONT_DEFAULT_COUNTRY_CODE` set on the backend (already required by other flows; surfaced through `/admin/scp-config`).
+**Cron**: `expire-pos-sessions` runs hourly at `30 * * * *`. Walks sessions where `status = "active"` and `expires_at` is in the past, flips them to `"expired"`. Pure DB work, no env gate (housekeeping is always-on).
+
+**Config**: `POS_SESSION_TTL_HOURS` (default 4) controls how long an unfinished session stays "active" before it auto-expires. `POS_WALKIN_EMAIL` (default `walkin@scprints.com.au`) is the email stamped on cash sales with no customer. The customizer popup needs `STOREFRONT_URL` and `STOREFRONT_DEFAULT_COUNTRY_CODE` set on the backend (already required by other flows; surfaced through `/admin/scp-config`). The studio tax address reuses the `ASCOLOUR_WORKSHOP_*` env vars.
 
 ## Production-floor stack
 

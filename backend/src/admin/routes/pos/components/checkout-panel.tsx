@@ -1,9 +1,10 @@
-import { Button, Heading, Label, Select, Text, toast } from "@medusajs/ui"
+import { Button, Heading, Input, Label, Select, Text, toast } from "@medusajs/ui"
 import { useState } from "react"
 
 import type {
   POSCheckoutResult,
   POSCustomer,
+  POSDiscount,
   POSLineItem,
   POSRegion,
   POSSalesChannel,
@@ -19,9 +20,15 @@ type Props = {
   salesChannels: POSSalesChannel[]
   salesChannelId: string | null
   customer: POSCustomer | null
+  walkInMode: boolean
+  discount: POSDiscount
   onCustomerChange: (c: POSCustomer | null) => void
+  onWalkInModeChange: (on: boolean) => void
+  onDiscountChange: (next: POSDiscount) => void
   onRegionChange: (id: string) => void
   onSalesChannelChange: (id: string) => void
+  onLoadLastOrder: () => void
+  onParkSale: () => void
   onCheckoutSuccess: (result: POSCheckoutResult) => void
 }
 
@@ -33,19 +40,63 @@ export const CheckoutPanel = ({
   salesChannels,
   salesChannelId,
   customer,
+  walkInMode,
+  discount,
   onCustomerChange,
+  onWalkInModeChange,
+  onDiscountChange,
   onRegionChange,
   onSalesChannelChange,
+  onLoadLastOrder,
+  onParkSale,
   onCheckoutSuccess,
 }: Props) => {
   const [paying, setPaying] = useState<"cash" | "stripe_link" | null>(null)
+  const [promoDraft, setPromoDraft] = useState("")
+  const [discountDraft, setDiscountDraft] = useState<string>(() =>
+    discount.manual_discount_cents
+      ? (discount.manual_discount_cents / 100).toFixed(2)
+      : ""
+  )
   const currency = region?.currency_code.toUpperCase() ?? "AUD"
-  const total = cartTotalCents(items)
-  const canCheckout = items.length > 0 && Boolean(customer) && Boolean(region)
+  const subtotal = cartTotalCents(items)
+  const finalTotal = Math.max(0, subtotal - discount.manual_discount_cents)
+  const customerReady = customer !== null || walkInMode
+  const canCheckout = items.length > 0 && customerReady && Boolean(region)
+
+  const addPromo = () => {
+    const code = promoDraft.trim().toUpperCase()
+    if (!code) return
+    if (discount.promo_codes.includes(code)) return
+    onDiscountChange({
+      ...discount,
+      promo_codes: [...discount.promo_codes, code],
+    })
+    setPromoDraft("")
+  }
+
+  const removePromo = (code: string) => {
+    onDiscountChange({
+      ...discount,
+      promo_codes: discount.promo_codes.filter((c) => c !== code),
+    })
+  }
+
+  const commitDiscount = () => {
+    const parsed = Number(discountDraft)
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      onDiscountChange({ ...discount, manual_discount_cents: 0 })
+      return
+    }
+    onDiscountChange({
+      ...discount,
+      manual_discount_cents: Math.round(parsed * 100),
+    })
+  }
 
   const checkout = async (paymentMethod: "cash" | "stripe_link") => {
     if (!canCheckout) {
-      toast.error("Add items and select a customer first")
+      toast.error("Add items and select a customer (or tick Walk-in)")
       return
     }
     setPaying(paymentMethod)
@@ -66,12 +117,14 @@ export const CheckoutPanel = ({
             unit_price_cents: it.unit_price_cents,
             metadata: it.metadata,
           })),
-          customer_id: customer!.id,
-          email: customer!.email,
+          customer_id: customer?.id ?? null,
+          email: customer?.email ?? null,
           region_id: region!.id,
           sales_channel_id: salesChannelId,
           currency_code: region!.currency_code,
           payment_method: paymentMethod,
+          promo_codes: discount.promo_codes,
+          discount_cents: discount.manual_discount_cents,
         }),
       })
       if (!res.ok) {
@@ -89,16 +142,49 @@ export const CheckoutPanel = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 pt-4 pb-3 border-b border-ui-border-base">
+      <div className="px-4 pt-4 pb-3 border-b border-ui-border-base flex items-center justify-between">
         <Heading level="h2">Checkout</Heading>
+        <Button variant="secondary" size="small" onClick={onParkSale}>
+          Park sale
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         <div>
-          <Label className="text-xs text-ui-fg-muted mb-1 block">
-            Customer
-          </Label>
-          <CustomerLookup customer={customer} onSelect={onCustomerChange} />
+          <div className="flex items-center justify-between mb-1">
+            <Label className="text-xs text-ui-fg-muted">Customer</Label>
+            <button
+              type="button"
+              className="text-xs text-ui-fg-muted hover:underline"
+              onClick={() => onWalkInModeChange(!walkInMode)}
+            >
+              {walkInMode ? "× Walk-in (no email)" : "+ Walk-in (no email)"}
+            </button>
+          </div>
+          {walkInMode ? (
+            <div className="border border-ui-border-base rounded-lg p-3 bg-ui-bg-subtle">
+              <Text size="small" className="font-medium">
+                Walk-in customer
+              </Text>
+              <Text size="xsmall" className="text-ui-fg-muted">
+                No email captured. Receipt can be emailed after checkout.
+              </Text>
+            </div>
+          ) : (
+            <>
+              <CustomerLookup customer={customer} onSelect={onCustomerChange} />
+              {customer && (
+                <Button
+                  variant="transparent"
+                  size="small"
+                  className="mt-1 text-xs"
+                  onClick={onLoadLastOrder}
+                >
+                  Repeat last order
+                </Button>
+              )}
+            </>
+          )}
         </div>
 
         <div>
@@ -139,6 +225,57 @@ export const CheckoutPanel = ({
             </Select>
           </div>
         )}
+
+        <div className="border-t border-ui-border-base pt-3">
+          <Label className="text-xs text-ui-fg-muted mb-1 block">
+            Promo codes
+          </Label>
+          <div className="flex gap-1">
+            <Input
+              placeholder="CODE"
+              value={promoDraft}
+              onChange={(e) => setPromoDraft(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addPromo()
+              }}
+            />
+            <Button variant="secondary" size="small" onClick={addPromo}>
+              Add
+            </Button>
+          </div>
+          {discount.promo_codes.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {discount.promo_codes.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className="text-xs bg-ui-bg-subtle rounded px-2 py-1 hover:bg-ui-bg-base border border-ui-border-base"
+                  onClick={() => removePromo(c)}
+                >
+                  {c} ×
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <Label className="text-xs text-ui-fg-muted mb-1 block">
+            Manual discount ({currency})
+          </Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={discountDraft}
+            onChange={(e) => setDiscountDraft(e.target.value)}
+            onBlur={commitDiscount}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+            }}
+          />
+        </div>
       </div>
 
       <div className="px-4 py-4 border-t border-ui-border-base bg-ui-bg-subtle">
@@ -146,7 +283,7 @@ export const CheckoutPanel = ({
           <Text size="base" className="font-semibold">
             Total
           </Text>
-          <Heading level="h2">{formatMoney(total, currency)}</Heading>
+          <Heading level="h2">{formatMoney(finalTotal, currency)}</Heading>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button
@@ -170,8 +307,8 @@ export const CheckoutPanel = ({
           <Text size="xsmall" className="text-ui-fg-muted mt-2 text-center">
             {items.length === 0
               ? "Add items first"
-              : !customer
-                ? "Select a customer"
+              : !customerReady
+                ? "Select a customer or tick Walk-in"
                 : !region
                   ? "Select a region"
                   : ""}

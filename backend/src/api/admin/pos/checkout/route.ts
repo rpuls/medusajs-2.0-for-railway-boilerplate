@@ -28,6 +28,8 @@ const checkoutSchema = z.object({
   sales_channel_id: z.string().nullable().optional(),
   currency_code: z.string().min(3).max(8).nullable().optional(),
   payment_method: z.enum(["cash", "stripe_link"]),
+  promo_codes: z.array(z.string().min(1).max(80)).max(10).optional(),
+  discount_cents: z.number().int().min(0).max(10_000_000).nullable().optional(),
 })
 
 /**
@@ -53,11 +55,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(400).json({ error: err?.message ?? "invalid" })
   }
 
-  if (!body.customer_id && !body.email) {
-    return res
-      .status(400)
-      .json({ error: "either customer_id or email is required" })
-  }
+  // Customer is optional — cash "scan + go" walk-ins should be able to
+  // checkout without capturing details. We always need *something* on
+  // the email field for Medusa's draft-order validator, so fall back to
+  // the configured walk-in inbox (or a sentinel).
+  const walkinEmail =
+    process.env.POS_WALKIN_EMAIL ?? "walkin@scprints.com.au"
+  const effectiveEmail = body.email ?? (body.customer_id ? null : walkinEmail)
 
   const actor = (req as any).auth_context?.actor_id
   if (!actor) {
@@ -95,13 +99,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         metadata: it.metadata ?? {},
       })),
       customer_id: body.customer_id ?? null,
-      email: body.email ?? null,
+      email: effectiveEmail,
       region_id: body.region_id,
       sales_channel_id: body.sales_channel_id ?? null,
       currency_code: body.currency_code ?? null,
       payment_method: body.payment_method,
       created_by_user_id: actor,
       pos_session_id: body.pos_session_id,
+      promo_codes: body.promo_codes ?? undefined,
+      discount_cents: body.discount_cents ?? null,
     })
   } catch (err: any) {
     return res.status(500).json({

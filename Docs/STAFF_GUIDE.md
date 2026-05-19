@@ -147,8 +147,8 @@ Use this when a customer walks into the studio and wants to buy something on the
 Three panels side-by-side:
 
 - **Left — Products.** Type to search by name, SKU, or handle. Click a single-variant product to add it directly; multi-variant products expand so you can pick the size/colour. Above the list, **+ Add custom design** opens the storefront customizer in a popup keyed to the current sale.
-- **Middle — Cart.** Every line you've added. Adjust quantities with the +/− buttons, remove with the trash icon. Standard products auto-merge if you add the same variant twice; custom designs always stay separate. Running total at the bottom.
-- **Right — Checkout.** Pick the customer (search or "+ New customer" for a guest). Confirm region (defaults to AUD) and sales channel. Two pay buttons: **Pay cash** (marks the order paid immediately) or **Card (QR link)** (mints a Stripe Payment Link, shows a QR code).
+- **Middle — Cart.** Every line you've added. Adjust quantities with the +/− buttons, remove with the trash icon. **Click the price on any line to override it** — useful for negotiated walk-in pricing. Standard products auto-merge if you add the same variant twice; custom designs always stay separate. Running total at the bottom shows subtotal, any promo codes / manual discount, and the final total.
+- **Right — Checkout.** Pick the customer (search or "+ New customer") or click **+ Walk-in (no email)** for a true scan-and-go cash sale. Confirm region (defaults to AUD) and sales channel. Add **promo codes** (any saved Medusa promotion) or a **manual discount** in dollars to mark a sale down. Two pay buttons: **Pay cash** (marks the order paid immediately) or **Card (QR link)** (mints a Stripe Payment Link, shows a QR code).
 
 ### Custom-design flow
 1. Click **+ Add custom design** in the products panel. A popup window opens with the storefront customizer.
@@ -166,15 +166,26 @@ If a popup is blocked, the browser shows it in the address bar — allow popups 
 
 ### After payment
 
-- The receipt modal shows the order number, total, and items.
-- "Open order" jumps to the standard order page where everything works as normal — the customizer line shows up in print details, mockup PDFs render, the order flows through the production stage tracker.
-- "New transaction" wipes the till state and starts a fresh session, ready for the next walk-in.
+The receipt modal shows the order number, total, and items, plus a few one-click follow-up actions:
+
+- **Email receipt** — type any email address and click Send. Re-sends the order-placed email so the customer gets a record (useful if they wanted email but you didn't capture it upfront, or if you fat-fingered theirs).
+- **Customer walked out with goods → mark delivered** — fast-forwards the order through every production stage (artwork → blanks → production → delivered) in one click. Use only for stock-item pickups where there's nothing to make; custom jobs should progress organically so the customer still gets the artwork-approval email etc.
+- **Open order** — jumps to the standard order page where everything works as normal: customizer lines show up in print details, mockup PDFs render, the order flows through the production stage tracker.
+- **New transaction** — wipes the till state and starts a fresh session, ready for the next walk-in.
+
+### Parking a sale (multi-customer)
+Click **Park sale** in the checkout panel if a customer wants to think about it or another walk-in interrupts. The cart is saved against the current session and a fresh empty session opens for the next customer. A **Parked (N)** dropdown appears at the top of the page listing your parked sales — click to resume any of them. Park-and-resume only sees *your* own parked sales, so two staff working different tills don't see each other's carts.
+
+### Repeating a previous order
+After you pick an existing customer in checkout, a **Repeat last order** button appears. Clicking it loads the line items from their most recent order into the cart. Standard items repeat as-is; custom designs are skipped (they need the customizer popup to rebuild) and the count is shown in the success toast.
 
 ### Things to know
 - A POS session lasts 4 hours. If a customer steps out and comes back later, the cart is still there on the same browser tab.
 - POS orders are real orders. They appear in /app/orders, count toward the customer's LTV, fire the production-stage emails (`Received` → `Art review` → …) just like online orders.
+- The studio's address is stamped on every POS order so GST computes correctly — the customer never sees it.
 - Cash payments are tagged `pos_cash` so the payment-mix report buckets revenue under "Cash" instead of "Stripe".
 - Custom design metadata is preserved on the order line — the mockup PDF generator, customizer downloads widget, and print-details widget all work without any POS-specific handling.
+- Abandoned sessions auto-tidy hourly — anything not checked out within 4 hours flips to "expired" so the parked-sales picker stays clean.
 
 ---
 
