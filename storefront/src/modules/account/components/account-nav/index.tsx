@@ -40,7 +40,7 @@ const AccountNav = ({
           </LocalizedClientLink>
         ) : (
           <>
-            <div className="text-xl-semi mb-4 px-8">
+            <div className="text-xl-semi mb-4 px-5">
               Hello {customer?.first_name}
             </div>
             <div className="text-base-regular">
@@ -48,40 +48,36 @@ const AccountNav = ({
                 <li>
                   <LocalizedClientLink
                     href="/account/profile"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
                     data-testid="profile-link"
                   >
-                    <>
-                      <div className="flex items-center gap-x-2">
-                        <User size={20} />
-                        <span>Profile</span>
-                      </div>
-                      <ChevronDown className="transform -rotate-90" />
-                    </>
+                    <div className="flex items-center gap-x-3">
+                      <User size={20} />
+                      <span>Profile</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
                   </LocalizedClientLink>
                 </li>
                 <li>
                   <LocalizedClientLink
                     href="/account/addresses"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
                     data-testid="addresses-link"
                   >
-                    <>
-                      <div className="flex items-center gap-x-2">
-                        <MapPin size={20} />
-                        <span>Addresses</span>
-                      </div>
-                      <ChevronDown className="transform -rotate-90" />
-                    </>
+                    <div className="flex items-center gap-x-3">
+                      <MapPin size={20} />
+                      <span>Addresses</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
                   </LocalizedClientLink>
                 </li>
                 <li>
                   <LocalizedClientLink
                     href="/account/orders"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
                     data-testid="orders-link"
                   >
-                    <div className="flex items-center gap-x-2">
+                    <div className="flex items-center gap-x-3">
                       <Package size={20} />
                       <span>Orders</span>
                     </div>
@@ -91,10 +87,10 @@ const AccountNav = ({
                 <li>
                   <LocalizedClientLink
                     href="/account/designs"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
                     data-testid="designs-link"
                   >
-                    <div className="flex items-center gap-x-2">
+                    <div className="flex items-center gap-x-3">
                       <Package size={20} />
                       <span>My designs</span>
                     </div>
@@ -102,13 +98,52 @@ const AccountNav = ({
                   </LocalizedClientLink>
                 </li>
                 <li>
+                  <LocalizedClientLink
+                    href="/account/wishlist"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
+                    data-testid="wishlist-link"
+                  >
+                    <div className="flex items-center gap-x-3">
+                      <Package size={20} />
+                      <span>Wishlist</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/account/group-orders"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
+                    data-testid="group-orders-link"
+                  >
+                    <div className="flex items-center gap-x-3">
+                      <Package size={20} />
+                      <span>Group orders</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/account/organisations"
+                    className="flex min-h-14 items-center justify-between border-b border-gray-200 px-5 py-4"
+                    data-testid="organisations-link"
+                  >
+                    <div className="flex items-center gap-x-3">
+                      <Package size={20} />
+                      <span>Organisations</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
+                  </LocalizedClientLink>
+                </li>
+                <li>
                   <button
                     type="button"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8 w-full"
+                    className="flex min-h-14 w-full items-center justify-between border-b border-gray-200 px-5 py-4"
                     onClick={handleLogout}
                     data-testid="logout-button"
                   >
-                    <div className="flex items-center gap-x-2">
+                    <div className="flex items-center gap-x-3">
                       <ArrowRightOnRectangle />
                       <span>Log out</span>
                     </div>
@@ -170,6 +205,33 @@ const AccountNav = ({
                   data-testid="designs-link"
                 >
                   My designs
+                </AccountNavLink>
+              </li>
+              <li>
+                <AccountNavLink
+                  href="/account/wishlist"
+                  route={route!}
+                  data-testid="wishlist-link"
+                >
+                  Wishlist
+                </AccountNavLink>
+              </li>
+              <li>
+                <AccountNavLink
+                  href="/account/group-orders"
+                  route={route!}
+                  data-testid="group-orders-link"
+                >
+                  Group orders
+                </AccountNavLink>
+              </li>
+              <li>
+                <AccountNavLink
+                  href="/account/organisations"
+                  route={route!}
+                  data-testid="organisations-link"
+                >
+                  Organisations
                 </AccountNavLink>
               </li>
               <li className="text-grey-700">

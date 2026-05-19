@@ -136,7 +136,7 @@ const AcceptForm = ({ id, sig, quote }: Props) => {
         id="approver"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="mt-1 block w-full rounded-md border border-ui-border-base bg-white px-3 py-2 text-sm shadow-sm focus:border-[var(--brand-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-secondary)]"
+        className="mt-1 block w-full min-h-11 rounded-md border border-ui-border-base bg-white px-3 py-2.5 text-base shadow-sm focus:border-[var(--brand-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-secondary)] tablet:text-sm"
         placeholder="e.g. Alex Smith"
       />
 
@@ -144,12 +144,12 @@ const AcceptForm = ({ id, sig, quote }: Props) => {
         <p className="mt-3 text-sm text-rose-700">{error}</p>
       ) : null}
 
-      <div className="mt-4 flex flex-col gap-2 small:flex-row small:items-center small:justify-end">
+      <div className="mt-4 flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-end tablet:gap-2">
         <button
           type="button"
           onClick={accept}
           disabled={pending}
-          className="inline-flex items-center justify-center rounded-md bg-[var(--brand-primary)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-60"
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-5 py-3 text-base font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-60 tablet:w-auto tablet:py-2 tablet:text-sm"
         >
           {pending ? "Building your cart…" : "Accept and check out"}
         </button>

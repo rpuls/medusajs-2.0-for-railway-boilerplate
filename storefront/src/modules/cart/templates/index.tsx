@@ -3,8 +3,15 @@ import Summary from "./summary"
 import AggregatedTierBanner from "../components/aggregated-tier-banner"
 import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
+import MobileCheckoutBar from "../components/mobile-checkout-bar"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
+
+function getCheckoutStep(cart: HttpTypes.StoreCart) {
+  if (!cart?.shipping_address?.address_1 || !cart.email) return "address"
+  if ((cart?.shipping_methods?.length ?? 0) === 0) return "delivery"
+  return "payment"
+}
 
 const CartTemplate = ({
   cart,
@@ -45,7 +52,7 @@ const CartTemplate = ({
                 ) : null}
                 <ItemsTemplate items={cart?.items} />
               </div>
-              <div className="relative">
+              <div className="relative" id="cart-summary-anchor">
                 <div className="sticky top-24 flex flex-col gap-y-6">
                   {cart && cart.region && (
                     <Summary cart={cart as any} />
@@ -53,6 +60,11 @@ const CartTemplate = ({
                 </div>
               </div>
             </div>
+            <div
+              aria-hidden
+              className="small:hidden"
+              style={{ height: "calc(5rem + env(safe-area-inset-bottom))" }}
+            />
           </>
         ) : (
           <div>
@@ -60,6 +72,13 @@ const CartTemplate = ({
           </div>
         )}
       </div>
+      {cart?.items?.length ? (
+        <MobileCheckoutBar
+          total={cart.total ?? null}
+          currencyCode={cart.currency_code ?? "AUD"}
+          checkoutHref={`/checkout?step=${getCheckoutStep(cart)}`}
+        />
+      ) : null}
     </div>
   )
 }

@@ -95,7 +95,7 @@ const DesignsGrid = ({ designs }: Props) => {
         </div>
       ) : null}
 
-      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 list-none p-0 m-0">
+      <ul className="grid grid-cols-2 tablet:grid-cols-2 small:grid-cols-2 large:grid-cols-3 gap-3 phone:gap-4 list-none p-0 m-0">
         {designs.map((design) => {
           const isBusy = busyId === design.id
           const isRenaming = renamingId === design.id

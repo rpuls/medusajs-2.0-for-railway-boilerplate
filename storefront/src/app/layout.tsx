@@ -7,6 +7,7 @@ import ConditionalCursorDot from "@modules/layout/components/conditional-cursor-
 import { ChatWidget } from "@modules/common/components/chat-widget"
 import { Ga4Script } from "@modules/common/components/ga4-script"
 import { PostHogProvider } from "@modules/common/components/posthog-provider"
+import AddToHomeBanner from "@modules/common/components/add-to-home-banner"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
@@ -27,6 +28,15 @@ export const metadata: Metadata = {
     default: `${SEO.siteName} | Custom Apparel & Merch`,
   },
   description: SEO.siteDescription,
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SC Prints",
+  },
+  icons: {
+    apple: "/branding/scp-vector.svg",
+  },
   alternates: {
     canonical: "/",
   },
@@ -130,6 +140,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           <main className="relative min-h-dvh bg-[var(--brand-background)] text-[var(--brand-primary)]">
             {props.children}
           </main>
+          <AddToHomeBanner />
           </PostHogProvider>
         </body>
       </html>

@@ -246,7 +246,7 @@ export default async function ByoPage({
             title="How BYO works"
             id="byo-process-heading"
           />
-          <ol className="mt-8 grid list-none grid-cols-1 overflow-hidden rounded-lg border border-ui-border-base bg-white p-0 small:grid-cols-2 large:grid-cols-4">
+          <ol className="mt-8 grid list-none grid-cols-1 overflow-hidden rounded-lg border border-ui-border-base bg-white p-0 phone:grid-cols-2 tablet:grid-cols-4 small:grid-cols-2 large:grid-cols-4">
             {STEPS.map((step, index) => {
               const { Icon } = step
               const isLastColLarge = (index + 1) % COLS_LARGE === 0
@@ -255,13 +255,18 @@ export default async function ByoPage({
               const isLastColSmall = (index + 1) % COLS_SMALL === 0
               const isLastRowSmall =
                 index >= STEPS.length - (STEPS.length % COLS_SMALL || COLS_SMALL)
+              const isLastColPhone = (index + 1) % 2 === 0
+              const isLastRowPhone =
+                index >= STEPS.length - (STEPS.length % 2 || 2)
               return (
                 <li
                   key={step.id}
                   className={[
-                    "group relative overflow-hidden p-6 transition-colors hover:bg-ui-bg-subtle/50",
+                    "group relative overflow-hidden p-5 phone:p-6 transition-colors hover:bg-ui-bg-subtle/50",
                     "border-ui-border-base",
-                    index < STEPS.length - 1 ? "border-b small:border-b-0" : "",
+                    index < STEPS.length - 1 ? "border-b phone:border-b-0" : "",
+                    !isLastColPhone ? "phone:border-r tablet:border-r-0" : "",
+                    !isLastRowPhone ? "phone:border-b tablet:border-b-0" : "",
                     !isLastColSmall ? "small:border-r large:border-r-0" : "",
                     !isLastRowSmall ? "small:border-b large:border-b-0" : "",
                     !isLastColLarge ? "large:border-r" : "",

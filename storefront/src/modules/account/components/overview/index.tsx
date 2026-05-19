@@ -29,9 +29,70 @@ const Overview = ({ customer, orders }: OverviewProps) => {
   const profileCompletion = getProfileCompletion(customer)
   const addressCount = customer?.addresses?.length || 0
   const recentOrders = orders ?? []
+  const latestOrder = recentOrders[0]
 
   return (
     <div data-testid="overview-page-wrapper">
+      <div className="small:hidden px-5 pb-6">
+        {latestOrder ? (
+          <LocalizedClientLink
+            href={`/account/orders/details/${latestOrder.id}`}
+            className="block rounded-xl border border-ui-border-base bg-white p-4 shadow-sm"
+            data-testid="mobile-latest-order"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+              Latest order
+            </p>
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-ui-fg-base">
+                  #{latestOrder.display_id}
+                </p>
+                <p className="mt-0.5 text-xs text-ui-fg-subtle">
+                  {new Date(latestOrder.created_at).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                  {" · "}
+                  {convertMinorToLocale({
+                    amount: latestOrder.total,
+                    currency_code: latestOrder.currency_code,
+                  })}
+                </p>
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--brand-secondary)]">
+                View
+                <ArrowRightIcon />
+              </span>
+            </div>
+          </LocalizedClientLink>
+        ) : (
+          <div className="rounded-xl border border-dashed border-ui-border-base bg-white p-5 text-center">
+            <p className="text-sm text-ui-fg-subtle">
+              No orders yet. Place one and it&apos;ll appear here.
+            </p>
+            <LocalizedClientLink
+              href="/store"
+              className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-4 py-2.5 text-sm font-semibold text-white"
+            >
+              Browse the store
+              <ArrowRightIcon />
+            </LocalizedClientLink>
+          </div>
+        )}
+        {profileCompletion < 100 ? (
+          <LocalizedClientLink
+            href="/account/profile"
+            className="mt-3 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+          >
+            <span className="text-sm text-amber-900">
+              Profile {profileCompletion}% complete
+            </span>
+            <ArrowRightIcon className="text-amber-700" />
+          </LocalizedClientLink>
+        ) : null}
+      </div>
       <div className="hidden small:block">
         <header className="border-l-4 border-[var(--brand-secondary)] pl-4">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">

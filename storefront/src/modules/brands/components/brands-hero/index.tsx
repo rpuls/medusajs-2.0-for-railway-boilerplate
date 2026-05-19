@@ -155,7 +155,7 @@ export default function BrandsHero({ brands }: { brands: StorefrontBrand[] }) {
     <div className="relative w-full overflow-hidden bg-ui-bg-base">
       <div
         ref={stageRef}
-        className="relative mx-auto flex min-h-[80vh] w-full max-w-[min(100%,76rem)] flex-col items-center justify-start px-4 pb-12 pt-16 small:px-8 small:pb-16 small:pt-24"
+        className="relative mx-auto flex min-h-[70dvh] w-full max-w-[min(100%,76rem)] flex-col items-center justify-start px-4 pb-10 pt-12 tablet:min-h-[78dvh] tablet:pb-12 tablet:pt-16 small:min-h-[80vh] small:px-8 small:pb-16 small:pt-24"
       >
         <div className="relative z-20 w-full max-w-xl shrink-0 px-2 text-center">
           <div
@@ -197,9 +197,52 @@ export default function BrandsHero({ brands }: { brands: StorefrontBrand[] }) {
           </div>
         </div>
 
+        {/* Phone + small tablet: static grid (the GSAP ring needs ≥768px to lay
+            out without overlap). The ring below renders on tablet+ only. */}
+        <div className="tablet:hidden relative z-[1] mt-6 grid w-full grid-cols-3 gap-3 phone:grid-cols-4 phone:gap-4">
+          {tiles.map((brand) => {
+            const isRamoTile = brand.handle === "ramo"
+            const showLogo =
+              !isRamoTile && Boolean(brand.logoSrc) && !logoLoadFailed[brand.id]
+            const storeHref = `/brands/${brand.handle}`
+            return (
+              <LocalizedClientLink
+                key={`grid-${brand.id}`}
+                href={storeHref}
+                className="group relative flex aspect-square items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-black/5 transition active:scale-95 focus-visible:ring-2 focus-visible:ring-[var(--brand-secondary)]"
+                aria-label={`View all ${brand.name} products`}
+              >
+                {isRamoTile ? (
+                  <RamoLogoInline className="h-full w-full max-h-full max-w-full object-contain" />
+                ) : showLogo && brand.logoSrc ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={brand.logoSrc}
+                    alt=""
+                    className="h-full w-full max-h-full max-w-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                    onError={() =>
+                      setLogoLoadFailed((prev) => ({ ...prev, [brand.id]: true }))
+                    }
+                  />
+                ) : (
+                  <span
+                    className={`flex h-full w-full items-center justify-center rounded-xl text-[0.7rem] font-bold uppercase tracking-tight text-white ${brand.bgClass}`}
+                  >
+                    <span className="select-none" aria-hidden>
+                      {brand.initials}
+                    </span>
+                  </span>
+                )}
+              </LocalizedClientLink>
+            )
+          })}
+        </div>
+
         <div
           ref={ringRef}
-          className="relative z-[1] mt-6 flex min-h-[21rem] w-full min-w-0 max-w-[min(99vw,76rem)] flex-1 items-center justify-center small:mt-8 small:min-h-[26rem]"
+          className="hidden tablet:flex relative z-[1] mt-6 min-h-[21rem] w-full min-w-0 max-w-[min(99vw,76rem)] flex-1 items-center justify-center small:mt-8 small:min-h-[26rem]"
         >
           {tiles.map((brand, i) => {
             const isRamoTile = brand.handle === "ramo"

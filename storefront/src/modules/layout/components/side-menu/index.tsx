@@ -96,9 +96,24 @@ const SideMenu = ({
                 <Popover.Button
                   data-testid="nav-menu-button"
                   data-no-squish
-                  className="relative h-full flex items-center text-base font-medium text-[var(--brand-secondary)] transition-all ease-out duration-200 focus:outline-none hover:text-[var(--brand-accent)]"
+                  aria-label="Open navigation menu"
+                  className="relative h-full flex min-h-11 min-w-11 items-center gap-2 text-base font-medium text-[var(--brand-secondary)] transition-all ease-out duration-200 focus:outline-none hover:text-[var(--brand-accent)]"
                 >
-                  Menu
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    aria-hidden
+                  >
+                    <line x1="4" y1="7" x2="20" y2="7" />
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="17" x2="20" y2="17" />
+                  </svg>
+                  <span className="hidden phone:inline">Menu</span>
                 </Popover.Button>
               </div>
 
@@ -107,14 +122,20 @@ const SideMenu = ({
                 data-testid="nav-menu-popup"
                 className="fixed inset-x-0 top-20 z-40 flex max-h-[calc(100vh-5rem)] flex-col overflow-hidden border-t-2 border-white/20 bg-[rgba(12,17,23,0.82)] text-sm text-[#F8FAFC] shadow-lg outline-none backdrop-blur-2xl"
               >
-                <div className="content-container flex min-h-0 flex-1 flex-col py-6">
+                <div
+                  className="content-container flex min-h-0 flex-1 flex-col py-6"
+                  style={{
+                    paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
+                  }}
+                >
                   <div className="flex shrink-0 justify-end pb-4">
                     <button
                       data-testid="close-menu-button"
                       data-no-squish
                       type="button"
                       onClick={close}
-                      className="rounded-full p-1 text-[rgba(248,250,252,0.95)] transition-colors hover:text-[var(--brand-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-secondary)]"
+                      aria-label="Close navigation menu"
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-2.5 text-[rgba(248,250,252,0.95)] transition-colors hover:text-[var(--brand-secondary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-secondary)]"
                     >
                       <XMark className="size-6" aria-hidden />
                     </button>

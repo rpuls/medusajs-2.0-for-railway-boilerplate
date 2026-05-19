@@ -19,6 +19,7 @@ import CanvasStage from "@modules/customizer/components/canvas-stage"
 import DesignPreviewPopover from "@modules/customizer/components/design-preview-popover"
 import InputPanel from "@modules/customizer/components/input-panel"
 import ManagementPanel from "@modules/customizer/components/management-panel"
+import MobileCustomizerToolbar from "@modules/customizer/components/mobile-customizer-toolbar"
 import PricingPanel from "@modules/customizer/components/pricing-panel"
 import SideSelector from "@modules/customizer/components/side-selector"
 import { getStoreProductTagValues } from "@lib/util/product-tags"
@@ -1833,9 +1834,28 @@ export default function CustomizerTemplate({
       return
     }
 
+    // Mobile-friendly control defaults: larger touch handles + pointer events
+    // so iOS Safari fires identical pointermove for touch + mouse. Set once on
+    // the prototype so every object created later inherits these without us
+    // having to thread the props through every addCanvasObject call site.
+    const FabricObject = (fabric as any).Object ?? (fabric as any).FabricObject
+    if (FabricObject?.prototype) {
+      FabricObject.prototype.cornerSize = 16
+      FabricObject.prototype.touchCornerSize = 32
+      FabricObject.prototype.cornerStyle = "circle"
+      FabricObject.prototype.transparentCorners = false
+      FabricObject.prototype.cornerColor = "#ffffff"
+      FabricObject.prototype.cornerStrokeColor = "rgba(15, 23, 42, 0.85)"
+      FabricObject.prototype.borderColor = "rgba(15, 23, 42, 0.55)"
+      FabricObject.prototype.padding = 4
+    }
+
     const canvas = new (fabric as any).Canvas(htmlCanvas, {
       preserveObjectStacking: true,
       selection: true,
+      enablePointerEvents: true,
+      targetFindTolerance: 8,
+      perPixelTargetFind: false,
     })
     fabricCanvasRef.current = canvas
 
@@ -3392,7 +3412,10 @@ export default function CustomizerTemplate({
               </div>
 
               <div className="flex flex-col lg:flex-row lg:items-stretch">
-                <div className="order-2 border-t border-ui-border-base bg-ui-bg-subtle/30 p-4 lg:order-1 lg:w-[min(100%,280px)] lg:shrink-0 lg:border-r lg:border-t-0 lg:border-ui-border-base">
+                <div
+                  id="customizer-input-panel"
+                  className="order-2 border-t border-ui-border-base bg-ui-bg-subtle/30 p-4 scroll-mt-20 lg:order-1 lg:w-[min(100%,280px)] lg:shrink-0 lg:border-r lg:border-t-0 lg:border-ui-border-base"
+                >
                   <InputPanel
                     onUploadFile={handleUploadFile}
                     uploads={sessionUploads.map((entry) => ({
@@ -3509,7 +3532,10 @@ export default function CustomizerTemplate({
 
             {isAdminProofMode ? null : (
             <>
-            <div className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
+            <div
+              id="customizer-side-selector"
+              className="space-y-3 rounded-xl border border-ui-border-base bg-ui-bg-base p-4 scroll-mt-20"
+            >
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-ui-fg-base">
                   {embedded ? `${embedPdpPrintStepNumber}. Print location` : "Print locations"}
@@ -3595,6 +3621,7 @@ export default function CustomizerTemplate({
               </p>
             </div>
 
+            <div id="customizer-pricing-panel" className="scroll-mt-20">
             <PricingPanel
               currencyCode={currencyCode}
               pricing={pricing}
@@ -3621,6 +3648,7 @@ export default function CustomizerTemplate({
               stockBySize={stockBySize}
               tier={tier}
             />
+            </div>
 
             <details className="group rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
               <summary className="cursor-pointer list-none text-sm font-semibold uppercase tracking-wide text-ui-fg-base marker:hidden [&::-webkit-details-marker]:hidden">
@@ -4608,9 +4636,15 @@ export default function CustomizerTemplate({
           </h2>
           {main}
         </div>
+        <MobileCustomizerToolbar />
       </section>
     )
   }
 
-  return <div className="content-container py-8 small:py-12">{main}</div>
+  return (
+    <div className="content-container py-8 small:py-12">
+      {main}
+      <MobileCustomizerToolbar />
+    </div>
+  )
 }

@@ -202,16 +202,16 @@ export default async function Home({
         />
 
         {/* 1. Hero */}
-        <section className="relative h-screen min-h-[600px] w-full overflow-hidden">
+        <section className="relative h-[100dvh] min-h-[600px] w-full overflow-hidden">
           <SpaceHero style={{ position: "absolute", inset: 0, height: "100%" }} />
           <HeroOverlay />
         </section>
 
         {/* 2. Trust strip — immediately under hero */}
         <section className="border-y border-ui-border-base bg-ui-bg-base">
-          <ul className="content-container flex list-none flex-wrap items-center justify-center gap-x-8 gap-y-2 px-0 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-ui-fg-subtle small:text-sm">
+          <ul className="content-container flex list-none flex-wrap items-center justify-center gap-x-4 gap-y-2 py-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-ui-fg-subtle phone:gap-x-6 phone:text-xs tablet:gap-x-8 small:text-sm">
             {TRUST_ITEMS.map((item) => (
-              <li key={item} className="flex items-center gap-2">
+              <li key={item} className="flex items-center gap-1.5 phone:gap-2">
                 <svg
                   width="14"
                   height="14"
@@ -221,7 +221,7 @@ export default async function Home({
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="text-[var(--brand-accent)]"
+                  className="shrink-0 text-[var(--brand-accent)]"
                   aria-hidden
                 >
                   <polyline points="3 8 7 12 13 4" />
@@ -308,7 +308,7 @@ export default async function Home({
             align="center"
           />
 
-          <ul className="mt-8 grid list-none grid-cols-2 gap-4 p-0 small:grid-cols-4">
+          <ul className="mt-8 grid list-none grid-cols-2 gap-3 p-0 phone:gap-4 tablet:grid-cols-4 small:grid-cols-4">
             {WHY_STATS.map((stat) => {
               const { Icon } = stat
               return (

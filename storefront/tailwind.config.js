@@ -48,7 +48,9 @@ module.exports = {
       },
       screens: {
         "2xsmall": "320px",
+        phone: "480px",
         xsmall: "512px",
+        tablet: "768px",
         small: "1024px",
         medium: "1280px",
         large: "1440px",

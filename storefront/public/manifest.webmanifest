@@ -1,0 +1,26 @@
+{
+  "name": "SC Prints",
+  "short_name": "SC Prints",
+  "description": "Custom apparel, screen printing, embroidery & transfers — built in NSW.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#0c1117",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "/branding/sc-prints-logo-transparent.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/branding/scp-vector.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

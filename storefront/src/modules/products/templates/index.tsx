@@ -8,6 +8,7 @@ import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
+import SkeletonProductionEtaStrip from "@modules/skeletons/components/skeleton-production-eta-strip"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import EmbeddedProductCustomizer from "@modules/customizer/components/embedded-product-customizer"
 import { getCustomerTier } from "@lib/data/customer-tier"
@@ -112,7 +113,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = async ({
                 asideSlot={
                   <>
                     <ProductInfo product={product} />
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<SkeletonProductionEtaStrip />}>
                       <ProductionEtaStrip />
                     </Suspense>
                     {(() => {

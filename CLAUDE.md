@@ -1371,6 +1371,46 @@ The original `init-backend` script (from `medusajs-launch-utils`) only seeds + m
 
 When a PDP variant or other view is a client component (`"use client"`) but needs server-fetched data, **render the server piece in the parent and pass it as a slot prop** — never `import` server-only modules into the client component. Reference implementation: [storefront/src/modules/customizer/components/embedded-product-customizer.tsx](storefront/src/modules/customizer/components/embedded-product-customizer.tsx) accepts an optional `integratedPdpSlots: { gallery: ReactNode; variantPickers: ReactNode }` prop; the parent server component composes those nodes from server-side data and hands them in. This avoids the "you're importing a Server Component into a Client Component" build failure that bites at deploy time, not in dev. New PDP templates (e.g. embroidery-only, sticker-only) should follow the same pattern.
 
+## Mobile / responsive conventions
+
+The storefront's Tailwind breakpoint names are **inverted from Tailwind defaults** — `small: 1024px` is iPad-landscape / small-desktop, NOT phone. Reading "small" and assuming "phone" silently ships a desktop layout to every device below 1024px. Before adding responsive classes, check [storefront/tailwind.config.js](storefront/tailwind.config.js) `screens` to confirm what you actually mean.
+
+### Breakpoint cheat sheet
+
+| Key | px | What it covers | Tailwind default equivalent |
+| --- | --- | --- | --- |
+| `2xsmall` | 320 | Galaxy Fold, iPhone SE 1st gen | — |
+| `phone` | 480 | Phone landscape / large phone portrait | — |
+| `xsmall` | 512 | (legacy) | — |
+| `tablet` | 768 | iPad portrait, foldables opened | Tailwind `md:` |
+| `small` | 1024 | iPad landscape, small desktop | Tailwind `lg:` |
+| `medium` | 1280 | Desktop | Tailwind `xl:` |
+| `large` | 1440 | Large desktop | — |
+| `xlarge` / `2xlarge` | 1680 / 1920 | Very large screens | Tailwind `2xl:` |
+
+**Practical rule**: the phone vs. tablet boundary is `tablet:` (768px). The tablet vs. desktop boundary is `small:` (1024px). Most mobile-cleanup work lives between those two.
+
+### Picking the right tool
+
+- **Visual-only branches** (different padding, columns, font sizes for phone vs. desktop): write Tailwind classes directly, e.g. `grid-cols-1 phone:grid-cols-2 tablet:grid-cols-3 small:grid-cols-4`. SSR-safe, zero JS.
+- **Conditional rendering of the same content**: use `<MobileOnly>` / `<DesktopOnly>` from [storefront/src/modules/layout/components/responsive/](storefront/src/modules/layout/components/responsive/index.tsx). Renders both branches in the DOM and hides one via CSS — no hydration flash.
+- **Different component trees per breakpoint** (e.g. `<Drawer>` on phone vs. `<Popover>` on desktop): use `useIsPhone()` / `useIsTablet()` / `useIsDesktop()` from [storefront/src/lib/hooks/use-breakpoint.tsx](storefront/src/lib/hooks/use-breakpoint.tsx). Accept the first-render flash (hook returns `false` on SSR) by defaulting to the desktop branch — phone users get a brief desktop render that flips to the mobile component on hydration.
+- **Custom media query**: `useMediaQuery("(prefers-reduced-motion: reduce)")` from [storefront/src/lib/hooks/use-media-query.tsx](storefront/src/lib/hooks/use-media-query.tsx). Same SSR-safety tradeoff.
+
+### Touch-target rule
+
+All interactive elements (buttons, links, icon buttons, accordion triggers) need a minimum `44 × 44` px hit area on phone — iOS guideline, also the de-facto Android standard. Apply via `min-h-11 min-w-11` (or `min-h-12 min-w-12` if there's room). Don't rely on padding alone — `cursor-pointer` on a `<div>` is almost always a bug; use `<button>` or `<a>` with explicit min size.
+
+### Safe-area-inset
+
+Sticky bottom bars (cart CTA, customizer toolbar, mobile nav) must respect the iOS home-indicator using `padding-bottom: calc(<base> + env(safe-area-inset-bottom))`. Reference: [storefront/src/modules/products/components/mobile-customize-cta.tsx](storefront/src/modules/products/components/mobile-customize-cta.tsx) — the inline style on the wrapper is the canonical pattern.
+
+### Don't reach for these
+
+- `useEffect` + `window.innerWidth` polling — `useMediaQuery` handles this correctly.
+- Server-side device detection (UA sniffing) — modern responsive CSS handles every device we care about.
+- Separate `/m/` mobile routes — would fragment SEO and double the maintenance surface.
+
 ## Customizer wizard architecture
 
 The customizer lives in one large file: [storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx) (~3700 lines). Understanding the two rendering modes and the wizard state machine is essential before editing it.

@@ -64,7 +64,7 @@ const WishlistGrid = ({ items }: Props) => {
           {error}
         </div>
       ) : null}
-      <ul className="grid grid-cols-1 small:grid-cols-2 large:grid-cols-3 gap-4">
+      <ul className="grid grid-cols-2 tablet:grid-cols-2 small:grid-cols-2 large:grid-cols-3 gap-3 phone:gap-4">
         {items.map((item) => (
           <li
             key={item.id}

@@ -99,32 +99,35 @@ const SERVICES: Service[] = [
 ]
 
 const COLS_LARGE = 3
-const COLS_SMALL = 2
+const COLS_TABLET = 3
+const COLS_PHONE = 2
 
 export default function HomeCoreServicesLordicons() {
   return (
-    <div className="mt-8 grid grid-cols-1 small:grid-cols-2 large:grid-cols-3 border border-ui-border-base rounded-lg overflow-hidden bg-white">
+    <div className="mt-8 grid grid-cols-1 phone:grid-cols-2 tablet:grid-cols-3 large:grid-cols-3 border border-ui-border-base rounded-lg overflow-hidden bg-white">
       {SERVICES.map((service, index) => {
         const { Icon } = service
         const isLastRowLarge =
           index >= SERVICES.length - (SERVICES.length % COLS_LARGE || COLS_LARGE)
         const isLastColLarge = (index + 1) % COLS_LARGE === 0
-        const isLastRowSmall =
-          index >= SERVICES.length - (SERVICES.length % COLS_SMALL || COLS_SMALL)
-        const isLastColSmall = (index + 1) % COLS_SMALL === 0
+        const isLastRowTablet =
+          index >= SERVICES.length - (SERVICES.length % COLS_TABLET || COLS_TABLET)
+        const isLastColTablet = (index + 1) % COLS_TABLET === 0
+        const isLastRowPhone =
+          index >= SERVICES.length - (SERVICES.length % COLS_PHONE || COLS_PHONE)
+        const isLastColPhone = (index + 1) % COLS_PHONE === 0
 
         return (
           <article
             key={service.id}
             className={[
-              "group relative p-6 transition-colors hover:bg-ui-bg-subtle",
+              "group relative p-5 phone:p-6 transition-colors hover:bg-ui-bg-subtle",
               "border-ui-border-base",
-              // Mobile: 1 col, border-b except last
-              index < SERVICES.length - 1 ? "border-b small:border-b-0" : "",
-              // Tablet (small): 2 cols
-              !isLastColSmall ? "small:border-r large:border-r-0" : "",
-              !isLastRowSmall ? "small:border-b large:border-b-0" : "",
-              // Desktop (large): 3 cols
+              index < SERVICES.length - 1 ? "border-b phone:border-b-0" : "",
+              !isLastColPhone ? "phone:border-r tablet:border-r-0" : "",
+              !isLastRowPhone ? "phone:border-b tablet:border-b-0" : "",
+              !isLastColTablet ? "tablet:border-r large:border-r-0" : "",
+              !isLastRowTablet ? "tablet:border-b large:border-b-0" : "",
               !isLastColLarge ? "large:border-r" : "",
               !isLastRowLarge ? "large:border-b" : "",
             ]
