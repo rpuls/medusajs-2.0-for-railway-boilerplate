@@ -137,6 +137,47 @@ Admin view: there's no `/app/group-orders` page — these belong to the customer
 
 ---
 
+## Point of sale (walk-in transactions)
+
+Path: `/app/pos`
+
+Use this when a customer walks into the studio and wants to buy something on the spot — pre-made products, a custom print they want designed there and then, or a mix. The till lives entirely in the admin so anyone signed in can use it.
+
+### Layout
+Three panels side-by-side:
+
+- **Left — Products.** Type to search by name, SKU, or handle. Click a single-variant product to add it directly; multi-variant products expand so you can pick the size/colour. Above the list, **+ Add custom design** opens the storefront customizer in a popup keyed to the current sale.
+- **Middle — Cart.** Every line you've added. Adjust quantities with the +/− buttons, remove with the trash icon. Standard products auto-merge if you add the same variant twice; custom designs always stay separate. Running total at the bottom.
+- **Right — Checkout.** Pick the customer (search or "+ New customer" for a guest). Confirm region (defaults to AUD) and sales channel. Two pay buttons: **Pay cash** (marks the order paid immediately) or **Card (QR link)** (mints a Stripe Payment Link, shows a QR code).
+
+### Custom-design flow
+1. Click **+ Add custom design** in the products panel. A popup window opens with the storefront customizer.
+2. Design the artwork normally — colours, text, upload images, pick the print size.
+3. Click **Add to cart**. The customizer detects POS mode (via the `?pos_session=` URL it was opened with), saves the design back to the till, and closes itself.
+4. Within ~2 seconds the line appears in the middle panel tagged **Custom**.
+
+If a popup is blocked, the browser shows it in the address bar — allow popups for the admin domain and try again.
+
+### Payment
+
+**Cash** — clicks `Pay cash`, system creates a real Medusa order and marks it paid. Done. Take the cash, hand them a receipt (the modal shows the order number).
+
+**Card (QR link)** — clicks `Card (QR link)`, system creates the order, mints a Stripe Payment Link, shows the customer a QR code on screen. They scan with their phone, pay in their banking app / Apple Pay / Google Pay, and the modal flips to "Payment received" automatically when Stripe's webhook fires. You can also tap "Copy link" and SMS it if a QR is awkward.
+
+### After payment
+
+- The receipt modal shows the order number, total, and items.
+- "Open order" jumps to the standard order page where everything works as normal — the customizer line shows up in print details, mockup PDFs render, the order flows through the production stage tracker.
+- "New transaction" wipes the till state and starts a fresh session, ready for the next walk-in.
+
+### Things to know
+- A POS session lasts 4 hours. If a customer steps out and comes back later, the cart is still there on the same browser tab.
+- POS orders are real orders. They appear in /app/orders, count toward the customer's LTV, fire the production-stage emails (`Received` → `Art review` → …) just like online orders.
+- Cash payments are tagged `pos_cash` so the payment-mix report buckets revenue under "Cash" instead of "Stripe".
+- Custom design metadata is preserved on the order line — the mockup PDF generator, customizer downloads widget, and print-details widget all work without any POS-specific handling.
+
+---
+
 ## Production tooling
 
 ### Print queue (suggested run order)
@@ -255,6 +296,8 @@ Each cron has its own `*_ENABLED` env var (see `backend/src/lib/constants.ts`). 
 
 | I want to… | Go to |
 | --- | --- |
+| Ring up a walk-in customer | `/app/pos` |
+| Take a card payment in-person (QR link) | `/app/pos` → Card (QR link) |
 | See what needs my attention today | `/app/studio` |
 | Plan today's production runs (minimise setup changes) | `/app/print-queue` |
 | Regenerate a product's description with AI | Product detail → AI description widget |

@@ -250,6 +250,40 @@ const SECTIONS: Section[] = [
     ),
   },
   {
+    id: "pos",
+    title: "Point of sale — walk-in transactions",
+    body: (
+      <>
+        <Text>
+          <a href="/app/pos" className="underline">/app/pos</a> — the till. Open this when a customer walks into the studio and wants to buy something on the spot. Three panels side-by-side: products on the left, cart in the middle, checkout (customer + payment) on the right.
+        </Text>
+
+        <Text className="mt-3 font-semibold">Adding items</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Standard products</strong> — search by name, SKU, or handle in the left panel. Single-variant products add directly; multi-variant products expand so you can pick size/colour.</li>
+          <li><strong>Custom designs</strong> — click <strong>+ Add custom design</strong> above the search. A popup opens with the full storefront customizer keyed to the current sale. Design the artwork, click <strong>Add to cart</strong>, the popup closes and the line appears in the till within ~2 seconds tagged <strong>Custom</strong>.</li>
+          <li>Same standard variant added twice auto-merges (quantity bump). Custom lines always stay separate.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Payment</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Pay cash</strong> — creates the order and marks it paid immediately. Receipt modal pops with the order number. Take the cash, you&apos;re done.</li>
+          <li><strong>Card (QR link)</strong> — creates the order and mints a Stripe Payment Link. The receipt modal shows a QR code; the customer scans with their phone (Apple Pay / Google Pay / banking app) and the modal auto-flips to &quot;Payment received&quot; the moment Stripe&apos;s webhook fires. <strong>Copy link</strong> lets you SMS the link if a QR is awkward.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">After payment</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Open order</strong> — jumps to the standard order detail page. Everything works as normal: production stages advance, mockup PDFs render, customizer downloads work, customer-facing emails fire on stage changes.</li>
+          <li><strong>New transaction</strong> — wipes the till state and starts a fresh session for the next walk-in.</li>
+        </ul>
+
+        <Text size="xsmall" className="text-ui-fg-muted mt-3">
+          POS sessions last 4 hours, so a customer can step out and come back later without losing their cart. POS orders count toward LTV like any other order. Cash payments are tagged <code>pos_cash</code> in the payment-mix report so revenue buckets under &quot;Cash&quot; instead of Stripe. If the popup customizer is blocked, allow popups for the admin domain.
+        </Text>
+      </>
+    ),
+  },
+  {
     id: "production",
     title: "Production tooling",
     body: (
@@ -543,6 +577,8 @@ const SECTIONS: Section[] = [
     title: "Common tasks → where to go",
     body: (
       <div className="grid grid-cols-1 small:grid-cols-2 gap-2 text-sm">
+        <div><strong>Ring up a walk-in customer</strong> <a href="/app/pos" className="underline">/app/pos</a></div>
+        <div><strong>Take a card payment in-person (QR link)</strong> <a href="/app/pos" className="underline">/app/pos</a> → Card (QR link)</div>
         <div><strong>What needs my attention today?</strong> <a href="/app/studio" className="underline">/app/studio</a></div>
         <div><strong>What&apos;s on my plate?</strong> <a href="/app/tasks" className="underline">/app/tasks</a></div>
         <div><strong>Mark a customer tax-exempt</strong> Customer detail → Tax status</div>
