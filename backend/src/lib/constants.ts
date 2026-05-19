@@ -565,6 +565,18 @@ export const MARKETING_PREFERENCE_CENTER_URL =
   process.env.MARKETING_PREFERENCE_CENTER_URL
 
 /**
+ * CRM Phase 10 — automation rules expansion.
+ *
+ *  - `AUTOMATION_EXPANDED_TRIGGERS_ENABLED`: gates the new triggers
+ *    (`customer.created`, `order.delivered`) and the new actions
+ *    (`create_task`, `assign_owner`). Off by default so existing
+ *    rules using `order.placed` and `order.production_stage_changed`
+ *    keep working unchanged until staff explicitly opt in.
+ */
+export const AUTOMATION_EXPANDED_TRIGGERS_ENABLED =
+  String(process.env.AUTOMATION_EXPANDED_TRIGGERS_ENABLED).toLowerCase() === "true"
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

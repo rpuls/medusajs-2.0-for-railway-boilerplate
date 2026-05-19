@@ -14,6 +14,8 @@ import {
 } from "../../lib/production-stage"
 import { writeAudit } from "../../lib/audit-log"
 import { AUDIT_ACTION, AUDIT_ENTITY } from "../../lib/audit-entities"
+import { TASK_MODULE } from "../../modules/task"
+import { getOwner, setOwner } from "../../lib/crm-owners"
 
 /**
  * Pure rule evaluator. Given an event payload + a list of rules with
@@ -34,6 +36,25 @@ type Action =
   | { kind: "post_order_comment"; params: { body: string } }
   | { kind: "send_alert_email"; params: { to: string; subject: string; body?: string } }
   | { kind: "set_production_stage"; params: { stage: string; note?: string } }
+  // Phase 10 — gated by AUTOMATION_EXPANDED_TRIGGERS_ENABLED in callers
+  | {
+      kind: "create_task"
+      params: {
+        assignee_user_id: string // "owner" sentinel resolves to entity's owner
+        title: string
+        body?: string
+        due_offset_days?: number
+        priority?: "low" | "normal" | "high" | "urgent"
+      }
+    }
+  | {
+      kind: "assign_owner"
+      params: {
+        entity: "customer" | "order"
+        user_id: string
+        reason?: string
+      }
+    }
 
 type Rule = {
   id: string
@@ -171,6 +192,83 @@ const dispatchAction = async (
           },
           adminUrl: null,
         },
+      })
+      return { ok: true }
+    }
+    if (action.kind === "create_task") {
+      const taskService = container.resolve(TASK_MODULE) as any
+      // "owner" sentinel resolves to the entity's current owner at fire time
+      // (customer's owner > order's owner). If neither has an owner, skip.
+      let assignee: string | null = null
+      if (action.params.assignee_user_id === "owner") {
+        const customerId =
+          typeof event.customer_id === "string" ? event.customer_id : null
+        const orderId =
+          typeof event.order_id === "string" ? event.order_id : null
+        if (customerId) {
+          const o = await getOwner({
+            container,
+            entity: AUDIT_ENTITY.CUSTOMER,
+            entity_id: customerId,
+          })
+          assignee = o?.user_id ?? null
+        }
+        if (!assignee && orderId) {
+          const o = await getOwner({
+            container,
+            entity: AUDIT_ENTITY.ORDER,
+            entity_id: orderId,
+          })
+          assignee = o?.user_id ?? null
+        }
+        if (!assignee) {
+          return { ok: false, detail: "owner sentinel unresolved — no owner set" }
+        }
+      } else {
+        assignee = action.params.assignee_user_id
+      }
+      const dueOffsetDays =
+        typeof action.params.due_offset_days === "number"
+          ? action.params.due_offset_days
+          : null
+      const dueAt =
+        dueOffsetDays !== null
+          ? new Date(Date.now() + dueOffsetDays * 86400000)
+          : null
+      await taskService.createTasks({
+        assignee_user_id: assignee,
+        customer_id:
+          typeof event.customer_id === "string" ? event.customer_id : null,
+        order_id:
+          typeof event.order_id === "string" ? event.order_id : null,
+        title: action.params.title,
+        body: action.params.body ?? null,
+        due_at: dueAt,
+        status: "open",
+        priority: action.params.priority ?? "normal",
+        created_by: "automation",
+      })
+      return { ok: true }
+    }
+    if (action.kind === "assign_owner") {
+      const entity = action.params.entity
+      const entityId =
+        entity === "customer"
+          ? typeof event.customer_id === "string"
+            ? event.customer_id
+            : null
+          : typeof event.order_id === "string"
+            ? event.order_id
+            : null
+      if (!entityId) return { ok: false, detail: `no ${entity}_id in event` }
+      await setOwner({
+        container,
+        entity:
+          entity === "customer" ? AUDIT_ENTITY.CUSTOMER : AUDIT_ENTITY.ORDER,
+        entity_id: entityId,
+        user_id: action.params.user_id,
+        actor: "automation",
+        reason: action.params.reason ?? "automation_rule",
       })
       return { ok: true }
     }

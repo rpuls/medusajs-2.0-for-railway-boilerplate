@@ -608,6 +608,7 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `TASKS_OVERDUE_CRON_ENABLED` | Daily 09:00 UTC cron that walks active tasks with `due_at` in the past, stamps `last_overdue_notified_at`, writes audit rows on every anchored entity, and emits `task_overdue_notified` PostHog events. Email/Slack delivery is deferred to a follow-up. Off by default so dev/staging doesn't spam during testing. See [backend/src/jobs/notify-overdue-tasks.ts](backend/src/jobs/notify-overdue-tasks.ts). | `false` |
 | `UNSUBSCRIBE_LINK_SECRET` | HMAC key used to sign the one-click unsubscribe URL embedded in marketing emails. Same shape as `NPS_LINK_SECRET`: must be set in prod (so links can't be forged), dev placeholder used otherwise so links verify locally. | `unsubscribe-dev-secret-do-not-use-in-prod` |
 | `MARKETING_PREFERENCE_CENTER_URL` | Where one-click unsubscribe redirects after writing the suppression row. Storefront page that confirms the action / lets the customer toggle per-stream prefs. Falls back to `/` if unset. | unset (recommend `${STOREFRONT_URL}/email-preferences`) |
+| `AUTOMATION_EXPANDED_TRIGGERS_ENABLED` | Gates the Phase 10 trigger expansion (`customer.created`, `order.delivered`) and the new actions (`create_task`, `assign_owner`). Off by default so existing rules using only `order.placed` + `order.production_stage_changed` keep working unchanged until staff opt in. | `false` |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -1237,6 +1238,31 @@ The `customer-journey` widget now also surfaces `audit_log` rows where `entity =
 **Friendly titles**: each `AUDIT_ACTION` constant from `lib/audit-entities.ts` gets a short human label (e.g. `tag_added` → "Tag added", `email_suppressed` → "Unsubscribed"). Unknown actions fall back to the raw verb with underscores converted to spaces, so adding a new `AUDIT_ACTION` in `lib/audit-entities.ts` immediately surfaces on the timeline without a follow-up commit to `AUDIT_ACTION_LABEL`.
 
 **Resend webhook for email opens/clicks** + **organisation activity tab** are deferred to a Phase 9 follow-up. The customer-side audit feed is the load-bearing improvement; per-org timelines + email-engagement signals are nice-to-have add-ons.
+
+### Automation rules expansion (Phase 10)
+The automation-rules framework gets 2 new triggers and 2 new actions, gated by `AUTOMATION_EXPANDED_TRIGGERS_ENABLED=true` so existing rules stay unchanged until staff opt in.
+
+**New triggers**:
+- `customer.created` — fires when a new customer is created (signup or admin-created). Conditions: `email`, `has_account`.
+- `order.delivered` — fires on `order.production_stage_changed` with `to_stage = "delivered"`. Conditions: `total`, `currency_code`, `from_stage`, `lifetime_value`, `order_count`.
+
+**New actions**:
+- `create_task` — creates a Phase 7 task. `assignee_user_id` can be a Medusa user ID or the literal `"owner"` sentinel (resolves to the entity's customer owner → order owner at fire time). Optional `due_offset_days`, `priority`, `body`.
+- `assign_owner` — calls Phase 6 `setOwner()`. Targets `entity: customer` or `entity: order`.
+
+| Component | Path |
+| --- | --- |
+| New triggers (subscribers) | [backend/src/subscribers/automation-on-customer-created.ts](backend/src/subscribers/automation-on-customer-created.ts), [backend/src/subscribers/automation-on-order-delivered.ts](backend/src/subscribers/automation-on-order-delivered.ts) |
+| Action `create_task` + `assign_owner` | [backend/src/services/automation-rules/evaluate.ts](backend/src/services/automation-rules/evaluate.ts) |
+| Admin UI (new TRIGGER_LABELS / TRIGGER_FIELDS / ACTION_LABELS entries) | [backend/src/admin/routes/automation-rules/page.tsx](backend/src/admin/routes/automation-rules/page.tsx) |
+
+**Useful rule recipes**:
+- `customer.created` → `assign_owner` (entity=customer, user_id=…) — manual override of the rotation pick for VIP signups.
+- `order.placed` + `lifetime_value gte 5000` → `create_task` (assignee="owner", title="VIP — call to thank", due_offset_days=1) — outbound follow-up on big orders.
+- `order.delivered` → `create_task` (assignee="owner", title="Send NPS request", due_offset_days=3) — handle review chase manually rather than via the lifecycle cron.
+- `customer.created` → `tag_customer` (label="new_customer", color="teal") — flag new accounts for the segmentation reports.
+
+**Remaining triggers + actions from the original plan** — `quote.created/accepted/lost`, `order.refunded`, `order.shipment_created`, `organisation.member_added` triggers + `send_customer_email` / `add_to_customer_group` / `add_organisation_member` actions — are deferred to a Phase 10 follow-up. The above 2+2 covers the highest-value rule patterns; the rest layer in cleanly once these are battle-tested.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 
