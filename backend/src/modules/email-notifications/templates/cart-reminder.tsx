@@ -23,6 +23,8 @@ export interface CartReminderEmailProps {
     resumeUrl?: string | null
   }
   preview?: string
+  /** Pre-signed one-click unsubscribe URL (built by the sender). */
+  unsubscribeUrl?: string
 }
 
 export const isCartReminderData = (data: any): data is CartReminderEmailProps =>
@@ -48,6 +50,7 @@ const formatTotal = (
 export const CartReminderEmail = ({
   reminder,
   preview = "Your cart is saved and ready when you are.",
+  unsubscribeUrl,
 }: CartReminderEmailProps) => {
   const total = formatTotal(reminder.cartTotal, reminder.currencyCode)
   const itemList = (reminder.items ?? []).filter(
@@ -55,7 +58,7 @@ export const CartReminderEmail = ({
   )
 
   return (
-    <Base preview={preview}>
+    <Base preview={preview} unsubscribeUrl={unsubscribeUrl}>
       <Text style={STYLES.eyebrow}>Saved for you</Text>
       <Text style={STYLES.h1}>Your cart is ready when you are</Text>
       <Text style={STYLES.body}>

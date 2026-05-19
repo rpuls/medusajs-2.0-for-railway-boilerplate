@@ -11,6 +11,7 @@ export interface NpsRequestEmailProps {
     ratingUrls: Array<{ score: number; url: string }>
   }
   preview?: string
+  unsubscribeUrl?: string
 }
 
 export const isNpsRequestData = (data: any): data is NpsRequestEmailProps =>
@@ -24,12 +25,12 @@ const SCORE_COLORS: Record<number, string> = {
   5: "#22c55e",
 }
 
-export const NpsRequestEmail = ({ nps, preview }: NpsRequestEmailProps) => {
+export const NpsRequestEmail = ({ nps, preview, unsubscribeUrl }: NpsRequestEmailProps) => {
   const greeting = nps.firstName ? `Hey ${nps.firstName},` : "Hey,"
   const previewText = preview ?? "How did we do?"
 
   return (
-    <Base preview={previewText}>
+    <Base preview={previewText} unsubscribeUrl={unsubscribeUrl}>
       <Text style={STYLES.eyebrow}>How did we do?</Text>
       <Text style={STYLES.h1}>{greeting}</Text>
       <Text style={{ ...STYLES.h2, margin: "16px 0 0" }}>

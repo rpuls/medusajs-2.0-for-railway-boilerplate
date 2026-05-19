@@ -8,14 +8,18 @@ import type {
   MedusaContainer,
 } from "@medusajs/framework/types"
 
-import { SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
+import { BACKEND_URL, SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
 import { tagUrl } from "../../lib/email-utm"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
+import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
 import {
   buildReorderCandidates,
   type ReorderCandidate,
 } from "./build-candidates"
+
+const buildUnsubscribeUrl = (email: string): string =>
+  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, "reorder_reminder")}`
 
 const STOREFRONT_URL = process.env.STOREFRONT_URL?.replace(/\/$/, "")
 const STOREFRONT_DEFAULT_COUNTRY_CODE =
@@ -118,6 +122,7 @@ export async function sendReorderReminders(
       content: "secondary_cta",
     })
 
+    const unsubscribeUrl = buildUnsubscribeUrl(c.email)
     try {
       await notificationModuleService.createNotifications({
         to: c.email,
@@ -127,6 +132,10 @@ export async function sendReorderReminders(
           emailOptions: {
             replyTo: SUPPORT_REPLY_TO_EMAIL,
             subject: `Time to reorder?${c.last_order_display_id ? ` (your last was #${c.last_order_display_id})` : ""}`,
+            headers: {
+              "List-Unsubscribe": `<${unsubscribeUrl}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
           },
           reminder: {
             firstName: c.first_name,
@@ -138,6 +147,7 @@ export async function sendReorderReminders(
             reorderUrl,
             accountOrdersUrl,
           },
+          unsubscribeUrl,
         },
       })
       sent += 1

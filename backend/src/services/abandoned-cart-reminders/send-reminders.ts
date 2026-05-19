@@ -10,14 +10,19 @@ import { Pool } from "pg"
 
 import {
   ABANDONED_CART_MAX_SENDS_PER_RUN,
+  BACKEND_URL,
   DATABASE_URL,
   SUPPORT_REPLY_TO_EMAIL,
 } from "../../lib/constants"
 import { getPostHog } from "../../lib/posthog"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
+import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 import { buildAbandonedCartCandidates } from "./build-candidates"
+
+const buildUnsubscribeUrl = (email: string, kind: string): string =>
+  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, kind)}`
 
 export type SendResult = {
   considered: number
@@ -68,6 +73,7 @@ export async function sendAbandonedCartReminders(
         template_kind: "cart_reminder",
       })
       if (!gate.ok) continue
+      const unsubscribeUrl = buildUnsubscribeUrl(c.email, "cart_reminder")
       try {
         await notificationModuleService.createNotifications({
           to: c.email,
@@ -77,6 +83,10 @@ export async function sendAbandonedCartReminders(
             emailOptions: {
               subject: "Your SC PRINTS cart is saved for you",
               replyTo: SUPPORT_REPLY_TO_EMAIL,
+              headers: {
+                "List-Unsubscribe": `<${unsubscribeUrl}>`,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
             },
             reminder: {
               cartId: c.cart_id,
@@ -91,6 +101,7 @@ export async function sendAbandonedCartReminders(
               })),
             },
             preview: "Your cart is saved and ready when you are.",
+            unsubscribeUrl,
           },
         })
 

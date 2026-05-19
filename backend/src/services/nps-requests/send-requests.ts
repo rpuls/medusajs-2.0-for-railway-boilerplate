@@ -16,7 +16,12 @@ import {
 import { tagUrl } from "../../lib/email-utm"
 import { getPostHog } from "../../lib/posthog"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
+import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
+import { BACKEND_URL } from "../../lib/constants"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
+
+const buildUnsubscribeUrl = (email: string): string =>
+  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, "nps_request")}`
 
 import { buildNpsCandidates } from "./build-candidates"
 import { signNpsRating } from "./sign"
@@ -99,6 +104,7 @@ export async function sendNpsRequests(
       continue
     }
 
+    const unsubscribeUrl = buildUnsubscribeUrl(c.email)
     try {
       const ratingUrls = [1, 2, 3, 4, 5].map((score) => ({
         score,
@@ -113,7 +119,12 @@ export async function sendNpsRequests(
           emailOptions: {
             replyTo: SUPPORT_REPLY_TO_EMAIL,
             subject: `How was your SC Prints order${c.order_display_id ? ` #${c.order_display_id}` : ""}?`,
+            headers: {
+              "List-Unsubscribe": `<${unsubscribeUrl}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
           },
+          unsubscribeUrl,
           nps: {
             firstName: c.first_name,
             orderDisplayId: c.order_display_id,

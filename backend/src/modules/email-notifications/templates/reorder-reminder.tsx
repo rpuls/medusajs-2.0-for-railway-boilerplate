@@ -16,6 +16,7 @@ export interface ReorderReminderEmailProps {
     accountOrdersUrl: string | null
   }
   preview?: string
+  unsubscribeUrl?: string
 }
 
 export const isReorderReminderData = (
@@ -27,6 +28,7 @@ export const isReorderReminderData = (
 export const ReorderReminderEmail = ({
   reminder,
   preview,
+  unsubscribeUrl,
 }: ReorderReminderEmailProps) => {
   const greeting = reminder.firstName ? `Hey ${reminder.firstName},` : "Hey,"
   const previewText =
@@ -34,7 +36,7 @@ export const ReorderReminderEmail = ({
     `It's been about ${Math.round(reminder.daysSinceLast)} days since your last SC Prints order — fancy a reorder?`
 
   return (
-    <Base preview={previewText}>
+    <Base preview={previewText} unsubscribeUrl={unsubscribeUrl}>
       <Text style={STYLES.eyebrow}>Time for another run?</Text>
       <Text style={STYLES.h1}>{greeting}</Text>
       <Text style={STYLES.body}>

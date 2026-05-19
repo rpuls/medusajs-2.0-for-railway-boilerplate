@@ -103,9 +103,17 @@ const STYLES = {
 interface BaseProps {
   preview?: string
   children: React.ReactNode
+  /**
+   * Marketing emails (cart-reminder, reorder-reminder, winback, NPS) pass
+   * a pre-signed one-click unsubscribe URL here. Renders an additional
+   * footer line with the link when present. Transactional emails (order
+   * placed, order shipped, etc.) leave this undefined and the footer
+   * renders as before.
+   */
+  unsubscribeUrl?: string
 }
 
-export const Base: React.FC<BaseProps> = ({ preview, children }) => {
+export const Base: React.FC<BaseProps> = ({ preview, children, unsubscribeUrl }) => {
   return (
     <Html>
       <Head />
@@ -136,6 +144,15 @@ export const Base: React.FC<BaseProps> = ({ preview, children }) => {
                 SC Prints &middot; Reply to this email for help &middot;{' '}
                 <a href="https://sc-prints.com.au" style={{ color: '#9ca3af' }}>sc-prints.com.au</a>
               </Text>
+              {unsubscribeUrl ? (
+                <Text style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af', textAlign: 'center', lineHeight: '16px' }}>
+                  You&apos;re receiving this because you&apos;re a SC Prints customer.{' '}
+                  <a href={unsubscribeUrl} style={{ color: '#9ca3af', textDecoration: 'underline' }}>
+                    Unsubscribe
+                  </a>{' '}
+                  or update your preferences.
+                </Text>
+              ) : null}
             </Section>
           </Container>
         </Body>

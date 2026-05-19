@@ -16,6 +16,7 @@ export interface WinbackEmailProps {
     customizerUrl: string | null
   }
   preview?: string
+  unsubscribeUrl?: string
 }
 
 export const isWinbackData = (data: any): data is WinbackEmailProps =>
@@ -40,7 +41,7 @@ const COPY_BY_SEVERITY: Record<
   },
 }
 
-export const WinbackEmail = ({ winback, preview }: WinbackEmailProps) => {
+export const WinbackEmail = ({ winback, preview, unsubscribeUrl }: WinbackEmailProps) => {
   const greeting = winback.firstName ? `Hey ${winback.firstName},` : "Hey,"
   const copy = COPY_BY_SEVERITY[winback.severity]
   const previewText = preview ?? copy.headline
@@ -48,7 +49,7 @@ export const WinbackEmail = ({ winback, preview }: WinbackEmailProps) => {
   const ctaUrl = winback.customizerUrl ?? winback.storefrontUrl
 
   return (
-    <Base preview={previewText}>
+    <Base preview={previewText} unsubscribeUrl={unsubscribeUrl}>
       <Text style={STYLES.eyebrow}>Welcome back</Text>
       <Text style={STYLES.h1}>{greeting}</Text>
       <Text style={{ ...STYLES.h2, margin: "16px 0 0" }}>{copy.headline}</Text>
