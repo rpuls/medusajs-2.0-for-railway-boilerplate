@@ -600,6 +600,19 @@ export const STALE_ORDER_ESCALATION_DAYS = parseIntEnv(
 export const STALE_ORDER_MANAGER_EMAIL = process.env.STALE_ORDER_MANAGER_EMAIL
 
 /**
+ * CRM Phase 9b — Resend webhook.
+ *
+ * Resend uses Svix for webhook signing. Configure a webhook in the
+ * Resend dashboard pointed at `{backend}/hooks/resend` subscribed to
+ * `email.bounced`, `email.complained`, `email.opened`, `email.clicked`.
+ * The signing secret shown once on creation is the value to put here.
+ *
+ * When unset the webhook route returns 503 — same posture as the
+ * Stripe payment-link webhook.
+ */
+export const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

@@ -64,5 +64,16 @@ export default defineMiddlewares({
         sizeLimit: "1mb",
       },
     },
+    {
+      // Resend webhook for bounce / spam-complaint / open / click events.
+      // Svix signs the raw body — preserved verbatim for the signature
+      // check in lib/resend-webhook.ts.
+      matcher: "/hooks/resend",
+      methods: ["POST"],
+      bodyParser: {
+        preserveRawBody: true,
+        sizeLimit: "256kb",
+      },
+    },
   ],
 })

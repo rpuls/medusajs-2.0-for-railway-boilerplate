@@ -10,6 +10,7 @@ import StatusBanner from "./models/status-banner"
 import CrmOwnerAssignment from "./models/crm-owner-assignment"
 import CrmOwnerRotation from "./models/crm-owner-rotation"
 import EmailSuppression from "./models/email-suppression"
+import ResendEvent from "./models/resend-event"
 
 class AdminWorkspaceService extends MedusaService({
   CustomerTag,
@@ -22,6 +23,7 @@ class AdminWorkspaceService extends MedusaService({
   CrmOwnerAssignment,
   CrmOwnerRotation,
   EmailSuppression,
+  ResendEvent,
 }) {}
 
 export default AdminWorkspaceService
