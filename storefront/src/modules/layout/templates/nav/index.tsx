@@ -272,7 +272,7 @@ export default function Nav() {
             </LocalizedClientLink>
           </div>
 
-          <div className="flex h-full flex-1 basis-0 items-center justify-end gap-x-6 leading-none">
+          <div className="flex h-full flex-1 basis-0 items-center justify-end gap-x-2 leading-none phone:gap-x-3 tablet:gap-x-4 small:gap-x-6">
             <LocalizedClientLink
               className="flex h-full min-h-10 min-w-10 items-center justify-center hover:text-[var(--brand-accent)]"
               href="/search"
@@ -299,12 +299,28 @@ export default function Nav() {
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="flex gap-2 text-base font-medium hover:text-[var(--brand-accent)]"
+                  className="flex h-full min-h-10 min-w-10 items-center justify-center whitespace-nowrap text-base font-medium hover:text-[var(--brand-accent)]"
                   href="/cart"
                   prefetch={false}
                   data-testid="nav-cart-link"
+                  aria-label="View cart"
                 >
-                  Cart (0)
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <circle cx="9" cy="20" r="1.5" />
+                    <circle cx="18" cy="20" r="1.5" />
+                    <path d="M3 4h2l3 12h12l2-8H7" />
+                  </svg>
+                  <span className="hidden tablet:ml-1.5 tablet:inline">Cart (0)</span>
                 </LocalizedClientLink>
               }
             >

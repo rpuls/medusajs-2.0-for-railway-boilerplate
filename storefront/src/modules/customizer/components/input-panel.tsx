@@ -94,7 +94,7 @@ export default function InputPanel({
           </p>
           <p className="mt-1 text-xs text-ui-fg-subtle">
             {disabledMessage?.body ??
-              "Pick your colour and print location on the right to get started."}
+              "Pick your colour and print location above to get started."}
           </p>
         </div>
       ) : null}

@@ -1757,6 +1757,18 @@ export default function CustomizerTemplate({
       }
       canvas.getObjects().forEach((object: any) => {
         getObjectId(object)
+        // Re-apply mobile-friendly control styling to objects rehydrated from
+        // saved JSON — loadFromJSON resets controls to Fabric defaults.
+        object.set({
+          cornerSize: 16,
+          touchCornerSize: 36,
+          cornerStyle: "circle",
+          transparentCorners: false,
+          cornerColor: "#ffffff",
+          cornerStrokeColor: "rgba(15, 23, 42, 0.85)",
+          borderColor: "rgba(15, 23, 42, 0.55)",
+          padding: 4,
+        })
       })
       canvas.renderAll()
       updateLayers()
@@ -1981,6 +1993,16 @@ export default function CustomizerTemplate({
     object.set({
       left: printArea.x + printArea.width / 2 - (object.getScaledWidth?.() ?? 80) / 2,
       top: printArea.y + printArea.height / 2 - (object.getScaledHeight?.() ?? 40) / 2,
+      // Mobile-friendly control styling. Setting these per-object reliably
+      // works across Fabric v5/v6/v7 — the prototype path didn't take in v7.
+      cornerSize: 16,
+      touchCornerSize: 36,
+      cornerStyle: "circle",
+      transparentCorners: false,
+      cornerColor: "#ffffff",
+      cornerStrokeColor: "rgba(15, 23, 42, 0.85)",
+      borderColor: "rgba(15, 23, 42, 0.55)",
+      padding: 4,
     })
     canvas.add(object)
     canvas.setActiveObject(object)
@@ -3439,7 +3461,7 @@ export default function CustomizerTemplate({
                       pdpHasVariantOptions && !pdpStep1Done
                         ? {
                             title: "Customize first",
-                            body: 'Click "Customize this product" on the right to start.',
+                            body: 'Tap "Customize this product" above to start.',
                           }
                         : undefined
                     }

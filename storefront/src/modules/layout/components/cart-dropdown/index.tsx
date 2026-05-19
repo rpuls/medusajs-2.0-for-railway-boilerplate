@@ -87,11 +87,38 @@ const CartDropdown = ({
           data-no-squish
         >
           <LocalizedClientLink
-            className="flex h-full items-center text-base font-medium hover:text-ui-fg-base"
+            className="relative flex h-full min-h-10 min-w-10 items-center justify-center whitespace-nowrap text-base font-medium hover:text-ui-fg-base"
             href="/cart"
             prefetch={false}
             data-testid="nav-cart-link"
-          >{`Cart (${totalItems})`}</LocalizedClientLink>
+            aria-label={`View cart, ${totalItems} item${totalItems === 1 ? "" : "s"}`}
+          >
+            <svg
+              className="tablet:hidden"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="9" cy="20" r="1.5" />
+              <circle cx="18" cy="20" r="1.5" />
+              <path d="M3 4h2l3 12h12l2-8H7" />
+            </svg>
+            {totalItems > 0 ? (
+              <span
+                className="tablet:hidden absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-secondary)] px-1 text-[10px] font-bold leading-none text-white"
+                aria-hidden
+              >
+                {totalItems > 99 ? "99+" : totalItems}
+              </span>
+            ) : null}
+            <span className="hidden tablet:inline">{`Cart (${totalItems})`}</span>
+          </LocalizedClientLink>
         </Popover.Button>
         <Transition
           show={cartDropdownOpen}

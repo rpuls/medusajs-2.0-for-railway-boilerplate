@@ -70,14 +70,46 @@ const ChatWidget: React.FC = () => {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-[var(--brand-primary,#002a5c)] px-4 py-3 text-sm font-medium text-white shadow-lg hover:opacity-90"
+        className="fixed right-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 inline-flex min-h-12 min-w-12 items-center justify-center rounded-full bg-[var(--brand-primary,#002a5c)] text-white shadow-lg hover:opacity-90 tablet:right-5 tablet:bottom-5 tablet:px-4 tablet:py-3 tablet:text-sm tablet:font-medium"
         aria-label={open ? "Close chat" : "Open chat"}
       >
-        {open ? "Close" : "Chat with us"}
+        <span className="tablet:hidden" aria-hidden>
+          {open ? (
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 12a8 8 0 01-11.5 7.2L4 21l1.8-5.5A8 8 0 1121 12z" />
+            </svg>
+          )}
+        </span>
+        <span className="hidden tablet:inline">{open ? "Close" : "Chat with us"}</span>
       </button>
 
       {open && (
-        <div className="fixed bottom-20 right-5 z-50 flex h-[520px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-lg border border-ui-border-base bg-ui-bg-base shadow-xl">
+        <div
+          className="fixed right-3 bottom-[calc(8.5rem+env(safe-area-inset-bottom))] z-50 flex h-[min(70dvh,520px)] w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-lg border border-ui-border-base bg-ui-bg-base shadow-xl tablet:right-5 tablet:bottom-20 tablet:h-[520px] tablet:w-[360px] tablet:max-w-[calc(100vw-2.5rem)]"
+        >
           <div className="border-b border-ui-border-base bg-[var(--brand-primary,#002a5c)] px-4 py-3 text-white">
             <div className="text-sm font-semibold">SC Prints assistant</div>
             <div className="text-xs opacity-80">
