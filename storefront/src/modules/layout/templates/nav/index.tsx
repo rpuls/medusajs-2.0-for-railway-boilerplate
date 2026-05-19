@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import Image from "next/image"
 import { MagnifyingGlassMini } from "@medusajs/icons"
 
+import { listBrands } from "@lib/data/brands"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import { listRegions } from "@lib/data/regions"
@@ -9,8 +10,11 @@ import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu, {
+  type SideMenuBrandLink,
   type SideMenuBrowseGroup,
 } from "@modules/layout/components/side-menu"
+
+const MENU_BRAND_CAP = 8
 
 type RawCategory = {
   id?: string
@@ -79,10 +83,11 @@ const buildCategoryBrowseGroups = (
 }
 
 async function NavSideMenu() {
-  const [regions, { collections }, categories] = await Promise.all([
+  const [regions, { collections }, categories, brands] = await Promise.all([
     listRegions().then((regions: StoreRegion[]) => regions),
     getCollectionsList(0, 100),
     listCategories().catch(() => [] as RawCategory[]),
+    listBrands().catch(() => []),
   ])
 
   const menuCollectionLinks = [...collections]
@@ -96,11 +101,29 @@ async function NavSideMenu() {
     (categories as RawCategory[]) ?? []
   )
 
+  // Surface up to 8 brands in the menu. Prefer top-level brands (no parent_id) so the
+  // group level reads cleanly — FashionBiz children (Biz Collection / Biz Care / Syzmik /
+  // Biz Corporates) still show through if there aren't enough top-level rows.
+  const sortedBrands = [...brands].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  )
+  const topLevel = sortedBrands.filter((b) => !b.parent_id)
+  const rest = sortedBrands.filter((b) => b.parent_id)
+  const brandLinks: SideMenuBrandLink[] = [...topLevel, ...rest]
+    .filter((b) => b.handle && b.name)
+    .slice(0, MENU_BRAND_CAP)
+    .map((b) => ({
+      handle: b.handle,
+      name: b.name,
+      logoUrl: b.logo_url,
+    }))
+
   return (
     <SideMenu
       regions={regions}
       collectionLinks={menuCollectionLinks}
       categoryBrowseGroups={categoryBrowseGroups}
+      brandLinks={brandLinks}
     />
   )
 }

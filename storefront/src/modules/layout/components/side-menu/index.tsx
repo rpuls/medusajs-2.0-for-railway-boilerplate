@@ -6,6 +6,10 @@ import { clx, useToggleState } from "@medusajs/ui"
 import NavLink from "@modules/common/components/nav-link"
 import CountrySelect from "../country-select"
 import { services } from "@modules/services/data"
+import {
+  brandInitials,
+  getBrandPresentation,
+} from "@modules/brands/data/brands"
 import { HttpTypes } from "@medusajs/types"
 
 const MENU_COLLECTIONS_CAP = 6
@@ -45,14 +49,22 @@ export type MenuCollectionLink = {
   title: string
 }
 
+export type SideMenuBrandLink = {
+  handle: string
+  name: string
+  logoUrl: string | null
+}
+
 const SideMenu = ({
   regions,
   collectionLinks,
   categoryBrowseGroups = [],
+  brandLinks = [],
 }: {
   regions: HttpTypes.StoreRegion[] | null
   collectionLinks: MenuCollectionLink[]
   categoryBrowseGroups?: SideMenuBrowseGroup[]
+  brandLinks?: SideMenuBrandLink[]
 }) => {
   const toggleState = useToggleState()
   const safeCollectionLinks = collectionLinks ?? []
@@ -200,6 +212,53 @@ const SideMenu = ({
 
                       </div>
                     </div>
+
+                    {brandLinks.length > 0 ? (
+                      <div className="mt-10 border-t border-[var(--brand-accent)]/35 pt-8">
+                        <h2 className="mb-4 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+                          Brands
+                        </h2>
+                        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                          {brandLinks.map((brand) => {
+                            const presentation = getBrandPresentation(brand.handle)
+                            const logoSrc = brand.logoUrl ?? presentation.logoSrc ?? null
+                            return (
+                              <li key={brand.handle}>
+                                <NavLink
+                                  href={`/brands/${brand.handle}`}
+                                  onClick={close}
+                                  className="group flex items-center gap-3 rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
+                                  data-testid={`menu-brand-${brand.handle}-link`}
+                                >
+                                  <span
+                                    className={clx(
+                                      "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md",
+                                      !logoSrc && presentation.bgClass
+                                    )}
+                                  >
+                                    {logoSrc ? (
+                                      <img
+                                        src={logoSrc}
+                                        alt={brand.name}
+                                        className="h-8 w-auto max-w-full object-contain"
+                                        loading="lazy"
+                                      />
+                                    ) : (
+                                      <span className="text-xs font-semibold uppercase tracking-wide text-white">
+                                        {brandInitials(brand.name)}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="text-sm leading-snug text-[rgba(248,250,252,0.95)] group-hover:text-[var(--brand-secondary)]">
+                                    {brand.name}
+                                  </span>
+                                </NavLink>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="mt-4 shrink-0 border-t border-[var(--brand-accent)]/20 pt-4">
