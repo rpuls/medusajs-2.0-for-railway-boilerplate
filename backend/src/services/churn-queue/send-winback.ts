@@ -10,6 +10,7 @@ import type {
 
 import { SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
 import { tagUrl } from "../../lib/email-utm"
+import { shouldSendMarketingEmail } from "../../lib/marketing-email"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 import { buildChurnQueue, type ChurnCandidate } from "./build-queue"
 
@@ -88,6 +89,17 @@ export async function sendWinbackEmails(
       dryRunSkipped += 1
       continue
     }
+    // Belt-and-braces marketing gate.  buildChurnQueue already filters
+    // out `marketing_consent_email === false`; this adds the suppression-
+    // table check (and is the canonical place for future per-stream
+    // logic).
+    const gate = await shouldSendMarketingEmail({
+      container,
+      email: c.email,
+      customer_id: (c as any).customer_id ?? null,
+      template_kind: "winback",
+    })
+    if (!gate.ok) continue
     try {
       await notificationModuleService.createNotifications({
         to: c.email,

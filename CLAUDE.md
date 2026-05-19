@@ -606,6 +606,8 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `EMAIL_SUPPRESSION_TABLE_ENABLED` | Enables the suppression-table check inside `shouldSendMarketingEmail()` ([backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts)). Phase 8 ships the table and flips this to `true`. Until then the helper short-circuits the suppression check and relies only on `customer.metadata.marketing_consent_email`. | `false` |
 | `OWNER_AUTOSTAMP_ENABLED` | Auto-assigns ownership on every new order — inheriting the customer's owner first, falling back to `pickNextOwner()` from the rotation table. Off by default so existing orders aren't disrupted before the rotation is populated. See [backend/src/subscribers/order-placed-stamp-owner.ts](backend/src/subscribers/order-placed-stamp-owner.ts). | `false` |
 | `TASKS_OVERDUE_CRON_ENABLED` | Daily 09:00 UTC cron that walks active tasks with `due_at` in the past, stamps `last_overdue_notified_at`, writes audit rows on every anchored entity, and emits `task_overdue_notified` PostHog events. Email/Slack delivery is deferred to a follow-up. Off by default so dev/staging doesn't spam during testing. See [backend/src/jobs/notify-overdue-tasks.ts](backend/src/jobs/notify-overdue-tasks.ts). | `false` |
+| `UNSUBSCRIBE_LINK_SECRET` | HMAC key used to sign the one-click unsubscribe URL embedded in marketing emails. Same shape as `NPS_LINK_SECRET`: must be set in prod (so links can't be forged), dev placeholder used otherwise so links verify locally. | `unsubscribe-dev-secret-do-not-use-in-prod` |
+| `MARKETING_PREFERENCE_CENTER_URL` | Where one-click unsubscribe redirects after writing the suppression row. Storefront page that confirms the action / lets the customer toggle per-stream prefs. Falls back to `/` if unset. | unset (recommend `${STOREFRONT_URL}/email-preferences`) |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -1192,6 +1194,36 @@ Staff to-do list. Each task has a single assignee, optional anchors (customer / 
 **Denormalised anchor columns alongside module links** (CLAUDE.md convention): `task.customer_id` / `order_id` / `quote_id` / `organisation_id` are FK strings indexed for the hot-path "my open tasks where customer_id = X" filter. The links layer graph-query traversal (`customer.tasks`) on top for admin widgets.
 
 **Email/Slack delivery + per-context create-task widgets** are deferred to a Phase 7 follow-up. Studio dashboard `tasks_due_today` bucket is also deferred.
+
+### Marketing email compliance (Phase 8)
+Centralised opt-out + one-click unsubscribe. Every marketing send path (cart-reminder, reorder-reminder, winback, nps-request) now passes through `shouldSendMarketingEmail()` from [backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts), which composes a `customer.metadata.marketing_consent_email` check with the suppression table.
+
+| Component | Path |
+| --- | --- |
+| Suppression entity | [backend/src/modules/admin-workspace/models/email-suppression.ts](backend/src/modules/admin-workspace/models/email-suppression.ts) |
+| Migration | [backend/src/modules/admin-workspace/migrations/Migration20270301000000.ts](backend/src/modules/admin-workspace/migrations/Migration20270301000000.ts) |
+| Signed-token helper | [backend/src/lib/unsubscribe-token.ts](backend/src/lib/unsubscribe-token.ts) |
+| Public unsubscribe endpoint | [backend/src/api/email/unsubscribe/route.ts](backend/src/api/email/unsubscribe/route.ts) |
+| Admin REST — list / add | [backend/src/api/admin/email-suppressions/route.ts](backend/src/api/admin/email-suppressions/route.ts) |
+| Admin REST — remove | [backend/src/api/admin/email-suppressions/[id]/route.ts](backend/src/api/admin/email-suppressions/[id]/route.ts) |
+| Reorder-reminder gate (new) | [backend/src/services/reorder-reminders/send-reminders.ts](backend/src/services/reorder-reminders/send-reminders.ts) |
+| NPS gate (new) | [backend/src/services/nps-requests/send-requests.ts](backend/src/services/nps-requests/send-requests.ts) |
+| Abandoned-cart gate (belt-and-braces) | [backend/src/services/abandoned-cart-reminders/send-reminders.ts](backend/src/services/abandoned-cart-reminders/send-reminders.ts) |
+| Winback gate (belt-and-braces) | [backend/src/services/churn-queue/send-winback.ts](backend/src/services/churn-queue/send-winback.ts) |
+
+**Unsubscribe link shape**: `${BACKEND_URL}/email/unsubscribe?email=<lowered>&kind=<template_kind|all>&sig=<hex16>`. The signature is HMAC-SHA256 over `${email}:${kind}` keyed by `UNSUBSCRIBE_LINK_SECRET`, truncated to 16 hex chars. Same pattern as the NPS link signer.
+
+**Suppression scope**:
+- `template_kind = null` → global suppression, blocks every marketing template.
+- `template_kind = "winback"` (or another stream key) → per-stream opt-out; the customer still receives other streams.
+
+When a global unsubscribe lands, the public route ALSO flips `customer.metadata.marketing_consent_email = false` so the customer-side preference UI stays consistent.
+
+**Activating the suppression check**: ship the migration, then flip `EMAIL_SUPPRESSION_TABLE_ENABLED=true`. With the flag off, the helper falls back to consent-only and the table is just a passive admin record.
+
+**Footer + List-Unsubscribe header** on existing marketing templates is intentionally deferred to a Phase 8 follow-up — closing the consent gaps on NPS / reorder-reminder + the suppression table + admin surface is the load-bearing compliance work. The template footer that surfaces the URL to recipients comes next.
+
+**Storefront preference center page** is also deferred to a follow-up — for v1 the one-click link writes a global suppression and that's enough opt-out cover.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 

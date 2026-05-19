@@ -548,6 +548,23 @@ export const TASKS_OVERDUE_CRON_ENABLED =
   String(process.env.TASKS_OVERDUE_CRON_ENABLED).toLowerCase() === "true"
 
 /**
+ * CRM Phase 8 — Marketing email compliance.
+ *
+ *  - `UNSUBSCRIBE_LINK_SECRET`: HMAC key used to sign the one-click
+ *    unsubscribe URL embedded in marketing emails. Same shape as
+ *    `NPS_LINK_SECRET`: must be set in prod, dev placeholder used
+ *    otherwise so links verify locally.
+ *  - `MARKETING_PREFERENCE_CENTER_URL`: where one-click unsubscribe
+ *    redirects after writing the suppression row. Defaults to
+ *    `${STOREFRONT_URL}/email-preferences`.
+ */
+export const UNSUBSCRIBE_LINK_SECRET =
+  process.env.UNSUBSCRIBE_LINK_SECRET ||
+  "unsubscribe-dev-secret-do-not-use-in-prod"
+export const MARKETING_PREFERENCE_CENTER_URL =
+  process.env.MARKETING_PREFERENCE_CENTER_URL
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'
