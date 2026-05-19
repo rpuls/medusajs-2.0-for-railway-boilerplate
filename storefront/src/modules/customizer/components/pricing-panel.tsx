@@ -377,12 +377,19 @@ export default function PricingPanel({
           <span className="text-ui-fg-subtle">Unit</span>
           <span className="font-medium text-ui-fg-base">{formatMoney(checkoutUnitCents, currencyCode)}</span>
         </p>
-        <p className="mt-1.5 flex justify-between text-sm font-semibold">
-          <span className="text-ui-fg-base">
-            {quantity > 0 ? `Checkout total (${quantity})` : "Estimated total (qty 1)"}
-          </span>
-          <span className="text-ui-fg-base">{formatMoney(checkoutTotalCents, currencyCode)}</span>
-        </p>
+        {quantity > 0 ? (
+          <p className="mt-1.5 flex justify-between text-sm font-semibold">
+            <span className="text-ui-fg-base">Checkout total ({quantity})</span>
+            <span className="text-ui-fg-base">
+              {formatMoney(checkoutTotalCents, currencyCode)}
+            </span>
+          </p>
+        ) : (
+          <p className="mt-1.5 flex items-center justify-between text-xs text-ui-fg-subtle">
+            <span>Add sizes above to see your total</span>
+            <span aria-hidden>—</span>
+          </p>
+        )}
       </div>
 
       {showDtfTierEstimator ? (

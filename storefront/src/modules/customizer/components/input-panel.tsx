@@ -138,8 +138,33 @@ export default function InputPanel({
 
       {enabled ? (
         <div className="space-y-2">
-          <label className="text-xs font-medium text-ui-fg-subtle">Image uploader (PNG/JPG/SVG)</label>
-          <input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={onFileChange} className="w-full text-sm" />
+          <p className="text-xs font-medium text-ui-fg-subtle">
+            Image uploader (PNG/JPG/SVG)
+          </p>
+          {/*
+            Wrap the native file input in a styled label so the browser's
+            "No file chosen" hover tooltip (which used to bleed across the
+            wizard sidebar) is replaced with a meaningful title, and the
+            raw input chrome is hidden behind a button + filename pair.
+          */}
+          <label
+            className="flex w-full cursor-pointer items-center gap-3 rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2 text-sm transition hover:border-[var(--brand-secondary)]/50 hover:bg-ui-bg-subtle"
+            title="Upload a PNG, JPG, or SVG to add to your design"
+          >
+            <span className="rounded-md border border-ui-border-base bg-ui-bg-subtle px-2.5 py-1 text-xs font-semibold text-ui-fg-base">
+              Choose file
+            </span>
+            <span className="truncate text-xs text-ui-fg-subtle">
+              PNG, JPG, or SVG
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              onChange={onFileChange}
+              className="sr-only"
+              aria-label="Upload a PNG, JPG, or SVG to add to your design"
+            />
+          </label>
         </div>
       ) : null}
 
