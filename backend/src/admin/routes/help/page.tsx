@@ -54,12 +54,13 @@ const SECTIONS: Section[] = [
     title: "Order detail — what each widget does",
     body: (
       <ul className="list-disc pl-5 text-sm space-y-1">
-        <li><strong>Stale badge (red)</strong> — auto-stamped if production stage hasn&apos;t moved in 3+ days. Clears when you advance.</li>
+        <li><strong>Order owner</strong> — the staff member responsible for this specific order. Auto-stamps from the customer's owner (or rotation if un-owned) when <code>OWNER_AUTOSTAMP_ENABLED</code> is on. Override per-order if a different teammate is handling this job. See <em>Owner &amp; rotation</em>.</li>
+        <li><strong>Stale badge (red)</strong> — auto-stamped if production stage hasn&apos;t moved in 3+ days. Clears when you advance. Phase 11 also auto-creates a Task for the owner ("Investigate stale order #N", priority high) so it lands in <a href="/app/tasks" className="underline">My tasks</a>.</li>
         <li><strong>Production stage tracker</strong> — three parallel tracks (artwork / blanks / production). Advance from here.</li>
         <li><strong>Customer perks</strong> — &quot;Free shipping (waive at fulfillment)&quot; surfaces when the customer&apos;s tag qualifies. Apply via Order Edit.</li>
         <li><strong>Deposit &amp; balance</strong> — track upfront payment + balance due date. Bookkeeping only, no money movement.</li>
         <li><strong>NPS</strong> — score + comment from the customer after delivery.</li>
-        <li><strong>Watchers</strong> — up to 5 extra emails that get CC&apos;d on production-stage updates.</li>
+        <li><strong>Watchers</strong> — up to 5 extra emails that get CC&apos;d on production-stage updates. Add/remove now writes audit rows.</li>
         <li><strong>Production photos</strong> — snap from phone, latest auto-appears in customer&apos;s next stage email.</li>
         <li><strong>Print recipes</strong> — link reusable production settings (mesh count, flash temp, embroidery file).</li>
         <li><strong>Rejects / spoilage</strong> — log every scrapped garment. Powers the /app/production-rejects report.</li>
@@ -72,13 +73,47 @@ const SECTIONS: Section[] = [
     title: "Customer detail — the widgets",
     body: (
       <ul className="list-disc pl-5 text-sm space-y-1">
+        <li><strong>Account owner</strong> — the staff member responsible for this customer. New orders auto-inherit the owner so the same teammate handles every job (gated by <code>OWNER_AUTOSTAMP_ENABLED</code>). Setting an owner here populates a link table + writes an audit row. See <em>Owner &amp; rotation</em> below.</li>
         <li><strong>Lifetime value</strong> — LTV / orders / AOV / last-order tiles. &quot;Suggest VIP tag&quot; appears once they cross the threshold.</li>
-        <li><strong>Tags + notes</strong> — coloured labels (VIP, Wholesale, Tricky) and pinnable internal notes. Add a snooze date to a note for follow-up reminders.</li>
+        <li><strong>Tags + notes</strong> — coloured labels (VIP, Wholesale, Tricky) and pinnable internal notes. Add a snooze date to a note for follow-up reminders. Every tag/note change now writes an audit row visible on the Customer journey timeline.</li>
         <li><strong>Tax status</strong> — mark tax-exempt (council, NFP, school) so invoices render without GST. Snapshots to orders at placement.</li>
         <li><strong>Customer pricing tier</strong> — drop a known/repeat customer onto a tier (Platinum 1.10× → Member 1.45× of cost). They&apos;ll see a flat below-retail price on every product after sign-in. Detail in the <em>Pricing tiers</em> section below.</li>
-        <li><strong>Customer journey</strong> — unified timeline of PostHog events + orders + NPS + saved designs + tag changes. Use before a sales call.</li>
+        <li><strong>Customer journey</strong> — unified timeline of PostHog events + orders + NPS + saved designs + tag changes + every audit-log row (purple "Activity" badge: owner changes, notes pinned/snoozed, organisation joins, unsubscribes, automation rule fires). Use before a sales call.</li>
         <li><strong>Order list</strong> — Medusa standard.</li>
       </ul>
+    ),
+  },
+  {
+    id: "owner-rotation",
+    title: "Account & order ownership",
+    body: (
+      <>
+        <Text>
+          Every customer and every order can have an "owner" — a staff member who's responsible for them. The whole point is that stale orders, quote follow-ups, and re-order chases land on a known inbox instead of falling through the cracks.
+        </Text>
+
+        <Text className="mt-3 font-semibold">How it works</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Manual assignment always wins.</strong> Pick an owner from the <em>Account owner</em> widget on the customer detail, or the <em>Order owner</em> widget on the order detail.</li>
+          <li><strong>Order inherits customer owner.</strong> When a customer with an owner places an order, the order auto-stamps to the same owner. Different teammate handling a specific job? Override per-order from the widget.</li>
+          <li><strong>Rotation fills in the gaps.</strong> When an un-owned customer places an order, the system picks the next teammate from the rotation table (oldest <code>last_picked_at</code> wins, position as tiebreaker) and stamps both the customer and the order with that user.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Setting up rotation</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><a href="/app/rotation" className="underline">/app/rotation</a> — admin page where you toggle who's "in rotation".</li>
+          <li>Add at least one teammate before flipping <code>OWNER_AUTOSTAMP_ENABLED=true</code> in env — otherwise auto-stamp is a no-op.</li>
+          <li><strong>On leave?</strong> Toggle a member's <em>Enabled</em> switch off. They stay in the rotation history but are skipped for picks. Flip back on when they return.</li>
+          <li><strong>Position</strong> is a tiebreaker only — lower numbers picked first when <code>last_picked_at</code> is tied. Most setups can leave it at the default 100.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">What owners are used for</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Stale-order escalation</strong> (Phase 11) — when an order goes stale, a Task is auto-created for the owner with priority <em>high</em> (or <em>urgent</em> after 7 days). If the order stays stale past <code>STALE_ORDER_ESCALATION_DAYS</code> (default 3), the manager email gets pinged once.</li>
+          <li><strong>Automation rules</strong> (Phase 10) — the <code>create_task</code> action accepts the literal <code>owner</code> sentinel for <em>assignee</em>. Rules can route work to "whoever owns this customer / order" without hard-coding names.</li>
+          <li><strong>Filtering</strong> — quotes already support <em>Assigned to</em> (the staff person responding); customer/order owner is the longer-term account assignment.</li>
+        </ul>
+      </>
     ),
   },
   {
@@ -165,13 +200,52 @@ const SECTIONS: Section[] = [
           <a href="/app/quotes" className="underline">/app/quotes</a> — every BYO inquiry, contact form quote request, or admin lead lands here as <em>new</em>.
         </Text>
         <Text className="mt-2">
-          Move through: <strong>new → quoted → accepted → (becomes a cart)</strong>. Lost / expired close the loop.
+          Move through: <strong>new → quoted → accepted → (becomes an order)</strong>. Lost / expired close the loop.
         </Text>
         <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
           <li><strong>Mood board</strong> — reference images the customer attached are at the top of the quote detail.</li>
           <li><strong>Line items + total estimate</strong> — operator-edited freeform JSON, used as a working draft.</li>
           <li><strong>Copy customer accept link</strong> — HMAC-signed URL you paste into your email reply to the customer. They click → review → Accept → backend builds a real cart → checkout.</li>
+          <li><strong>Auto-conversion to order</strong> (Phase 11) — when an order is placed from an accepted quote&apos;s cart, the backend stamps <code>quote.metadata.order_id</code> and writes a <em>converted</em> audit row. Idempotent. Visible as &quot;Quote converted&quot; on the customer&apos;s journey timeline.</li>
+          <li><strong>Quote expiry cron</strong> (Phase 5) — daily 23:45 UTC. Quotes with <code>expires_at</code> in the past flip from <em>quoted</em> to <em>expired</em>. Opt-in via <code>QUOTE_EXPIRY_CRON_ENABLED=true</code>.</li>
+          <li><strong>Cancelled orders don&apos;t un-accept the quote.</strong> If an order from a converted quote gets cancelled, the quote stays <em>accepted</em> and a note is appended. Customer needs a fresh quote to re-order.</li>
         </ul>
+      </>
+    ),
+  },
+  {
+    id: "tasks",
+    title: "My tasks (staff to-do)",
+    body: (
+      <>
+        <Text>
+          <a href="/app/tasks" className="underline">/app/tasks</a> — your personal queue. Three tabs: <strong>Today</strong> (due today), <strong>Overdue</strong> (past due, still active), <strong>All active</strong> (everything assigned to you that&apos;s open or in-progress).
+        </Text>
+
+        <Text className="mt-3 font-semibold">When tasks appear</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Manually</strong> — quick-add form at the bottom of <a href="/app/tasks" className="underline">/app/tasks</a>. Pick assignee + title + (optional) due date + priority + notes.</li>
+          <li><strong>Auto, from stale orders</strong> (Phase 11) — the daily stale-order scan creates a task for the order&apos;s owner: <em>"Investigate stale order #N"</em>, due in 1 day, priority <em>high</em> (urgent after 7 days stale).</li>
+          <li><strong>Auto, from automation rules</strong> (Phase 10) — the <code>create_task</code> rule action with <code>assignee_user_id: "owner"</code> resolves at fire-time. Useful for "VIP order → follow up tomorrow" or "post-delivery → chase NPS manually" recipes.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">What each row shows</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Anchor link</strong> — task is auto-attached to the source customer / order / quote / org. Click the anchor pill to jump.</li>
+          <li><strong>Priority colour</strong> — grey (low), blue (normal), orange (high), red (urgent).</li>
+          <li><strong>Due-date colour</strong> — red text when past due.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Actions</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Start</strong> — flips to <em>in_progress</em>. Still appears in Today / All buckets.</li>
+          <li><strong>Done</strong> — stamps completed_at + completed_by. Task drops out of the active buckets.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Overdue notification cron</Text>
+        <Text size="xsmall" className="text-ui-fg-muted">
+          Daily 09:00 UTC. Walks every active task past its due date, stamps a 23h notification cooldown, writes audit rows on every anchored entity, emits PostHog signals. Email/Slack delivery is wired separately. Opt-in via <code>TASKS_OVERDUE_CRON_ENABLED=true</code>.
+        </Text>
       </>
     ),
   },
@@ -278,15 +352,69 @@ const SECTIONS: Section[] = [
     body: (
       <>
         <Text>
-          <a href="/app/automation-rules" className="underline">/app/automation-rules</a> — &quot;when X happens, do Y&quot; rules. Examples:
+          <a href="/app/automation-rules" className="underline">/app/automation-rules</a> — &quot;when X happens, do Y&quot; rules. Triggers fire in real time from the backend event bus.
         </Text>
-        <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
-          <li>When an order is placed AND <code>lifetime_value &gt;= 1500</code>, tag the customer &quot;VIP&quot;.</li>
-          <li>When stage moves to <code>quality_check</code>, post an internal order comment.</li>
-          <li>When <code>order_count == 1</code>, send a thank-you alert email to a staff inbox.</li>
+
+        <Text className="mt-3 font-semibold">Triggers</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><code>order.placed</code> — every new order.</li>
+          <li><code>order.production_stage_changed</code> — every stage advance.</li>
+          <li><code>customer.created</code> — new customer signup or admin-created. <em>Gated by <code>AUTOMATION_EXPANDED_TRIGGERS_ENABLED</code>.</em></li>
+          <li><code>order.delivered</code> — fires once when stage hits <em>delivered</em>. <em>Gated.</em></li>
         </ul>
-        <Text size="xsmall" className="text-ui-fg-muted mt-2">
-          Triggers fire in real time from the backend event bus.
+
+        <Text className="mt-3 font-semibold">Actions</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>Tag customer</strong> — adds a coloured label.</li>
+          <li><strong>Post order comment</strong> — internal note on the order.</li>
+          <li><strong>Send alert email</strong> — staff inbox notification (not for customer-facing emails — use a marketing-stream cron for those).</li>
+          <li><strong>Set production stage</strong> — auto-advance the stage. Useful for "approved → in_production" automation when artwork approval comes in.</li>
+          <li><strong>Create task</strong> — creates a row in <a href="/app/tasks" className="underline">/app/tasks</a>. <code>assignee_user_id</code> accepts the literal <code>owner</code> sentinel — resolves to the entity&apos;s owner at fire time. <em>Gated.</em></li>
+          <li><strong>Assign owner</strong> — calls the Phase 6 ownership API. Targets customer or order. <em>Gated.</em></li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Recipe ideas</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li>When an order is placed AND <code>lifetime_value &gt;= 1500</code>, tag the customer "VIP" AND create a task for the owner ("VIP order — call to thank", due in 1 day).</li>
+          <li>When a customer is created with a corporate-domain email, assign the owner to your B2B lead.</li>
+          <li>When an order is delivered, create a task to manually chase a review.</li>
+          <li>When stage moves to <code>quality_check</code>, post an internal order comment.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "marketing-compliance",
+    title: "Marketing email opt-out & suppression",
+    body: (
+      <>
+        <Text>
+          Every marketing send (cart-reminder, reorder-reminder, winback, NPS) now passes through a single gate that checks the customer&apos;s consent <strong>and</strong> a suppression table before firing.
+        </Text>
+
+        <Text className="mt-3 font-semibold">How customers opt out</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>One-click unsubscribe link</strong> in marketing email footers. Lands at <code>/email/unsubscribe?email=...&amp;kind=...&amp;sig=...</code> with an HMAC signature. The backend inserts a suppression row, flips <code>customer.metadata.marketing_consent_email=false</code> for global unsubs, and redirects them to the storefront preference center.</li>
+          <li><strong>Per-stream</strong> — they can opt out of <em>winback</em> only and still receive <em>cart-reminder</em>. Stream key is encoded in the link.</li>
+          <li><strong>Account preferences page</strong> on the storefront — same toggle, signed-in path.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Admin: managing the suppression list</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li><strong>List + add</strong> — <code>GET /admin/email-suppressions</code> and <code>POST</code> from the admin (UI page is on the v1.1 roadmap; the REST endpoint is live).</li>
+          <li><strong>Reasons</strong> — <em>user_unsubscribe</em>, <em>bounce</em>, <em>spam_complaint</em>, <em>manual_admin</em>. Pick <em>manual_admin</em> when you&apos;re suppressing on a customer&apos;s phone request.</li>
+          <li><strong>Removing a suppression</strong> — <code>DELETE /admin/email-suppressions/[id]</code>. Use sparingly: re-enabling an unsubscribed customer without their permission is a compliance risk.</li>
+        </ul>
+
+        <Text className="mt-3 font-semibold">Activation checklist</Text>
+        <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
+          <li>Set <code>UNSUBSCRIBE_LINK_SECRET</code> in Railway (must match across deploys or in-flight links break).</li>
+          <li>Set <code>MARKETING_PREFERENCE_CENTER_URL</code> to your storefront preference page (e.g. <code>${'{STOREFRONT_URL}'}/email-preferences</code>).</li>
+          <li>Flip <code>EMAIL_SUPPRESSION_TABLE_ENABLED=true</code> once the migration has applied — turns the suppression check on. Until you flip it the helper falls back to consent-only checks.</li>
+        </ul>
+
+        <Text size="xsmall" className="text-ui-fg-muted mt-3">
+          Compliance note: Australian Spam Act + GDPR/UK PECR both require a working unsubscribe mechanism on commercial email. The one-click endpoint + per-stream toggles satisfy both. Bounces and spam complaints from Resend should be ingested into the same table (deferred — Phase 9 follow-up).
         </Text>
       </>
     ),
@@ -396,11 +524,13 @@ const SECTIONS: Section[] = [
       <>
         <Text>Every cron is opt-in via an <code>*_ENABLED=true</code> env var:</Text>
         <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
-          <li><strong>Stale-order scan</strong> — daily 08:00 UTC. Stamps red badge, posts Slack digest.</li>
-          <li><strong>NPS request</strong> — daily 22:00 UTC. Fires 14 days after delivery.</li>
-          <li><strong>Abandoned-cart reminder</strong> — daily 23:15 UTC.</li>
-          <li><strong>Reorder reminder</strong> — daily 23:30 UTC. Repeat customers past their median order gap.</li>
-          <li><strong>Win-back</strong> — Mondays 00:00 UTC. Drifting / at-risk / lost customers.</li>
+          <li><strong>Stale-order scan</strong> — daily 08:00 UTC. Stamps red badge, posts Slack digest, creates a Task for the order owner (Phase 11), escalates to manager after <code>STALE_ORDER_ESCALATION_DAYS</code>.</li>
+          <li><strong>Overdue tasks notification</strong> — daily 09:00 UTC. Walks active tasks past their due date, writes audit + PostHog. <em>(Phase 7, opt-in.)</em></li>
+          <li><strong>NPS request</strong> — daily 22:00 UTC. Fires 14 days after delivery. Now respects marketing consent + suppression (Phase 8).</li>
+          <li><strong>Abandoned-cart reminder</strong> — daily 23:15 UTC. Respects suppression.</li>
+          <li><strong>Reorder reminder</strong> — daily 23:30 UTC. Repeat customers past their median order gap. Now respects marketing consent + suppression (Phase 8).</li>
+          <li><strong>Quote expiry</strong> — daily 23:45 UTC. Auto-expires <em>quoted</em>-status quotes past their expires_at. <em>(Phase 5, opt-in.)</em></li>
+          <li><strong>Win-back</strong> — Mondays 00:00 UTC. Drifting / at-risk / lost customers. Respects suppression.</li>
           <li><strong>Cross-sell refresh</strong> — daily 02:00 UTC. Walks orders, counts co-purchases, writes to product metadata.</li>
           <li><strong>PostHog cohort sync</strong> — daily 03:30 UTC. Reconciles cohort memberships to customer tags.</li>
           <li><strong>Supplier inventory sync</strong> — AS Colour hourly, FashionBiz daily 04:00 UTC, Aussie Pacific daily 05:00 UTC. See <a href="#supplier-integrations" className="underline">Supplier API integrations</a> for what each sync touches.</li>
@@ -414,9 +544,13 @@ const SECTIONS: Section[] = [
     body: (
       <div className="grid grid-cols-1 small:grid-cols-2 gap-2 text-sm">
         <div><strong>What needs my attention today?</strong> <a href="/app/studio" className="underline">/app/studio</a></div>
+        <div><strong>What&apos;s on my plate?</strong> <a href="/app/tasks" className="underline">/app/tasks</a></div>
         <div><strong>Mark a customer tax-exempt</strong> Customer detail → Tax status</div>
         <div><strong>Tag a customer VIP</strong> Customer detail → Tags</div>
         <div><strong>Give a customer tier pricing</strong> Customer detail → Customer pricing tier</div>
+        <div><strong>Assign a customer or order to a teammate</strong> Customer/Order detail → Account/Order owner widget</div>
+        <div><strong>Manage owner rotation</strong> <a href="/app/rotation" className="underline">/app/rotation</a></div>
+        <div><strong>Create a task for myself or a teammate</strong> <a href="/app/tasks" className="underline">/app/tasks</a> → quick-add form</div>
         <div><strong>Generate accept link for a quote</strong> Quote detail → top right</div>
         <div><strong>Plan the week</strong> <a href="/app/production" className="underline">Production → Production calendar tab</a></div>
         <div><strong>Group today&apos;s press setups</strong> <a href="/app/production" className="underline">Production → Print queue tab</a></div>
@@ -430,6 +564,7 @@ const SECTIONS: Section[] = [
         <div><strong>Add a gallery tile</strong> <a href="/app/lookbook" className="underline">/app/lookbook</a></div>
         <div><strong>Snooze a customer for Tuesday</strong> Customer detail → Notes → add note with snooze date</div>
         <div><strong>Tax invoice</strong> Customer side: /account/orders/[id] → Tax invoice button</div>
+        <div><strong>Stop marketing emails to an address</strong> Customer calls? <code>POST /admin/email-suppressions</code> (admin REST). UI page on the roadmap.</div>
       </div>
     ),
   },
@@ -449,6 +584,11 @@ const SECTIONS: Section[] = [
         <div><dt className="font-semibold inline">Org</dt> <dd className="inline">— school / club / business — a group of customers sharing identity.</dd></div>
         <div><dt className="font-semibold inline">Recipe</dt> <dd className="inline">— reusable production settings (mesh count, ink, etc.).</dd></div>
         <div><dt className="font-semibold inline">Pricing tier</dt> <dd className="inline">— customer-group-scoped flat price (cost × 1.10 to 1.45). Hides the public quantity ladder for that customer.</dd></div>
+        <div><dt className="font-semibold inline">Owner</dt> <dd className="inline">— the staff member responsible for a customer or order. Inherits customer → order; rotation fills gaps for un-owned customers. Different from a quote&apos;s <em>assigned_to</em>, which is the person actively responding to that quote.</dd></div>
+        <div><dt className="font-semibold inline">Rotation</dt> <dd className="inline">— the admin-managed list at <a href="/app/rotation" className="underline">/app/rotation</a> of staff who can be auto-assigned new customers/orders. Round-robin by oldest <em>last_picked_at</em>.</dd></div>
+        <div><dt className="font-semibold inline">Task</dt> <dd className="inline">— a staff to-do anchored to a customer / order / quote / org. Single assignee, optional due_at + priority. Lives at <a href="/app/tasks" className="underline">/app/tasks</a>.</dd></div>
+        <div><dt className="font-semibold inline">Audit log</dt> <dd className="inline">— the polymorphic activity feed. Every meaningful staff action (tag add, note pin, owner change, watcher add, automation fire) writes a row. Surfaced on the customer-journey widget as the purple "Activity" track.</dd></div>
+        <div><dt className="font-semibold inline">Suppression</dt> <dd className="inline">— a marketing-email opt-out. Stored by email (works for guests too). Global or per-stream. Blocks every marketing-job send.</dd></div>
       </dl>
     ),
   },
