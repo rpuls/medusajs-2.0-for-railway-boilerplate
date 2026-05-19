@@ -120,7 +120,26 @@ const POSPage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       })
-      if (!sessionRes.ok) throw new Error("Failed to create POS session")
+      if (!sessionRes.ok) {
+        // Surface the real backend message — opaque "Failed to create
+        // POS session" hid a method-name mismatch in the first deploy.
+        const detail = await sessionRes
+          .text()
+          .then((t) => {
+            try {
+              const j = JSON.parse(t)
+              return j?.error ?? j?.message ?? t
+            } catch {
+              return t
+            }
+          })
+          .catch(() => "")
+        throw new Error(
+          `Failed to create POS session (${sessionRes.status})${
+            detail ? `: ${detail}` : ""
+          }`
+        )
+      }
       const sJson = (await sessionRes.json()) as { pos_session: POSSession }
       setSession(sJson.pos_session)
 

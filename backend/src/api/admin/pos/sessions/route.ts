@@ -77,14 +77,26 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const service = req.scope.resolve(POS_SESSION_MODULE) as POSSessionModuleService
   const expiresAt = new Date(Date.now() + POS_SESSION_TTL_HOURS * 3600_000)
 
-  const created = await (service as any).createPosSessions({
-    created_by_user_id: actor,
-    customer_id: body.customer_id ?? null,
-    items: [],
-    status: "active",
-    expires_at: expiresAt,
-    metadata: body.metadata ?? {},
-  })
+  let created: any
+  try {
+    created = await (service as any).createPosSessions({
+      created_by_user_id: actor,
+      customer_id: body.customer_id ?? null,
+      items: [],
+      status: "active",
+      expires_at: expiresAt,
+      metadata: body.metadata ?? {},
+    })
+  } catch (err: any) {
+    // Surface DB / model errors instead of letting a 500 with no body
+    // make the admin UI show a generic "Failed to create POS session".
+    // Most likely cause if this fires in prod: the pos_session migration
+    // didn't run during deploy.
+    return res.status(500).json({
+      error: err?.message ?? "create failed",
+      detail: err?.code ?? null,
+    })
+  }
 
   const session = Array.isArray(created) ? created[0] : created
 
