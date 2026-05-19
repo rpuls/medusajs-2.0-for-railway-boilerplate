@@ -4386,13 +4386,15 @@ export default function CustomizerTemplate({
               )}
             </motion.div>
           ) : (
-            <StepPreview
-              num={stepNum(3)}
-              title="Print size"
-              hint="Choose A6, A4, A3 or oversize for each location."
-              onClick={() => setPdpStep(3)}
-              isNext={pdpStep === 2}
-            />
+            <div ref={step3Ref}>
+              <StepPreview
+                num={stepNum(3)}
+                title="Print size"
+                hint="Choose A6, A4, A3 or oversize for each location."
+                onClick={() => setPdpStep(3)}
+                isNext={pdpStep === 2}
+              />
+            </div>
           )}
 
           {/* Step 4 — Quantities, notes & checkout */}
@@ -4486,13 +4488,15 @@ export default function CustomizerTemplate({
               </div>
             </motion.div>
           ) : (
-            <StepPreview
-              num={stepNum(4)}
-              title="Quantity & checkout"
-              hint="Set sizes, quantities and add to cart."
-              onClick={() => setPdpStep(4)}
-              isNext={pdpStep === 3}
-            />
+            <div ref={step4Ref}>
+              <StepPreview
+                num={stepNum(4)}
+                title="Quantity & checkout"
+                hint="Set sizes, quantities and add to cart."
+                onClick={() => setPdpStep(4)}
+                isNext={pdpStep === 3}
+              />
+            </div>
           )}
         </div>
       </div>
