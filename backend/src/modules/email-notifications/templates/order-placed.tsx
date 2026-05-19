@@ -1,6 +1,6 @@
 import { Text, Section, Hr, Row, Column } from '@react-email/components'
 import * as React from 'react'
-import { Base } from './base'
+import { Base, STYLES, NAVY, SLATE, BORDER, BG_SUBTLE } from './base'
 import { OrderDTO, OrderAddressDTO } from '@medusajs/framework/types'
 
 export const ORDER_PLACED = 'order-placed'
@@ -43,94 +43,194 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
     (isMerchant
       ? `New order #${order.display_id}`
       : 'Your order has been placed!')
-  const title = isMerchant ? 'New order received' : 'Order Confirmation'
-  const greeting = isMerchant ? (
-    <>
-      <Text style={{ margin: '0 0 15px' }}>
-        Customer: {shippingAddress.first_name} {shippingAddress.last_name}
-      </Text>
-      <Text style={{ margin: '0 0 15px' }}>
-        Customer email: {order.email ?? '—'}
-      </Text>
-      <Text style={{ margin: '0 0 15px' }}>
-        Internal order id: {order.id}
-      </Text>
-    </>
-  ) : (
-    <Text style={{ margin: '0 0 15px' }}>
-      Dear {shippingAddress.first_name} {shippingAddress.last_name},
-    </Text>
-  )
-  const intro = isMerchant ? (
-    <Text style={{ margin: '0 0 30px' }}>Below is a copy of the order details.</Text>
-  ) : (
-    <Text style={{ margin: '0 0 30px' }}>
-      Thank you for your recent order! Here are your order details:
-    </Text>
-  )
+  const eyebrow = isMerchant ? 'New order' : 'Order confirmation'
+  const title = isMerchant ? 'New order received' : 'Thanks for your order'
 
   const items = order.items ?? []
 
   return (
     <Base preview={effectivePreview}>
-      <Section>
-        <Text style={{ fontSize: '24px', fontWeight: 'bold', textAlign: 'center', margin: '0 0 30px' }}>
-          {title}
-        </Text>
+      <Text style={STYLES.eyebrow}>
+        Order #{order.display_id} &middot; {eyebrow}
+      </Text>
+      <Text style={STYLES.h1}>{title}</Text>
 
-        {greeting}
-
-        {intro}
-
-        <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
-          Order Summary
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          Order ID: {order.display_id}
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          Order Date: {new Date(order.created_at).toLocaleDateString()}
-        </Text>
-        <Text style={{ margin: '0 0 20px' }}>
-          Total: {formatPrice(order.summary.raw_current_order_total.value, order.currency_code)}
-        </Text>
-
-        <Hr style={{ margin: '20px 0' }} />
-
-        <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
-          Shipping Address
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          {shippingAddress.address_1}
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          {shippingAddress.city}, {shippingAddress.province} {shippingAddress.postal_code}
-        </Text>
-        <Text style={{ margin: '0 0 20px' }}>
-          {shippingAddress.country_code}
-        </Text>
-
-        <Hr style={{ margin: '20px 0' }} />
-
-        <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 15px' }}>
-          Order Items
-        </Text>
-
-        <Section style={{ width: '100%', border: '1px solid #ddd', margin: '10px 0', borderCollapse: 'collapse' }}>
-          <Row style={{ backgroundColor: '#f2f2f2', borderBottom: '1px solid #ddd' }}>
-            <Column style={{ padding: '8px', fontWeight: 'bold' }}>Item</Column>
-            <Column style={{ padding: '8px', fontWeight: 'bold', textAlign: 'center', width: '60px' }}>Qty</Column>
-            <Column style={{ padding: '8px', fontWeight: 'bold', textAlign: 'right', width: '90px' }}>Price</Column>
-          </Row>
-          {items.map((item) => (
-            <Row key={item.id} style={{ borderBottom: '1px solid #ddd' }}>
-              <Column style={{ padding: '8px' }}>{item.product_title}</Column>
-              <Column style={{ padding: '8px', textAlign: 'center', width: '60px' }}>{item.quantity}</Column>
-              <Column style={{ padding: '8px', textAlign: 'right', width: '90px' }}>{formatPrice(item.unit_price, order.currency_code)}</Column>
-            </Row>
-          ))}
+      {isMerchant ? (
+        <Section style={{ margin: '20px 0 0' }}>
+          <Text style={{ ...STYLES.body, margin: 0 }}>
+            <strong style={{ color: NAVY }}>Customer:</strong>{' '}
+            {shippingAddress.first_name} {shippingAddress.last_name}
+          </Text>
+          <Text style={{ ...STYLES.body, margin: '4px 0 0' }}>
+            <strong style={{ color: NAVY }}>Email:</strong>{' '}
+            {order.email ?? '—'}
+          </Text>
+          <Text style={{ ...STYLES.body, margin: '4px 0 0' }}>
+            <strong style={{ color: NAVY }}>Internal id:</strong> {order.id}
+          </Text>
         </Section>
+      ) : (
+        <Text style={STYLES.body}>
+          Hi {shippingAddress.first_name} {shippingAddress.last_name},
+          we&apos;ve received your order and will email you again as soon as
+          it moves into production. Here&apos;s a copy for your records.
+        </Text>
+      )}
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.h2}>Order summary</Text>
+      <Section
+        style={{
+          margin: '12px 0 0',
+          padding: '12px 16px',
+          background: BG_SUBTLE,
+          borderRadius: '8px',
+        }}
+      >
+        <Text style={{ margin: 0, fontSize: '14px', color: SLATE }}>
+          <strong style={{ color: NAVY }}>Order:</strong> #{order.display_id}
+        </Text>
+        <Text style={{ margin: '4px 0 0', fontSize: '14px', color: SLATE }}>
+          <strong style={{ color: NAVY }}>Placed:</strong>{' '}
+          {new Date(order.created_at).toLocaleDateString('en-AU', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })}
+        </Text>
+        <Text
+          style={{
+            margin: '8px 0 0',
+            fontSize: '16px',
+            fontWeight: 700,
+            color: NAVY,
+          }}
+        >
+          Total{' '}
+          {formatPrice(
+            order.summary.raw_current_order_total.value,
+            order.currency_code
+          )}
+        </Text>
       </Section>
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.h2}>Shipping to</Text>
+      <Text style={{ ...STYLES.body, margin: '6px 0 0' }}>
+        {shippingAddress.address_1}
+      </Text>
+      <Text style={{ ...STYLES.body, margin: '2px 0 0' }}>
+        {shippingAddress.city}, {shippingAddress.province}{' '}
+        {shippingAddress.postal_code}
+      </Text>
+      <Text style={{ ...STYLES.body, margin: '2px 0 0' }}>
+        {shippingAddress.country_code}
+      </Text>
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.h2}>Items</Text>
+      <Section
+        style={{
+          width: '100%',
+          margin: '12px 0 0',
+          border: `1px solid ${BORDER}`,
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}
+      >
+        <Row
+          style={{
+            background: BG_SUBTLE,
+            borderBottom: `1px solid ${BORDER}`,
+          }}
+        >
+          <Column
+            style={{
+              padding: '10px 12px',
+              fontWeight: 700,
+              fontSize: '12px',
+              color: NAVY,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Item
+          </Column>
+          <Column
+            style={{
+              padding: '10px 12px',
+              fontWeight: 700,
+              fontSize: '12px',
+              color: NAVY,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              textAlign: 'center',
+              width: '60px',
+            }}
+          >
+            Qty
+          </Column>
+          <Column
+            style={{
+              padding: '10px 12px',
+              fontWeight: 700,
+              fontSize: '12px',
+              color: NAVY,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              textAlign: 'right',
+              width: '90px',
+            }}
+          >
+            Price
+          </Column>
+        </Row>
+        {items.map((item, idx) => (
+          <Row
+            key={item.id}
+            style={{
+              borderBottom:
+                idx === items.length - 1 ? 'none' : `1px solid ${BORDER}`,
+            }}
+          >
+            <Column
+              style={{ padding: '10px 12px', fontSize: '14px', color: SLATE }}
+            >
+              {item.product_title}
+            </Column>
+            <Column
+              style={{
+                padding: '10px 12px',
+                fontSize: '14px',
+                color: SLATE,
+                textAlign: 'center',
+                width: '60px',
+              }}
+            >
+              {item.quantity}
+            </Column>
+            <Column
+              style={{
+                padding: '10px 12px',
+                fontSize: '14px',
+                color: SLATE,
+                textAlign: 'right',
+                width: '90px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {formatPrice(item.unit_price, order.currency_code)}
+            </Column>
+          </Row>
+        ))}
+      </Section>
+
+      <Text style={{ ...STYLES.meta, margin: '24px 0 0' }}>
+        Reply to this email if anything looks off and we&apos;ll sort it out.
+      </Text>
     </Base>
   )
 }

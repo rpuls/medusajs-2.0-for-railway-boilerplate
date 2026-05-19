@@ -1,6 +1,6 @@
 import { Text, Section, Hr, Button } from '@react-email/components'
 import * as React from 'react'
-import { Base } from './base'
+import { Base, STYLES, NAVY, SLATE, BORDER } from './base'
 import { OrderDTO, OrderAddressDTO } from '@medusajs/framework/types'
 
 export const ORDER_SHIPPED = 'order-shipped'
@@ -58,84 +58,61 @@ export const OrderShippedTemplate: React.FC<OrderShippedTemplateProps> & {
   const parcelCount = parcels.length
   return (
     <Base preview={preview}>
-      <Section>
-        <Text
+      <Text style={STYLES.eyebrow}>Order #{order.display_id} &middot; Shipped</Text>
+      <Text style={STYLES.h1}>Your order has shipped</Text>
+      <Text style={STYLES.body}>
+        Hi {shippingAddress.first_name} {shippingAddress.last_name}, order{' '}
+        <strong style={{ color: NAVY }}>{order.display_id}</strong> is on its
+        way. {parcelCount === 1
+          ? "Track it below."
+          : `We split it into ${parcelCount} parcels — track each below.`}
+      </Text>
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.h2}>Tracking</Text>
+
+      {parcels.map((parcel, idx) => (
+        <Section
+          key={parcel.tracking_number || `parcel-${idx}`}
           style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            margin: '0 0 30px',
+            padding: '12px 0',
+            borderBottom:
+              idx === parcels.length - 1 ? 'none' : `1px solid ${BORDER}`,
           }}
         >
-          Your order has shipped
-        </Text>
+          <Text style={{ margin: '0 0 6px', fontWeight: 700, color: NAVY }}>
+            Parcel {idx + 1} of {parcelCount} &middot; {formatCarrier(parcel)}
+          </Text>
+          <Text style={{ margin: '0 0 10px', color: SLATE, fontSize: '14px' }}>
+            Tracking: {parcel.tracking_number || '—'}
+          </Text>
+          {parcel.tracking_url && (
+            <Button href={parcel.tracking_url} style={STYLES.buttonPrimary}>
+              Track parcel {idx + 1}
+            </Button>
+          )}
+        </Section>
+      ))}
 
-        <Text style={{ margin: '0 0 15px' }}>
-          Hi {shippingAddress.first_name} {shippingAddress.last_name},
-        </Text>
+      <Hr style={STYLES.divider} />
 
-        <Text style={{ margin: '0 0 20px' }}>
-          Order <strong>{order.display_id}</strong> is on its way. We split it
-          into {parcelCount} {parcelCount === 1 ? 'parcel' : 'parcels'} — track
-          each below.
-        </Text>
+      <Text style={STYLES.h2}>Delivering to</Text>
+      <Text style={{ ...STYLES.body, margin: '6px 0 0' }}>
+        {shippingAddress.address_1}
+      </Text>
+      <Text style={{ ...STYLES.body, margin: '2px 0 0' }}>
+        {shippingAddress.city}, {shippingAddress.province}{' '}
+        {shippingAddress.postal_code}
+      </Text>
+      <Text style={{ ...STYLES.body, margin: '2px 0 0' }}>
+        {shippingAddress.country_code}
+      </Text>
 
-        <Hr style={{ margin: '20px 0' }} />
-
-        <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
-          Tracking
-        </Text>
-
-        {parcels.map((parcel, idx) => (
-          <Section
-            key={parcel.tracking_number || `parcel-${idx}`}
-            style={{
-              padding: '12px 0',
-              borderBottom:
-                idx === parcels.length - 1 ? 'none' : '1px solid #eaeaea',
-            }}
-          >
-            <Text style={{ margin: '0 0 6px', fontWeight: 'bold' }}>
-              Parcel {idx + 1} of {parcelCount} · {formatCarrier(parcel)}
-            </Text>
-            <Text style={{ margin: '0 0 8px', color: '#555' }}>
-              Tracking: {parcel.tracking_number || '—'}
-            </Text>
-            {parcel.tracking_url && (
-              <Button
-                href={parcel.tracking_url}
-                style={{
-                  background: '#000',
-                  color: '#fff',
-                  padding: '10px 16px',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  display: 'inline-block',
-                }}
-              >
-                Track parcel {idx + 1}
-              </Button>
-            )}
-          </Section>
-        ))}
-
-        <Hr style={{ margin: '20px 0' }} />
-
-        <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
-          Delivering to
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>{shippingAddress.address_1}</Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          {shippingAddress.city}, {shippingAddress.province}{' '}
-          {shippingAddress.postal_code}
-        </Text>
-        <Text style={{ margin: '0 0 20px' }}>{shippingAddress.country_code}</Text>
-
-        <Text style={{ margin: '20px 0 0', color: '#555' }}>
-          Reply to this email if anything looks off and we'll sort it out for
-          you.
-        </Text>
-      </Section>
+      <Text style={{ ...STYLES.meta, margin: '24px 0 0' }}>
+        Reply to this email if anything looks off and we&apos;ll sort it out
+        for you.
+      </Text>
     </Base>
   )
 }

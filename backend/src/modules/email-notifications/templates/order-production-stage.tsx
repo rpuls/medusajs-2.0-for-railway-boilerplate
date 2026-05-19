@@ -1,6 +1,6 @@
 import { Text, Section, Hr, Button, Img } from '@react-email/components'
 import * as React from 'react'
-import { Base } from './base'
+import { Base, STYLES, NAVY, SLATE, MUTED } from './base'
 import { OrderDTO } from '@medusajs/framework/types'
 
 import {
@@ -107,114 +107,85 @@ export const OrderProductionStageTemplate: React.FC<OrderProductionStageTemplate
 
   return (
     <Base preview={previewText}>
-      <Section>
-        <Text
-          style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            margin: '0 0 30px',
-          }}
-        >
-          {heading}
+      <Text style={STYLES.eyebrow}>
+        Order #{order.display_id} &middot; {PRODUCTION_STAGE_LABEL[stage]}
+      </Text>
+      <Text style={STYLES.h1}>{heading}</Text>
+
+      {copy ? copy.intro(firstName) : (
+        <Text style={STYLES.body}>Hi {firstName},</Text>
+      )}
+
+      {copy ? (
+        copy.body
+      ) : (
+        <Text style={STYLES.body}>
+          Order <strong style={{ color: NAVY }}>{order.display_id}</strong> has moved to{' '}
+          <strong style={{ color: NAVY }}>{PRODUCTION_STAGE_LABEL[stage]}</strong>.
         </Text>
+      )}
 
-        {copy ? copy.intro(firstName) : (
-          <Text style={{ margin: '0 0 15px' }}>Hi {firstName},</Text>
-        )}
-
-        {copy ? (
-          copy.body
-        ) : (
-          <Text style={{ margin: '0 0 15px' }}>
-            Order <strong>{order.display_id}</strong> has moved to{' '}
-            <strong>{PRODUCTION_STAGE_LABEL[stage]}</strong>.
-          </Text>
-        )}
-
-        {stage === 'awaiting_approval' && mockupImages && mockupImages.length > 0 ? (
-          <Section style={{ margin: '20px 0' }}>
-            {mockupImages.map((img) => (
-              <Section key={img.side} style={{ margin: '0 0 16px' }}>
-                {img.sideLabel ? (
-                  <Text
-                    style={{
-                      margin: '0 0 6px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      color: '#888',
-                    }}
-                  >
-                    {img.sideLabel}
-                  </Text>
-                ) : null}
-                <Img
-                  src={img.url}
-                  alt={img.sideLabel ?? img.side}
-                  style={{ maxWidth: '100%', borderRadius: '6px' }}
-                />
-              </Section>
-            ))}
-          </Section>
-        ) : null}
-
-        {productionPhoto?.url ? (
-          <Section style={{ margin: '20px 0', textAlign: 'center' }}>
-            <Img
-              src={productionPhoto.url}
-              alt={productionPhoto.caption ?? 'Production photo'}
-              style={{
-                maxWidth: '100%',
-                borderRadius: '6px',
-                margin: '0 auto',
-              }}
-            />
-            {productionPhoto.caption ? (
-              <Text
-                style={{
-                  margin: '8px 0 0',
-                  fontSize: '13px',
-                  color: '#555',
-                  fontStyle: 'italic',
-                }}
-              >
-                {productionPhoto.caption}
-              </Text>
-            ) : null}
-          </Section>
-        ) : null}
-
-        <Text style={{ margin: '0 0 15px' }}>
-          Order reference: <strong>{order.display_id}</strong>
-        </Text>
-
-        {portalUrl && copy?.cta ? (
-          <>
-            <Hr style={{ margin: '20px 0' }} />
-            <Section style={{ textAlign: 'center' }}>
-              <Button
-                href={portalUrl}
-                style={{
-                  background: '#000',
-                  color: '#fff',
-                  padding: '12px 22px',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  display: 'inline-block',
-                }}
-              >
-                {copy.cta.label}
-              </Button>
+      {stage === 'awaiting_approval' && mockupImages && mockupImages.length > 0 ? (
+        <Section style={{ margin: '24px 0 0' }}>
+          {mockupImages.map((img) => (
+            <Section key={img.side} style={{ margin: '0 0 16px' }}>
+              {img.sideLabel ? (
+                <Text style={{ ...STYLES.eyebrow, margin: '0 0 6px' }}>
+                  {img.sideLabel}
+                </Text>
+              ) : null}
+              <Img
+                src={img.url}
+                alt={img.sideLabel ?? img.side}
+                style={{ maxWidth: '100%', borderRadius: '8px', display: 'block' }}
+              />
             </Section>
-          </>
-        ) : null}
+          ))}
+        </Section>
+      ) : null}
 
-        <Text style={{ margin: '24px 0 0', color: '#555' }}>
-          Reply to this email if anything looks off — we&apos;ll sort it out for you.
-        </Text>
-      </Section>
+      {productionPhoto?.url ? (
+        <Section style={{ margin: '24px 0 0', textAlign: 'center' }}>
+          <Img
+            src={productionPhoto.url}
+            alt={productionPhoto.caption ?? 'Production photo'}
+            style={{
+              maxWidth: '100%',
+              borderRadius: '8px',
+              margin: '0 auto',
+              display: 'block',
+            }}
+          />
+          {productionPhoto.caption ? (
+            <Text
+              style={{
+                margin: '8px 0 0',
+                fontSize: '13px',
+                color: SLATE,
+                fontStyle: 'italic',
+              }}
+            >
+              {productionPhoto.caption}
+            </Text>
+          ) : null}
+        </Section>
+      ) : null}
+
+      {portalUrl && copy?.cta ? (
+        <Section style={{ margin: '28px 0 8px', textAlign: 'center' }}>
+          <Button href={portalUrl} style={STYLES.buttonPrimary}>
+            {copy.cta.label} &rarr;
+          </Button>
+        </Section>
+      ) : null}
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.meta}>
+        Order reference: <strong style={{ color: MUTED }}>{order.display_id}</strong>{' '}
+        &middot; Reply to this email if anything looks off and we&apos;ll sort it
+        out.
+      </Text>
     </Base>
   )
 }

@@ -1,6 +1,6 @@
 import { Hr, Section, Text, Button, Row, Column } from "@react-email/components"
 
-import { Base } from "./base"
+import { Base, STYLES } from "./base"
 
 export const NPS_REQUEST = "nps-request"
 
@@ -30,106 +30,59 @@ export const NpsRequestEmail = ({ nps, preview }: NpsRequestEmailProps) => {
 
   return (
     <Base preview={previewText}>
-      <Section>
-        <Text
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 700,
-            color: "#111111",
-          }}
-        >
-          {greeting}
-        </Text>
+      <Text style={STYLES.eyebrow}>How did we do?</Text>
+      <Text style={STYLES.h1}>{greeting}</Text>
+      <Text style={{ ...STYLES.h2, margin: "16px 0 0" }}>
+        How was your SC Prints order
+        {nps.orderDisplayId ? ` #${nps.orderDisplayId}` : ""}?
+      </Text>
+      <Text style={STYLES.body}>
+        Two seconds &mdash; pick the rating that matches. Goes straight to the
+        team and we read every one.
+      </Text>
 
-        <Text
-          style={{
-            margin: "12px 0 0 0",
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "#111111",
-          }}
-        >
-          How was your SC Prints order
-          {nps.orderDisplayId ? ` #${nps.orderDisplayId}` : ""}?
-        </Text>
-
-        <Text
-          style={{
-            margin: "10px 0 0 0",
-            fontSize: "15px",
-            color: "#1f2937",
-            lineHeight: "22px",
-          }}
-        >
-          Two seconds — pick the rating that matches. Goes straight to the team
-          and we read every one.
-        </Text>
-
-        <Section style={{ margin: "24px 0" }}>
-          <Row>
-            {nps.ratingUrls.map(({ score, url }) => (
-              <Column key={score} align="center" style={{ padding: "0 4px" }}>
-                <Button
-                  href={url}
-                  style={{
-                    background: SCORE_COLORS[score] ?? "#737373",
-                    color: "#ffffff",
-                    padding: "16px 0",
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    borderRadius: "8px",
-                    textDecoration: "none",
-                    display: "inline-block",
-                    width: "56px",
-                    textAlign: "center",
-                  }}
-                >
-                  {score}
-                </Button>
-              </Column>
-            ))}
-          </Row>
-          <Row style={{ marginTop: "8px" }}>
-            <Column align="left" style={{ paddingLeft: "4px" }}>
-              <Text
+      <Section style={{ margin: "24px 0" }}>
+        <Row>
+          {nps.ratingUrls.map(({ score, url }) => (
+            <Column key={score} align="center" style={{ padding: "0 4px" }}>
+              <Button
+                href={url}
                 style={{
-                  margin: 0,
-                  fontSize: "11px",
-                  color: "#737373",
+                  background: SCORE_COLORS[score] ?? "#737373",
+                  color: "#ffffff",
+                  padding: "16px 0",
+                  fontSize: "20px",
+                  fontWeight: 700,
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  display: "inline-block",
+                  width: "56px",
+                  textAlign: "center",
                 }}
               >
-                Disappointing
-              </Text>
+                {score}
+              </Button>
             </Column>
-            <Column align="right" style={{ paddingRight: "4px" }}>
-              <Text
-                style={{
-                  margin: 0,
-                  fontSize: "11px",
-                  color: "#737373",
-                }}
-              >
-                Loved it
-              </Text>
-            </Column>
-          </Row>
-        </Section>
-
-        <Hr style={{ margin: "24px 0", borderColor: "#e5e5e5" }} />
-
-        <Text
-          style={{
-            margin: 0,
-            fontSize: "12px",
-            color: "#737373",
-            lineHeight: "18px",
-          }}
-        >
-          We send this once per order, never more than once a quarter to the
-          same person. If something went wrong, hit reply and we'll fix it.
-        </Text>
+          ))}
+        </Row>
+        <Row style={{ marginTop: "8px" }}>
+          <Column align="left" style={{ paddingLeft: "4px" }}>
+            <Text style={{ ...STYLES.meta, fontSize: "11px" }}>
+              Disappointing
+            </Text>
+          </Column>
+          <Column align="right" style={{ paddingRight: "4px" }}>
+            <Text style={{ ...STYLES.meta, fontSize: "11px" }}>Loved it</Text>
+          </Column>
+        </Row>
       </Section>
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.meta}>
+        We send this once per order, never more than once a quarter to the
+        same person. If something went wrong, hit reply and we&apos;ll fix it.
+      </Text>
     </Base>
   )
 }
