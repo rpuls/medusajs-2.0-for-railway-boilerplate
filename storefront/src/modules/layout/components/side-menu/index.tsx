@@ -10,6 +10,7 @@ import {
   brandInitials,
   getBrandPresentation,
 } from "@modules/brands/data/brands"
+import { industries } from "@modules/industries/data/industries"
 import { HttpTypes } from "@medusajs/types"
 
 const MENU_COLLECTIONS_CAP = 6
@@ -160,6 +161,26 @@ const SideMenu = ({
                       </div>
 
                       <div className="flex flex-col gap-8 border-t border-[var(--brand-accent)]/35 pt-8 lg:col-span-3 lg:border-t-0 lg:pt-0">
+                        <div>
+                          <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+                            Industries
+                          </h2>
+                          <ul className="space-y-1.5">
+                            {industries.map((i) => (
+                              <li key={i.slug}>
+                                <NavLink
+                                  href={`/industries/${i.slug}`}
+                                  onClick={close}
+                                  className="text-sm leading-6 text-[rgba(248,250,252,0.95)] transition-colors hover:text-[var(--brand-secondary)]"
+                                  data-testid={`menu-industry-${i.slug}-link`}
+                                >
+                                  {i.name}
+                                </NavLink>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
                         <div>
                           <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
                             Discover
