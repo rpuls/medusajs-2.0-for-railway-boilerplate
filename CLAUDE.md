@@ -155,6 +155,427 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 
 **Vectorization service**: a hidden Medusa product whose variant ID is set in `NEXT_PUBLIC_VECTORIZATION_VARIANT_ID`. When the customer accepts vectorization, the customizer adds that variant to cart with quantity 1 alongside the garment line(s).
 
+## Customer-facing features beyond Phase 1-4
+
+These layer on top of the Phase 1-4 portal. Most have their own module + migration; some are presentation-only and read from existing data.
+
+### Artwork approval (HMAC-signed customer review)
+After Phase 1's `awaiting_approval` stage email goes out, the customer follows an HMAC-signed link to `/[countryCode]/artwork-approval/[orderId]` to see mockups and approve or request changes. Approval auto-advances `production_stage`.
+
+| Component | Path |
+| --- | --- |
+| Sign + verify helper | [backend/src/services/artwork-approval/sign.ts](backend/src/services/artwork-approval/sign.ts) |
+| Store route | [backend/src/api/store/artwork-approval/route.ts](backend/src/api/store/artwork-approval/route.ts) |
+| Subscriber that emails the link | [backend/src/subscribers/order-artwork-stage-changed.ts](backend/src/subscribers/order-artwork-stage-changed.ts) |
+| Email template | [backend/src/modules/email-notifications/templates/artwork-approval.tsx](backend/src/modules/email-notifications/templates/artwork-approval.tsx) |
+| Storefront page | [storefront/src/app/[countryCode]/(main)/artwork-approval/[orderId]/page.tsx](storefront/src/app/[countryCode]/(main)/artwork-approval/[orderId]/page.tsx) |
+| Storefront components | [storefront/src/modules/artwork-approval/](storefront/src/modules/artwork-approval/) |
+
+**Secret reuse**: links are signed with `NPS_LINK_SECRET` (same env var as NPS — same threat model: short-lived signed URLs). Signature is truncated to 24 hex chars but timing-safe.
+
+### NPS feedback loop (post-delivery)
+Email customers a 1-5 rating prompt N days after `delivered`. Score + comment land on `order.metadata.nps_*`; the admin order page surfaces them.
+
+| Component | Path |
+| --- | --- |
+| Daily job (`0 22 * * *`) | [backend/src/jobs/send-nps-requests.ts](backend/src/jobs/send-nps-requests.ts) |
+| Candidate builder + sender + signer | [backend/src/services/nps-requests/](backend/src/services/nps-requests/) |
+| Email template | [backend/src/modules/email-notifications/templates/nps-request.tsx](backend/src/modules/email-notifications/templates/nps-request.tsx) |
+| Store record route | [backend/src/api/store/nps/route.ts](backend/src/api/store/nps/route.ts) |
+| Storefront thanks page | [storefront/src/app/[countryCode]/(main)/nps/page.tsx](storefront/src/app/[countryCode]/(main)/nps/page.tsx) |
+| Admin widget | [backend/src/admin/widgets/order-nps.tsx](backend/src/admin/widgets/order-nps.tsx) |
+
+**Env gate**: `NPS_REQUESTS_ENABLED=true`. **Tuning**: `NPS_REQUEST_DAYS_AFTER_DELIVERED` (default 14), `NPS_MIN_GAP_DAYS_PER_CUSTOMER` (default 90), `NPS_MAX_SENDS_PER_RUN` (default 25). **Idempotency**: stamped on `order.metadata.nps_request_sent_at` and `customer.metadata.last_nps_request_sent_at`.
+
+### Wishlist
+Customers bookmark products from PDP and revisit them at `/account/wishlist`. Supports optional variant selection + notes.
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/wishlist/](backend/src/modules/wishlist/) |
+| Migration | [backend/src/modules/wishlist/migrations/Migration20260616000000.ts](backend/src/modules/wishlist/migrations/Migration20260616000000.ts) |
+| Module Link customer↔wishlist | [backend/src/links/customer-wishlist.ts](backend/src/links/customer-wishlist.ts) |
+| Store CRUD routes | [backend/src/api/store/customers/me/wishlist/route.ts](backend/src/api/store/customers/me/wishlist/route.ts) + `[id]/route.ts` |
+| Storefront data layer | [storefront/src/lib/data/wishlist.ts](storefront/src/lib/data/wishlist.ts) |
+| Account page | [storefront/src/app/[countryCode]/(main)/account/@dashboard/wishlist/page.tsx](storefront/src/app/[countryCode]/(main)/account/@dashboard/wishlist/page.tsx) |
+| Grid component | [storefront/src/modules/account/components/wishlist-grid/index.tsx](storefront/src/modules/account/components/wishlist-grid/index.tsx) |
+
+`customer_id` + `product_id` denormalised on the row (indexed for fast list/check), plus a Module Link for admin graph queries. POST returns `duplicate: true` if the item is already wishlisted.
+
+### Bundles (curated multi-product gift sets)
+Admin curates bundles (e.g. "Coach Starter Pack"); storefront displays them at `/bundles/[handle]` with a wizard.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/bundles/](backend/src/modules/bundles/) |
+| Migration | [backend/src/modules/bundles/migrations/Migration20260515000000.ts](backend/src/modules/bundles/migrations/Migration20260515000000.ts) |
+| Admin REST | [backend/src/api/admin/bundles/](backend/src/api/admin/bundles/) |
+| Store REST | [backend/src/api/store/bundles/](backend/src/api/store/bundles/) |
+| Admin CRUD page | [backend/src/admin/routes/bundles/page.tsx](backend/src/admin/routes/bundles/page.tsx) |
+| Storefront UI | [storefront/src/modules/bundles/](storefront/src/modules/bundles/) |
+| Storefront page | [storefront/src/app/[countryCode]/(main)/bundles/[handle]/page.tsx](storefront/src/app/[countryCode]/(main)/bundles/[handle]/page.tsx) |
+
+**Key choice**: bundle items reference products by `handle`, not `product_id` — survives re-imports without manual relink. Unique constraint on bundle `handle`.
+
+### Lookbook (social-proof gallery)
+Tag-filterable masonry grid of past client jobs at `/lookbook`. Staff curate via admin.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/lookbook/](backend/src/modules/lookbook/) |
+| Migration | [backend/src/modules/lookbook/migrations/Migration20260623000000.ts](backend/src/modules/lookbook/migrations/Migration20260623000000.ts) |
+| Admin REST | [backend/src/api/admin/lookbook/](backend/src/api/admin/lookbook/) |
+| Store REST | [backend/src/api/store/lookbook/](backend/src/api/store/lookbook/) |
+| Admin CRUD page | [backend/src/admin/routes/lookbook/page.tsx](backend/src/admin/routes/lookbook/page.tsx) |
+| Combined dashboard (studio + lookbook) | [backend/src/admin/routes/studio-and-lookbook/page.tsx](backend/src/admin/routes/studio-and-lookbook/page.tsx) |
+| Storefront page | [storefront/src/app/[countryCode]/(main)/lookbook/page.tsx](storefront/src/app/[countryCode]/(main)/lookbook/page.tsx) |
+
+Sort by `weight` ascending; `is_published = false` hides from storefront.
+
+### Group orders (team / club bulk buys)
+A customer creates a "group order" off a base product + design, shares a public token, and parents/players submit individual sizes. The owner closes the order; the converter builds one cart with line items per participant.
+
+| Component | Path |
+| --- | --- |
+| Module + models | [backend/src/modules/group-order/](backend/src/modules/group-order/) |
+| Migration | [backend/src/modules/group-order/migrations/Migration20260621000000.ts](backend/src/modules/group-order/migrations/Migration20260621000000.ts) |
+| Store create + roster + status | [backend/src/api/store/group-orders/](backend/src/api/store/group-orders/) + [me/group-orders/[id]/status/route.ts](backend/src/api/store/customers/me/group-orders/[id]/status/route.ts) |
+| Convert-to-cart (idempotent) | [backend/src/api/store/customers/me/group-orders/[id]/convert-to-cart/route.ts](backend/src/api/store/customers/me/group-orders/[id]/convert-to-cart/route.ts) |
+| Public join page | [storefront/src/app/[countryCode]/(main)/group-order/[token]/page.tsx](storefront/src/app/[countryCode]/(main)/group-order/[token]/page.tsx) |
+| Account list | [storefront/src/app/[countryCode]/(main)/account/@dashboard/group-orders/page.tsx](storefront/src/app/[countryCode]/(main)/account/@dashboard/group-orders/page.tsx) |
+| Create-from-design | [storefront/src/app/[countryCode]/(main)/account/@dashboard/designs/[id]/group-order/page.tsx](storefront/src/app/[countryCode]/(main)/account/@dashboard/designs/[id]/group-order/page.tsx) |
+| Storefront components | [storefront/src/modules/group-order/](storefront/src/modules/group-order/) |
+
+**Size matching**: participants type free-text size labels (e.g. "Mens Large"); the converter matches case-insensitively against variant titles/options. Mismatches are skipped and reported back to the owner — coaches don't need to know SKUs. **Idempotency**: re-calling convert-to-cart returns the existing cart if `metadata.cart_id` is set.
+
+### Organisations (schools, clubs, businesses)
+Top-level grouping of customers. Members have a role (owner / purchaser / viewer). Tax-exempt + default pricing tier are properties of the org.
+
+| Component | Path |
+| --- | --- |
+| Module + models | [backend/src/modules/organisation/](backend/src/modules/organisation/) |
+| Migration | [backend/src/modules/organisation/migrations/Migration20260624000000.ts](backend/src/modules/organisation/migrations/Migration20260624000000.ts) |
+| Admin REST | [backend/src/api/admin/organisations/](backend/src/api/admin/organisations/) |
+| Admin CRUD page | [backend/src/admin/routes/organisations/page.tsx](backend/src/admin/routes/organisations/page.tsx) |
+| Account page | [storefront/src/app/[countryCode]/(main)/account/@dashboard/organisations/page.tsx](storefront/src/app/[countryCode]/(main)/account/@dashboard/organisations/page.tsx) |
+
+**Handle**: auto-slugified (lowercased, non-alphanumeric → dashes, deduped). One customer can belong to multiple orgs.
+
+### Quotes (sales pipeline)
+Lead capture from BYO + contact form + admin-created leads. Statuses: `new` → `quoted` → `accepted` / `lost` / `expired`. Line items live as JSON until acceptance, then convert to a real Medusa cart via an HMAC-signed customer link.
+
+| Component | Path |
+| --- | --- |
+| Module + models (`quote` + `quote-event`) | [backend/src/modules/quote/](backend/src/modules/quote/) |
+| Migration | [backend/src/modules/quote/migrations/Migration20260618000000.ts](backend/src/modules/quote/migrations/Migration20260618000000.ts) |
+| Admin REST | [backend/src/api/admin/quotes/](backend/src/api/admin/quotes/) |
+| Store submission | [backend/src/api/store/quotes/route.ts](backend/src/api/store/quotes/route.ts) |
+| Accept-link generator | [backend/src/api/admin/quotes/[id]/accept-link/route.ts](backend/src/api/admin/quotes/[id]/accept-link/route.ts) |
+| Signing helper | [backend/src/services/quote-accept/sign.ts](backend/src/services/quote-accept/sign.ts) |
+| Admin Kanban page | [backend/src/admin/routes/quotes/page.tsx](backend/src/admin/routes/quotes/page.tsx) |
+| Customer acceptance page | [storefront/src/app/[countryCode]/(main)/quote-accept/[id]/page.tsx](storefront/src/app/[countryCode]/(main)/quote-accept/[id]/page.tsx) |
+| Storefront accept form | [storefront/src/modules/quote-accept/](storefront/src/modules/quote-accept/) |
+
+**Event log**: every status change / assignment / message lands as a `quote_event` row — append-only audit. **Public ID**: ULID last-10 chars upper-cased for shareable refs. **Mood-board uploads**: base64 in POST, soft-fails if upload fails so the quote still creates. **Emails**: triggers `CONTACT_NOTIFICATION_EMAIL` on submission; `SUPPORT_REPLY_TO_EMAIL` is the reply-to. **Secret**: signs accept-links with `NPS_LINK_SECRET`.
+
+### Customer tiers, tax-exempt, applied perks (B2B pricing & invoicing)
+Tier system overrides the quantity-ladder with a flat rate via Medusa price-list rules. Tax-exempt + free-shipping perks are snapshotted onto the order at `order.placed` so historical invoices stay correct even if customer state changes later.
+
+| Component | Path |
+| --- | --- |
+| Tier constants (backend) | [backend/src/lib/customer-tiers.ts](backend/src/lib/customer-tiers.ts) |
+| Tier constants (storefront mirror) | [storefront/src/lib/customer-tiers.ts](storefront/src/lib/customer-tiers.ts) |
+| Bootstrap script | [backend/src/scripts/seed-customer-tiers.ts](backend/src/scripts/seed-customer-tiers.ts) |
+| Tax-exempt snapshot | [backend/src/subscribers/stamp-order-tax-exempt.ts](backend/src/subscribers/stamp-order-tax-exempt.ts) |
+| Perks snapshot | [backend/src/subscribers/stamp-order-perks.ts](backend/src/subscribers/stamp-order-perks.ts) |
+| Customer-tier widget | [backend/src/admin/widgets/customer-tier.tsx](backend/src/admin/widgets/customer-tier.tsx) |
+| Customer tax-exempt widget | [backend/src/admin/widgets/customer-tax-exempt.tsx](backend/src/admin/widgets/customer-tax-exempt.tsx) |
+| Customer tags & notes widget | [backend/src/admin/widgets/customer-tags-notes.tsx](backend/src/admin/widgets/customer-tags-notes.tsx) |
+| Order applied-perks widget | [backend/src/admin/widgets/order-applied-perks.tsx](backend/src/admin/widgets/order-applied-perks.tsx) |
+| Tier regen job (`0 6 * * *`) | [backend/src/jobs/regenerate-tier-prices.ts](backend/src/jobs/regenerate-tier-prices.ts) |
+
+**Tier ladder**: 8 ranks from platinum (1.10×) to member (1.45×). Customers are assigned by adding them to the matching "Tier: X" customer group.
+
+**Free-shipping perks**: `FREE_SHIPPING_TAGS` env var (comma-separated, default `"VIP,Wholesale"`). At `order.placed` the subscriber checks customer tags and stamps `order.metadata.applied_perks.free_shipping = true` if any match — staff manually waive shipping at fulfilment.
+
+**Sync risk**: backend and storefront tier constants must agree. Consider a sync-check script following the production-stage pattern.
+
+### Chatbot (pre-sale AI assistant)
+Claude Haiku-powered storefront widget answering decoration/pricing questions. Session-persistent via `sessionStorage`.
+
+| Component | Path |
+| --- | --- |
+| Widget | [storefront/src/modules/chatbot/components/chat-widget.tsx](storefront/src/modules/chatbot/components/chat-widget.tsx) |
+| API proxy | [storefront/src/app/api/chat/route.ts](storefront/src/app/api/chat/route.ts) |
+| System prompt | [storefront/src/lib/chatbot/system-prompt.ts](storefront/src/lib/chatbot/system-prompt.ts) |
+
+**Env**: `ANTHROPIC_API_KEY` (route returns 503 if unset). **Model**: `claude-haiku-4-5` with prompt caching (`cache_control: ephemeral`); max 600 output tokens.
+
+**Gotcha**: pricing is hard-coded in the system prompt. Whenever the decoration estimators or pricing-panel change, also update the prompt — there is no shared pricing module the prompt reads from.
+
+### Production ETA (live delivery window)
+Computes a customer-facing lead-time range (e.g. "4-7 business days") from current queue depth per stage. Surfaces on PDP.
+
+| Component | Path |
+| --- | --- |
+| Pure ETA math | [backend/src/services/production-eta/compute-eta.ts](backend/src/services/production-eta/compute-eta.ts) |
+| Container wrapper | [backend/src/services/production-eta/get-eta.ts](backend/src/services/production-eta/get-eta.ts) |
+| Store route | [backend/src/api/store/production-eta/route.ts](backend/src/api/store/production-eta/route.ts) |
+| Storefront fetcher | [storefront/src/lib/data/production-eta.ts](storefront/src/lib/data/production-eta.ts) |
+
+**Config**: all hard-coded in `compute-eta.ts` (baseline days per stage, daily throughput, congestion multiplier `1.4`, min range `2` days, min ETA `4` days). No env overrides yet — promote to env before multi-shop deployments.
+
+### Best Sellers (live top-N)
+Live top-selling products query for nav + home rails. Computed on each request from non-cancelled order lines in a rolling window (default 30 days).
+
+| Component | Path |
+| --- | --- |
+| Store route | [backend/src/api/store/products/top-selling/route.ts](backend/src/api/store/products/top-selling/route.ts) |
+
+**Defensive**: returns 204 on any error so the rail doesn't break the page. Capped at 5000 line items per query — promote to a materialised view if volume exceeds that.
+
+### Shop categories + Industries + Services + Brands menus
+Hierarchical mega-menu nav: audience × garment-type (Mens / Womens / Kids / Accessories × T-shirts / Hoodies / Polos / ...). Categories are inferred from product metadata during import; staff override via admin. Industries + Services menus are static-data-driven; Brands menu reads from the Brand module.
+
+| Component | Path |
+| --- | --- |
+| Category tree + inference helpers | [backend/src/lib/shop-categories.ts](backend/src/lib/shop-categories.ts) |
+| One-shot bootstrap | [backend/src/scripts/setup-shop-categories.ts](backend/src/scripts/setup-shop-categories.ts) |
+| Storefront category module | [storefront/src/modules/categories/](storefront/src/modules/categories/) |
+| Category landing | [storefront/src/app/[countryCode]/(main)/categories/[...category]/page.tsx](storefront/src/app/[countryCode]/(main)/categories/[...category]/page.tsx) |
+| Industries module + pages | [storefront/src/modules/industries/](storefront/src/modules/industries/) + [pages](storefront/src/app/[countryCode]/(main)/industries/) |
+| Services data + pages | [storefront/src/modules/services/](storefront/src/modules/services/) + [pages](storefront/src/app/[countryCode]/(main)/services/) |
+| Brand menu cards | [storefront/src/modules/brands/components/](storefront/src/modules/brands/components/) |
+
+**Importer wiring**: `ensureCategoryTree()` + `assignCategoriesToProducts()` are called by the AS Colour, FashionBiz, and AP importers — new product imports land in the right categories automatically.
+
+### Decoration estimators (price + rush)
+Per-method (screen / DTF / embroidery / UV-DTF) live price + rush calculators. Used on PDP and in the customizer's pricing panel.
+
+| Component | Path |
+| --- | --- |
+| Storefront estimators | [storefront/src/modules/decoration/](storefront/src/modules/decoration/) |
+| Embroidery canvas + stitch estimator | [storefront/src/modules/embroidery/](storefront/src/modules/embroidery/) |
+| Backend embroidery pricing | [backend/src/lib/embroidery-pricing.ts](backend/src/lib/embroidery-pricing.ts) |
+| Backend DTF pricing | [backend/src/lib/scp-dtf-print-pricing.ts](backend/src/lib/scp-dtf-print-pricing.ts) |
+| Cart-decoration serialiser | [storefront/src/lib/util/cart-decorations.ts](storefront/src/lib/util/cart-decorations.ts) |
+| DTF gang-sheet builder | [storefront/src/app/[countryCode]/(main)/dtf-builder/page.tsx](storefront/src/app/[countryCode]/(main)/dtf-builder/page.tsx) |
+| BYO (bring-your-own garments) | [storefront/src/app/[countryCode]/(main)/byo/page.tsx](storefront/src/app/[countryCode]/(main)/byo/page.tsx) |
+
+**Sync risk**: pricing constants live in TS files on both sides. If you bump a price band, also update the chatbot system prompt and the customizer pricing-panel — three places, no shared source of truth yet.
+
+### Guides (static content pages)
+Reference docs (CMYK ↔ DTF colour chart, etc.) live as TS data + page templates.
+
+| Component | Path |
+| --- | --- |
+| Guides module | [storefront/src/modules/guides/](storefront/src/modules/guides/) |
+| Guide pages | [storefront/src/app/[countryCode]/(main)/guides/](storefront/src/app/[countryCode]/(main)/guides/) |
+
+## Production-floor stack
+
+Operator surfaces beyond the customer-facing production-stage tracker. All live in admin; some surface customer-visible signals via emails or automation rules.
+
+### Print queue (daily job batching)
+Groups today's queued orders by decoration method + colour signature to minimise setup changes (screen swaps, thread/ink changes). Operators see the suggested run order on the queue page.
+
+| Component | Path |
+| --- | --- |
+| Pure batching logic | [backend/src/services/print-queue/build.ts](backend/src/services/print-queue/build.ts) |
+| Container wrapper | [backend/src/services/print-queue/get-queue.ts](backend/src/services/print-queue/get-queue.ts) |
+| Admin route | [backend/src/api/admin/print-queue/route.ts](backend/src/api/admin/print-queue/route.ts) |
+| Admin page | [backend/src/admin/routes/print-queue/page.tsx](backend/src/admin/routes/print-queue/page.tsx) |
+
+Stale orders float to top, tiebreak by `created_at`. Colour signature is normalised (lowercased, sorted, deduped) so the same ink mix on different orders clusters together.
+
+### Print recipes (reusable production specs)
+Operators capture step-by-step instructions (ink mix, screen settings, placement guides) linked to product / variant / customer. Shows on the order detail for any order containing the linked SKU.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/print-recipe/](backend/src/modules/print-recipe/) |
+| Migration | [backend/src/modules/print-recipe/migrations/Migration20260620000000.ts](backend/src/modules/print-recipe/migrations/Migration20260620000000.ts) |
+| Admin REST | [backend/src/api/admin/print-recipes/](backend/src/api/admin/print-recipes/) |
+| Admin CRUD page | [backend/src/admin/routes/print-recipes/page.tsx](backend/src/admin/routes/print-recipes/page.tsx) |
+| Order-detail widget | [backend/src/admin/widgets/order-print-recipes.tsx](backend/src/admin/widgets/order-print-recipes.tsx) |
+| Per-line print notes | [backend/src/admin/widgets/order-line-print-notes.tsx](backend/src/admin/widgets/order-line-print-notes.tsx) |
+
+`recipe_json` is unvalidated JSONB — flexible for per-method variation, no enforced contract.
+
+### Production calendar
+Week / month view of orders by upcoming stage transitions. Reads stage-change dates from `order.metadata.production_stage_history`.
+
+| Component | Path |
+| --- | --- |
+| Admin route | [backend/src/api/admin/production-calendar/route.ts](backend/src/api/admin/production-calendar/route.ts) |
+| Admin calendar page | [backend/src/admin/routes/production-calendar/page.tsx](backend/src/admin/routes/production-calendar/page.tsx) |
+| Production dashboard (tabs hub) | [backend/src/admin/routes/production/page.tsx](backend/src/admin/routes/production/page.tsx) |
+
+### Production rejects (QC defect log)
+Log misprints / defects per order with reason + cost; aggregates show defect rates per supplier brand for trend analysis.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/production-reject/](backend/src/modules/production-reject/) |
+| Migration | [backend/src/modules/production-reject/migrations/Migration20260619000000.ts](backend/src/modules/production-reject/migrations/Migration20260619000000.ts) |
+| Admin REST | [backend/src/api/admin/production-rejects/](backend/src/api/admin/production-rejects/) |
+| Admin report page | [backend/src/admin/routes/production-rejects/page.tsx](backend/src/admin/routes/production-rejects/page.tsx) |
+| Order-detail widget | [backend/src/admin/widgets/order-rejects.tsx](backend/src/admin/widgets/order-rejects.tsx) |
+
+### Mockup PDF generator
+Customer-facing approval PDF (one page per garment side, sizes table, watermarked mockups, branded header). Built with `pdfkit` + `sharp`; smart background removal.
+
+| Component | Path |
+| --- | --- |
+| Service | [backend/src/services/mockup-pdf/](backend/src/services/mockup-pdf/) |
+| Admin page (request generation) | [backend/src/admin/routes/mockup-pdf/page.tsx](backend/src/admin/routes/mockup-pdf/page.tsx) |
+| Brand assets (logo + fonts) | [backend/src/assets/](backend/src/assets/) |
+
+**Background removal**: corner-sampled white detection (threshold ≥220 RGB); edge flood-fill for black. Preserves design black at ≤30 RGB only if background is white. **Image fetch timeout**: 12s per URL; nulls drop silently.
+
+### Order timeline + presence + watchers + stale + photos
+Cluster of widgets on the order detail page giving operators a single pane of glass.
+
+| Component | Path |
+| --- | --- |
+| Timeline aggregator | [backend/src/services/order-timeline/build.ts](backend/src/services/order-timeline/build.ts) |
+| Stale-order scanner (`0 8 * * *`) | [backend/src/jobs/scan-stale-orders.ts](backend/src/jobs/scan-stale-orders.ts) |
+| Stale scan logic | [backend/src/services/stale-orders/scan.ts](backend/src/services/stale-orders/scan.ts) |
+| Timeline widget | [backend/src/admin/widgets/order-timeline.tsx](backend/src/admin/widgets/order-timeline.tsx) |
+| Stale badge | [backend/src/admin/widgets/order-stale-badge.tsx](backend/src/admin/widgets/order-stale-badge.tsx) |
+| Presence heartbeat (every 20s) | [backend/src/admin/widgets/order-presence-heartbeat.tsx](backend/src/admin/widgets/order-presence-heartbeat.tsx) |
+| Watchers (subscribe to changes) | [backend/src/admin/widgets/order-watchers.tsx](backend/src/admin/widgets/order-watchers.tsx) |
+| Comments audit | [backend/src/admin/widgets/order-comments-audit.tsx](backend/src/admin/widgets/order-comments-audit.tsx) |
+| Arrival watcher (inbound scan) | [backend/src/admin/widgets/order-arrival-watcher.tsx](backend/src/admin/widgets/order-arrival-watcher.tsx) |
+| Production photos uploader | [backend/src/admin/widgets/order-production-photos.tsx](backend/src/admin/widgets/order-production-photos.tsx) |
+| Customizer downloads (per-line files) | [backend/src/admin/widgets/order-customizer-downloads.tsx](backend/src/admin/widgets/order-customizer-downloads.tsx) |
+| Customizer print details | [backend/src/admin/widgets/order-customizer-print-details.tsx](backend/src/admin/widgets/order-customizer-print-details.tsx) |
+| Stage audit subscriber | [backend/src/subscribers/order-stage-audit.ts](backend/src/subscribers/order-stage-audit.ts) |
+
+**Stale flag**: env-gated. `STALE_ORDER_ALERTS_ENABLED=true` enables; threshold `STALE_ORDER_THRESHOLD_DAYS` (default 3); optional Slack digest via `SLACK_PRODUCTION_WEBHOOK_URL`.
+
+**Presence heartbeat**: POSTs to `/admin/admin-workspace/presence` every 20s when tab is visible. Powers "X is viewing this order" avatars across tabs.
+
+**Timeline cap**: comments + rejects queries capped at 500 each — large order histories may truncate.
+
+## Customer lifecycle / CRM
+
+Subscriber-driven and cron-driven nudges to keep customers engaged. **Every send-based cron is gated behind an `*_ENABLED=true` flag** so accidental boots don't spam customers.
+
+### Abandoned cart reminders
+Daily cron at `15 23 * * *` UTC scans carts in the 6-72h window and sends a single reminder if consent allows. Marks converted on order placement.
+
+| Component | Path |
+| --- | --- |
+| Daily job (`15 23 * * *`) | [backend/src/jobs/send-abandoned-cart-reminders.ts](backend/src/jobs/send-abandoned-cart-reminders.ts) |
+| Send + idempotency | [backend/src/services/abandoned-cart-reminders/](backend/src/services/abandoned-cart-reminders/) |
+| Mark-converted subscriber | [backend/src/subscribers/abandoned-cart-mark-converted.ts](backend/src/subscribers/abandoned-cart-mark-converted.ts) |
+| Backend ingest route | [backend/src/api/abandoned-cart/route.ts](backend/src/api/abandoned-cart/route.ts) |
+| Email template | [backend/src/modules/email-notifications/templates/cart-reminder.tsx](backend/src/modules/email-notifications/templates/cart-reminder.tsx) |
+
+**Env**: `ABANDONED_CART_REMINDERS_ENABLED=true` required. **Tuning**: `ABANDONED_CART_AGE_MIN_HOURS` (default 6), `ABANDONED_CART_AGE_MAX_HOURS` (default 72), `ABANDONED_CART_MAX_SENDS_PER_RUN` (default 50). **Storage**: `abandoned_cart_followups` table; stamped with `reminder_sent_at` and `converted_at`. **Consent**: skips customers with `marketing_consent_email = false`; guests still messaged.
+
+### Reorder reminders, win-back, monthly digest
+Email cadence keeping repeat / dormant customers warm and producing an internal monthly performance report.
+
+| Feature | Job | Schedule | Email template | Env gate |
+| --- | --- | --- | --- | --- |
+| Reorder reminders | [send-reorder-reminders.ts](backend/src/jobs/send-reorder-reminders.ts) | `30 23 * * *` | [reorder-reminder.tsx](backend/src/modules/email-notifications/templates/reorder-reminder.tsx) | `REORDER_REMINDERS_ENABLED` |
+| Win-back | [send-winback-emails.ts](backend/src/jobs/send-winback-emails.ts) | `0 0 * * 1` (weekly Monday) | [winback.tsx](backend/src/modules/email-notifications/templates/winback.tsx) | `WINBACK_EMAILS_ENABLED` |
+| Monthly digest (internal) | [send-monthly-digest.ts](backend/src/jobs/send-monthly-digest.ts) | `0 22 2 * *` (2nd of month) | [monthly-digest.tsx](backend/src/modules/email-notifications/templates/monthly-digest.tsx) | `MONTHLY_DIGEST_RECIPIENTS` (comma-separated emails) |
+
+Services: [reorder-reminders/](backend/src/services/reorder-reminders/), [churn-queue/](backend/src/services/churn-queue/) (drives win-back; classifies dormancy as drifting / at_risk / lost based on median order gap), [monthly-digest/](backend/src/services/monthly-digest/).
+
+**Idempotency**: `customer.metadata.last_reorder_reminder_sent_at` (reorder); win-back uses one per customer per 90 days. Monthly digest skips silently if `MONTHLY_DIGEST_RECIPIENTS` is unset.
+
+### Automation rules engine
+Fire-on-event rules: conditions on order/stage changes trigger actions (tag customer, post comment, send alert, advance stage).
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/automation-rule/](backend/src/modules/automation-rule/) |
+| Migration | [backend/src/modules/automation-rule/migrations/Migration20260516200000.ts](backend/src/modules/automation-rule/migrations/Migration20260516200000.ts) |
+| Evaluator + dispatcher | [backend/src/services/automation-rules/evaluate.ts](backend/src/services/automation-rules/evaluate.ts) |
+| `order.placed` subscriber | [backend/src/subscribers/automation-on-order-placed.ts](backend/src/subscribers/automation-on-order-placed.ts) |
+| `stage_changed` subscriber | [backend/src/subscribers/automation-on-stage-changed.ts](backend/src/subscribers/automation-on-stage-changed.ts) |
+| Admin REST | [backend/src/api/admin/admin-workspace/automation-rules/](backend/src/api/admin/admin-workspace/automation-rules/) |
+| Admin CRUD page | [backend/src/admin/routes/automation-rules/page.tsx](backend/src/admin/routes/automation-rules/page.tsx) |
+
+**Triggers**: `order.placed`, `order.production_stage_changed`.
+**Operators**: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `exists`.
+**Fields**: `total`, `currency_code`, `line_count`, `quantity_total`, `lifetime_value`, `order_count`.
+**Actions**: `tag_customer`, `post_order_comment`, `send_alert_email`, `set_production_stage`.
+
+**Gotcha**: conditions + action payloads are stored as raw JSONB with loose validation. Action kinds are hard-coded in `evaluate.ts`; extending requires a code change. LTV is hydrated inline by `automation-on-order-placed.ts`.
+
+### Customer analytics widgets (LTV, journey, anonymize)
+Per-customer signals surfaced on the admin customer detail page.
+
+| Component | Path |
+| --- | --- |
+| LTV compute | [backend/src/services/customer-ltv/](backend/src/services/customer-ltv/) |
+| LTV widget | [backend/src/admin/widgets/customer-ltv.tsx](backend/src/admin/widgets/customer-ltv.tsx) |
+| Journey aggregator | [backend/src/services/customer-journey/](backend/src/services/customer-journey/) |
+| Journey widget | [backend/src/admin/widgets/customer-journey.tsx](backend/src/admin/widgets/customer-journey.tsx) |
+| Anonymize (GDPR) | [backend/src/services/customer-anonymize/anonymize.ts](backend/src/services/customer-anonymize/anonymize.ts) |
+| Recently viewed widget | [backend/src/admin/widgets/recently-viewed.tsx](backend/src/admin/widgets/recently-viewed.tsx) + trackers (`-customer`, `-order`, `-product`) |
+
+**Env**: `LTV_VIP_THRESHOLD_AUD` (default 1500; triggers VIP-tag suggestion). **PostHog integration** (journey): needs `POSTHOG_PERSONAL_API_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_HOST`. **Anonymize**: hashes email → `redacted-<sha256>@anon.invalid`, blanks PII, deletes newsletter + abandoned_cart rows. Deterministic so re-requests don't conflict.
+
+### PostHog cohort sync (PostHog → Medusa tags)
+Daily sync of PostHog cohort membership into Medusa customer tags so segments can drive automation rules.
+
+| Component | Path |
+| --- | --- |
+| Daily job (`30 3 * * *`) | [backend/src/jobs/sync-posthog-cohorts.ts](backend/src/jobs/sync-posthog-cohorts.ts) |
+| Sync logic | [backend/src/services/posthog-cohort-sync/](backend/src/services/posthog-cohort-sync/) |
+| Stats helpers | [backend/src/services/posthog-stats/](backend/src/services/posthog-stats/) |
+
+**Env**: `POSTHOG_COHORT_SYNC_ENABLED=true`, plus the PostHog auth trio. **Config format**: `POSTHOG_COHORT_SYNC_LIST="123:Engaged this week:teal,456:Cart but no checkout:amber"` (`cohort_id:tag_label:color`). **Safety**: hard cap of 5000 members per cohort; only deletes tags whose `created_by = "posthog-cohort-sync"` so admin-created tags are never auto-removed.
+
+### Newsletter + consent
+Subscriber syncs newsletter consent backwards when a previously-subscribed email registers as a customer.
+
+| Component | Path |
+| --- | --- |
+| Subscriber | [backend/src/subscribers/newsletter-sync-on-customer-created.ts](backend/src/subscribers/newsletter-sync-on-customer-created.ts) |
+| Signup route | [backend/src/api/newsletter/route.ts](backend/src/api/newsletter/route.ts) |
+| Migration script | [backend/src/scripts/migrate-newsletter-to-consent.ts](backend/src/scripts/migrate-newsletter-to-consent.ts) |
+
+**Env**: `NEWSLETTER_NOTIFICATION_EMAIL` (admin alerted on new subscribers). **Idempotency**: only sets `marketing_consent_email` if currently unset — never overwrites explicit `false`.
+
+### AI copy (product description drafts)
+Generates 3 draft descriptions for a product based on metadata + optional staff hint. OpenAI or Anthropic, configurable per env.
+
+| Component | Path |
+| --- | --- |
+| Service | [backend/src/services/ai-copy/](backend/src/services/ai-copy/) |
+| Admin route | [backend/src/api/admin/products/[id]/generate-description/route.ts](backend/src/api/admin/products/[id]/generate-description/route.ts) |
+| Widget on product detail | [backend/src/admin/widgets/product-ai-description.tsx](backend/src/admin/widgets/product-ai-description.tsx) |
+
+**Env**: `AI_PROVIDER` (`openai` | `anthropic`), `OPENAI_API_KEY` + `OPENAI_MODEL` (default `gpt-4o-mini`), `ANTHROPIC_API_KEY` + `ANTHROPIC_MODEL` (default `claude-haiku-4-5`), `AI_REQUEST_TIMEOUT_MS`. Returns 503 if provider unconfigured, 429 on rate limit.
+
+### Cross-sell recommendations
+Nightly job computes top-K co-purchased products per product; stored in product metadata for PDP rendering.
+
+| Component | Path |
+| --- | --- |
+| Nightly job (`0 2 * * *`) | [backend/src/jobs/refresh-cross-sell-recommendations.ts](backend/src/jobs/refresh-cross-sell-recommendations.ts) |
+| Compute + refresh logic | [backend/src/services/cross-sell-recommendations/](backend/src/services/cross-sell-recommendations/) |
+
+**Tuning**: `CROSS_SELL_MAX_PER_PRODUCT`, `CROSS_SELL_MIN_CO_OCCURRENCE`. **Storage**: `product.metadata.cross_sell_product_ids`. **Scale ceiling**: pulls full order history each run — promote to a materialised view past ~10k orders.
+
+### Search event logging
+Storefront fire-and-forget POST captures search queries + result counts for trending / zero-result analysis.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/search-log/](backend/src/modules/search-log/) |
+| Migration | [backend/src/modules/search-log/migrations/Migration20260509000000.ts](backend/src/modules/search-log/migrations/Migration20260509000000.ts) |
+| Store route | [backend/src/api/store/search-events/route.ts](backend/src/api/store/search-events/route.ts) |
+
+Always returns 204 so failures never break UX. Query length validated 1-500 chars; empty queries dropped.
+
 ## Required environment variables
 
 ### Backend (`backend/.env`)
@@ -182,7 +603,73 @@ Computes effective DPI = `image source pixels / (rendered canvas px / canvas-px-
 | `AUSSIE_PACIFIC_COST_ADJUSTMENT` | Multiplier applied to the API `price` field before it's fed into the bulk-price ladder. We currently assume AP's `price` is ex-GST cost (same convention as AS Colour and the FashionBiz "1-99" tier), so default is `1.0`. Calibrate against the first real invoice — if AP returns inc-GST prices, set `0.909`; if AP's published price sits below the trade rate (like FashionBiz's distributor storefront), set the observed ratio. The first 5 styles emit a calibration log line during import so the operator can sanity-check before scaling up. | `1.0` |
 | `AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD` | Optional. Default shipping method embedded in dropship order payloads. Falls back to the form input on the admin widget when unset. | unset |
 
-All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
+#### Customer-lifecycle send-gate flags (CRM)
+
+Every reminder/digest job is gated behind an `*_ENABLED` flag so accidental boots don't mass-email customers. All default OFF.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `NPS_LINK_SECRET` | **Shared** HMAC secret for NPS rating links, artwork-approval links, and quote-accept links. Required in prod for any of those features. | unset — features fall back to dev no-op |
+| `NPS_REQUESTS_ENABLED` | Gate the daily NPS-request cron. | `false` |
+| `NPS_REQUEST_DAYS_AFTER_DELIVERED` | Days after `delivered` before sending NPS prompt. | `14` |
+| `NPS_MIN_GAP_DAYS_PER_CUSTOMER` | Don't re-NPS the same customer within this many days. | `90` |
+| `NPS_MAX_SENDS_PER_RUN` | Cap per cron tick to limit blast radius. | `25` |
+| `ABANDONED_CART_REMINDERS_ENABLED` | Gate the daily abandoned-cart cron. | `false` |
+| `ABANDONED_CART_AGE_MIN_HOURS` / `ABANDONED_CART_AGE_MAX_HOURS` | Send window relative to cart-created. | `6` / `72` |
+| `ABANDONED_CART_MAX_SENDS_PER_RUN` | Cap per cron tick. | `50` |
+| `REORDER_REMINDERS_ENABLED` | Gate the daily reorder-reminder cron. | `false` |
+| `WINBACK_EMAILS_ENABLED` | Gate the weekly win-back cron. | `false` |
+| `MONTHLY_DIGEST_RECIPIENTS` | Comma-separated admin emails for the 2nd-of-month internal digest. Empty disables. | unset |
+| `STALE_ORDER_ALERTS_ENABLED` | Gate the daily stale-order scan. | `false` |
+| `STALE_ORDER_THRESHOLD_DAYS` | Days a `production_stage` can sit before being flagged stale. | `3` |
+| `SLACK_PRODUCTION_WEBHOOK_URL` | Optional. Webhook for newly-stale orders digest. | unset — logged only |
+| `POSTHOG_COHORT_SYNC_ENABLED` | Gate the daily PostHog → tags sync. | `false` |
+| `POSTHOG_COHORT_SYNC_LIST` | `cohort_id:tag_label:color` comma-separated config. | unset |
+| `LTV_VIP_THRESHOLD_AUD` | LTV threshold for VIP-tag suggestion in admin. | `1500` |
+| `FREE_SHIPPING_TAGS` | Comma-separated customer-tag labels that grant `applied_perks.free_shipping` at order placement. | `"VIP,Wholesale"` |
+| `CROSS_SELL_MAX_PER_PRODUCT` / `CROSS_SELL_MIN_CO_OCCURRENCE` | Tuning for the nightly cross-sell job. | see constants.ts |
+
+#### AI features
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | Required for the storefront chatbot AND backend AI copy generator (when `AI_PROVIDER=anthropic`). | unset — both routes return 503 |
+| `ANTHROPIC_MODEL` | Override the Anthropic model id. | `claude-haiku-4-5` |
+| `AI_PROVIDER` | Backend AI copy provider switch (`openai` \| `anthropic`). | `openai` |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | OpenAI credentials for AI copy. | unset / `gpt-4o-mini` |
+| `AI_REQUEST_TIMEOUT_MS` | Hard timeout for AI provider requests. | sensible default |
+
+#### Notification routing
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `RESEND_API_KEY` | Required to send any email. | unset — emails silently dropped |
+| `RESEND_FROM_EMAIL` (or `RESEND_FROM`) | Verified sender address. | unset |
+| `SUPPORT_REPLY_TO_EMAIL` | Reply-to header on customer-facing emails (NPS, quotes, contact responses). | unset — falls back to from-address |
+| `CONTACT_NOTIFICATION_EMAIL` | Admin inbox for contact-form + quote submissions. | unset — submissions still persist |
+| `NEWSLETTER_NOTIFICATION_EMAIL` | Admin inbox for new newsletter signups. | unset |
+| `ORDER_NOTIFICATION_EMAIL` | Admin inbox for order-placed notification. | unset |
+| `ADMIN_PUBLIC_URL` | Public admin URL used in digest emails. | falls back to `BACKEND_URL` |
+
+#### Shipping (ShipStation + dropship)
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `SHIPSTATION_API_KEY` | Required to enable the ShipStation fulfillment provider (rates, labels). | unset — provider not registered |
+| `SHIPSTATION_WEBHOOK_SECRET` | Required for incoming label events. | unset |
+| `SHIPSTATION_WAREHOUSE_*` | Warehouse address fallback (`POSTCODE`, `COUNTRY_CODE`, `CITY`, `STATE`, `ADDRESS_1`, `PHONE`, `NAME`). Prefer the stock-location address in admin. | unset |
+| `SHIPSTATION_PACKAGE_LENGTH_CM` / `_WIDTH_CM` / `_HEIGHT_CM` | Default package dimensions for rate quotes. | unset |
+| `SHIPPING_PACKAGING_OVERHEAD_GRAMS` | Added to item weight for accurate rates. | sensible default |
+
+#### File storage (MinIO)
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `MINIO_ENDPOINT` | MinIO host (e.g. `minio.example.com:9000` or `https://minio.example.com`). Protocol parsed for port; default 443 for https, 80 for http. | unset — file uploads broken |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Credentials. | unset |
+| `MINIO_BUCKET` | Bucket name; auto-set to public-read on first use. | `medusa-media` |
+
+All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 
 ### Storefront (`storefront/.env`)
 
@@ -194,16 +681,19 @@ All other env vars (Medusa, MinIO, Resend, AS Colour, ShipStation, Stripe, etc.)
 ## First-time setup checklist
 
 1. `cd backend && pnpm install && cd ../storefront && pnpm install`
-2. **Run the designs migration**: `cd backend && npx medusa db:migrate` — creates the `design` table for Phase 2.
-3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises the customer↔design link table.
-4. **Create the vectorization service product** in Medusa admin (Phase 4):
+2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace, report-alert, report-annotation, search-log, stripe-payment-link, …).
+3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises the customer↔design, customer↔wishlist, and product↔brand link tables.
+4. **Seed customer tiers** (B2B pricing): `cd backend && npx medusa exec src/scripts/seed-customer-tiers.ts` — creates the 8 "Tier: X" customer groups + matching price-list overrides.
+5. **Bootstrap shop categories** (mega-menu): `cd backend && npx medusa exec src/scripts/setup-shop-categories.ts` — creates the audience × garment-type tree and back-fills existing products.
+6. **Create the vectorization service product** in Medusa admin (Phase 4):
    - Title: "Artwork Vectorization Service"
    - Make it digital (no shipping, no inventory)
    - Hide from storefront catalog (tag it `internal` or whatever convention you use)
    - Set price (e.g. $15 AUD)
    - Copy the **variant ID** (not product ID) into `NEXT_PUBLIC_VECTORIZATION_VARIANT_ID`
-5. Add the new env vars from the table above.
-6. Restart both apps.
+7. Add the env vars from the tables above (at minimum: Resend, NPS_LINK_SECRET, STOREFRONT_URL).
+8. Configure the **second** Stripe webhook endpoint for payment links if used (see "Stripe payment links" section below).
+9. Restart both apps.
 
 ## Stripe payment links — auto-link to orders
 
@@ -330,6 +820,277 @@ Env vars: `IMPORT_LIMIT` (cap product count), `IMPORT_DRY_RUN=1` (no DB writes).
 **Dropship**: AP's API documents `POST /api/v1/order` but exposes **no GET endpoint for order retrieval, no shipment/tracking endpoints, and no webhooks**. The admin widget submits the order and records whatever response AP returns (typically just a reference + "Submitted" status). Operators reconcile shipment progress via AP email confirmations or the distributor portal until AP adds a status endpoint. The status-mapping lib + reserved metadata fields (`aussiepacific_last_synced_at`, `aussiepacific_shipments`) are in place so a polling cron can be added later without touching the create flow.
 
 **Workshop "ship-to" address**: AP dropships reuse the existing `ASCOLOUR_WORKSHOP_*` env vars (same physical SC Prints address). If AP ever needs a different destination, introduce `AUSSIE_PACIFIC_WORKSHOP_*` overrides at that point.
+
+## Shipping & dropship
+
+### ShipStation fulfillment provider
+Real-time rate calculation, label purchase, and shipment tracking via ShipStation API v2.
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/shipstation/](backend/src/modules/shipstation/) |
+| Parcels widget | [backend/src/admin/widgets/order-shipstation-parcels.tsx](backend/src/admin/widgets/order-shipstation-parcels.tsx) |
+| Shipping-decision widget | [backend/src/admin/widgets/order-shipping-decision.tsx](backend/src/admin/widgets/order-shipping-decision.tsx) |
+| Shipping-decision stamp (cart → order) | [backend/src/subscribers/order-placed-stamp-shipping-decision.ts](backend/src/subscribers/order-placed-stamp-shipping-decision.ts) |
+| Shipment-created → email | [backend/src/subscribers/order-shipment-created.ts](backend/src/subscribers/order-shipment-created.ts) |
+
+**Env**: `SHIPSTATION_API_KEY` + warehouse fields (see env table). **Gotcha**: rates silently fail if any required warehouse field is missing; `variant.weight` or `item.metadata.weight_grams` must be set or only packaging overhead is used.
+
+### AS Colour dropship status sync
+AS Colour has no webhooks — every 15 minutes a job polls non-terminal AS Colour orders and writes status / shipments into order metadata.
+
+| Component | Path |
+| --- | --- |
+| Status sync job (`*/15 * * * *`) | [backend/src/jobs/sync-ascolour-order-status.ts](backend/src/jobs/sync-ascolour-order-status.ts) |
+| Dropship widget | [backend/src/admin/widgets/order-ascolour-dropship.tsx](backend/src/admin/widgets/order-ascolour-dropship.tsx) |
+| Status mapping | [backend/src/lib/ascolour-status.ts](backend/src/lib/ascolour-status.ts) |
+
+180-day lookback to skip ancient orders. Terminal-status filter prevents re-polling completed orders. Shipments endpoint may 404 early — logged non-fatal.
+
+### Aussie Pacific dropship dashboard
+See "Aussie Pacific API importer" section above. Dropship dashboard at `/app/dropship/aussie-pacific` (route at [backend/src/admin/routes/dropship/aussie-pacific/page.tsx](backend/src/admin/routes/dropship/aussie-pacific/page.tsx); the parent `/app/dropship` lives in [backend/src/admin/routes/dropship/page.tsx](backend/src/admin/routes/dropship/page.tsx)).
+
+## File storage (MinIO module)
+
+S3-compatible self-hosted file storage. Registered as Medusa's `FileProviderService`; all images and customer-uploaded artwork go through it.
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/minio-file/](backend/src/modules/minio-file/) |
+
+**Env**: `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` (default `medusa-media`).
+
+**Gotcha**: endpoint parsing strips protocol and extracts port; HTTPS implies 443, HTTP implies 80. Bucket policy auto-set to public-read on first use. Files keyed with ULID + extension; original filename in metadata.
+
+**Retention warning** (re-stated from Operational notes): if MinIO lifecycle policies GC `customer_original_files` URLs, re-order will display but add-to-cart will fail to re-render print PNGs. Treat these as indefinite retention.
+
+## Email notifications (Resend)
+
+All transactional + lifecycle emails go through the email-notifications module wrapping Resend.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/email-notifications/](backend/src/modules/email-notifications/) |
+| Resend service wrapper | [backend/src/modules/email-notifications/services/resend.ts](backend/src/modules/email-notifications/services/resend.ts) |
+| Templates dir | [backend/src/modules/email-notifications/templates/](backend/src/modules/email-notifications/templates/) |
+
+Preview templates locally: `cd backend && pnpm email:dev` (boots [react-email](https://react.email) at `localhost:3002`).
+
+### Templates
+
+| Template | Triggered by | Recipient | Notes |
+| --- | --- | --- | --- |
+| `order-placed.tsx` | `order.placed` subscriber | Customer + `ORDER_NOTIFICATION_EMAIL` | |
+| `order-shipped.tsx` | `order.shipment_created` subscriber | Customer | Tracking parcels from fulfillment metadata or ShipStation labels |
+| `order-production-stage.tsx` | `production_stage_changed` subscriber (Phase 1) | Customer | Sent only for forward transitions through `awaiting_approval` and `in_production` |
+| `artwork-approval.tsx` | `order-artwork-stage-changed` subscriber | Customer | HMAC-signed link to `/artwork-approval/[orderId]` |
+| `cart-reminder.tsx` | `send-abandoned-cart-reminders` job | Customer (consent-gated) | One per cart per lifetime |
+| `reorder-reminder.tsx` | `send-reorder-reminders` job | Customer | Targets repeat customers near their median order gap |
+| `nps-request.tsx` | `send-nps-requests` job | Customer | 1-5 score, HMAC-signed |
+| `winback.tsx` | `send-winback-emails` job | Lapsed customer | Three severity tiers (drifting / at_risk / lost) |
+| `monthly-digest.tsx` | `send-monthly-digest` job | Internal staff | 2nd of month at 22:00 UTC |
+| `threshold-alert.tsx` | `run-report-alerts` job | Staff | Stock / SLA / capacity threshold breach |
+| `contact-submission.tsx` | `POST /contact` route | `CONTACT_NOTIFICATION_EMAIL` | Quote submissions also use this path |
+| `invite-user.tsx` | `invite.created` / `invite.resent` | Admin invitee | Branded SC Prints copy + token link |
+| `base.tsx` | (utility) | — | Layout primitives shared by all templates |
+| `index.tsx` | (utility) | — | Template registry / barrel export |
+
+**Idempotency**: Resend's v6 API handles request dedup server-side. Some senders also add `notification.create({ idempotency_key })` belt-and-braces (e.g. artwork-approval flow).
+
+## Background jobs (cron) — at-a-glance
+
+All schedules in UTC. Hours shown also as AEST (+10) since the studio is in NSW.
+
+| Schedule (UTC) | AEST | Job | What it does |
+| --- | --- | --- | --- |
+| `0 * * * *` | hourly | [sync-ascolour-inventory.ts](backend/src/jobs/sync-ascolour-inventory.ts) | Delta inventory pull from AS Colour |
+| `*/15 * * * *` | every 15 min | [sync-ascolour-order-status.ts](backend/src/jobs/sync-ascolour-order-status.ts) | Poll AP and AS Colour order status |
+| `0 2 * * *` | 12:00 | [refresh-cross-sell-recommendations.ts](backend/src/jobs/refresh-cross-sell-recommendations.ts) | Recompute top-K co-purchased products |
+| `30 3 * * *` | 13:30 | [sync-posthog-cohorts.ts](backend/src/jobs/sync-posthog-cohorts.ts) | PostHog cohort → customer tag |
+| `0 4 * * *` | 14:00 | [sync-fashionbiz-inventory.ts](backend/src/jobs/sync-fashionbiz-inventory.ts) | Full sweep of FashionBiz stock |
+| `0 5 * * *` | 15:00 | [sync-aussie-pacific-inventory.ts](backend/src/jobs/sync-aussie-pacific-inventory.ts) | Full sweep of AP stock |
+| `0 5 * * *` | 15:00 | [refresh-seo-analytics.ts](backend/src/jobs/refresh-seo-analytics.ts) | Pull 28-day GSC + GA4 metrics into cache |
+| `0 6 * * *` | 16:00 | [regenerate-tier-prices.ts](backend/src/jobs/regenerate-tier-prices.ts) | Rebuild B2B tier price-list overrides |
+| `0 8 * * *` | 18:00 | [scan-stale-orders.ts](backend/src/jobs/scan-stale-orders.ts) | Flag orders not progressed in N days |
+| `0 22 * * *` | 08:00 next day | [send-nps-requests.ts](backend/src/jobs/send-nps-requests.ts) | Daily NPS prompt batch |
+| `15 23 * * *` | 09:15 next day | [send-abandoned-cart-reminders.ts](backend/src/jobs/send-abandoned-cart-reminders.ts) | Cart reminder batch |
+| `30 23 * * *` | 09:30 next day | [send-reorder-reminders.ts](backend/src/jobs/send-reorder-reminders.ts) | Repeat-customer nudge |
+| `45 23 * * *` | 09:45 next day | [run-report-alerts.ts](backend/src/jobs/run-report-alerts.ts) | Evaluate threshold alerts and email staff |
+| `0 0 * * 1` | Mon 10:00 | [send-winback-emails.ts](backend/src/jobs/send-winback-emails.ts) | Weekly dormant-customer email |
+| `0 22 2 * *` | 2nd of month 08:00 | [send-monthly-digest.ts](backend/src/jobs/send-monthly-digest.ts) | Internal monthly performance digest |
+
+Cron jobs that depend on optional integrations (AS Colour, FashionBiz, AP, ShipStation, PostHog, Google) no-op silently when their token/key env vars are unset.
+
+## Subscribers — at-a-glance
+
+| Subscriber | Event | Purpose |
+| --- | --- | --- |
+| [order-placed.ts](backend/src/subscribers/order-placed.ts) | `order.placed` | Dispatch ORDER_PLACED email to customer + `ORDER_NOTIFICATION_EMAIL`; PostHog identify |
+| [order-placed-stamp-production-stage.ts](backend/src/subscribers/order-placed-stamp-production-stage.ts) | `order.placed` | Stamp initial `production_stage = "received"` so the Phase 1 tracker renders |
+| [order-placed-stamp-shipping-decision.ts](backend/src/subscribers/order-placed-stamp-shipping-decision.ts) | `order.placed` | Mirror `cart.metadata.shipping_decision` → `order.metadata` |
+| [stamp-order-tax-exempt.ts](backend/src/subscribers/stamp-order-tax-exempt.ts) | `order.placed` | Snapshot customer's tax-exempt state onto the order so invoices stay correct |
+| [stamp-order-perks.ts](backend/src/subscribers/stamp-order-perks.ts) | `order.placed` | Snapshot `applied_perks` (free shipping, etc.) from customer tags |
+| [order-shipment-created.ts](backend/src/subscribers/order-shipment-created.ts) | `order.shipment_created` | Dispatch ORDER_SHIPPED email with tracking parcels |
+| [order-production-stage-changed.ts](backend/src/subscribers/order-production-stage-changed.ts) | `production_stage_changed` | Dispatch milestone email (Phase 1) |
+| [order-stage-audit.ts](backend/src/subscribers/order-stage-audit.ts) | `production_stage_changed` | Append stage change to audit log + production_stage_history metadata |
+| [order-artwork-stage-changed.ts](backend/src/subscribers/order-artwork-stage-changed.ts) | `artwork_stage_changed` | Build mockup PDF + email customer the HMAC-signed approval link |
+| [automation-on-order-placed.ts](backend/src/subscribers/automation-on-order-placed.ts) | `order.placed` | Hydrate LTV + order count, evaluate automation rules |
+| [automation-on-stage-changed.ts](backend/src/subscribers/automation-on-stage-changed.ts) | `production_stage_changed` | Evaluate stage-triggered automation rules |
+| [abandoned-cart-mark-converted.ts](backend/src/subscribers/abandoned-cart-mark-converted.ts) | `order.placed` | Stamp `converted_at` on matching abandoned_cart_followups |
+| [newsletter-sync-on-customer-created.ts](backend/src/subscribers/newsletter-sync-on-customer-created.ts) | `customer.created` | Back-fill `marketing_consent_email` from pre-existing newsletter row |
+| [invite-created.ts](backend/src/subscribers/invite-created.ts) | `invite.created` + `invite.resent` | Send SC-Prints-branded admin invite email |
+
+## Reports + alerts + admin workspace
+
+The admin's analytical + ops layer. Hundreds of routes; the cheat sheet below is organised by surface.
+
+### Reports dashboard
+Single admin page rendering ~50 charts driven by ~60 backend routes under [backend/src/api/admin/reports/](backend/src/api/admin/reports/). Date-range filter (presets: 7d, 30d, this/last month, last quarter), region-aware currency. No caching layer — everything is live.
+
+| Component | Path |
+| --- | --- |
+| Reports admin page | [backend/src/admin/routes/reports/page.tsx](backend/src/admin/routes/reports/page.tsx) |
+| Chart components | [backend/src/admin/components/reports/](backend/src/admin/components/reports/) |
+| Shared report utils (palette, date-range, CSV) | [backend/src/admin/lib/reports/](backend/src/admin/lib/reports/) |
+
+Sub-route categories under `/admin/reports/`:
+- **Sales & finance**: `sales-overview`, `aov-by-method`, `payment-mix`, `new-vs-returning`, `top-customers`, `top-products`, `cohort-ltv`, `cohorts`, `refund-rate`, `returns`, `discount-profitability`
+- **Acquisition + funnel**: `pdp-conversion`, `cart-conversion`, `time-to-purchase`, `first-order-affinity`, `site-search`, `ga4-acquisition`, `ga4-ecommerce`, `ga4-aov-by-source`, `gsc-ctr-trend`, `geo-heatmap`
+- **Customizer funnel**: `customizer-adoption`, `customizer-funnel`, `customizer-iteration`, `saved-design-conversion`, `vectorization-funnel`, `designs-utilization`
+- **Production / SLA**: `sla-breach`, `time-in-stage`, `flow-time`, `on-time-delivery`, `production-snapshot`, `print-tomorrow`, `stage-dwell-heatmap`, `capacity`, `staff-throughput`, `ascolour-throughput`, `embroidery-stitches`, `decoration-mix`, `approval-turnaround`, `reprint-rate`, `order-edit-frequency`
+- **Inventory & supply chain**: `inventory-status`, `aging-inventory`, `variant-velocity`, `supplier-lead-time`, `supplier-mix`, `blanks-forecast`
+- **Customer health**: `rfm`, `reorder-rate`, `reorder-reminders`, `churn-queue`, `email-channel-roi`
+- **Ops**: `today`, `order-time-heatmap`, `cron-jobs`, `system-health`, `regions`, `storage`, `monthly-digest`, `posthog-stats`, `config`
+
+### Report alerts
+Threshold-based metric alerts evaluated nightly at `45 23 * * *`. Six metrics by default: SLA breach %, currently-breaching count, reprint rate, dead stock units, capacity status, top-10 customer revenue share.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/report-alert/](backend/src/modules/report-alert/) |
+| Evaluator + runner | [backend/src/services/report-alerts/](backend/src/services/report-alerts/) |
+| Nightly job (`45 23 * * *`) | [backend/src/jobs/run-report-alerts.ts](backend/src/jobs/run-report-alerts.ts) |
+| Admin REST | [backend/src/api/admin/reports/alerts/](backend/src/api/admin/reports/alerts/) |
+| Email template | [backend/src/modules/email-notifications/templates/threshold-alert.tsx](backend/src/modules/email-notifications/templates/threshold-alert.tsx) |
+
+Each alert has comparator + threshold + cooldown days. `last_value` is always written; `last_fired_at` only when alert fires (cooldown enforces). UI shows "still breaching" via `last_value`.
+
+### Report annotations
+Pin date-stamped notes (label + description + colour) over time-series charts. Apply globally to all charts that opt in.
+
+| Component | Path |
+| --- | --- |
+| Module | [backend/src/modules/report-annotation/](backend/src/modules/report-annotation/) |
+| Admin REST | [backend/src/api/admin/reports/annotations/](backend/src/api/admin/reports/annotations/) |
+
+### Studio dashboard ("who needs attention today")
+Five live buckets recomputed at every page load: VIP dormant, first-timer orders, idle quotes, low NPS scores, snooze follow-ups due.
+
+| Component | Path |
+| --- | --- |
+| Service | [backend/src/services/studio-dashboard/build.ts](backend/src/services/studio-dashboard/build.ts) |
+| Admin route | [backend/src/api/admin/studio/route.ts](backend/src/api/admin/studio/route.ts) |
+| Admin page | [backend/src/admin/routes/studio/page.tsx](backend/src/admin/routes/studio/page.tsx) |
+
+### System map
+Lazy-loaded Mermaid diagrams of stage flow, staff lanes, data ownership.
+
+| Component | Path |
+| --- | --- |
+| Admin page | [backend/src/admin/routes/system-map/page.tsx](backend/src/admin/routes/system-map/page.tsx) |
+| Chunk-reload safety widget | [backend/src/admin/widgets/chunk-reload-guard.tsx](backend/src/admin/widgets/chunk-reload-guard.tsx) |
+
+The guard listens for 11 chunk-load-error signatures, debounces reloads via `sessionStorage` (key `LAST_RELOAD_KEY`), min 15s between reload attempts.
+
+### Help admin page
+Embedded staff guide reference (start-here, widget descriptions, keyboard shortcuts, integration walkthroughs). Source content tracked in `/Docs/STAFF_GUIDE.md`.
+
+| Component | Path |
+| --- | --- |
+| Admin page | [backend/src/admin/routes/help/page.tsx](backend/src/admin/routes/help/page.tsx) |
+
+### Admin workspace module (cross-cutting admin state)
+Centralises persistent admin state: customer tags + notes, order comments, audit log, admin bookmarks, presence, status banner.
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/admin-workspace/](backend/src/modules/admin-workspace/) |
+| Migrations (4 over time) | [Migration20260516000000.ts](backend/src/modules/admin-workspace/migrations/Migration20260516000000.ts), [...100000](backend/src/modules/admin-workspace/migrations/Migration20260516100000.ts), [...200000](backend/src/modules/admin-workspace/migrations/Migration20260516200000.ts), [Migration20260622000000.ts](backend/src/modules/admin-workspace/migrations/Migration20260622000000.ts) |
+| Bookmarks REST | [backend/src/api/admin/admin-workspace/bookmarks/](backend/src/api/admin/admin-workspace/bookmarks/) |
+| Presence REST | [backend/src/api/admin/admin-workspace/presence/](backend/src/api/admin/admin-workspace/presence/) |
+| Search REST | [backend/src/api/admin/admin-workspace/search/](backend/src/api/admin/admin-workspace/search/) |
+| Status banner REST | [backend/src/api/admin/admin-workspace/status-banner/](backend/src/api/admin/admin-workspace/status-banner/) |
+| Automation-rules REST (shared with the rules engine) | [backend/src/api/admin/admin-workspace/automation-rules/](backend/src/api/admin/admin-workspace/automation-rules/) |
+| Command palette | [backend/src/admin/widgets/cmd-k-palette.tsx](backend/src/admin/widgets/cmd-k-palette.tsx) |
+| Keyboard shortcuts overlay | [backend/src/admin/widgets/keyboard-shortcuts.tsx](backend/src/admin/widgets/keyboard-shortcuts.tsx) |
+| Status banner display | [backend/src/admin/widgets/status-banner.tsx](backend/src/admin/widgets/status-banner.tsx) |
+
+**Status banner**: severities `info` / `warning` / `critical`, optional `expires_at`. Dismiss state lives in `localStorage` (`sc:status_banner_dismissed_id`) — one-shot per banner per browser session.
+
+### Config endpoint for cross-domain admin links
+| Component | Path |
+| --- | --- |
+| Read-only `{storefront_url, country_code}` | [backend/src/api/admin/scp-config/route.ts](backend/src/api/admin/scp-config/route.ts) |
+
+### Product data hub
+One admin page consolidating five spreadsheet/import workflows into tabs: import-new, update-existing, bulk-delete, types-and-tags, plus per-supplier importer tabs (AS Colour, FashionBiz, AP).
+
+| Component | Path |
+| --- | --- |
+| Product data hub | [backend/src/admin/routes/product-data/page.tsx](backend/src/admin/routes/product-data/page.tsx) |
+| Spreadsheet-sync (import) | [backend/src/admin/routes/spreadsheet-sync/page.tsx](backend/src/admin/routes/spreadsheet-sync/page.tsx) |
+| Spreadsheet-sync (update) | [backend/src/admin/routes/spreadsheet-sync-update/page.tsx](backend/src/admin/routes/spreadsheet-sync-update/page.tsx) |
+| Bulk-delete | [backend/src/admin/routes/product-bulk-delete/page.tsx](backend/src/admin/routes/product-bulk-delete/page.tsx) |
+| Types & tags manager | [backend/src/admin/routes/product-type-tag-manage/page.tsx](backend/src/admin/routes/product-type-tag-manage/page.tsx) |
+| Per-supplier importer UIs | [backend/src/admin/routes/ascolour-import/](backend/src/admin/routes/ascolour-import/), [fashionbiz-import/](backend/src/admin/routes/fashionbiz-import/), [aussie-pacific-import/](backend/src/admin/routes/aussie-pacific-import/) |
+| Spreadsheet sync libs | [spreadsheet-sync-brands.ts](backend/src/admin/lib/spreadsheet-sync-brands.ts), [-categories.ts](backend/src/admin/lib/spreadsheet-sync-categories.ts), [-import.ts](backend/src/admin/lib/spreadsheet-sync-import.ts), [-preview.ts](backend/src/admin/lib/spreadsheet-sync-preview.ts), [-tags.ts](backend/src/admin/lib/spreadsheet-sync-tags.ts), [-update-import.ts](backend/src/admin/lib/spreadsheet-sync-update-import.ts) |
+| CSV import / export helpers | [csv-import.ts](backend/src/admin/lib/csv-import.ts) + [csv-export.ts](backend/src/admin/lib/csv-export.ts) |
+
+### Export widgets (CSV download from list pages)
+| Widget | Purpose |
+| --- | --- |
+| [orders-export-csv.tsx](backend/src/admin/widgets/orders-export-csv.tsx) | Order list snapshot |
+| [product-tags-export-csv.tsx](backend/src/admin/widgets/product-tags-export-csv.tsx) | Catalog tags |
+| [product-types-export-csv.tsx](backend/src/admin/widgets/product-types-export-csv.tsx) | Catalog types |
+| [products-import-template-export.tsx](backend/src/admin/widgets/products-import-template-export.tsx) | Empty product-import CSV template |
+| [variant-bulk-pricing.tsx](backend/src/admin/widgets/variant-bulk-pricing.tsx) | Per-variant bulk-pricing ladder editor |
+| [variant-bulk-aggregation-flag.tsx](backend/src/admin/widgets/variant-bulk-aggregation-flag.tsx) | Mark a variant as a "bulk aggregator" for ladder display |
+| [variant-weights.tsx](backend/src/admin/widgets/variant-weights.tsx) | Per-variant weight (shipping-rate inputs) |
+
+### Misc admin widgets
+| Widget | Purpose |
+| --- | --- |
+| [agent-products-debug.tsx](backend/src/admin/widgets/agent-products-debug.tsx) | Internal debug surface for agent-driven product queries |
+| [product-brand.tsx](backend/src/admin/widgets/product-brand.tsx) | Brand picker on product detail (see "Brands" section) |
+| [product-ai-description.tsx](backend/src/admin/widgets/product-ai-description.tsx) | AI copy widget on product detail |
+
+## Storefront layout map
+
+### Account dashboard sub-pages
+All under [storefront/src/app/[countryCode]/(main)/account/@dashboard/](storefront/src/app/[countryCode]/(main)/account/@dashboard/):
+
+| Page | Source | Status |
+| --- | --- | --- |
+| `profile/` | Medusa starter | stock |
+| `addresses/` | Medusa starter | stock |
+| `orders/` | Custom (Medusa starter + tracking + reorder) | custom |
+| `designs/` | Phase 2 (saved designs) | custom |
+| `wishlist/` | Wishlist module | custom |
+| `group-orders/` | Group-order module | custom |
+| `organisations/` | Organisation module | custom |
+
+### Experimental / dev pages (flag for cleanup before next release)
+These are clearly experimental and not linked from production navigation. Audit which are still useful and trim the rest.
+
+| Path | Notes |
+| --- | --- |
+| `[countryCode]/test/animation-widgets/` | Widget animation sandbox |
+| `[countryCode]/test/button-animations/` | Button interaction tests |
+| `[countryCode]/bleh/`, `bleh2/` | Three.js particle experiments with photo source |
+| `[countryCode]/dan/`, `dmc/` | Dev splash pages, not linked from nav |
+| `[countryCode]/(main)/particle-logo/`, `particle-threejs/`, `particle-flow/` | Tsparticles + Three.js sandboxes |
+| `[countryCode]/(main)/old-hero/` | Legacy hero — superseded by current home hero |
+| `[countryCode]/(main)/jungle-scene/`, `space-hero/` | Animation isolation tests |
 
 ## Tests
 
@@ -464,6 +1225,18 @@ pdpStep  done flag       Step
 | `InputPanel` | `components/input-panel.tsx` | Left-side "Add to design" panel — file upload, text, "My uploads" |
 | `PricingPanel` | `components/pricing-panel.tsx` | Bulk discount table + unit price calculation |
 | `EmbeddedProductCustomizer` | `components/embedded-product-customizer.tsx` | Server→client bridge for the PDP; passes `integratedPdpSlots` in |
+| `CustomizerGuide` | `components/customizer-guide.tsx` | 4-step coach-mark tour with spotlight overlay; emits `guide_started` / `guide_step_advanced` / `guide_completed` to PostHog |
+| `CanvasStage` | `components/canvas-stage.tsx` | Fabric.js canvas wrapper with drag/drop, paste, file upload |
+| `CustomizerProductPicker` | `components/customizer-product-picker.tsx` | Step 1 product picker (variant + options); portal-rendered to escape transform containing block |
+| `DecorationMethodPicker` | `components/decoration-method-picker.tsx` | Method (print / embroidery / sticker) selector for multi-decoration flows |
+| `EmbroiderySideConfig` | `components/embroidery-side-config.tsx` | Embroidery-specific layout config (different area model from print) |
+| `ManagementPanel` | `components/management-panel.tsx` | "Manage artwork" panel — duplicate / delete sides |
+| `LineItemDesignPreview` | `components/line-item-design-preview.tsx` | Order-history line-item design render |
+| `LineItemMockupPreview` | `components/line-item-mockup-preview.tsx` | Order-history mockup render |
+| `MassApplyDialog` | `components/mass-apply-dialog/` | Bulk apply artwork / size across multiple lines (centred overlay dialog) |
+| `LowResolutionModal` | `components/low-resolution-modal.tsx` | Phase 4 DPI warning + vectorization upsell modal |
+
+**Coach-mark gotcha**: `CustomizerGuide` uses `useLayoutEffect` + scheduled `getBoundingClientRect()` calls (0 / 150 / 350 / 550 ms) to track spotlight position during layout shifts. Portal-renders the spotlight + tooltip to avoid z-index issues, and the picker modal portals to body for the same reason.
 
 ### Canvas ↔ wizard data flow
 
