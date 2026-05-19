@@ -8,6 +8,8 @@ import {
   readWatchers,
   removeWatcher,
 } from "../../../../../lib/order-watchers"
+import { writeAudit } from "../../../../../lib/audit-log"
+import { AUDIT_ACTION, AUDIT_ENTITY } from "../../../../../lib/audit-entities"
 
 const addSchema = z.object({ email: z.string().min(3).max(200) })
 
@@ -33,6 +35,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   await orderModuleService.updateOrders(orderId, {
     metadata: { ...(order?.metadata ?? {}), watcher_emails: result.watchers },
   })
+  await writeAudit({
+    container: req.scope as any,
+    entity: AUDIT_ENTITY.ORDER,
+    entity_id: orderId,
+    action: AUDIT_ACTION.WATCHER_ADDED,
+    actor_id: (req as any).auth_context?.actor_id ?? null,
+    details: { email: body.email, total_watchers: result.watchers.length },
+  })
   res.json({ watchers: result.watchers })
 }
 
@@ -45,6 +55,14 @@ export async function DELETE(req: MedusaRequest, res: MedusaResponse) {
   const next = removeWatcher(order?.metadata, email)
   await orderModuleService.updateOrders(orderId, {
     metadata: { ...(order?.metadata ?? {}), watcher_emails: next },
+  })
+  await writeAudit({
+    container: req.scope as any,
+    entity: AUDIT_ENTITY.ORDER,
+    entity_id: orderId,
+    action: AUDIT_ACTION.WATCHER_REMOVED,
+    actor_id: (req as any).auth_context?.actor_id ?? null,
+    details: { email, total_watchers: next.length },
   })
   res.json({ watchers: next })
 }

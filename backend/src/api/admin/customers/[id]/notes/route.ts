@@ -2,6 +2,8 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 import { ADMIN_WORKSPACE_MODULE } from "../../../../../modules/admin-workspace"
+import { writeAudit } from "../../../../../lib/audit-log"
+import { AUDIT_ACTION, AUDIT_ENTITY } from "../../../../../lib/audit-entities"
 
 /**
  * GET /admin/customers/:id/notes — list notes pinned to this customer.
@@ -65,6 +67,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       pinned: body.pinned === true,
       snooze_until: snoozeUntil,
       created_by: actor,
+    })
+    await writeAudit({
+      container: req.scope as any,
+      entity: AUDIT_ENTITY.CUSTOMER,
+      entity_id: customerId,
+      action: AUDIT_ACTION.NOTE_ADDED,
+      actor_id: actor,
+      details: {
+        note_id: (created as any)?.id ?? null,
+        pinned: body.pinned === true,
+        snooze_until: snoozeUntil?.toISOString() ?? null,
+        excerpt: body.body.trim().slice(0, 80),
+      },
     })
     return res.status(201).json({ note: created })
   } catch (err: any) {

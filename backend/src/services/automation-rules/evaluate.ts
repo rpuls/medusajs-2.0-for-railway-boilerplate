@@ -12,6 +12,8 @@ import {
   type ProductionStageChangedEvent,
   type ProductionStageHistoryEntry,
 } from "../../lib/production-stage"
+import { writeAudit } from "../../lib/audit-log"
+import { AUDIT_ACTION, AUDIT_ENTITY } from "../../lib/audit-entities"
 
 /**
  * Pure rule evaluator. Given an event payload + a list of rules with
@@ -282,7 +284,36 @@ export async function runRulesForEvent(
     } catch {
       /* non-fatal */
     }
-    void allOk
+    // Mirror the fire into the polymorphic audit log so the per-order
+    // / per-customer Activity tabs show "Rule X fired" alongside other
+    // events. Choose the most specific entity available on the event.
+    const auditEntityId =
+      typeof eventData?.order_id === "string"
+        ? eventData.order_id
+        : typeof eventData?.customer_id === "string"
+        ? eventData.customer_id
+        : null
+    const auditEntity =
+      typeof eventData?.order_id === "string"
+        ? AUDIT_ENTITY.ORDER
+        : typeof eventData?.customer_id === "string"
+        ? AUDIT_ENTITY.CUSTOMER
+        : null
+    if (auditEntityId && auditEntity) {
+      await writeAudit({
+        container,
+        entity: auditEntity,
+        entity_id: auditEntityId,
+        action: AUDIT_ACTION.RULE_FIRED,
+        actor_id: "automation",
+        details: {
+          rule_id: r.id,
+          rule_name: r.name,
+          trigger_event: triggerEvent,
+          actions_ok: allOk,
+        },
+      })
+    }
   }
   return { evaluated: rules.length, fired, failures }
 }

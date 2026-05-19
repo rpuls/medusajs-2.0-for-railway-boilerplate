@@ -2,6 +2,8 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 import { ADMIN_WORKSPACE_MODULE } from "../../../../../modules/admin-workspace"
+import { writeAudit } from "../../../../../lib/audit-log"
+import { AUDIT_ACTION, AUDIT_ENTITY } from "../../../../../lib/audit-entities"
 
 const VALID_COLORS = new Set(["slate", "teal", "amber", "rose", "emerald"])
 
@@ -49,6 +51,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       label: body.label.trim(),
       color,
       created_by: actor,
+    })
+    await writeAudit({
+      container: req.scope as any,
+      entity: AUDIT_ENTITY.CUSTOMER,
+      entity_id: customerId,
+      action: AUDIT_ACTION.TAG_ADDED,
+      actor_id: actor,
+      details: { label: body.label.trim(), color, tag_id: (created as any)?.id ?? null },
     })
     return res.status(201).json({ tag: created })
   } catch (err: any) {

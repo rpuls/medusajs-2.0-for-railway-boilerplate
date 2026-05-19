@@ -602,6 +602,8 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `AUSSIE_PACIFIC_BASE_URL` | Optional. Aussie Pacific API base URL — only override for staging or proxy. | `https://api.aussiepacific.com.au` |
 | `AUSSIE_PACIFIC_COST_ADJUSTMENT` | Multiplier applied to the API `price` field before it's fed into the bulk-price ladder. We currently assume AP's `price` is ex-GST cost (same convention as AS Colour and the FashionBiz "1-99" tier), so default is `1.0`. Calibrate against the first real invoice — if AP returns inc-GST prices, set `0.909`; if AP's published price sits below the trade rate (like FashionBiz's distributor storefront), set the observed ratio. The first 5 styles emit a calibration log line during import so the operator can sanity-check before scaling up. | `1.0` |
 | `AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD` | Optional. Default shipping method embedded in dropship order payloads. Falls back to the form input on the admin widget when unset. | unset |
+| `QUOTE_EXPIRY_CRON_ENABLED` | Daily cron that transitions `status = quoted` quotes whose `expires_at` is past to `status = expired`, appending a `QuoteEvent` + audit row. Off by default so dry-running quote workflows in dev doesn't auto-expire stale test data. See [backend/src/jobs/expire-quotes.ts](backend/src/jobs/expire-quotes.ts). | `false` |
+| `EMAIL_SUPPRESSION_TABLE_ENABLED` | Enables the suppression-table check inside `shouldSendMarketingEmail()` ([backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts)). Phase 8 ships the table and flips this to `true`. Until then the helper short-circuits the suppression check and relies only on `customer.metadata.marketing_consent_email`. | `false` |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -1123,6 +1125,15 @@ Store routes under `/store/customers/me/*` are auto-protected by Medusa's core `
 
 ### Server-side rendering for print files
 The `customizer-render` service ([backend/src/services/customizer-render/](backend/src/services/customizer-render/)) handles all print/mockup PNG generation via Sharp. Do **not** generate high-res print files in the browser — it crashes mobile Safari and exposes source assets.
+
+### CRM audit log (Phase 5+)
+Polymorphic `audit_log` table in [backend/src/modules/admin-workspace/models/audit-log.ts](backend/src/modules/admin-workspace/models/audit-log.ts) is the per-entity activity trail behind the customer-journey widget, the order audit endpoint, and the future organisation activity tab. **Always call** `writeAudit({ container, entity, entity_id, action, actor_id?, actor_email?, details? })` from [backend/src/lib/audit-log.ts](backend/src/lib/audit-log.ts) — it standardises the vocabulary (`AUDIT_ENTITY` / `AUDIT_ACTION` constants in [backend/src/lib/audit-entities.ts](backend/src/lib/audit-entities.ts)), swallows + logs failures so a broken audit row never kills the caller, and mirrors to PostHog as `audit_log_written`. Subscribers that already use it: `order-stage-audit.ts`. Routes that already use it: customer tags/notes CRUD, organisation members add/remove, order watchers, automation rules evaluator.
+
+### CRM marketing-email gate (Phase 5+)
+Every marketing-email send path **must** call `shouldSendMarketingEmail({ container, email, customer_id?, template_kind })` from [backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts) before invoking the notification module. Returns `{ ok: false, reason: "consent_false" | "suppressed_global" | "suppressed_stream" | "no_email" }` to block, `{ ok: true }` to proceed. Composes a `customer.metadata.marketing_consent_email` check with the (Phase 8) `email_suppression` table — the suppression check is gated by `EMAIL_SUPPRESSION_TABLE_ENABLED` so this helper is safe to deploy before the table exists. Emits `marketing_email_skipped` PostHog event on block so the dashboard can surface "we skipped N emails today due to X". `template_kind` is one of `cart_reminder | reorder_reminder | winback | monthly_digest | nps_request`.
+
+### Quote expiry cron (Phase 5)
+[backend/src/jobs/expire-quotes.ts](backend/src/jobs/expire-quotes.ts) runs daily at 23:45 UTC. Walks `quote.status = "quoted"` rows whose `expires_at` is past and transitions them to `"expired"`, appending a `QuoteEvent` (`type: status_changed`) and an `audit_log` row. Opt-in via `QUOTE_EXPIRY_CRON_ENABLED=true`. Selection logic lives in [backend/src/services/quote/expire.ts](backend/src/services/quote/expire.ts) as a pure function so it can be unit-tested without the DB.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 

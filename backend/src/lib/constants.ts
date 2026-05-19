@@ -504,6 +504,25 @@ export const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY
 export const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID
 
 /**
+ * CRM Phase 5+ — feature flags
+ *
+ *  - `QUOTE_EXPIRY_CRON_ENABLED`: daily cron that transitions
+ *    `status = quoted` quotes whose `expires_at` is in the past to
+ *    `status = expired`, appends a QuoteEvent + audit row. Off by
+ *    default so dry-running quote workflows in dev doesn't auto-expire
+ *    stale test data.
+ *
+ *  - `EMAIL_SUPPRESSION_TABLE_ENABLED`: enables the suppression-table
+ *    check inside `shouldSendMarketingEmail()`. Phase 8 ships the table
+ *    and flips this to `true`. Until then the helper short-circuits the
+ *    suppression check and relies only on `customer.metadata.marketing_consent_email`.
+ */
+export const QUOTE_EXPIRY_CRON_ENABLED =
+  String(process.env.QUOTE_EXPIRY_CRON_ENABLED).toLowerCase() === "true"
+export const EMAIL_SUPPRESSION_TABLE_ENABLED =
+  String(process.env.EMAIL_SUPPRESSION_TABLE_ENABLED).toLowerCase() === "true"
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'
