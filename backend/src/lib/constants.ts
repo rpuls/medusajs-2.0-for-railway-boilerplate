@@ -523,6 +523,20 @@ export const EMAIL_SUPPRESSION_TABLE_ENABLED =
   String(process.env.EMAIL_SUPPRESSION_TABLE_ENABLED).toLowerCase() === "true"
 
 /**
+ * CRM Phase 6 — auto-stamp the owner on order placement.
+ *
+ * When `OWNER_AUTOSTAMP_ENABLED=true`, the `order-placed-stamp-owner`
+ * subscriber copies `customer.owner` → `order.owner` on every new
+ * order. If the customer has no owner, the order falls through to
+ * `pickNextOwner()` (rotation-based) and gets one assigned then.
+ *
+ * Off by default so existing orders aren't disrupted until the
+ * rotation table is populated.
+ */
+export const OWNER_AUTOSTAMP_ENABLED =
+  String(process.env.OWNER_AUTOSTAMP_ENABLED).toLowerCase() === "true"
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

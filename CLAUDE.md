@@ -604,6 +604,7 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `AUSSIE_PACIFIC_DEFAULT_SHIPPING_METHOD` | Optional. Default shipping method embedded in dropship order payloads. Falls back to the form input on the admin widget when unset. | unset |
 | `QUOTE_EXPIRY_CRON_ENABLED` | Daily cron that transitions `status = quoted` quotes whose `expires_at` is past to `status = expired`, appending a `QuoteEvent` + audit row. Off by default so dry-running quote workflows in dev doesn't auto-expire stale test data. See [backend/src/jobs/expire-quotes.ts](backend/src/jobs/expire-quotes.ts). | `false` |
 | `EMAIL_SUPPRESSION_TABLE_ENABLED` | Enables the suppression-table check inside `shouldSendMarketingEmail()` ([backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts)). Phase 8 ships the table and flips this to `true`. Until then the helper short-circuits the suppression check and relies only on `customer.metadata.marketing_consent_email`. | `false` |
+| `OWNER_AUTOSTAMP_ENABLED` | Auto-assigns ownership on every new order — inheriting the customer's owner first, falling back to `pickNextOwner()` from the rotation table. Off by default so existing orders aren't disrupted before the rotation is populated. See [backend/src/subscribers/order-placed-stamp-owner.ts](backend/src/subscribers/order-placed-stamp-owner.ts). | `false` |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -1134,6 +1135,32 @@ Every marketing-email send path **must** call `shouldSendMarketingEmail({ contai
 
 ### Quote expiry cron (Phase 5)
 [backend/src/jobs/expire-quotes.ts](backend/src/jobs/expire-quotes.ts) runs daily at 23:45 UTC. Walks `quote.status = "quoted"` rows whose `expires_at` is past and transitions them to `"expired"`, appending a `QuoteEvent` (`type: status_changed`) and an `audit_log` row. Opt-in via `QUOTE_EXPIRY_CRON_ENABLED=true`. Selection logic lives in [backend/src/services/quote/expire.ts](backend/src/services/quote/expire.ts) as a pure function so it can be unit-tested without the DB.
+
+### Customer & order ownership (Phase 6)
+Every customer and every order can have an "owner" (a Medusa admin User). Owner inheritance: when an order is placed, the `order-placed-stamp-owner` subscriber copies the customer's existing owner; if the customer has no owner, it falls back to `pickNextOwner()` (rotation-based) and stamps both the customer and order with the picked user. Gated by `OWNER_AUTOSTAMP_ENABLED=true`.
+
+| Component | Path |
+| --- | --- |
+| Assignment entity | [backend/src/modules/admin-workspace/models/crm-owner-assignment.ts](backend/src/modules/admin-workspace/models/crm-owner-assignment.ts) |
+| Rotation entity | [backend/src/modules/admin-workspace/models/crm-owner-rotation.ts](backend/src/modules/admin-workspace/models/crm-owner-rotation.ts) |
+| Migration | [backend/src/modules/admin-workspace/migrations/Migration20270101000000.ts](backend/src/modules/admin-workspace/migrations/Migration20270101000000.ts) |
+| Customer↔owner link (isList:false) | [backend/src/links/customer-owner.ts](backend/src/links/customer-owner.ts) |
+| Order↔owner link (isList:false) | [backend/src/links/order-owner.ts](backend/src/links/order-owner.ts) |
+| Helpers (setOwner / getOwner / clearOwner / pickNextOwner) | [backend/src/lib/crm-owners.ts](backend/src/lib/crm-owners.ts) |
+| Admin REST — customer owner | [backend/src/api/admin/customers/[id]/owner/route.ts](backend/src/api/admin/customers/[id]/owner/route.ts) |
+| Admin REST — order owner | [backend/src/api/admin/orders/[id]/owner/route.ts](backend/src/api/admin/orders/[id]/owner/route.ts) |
+| Admin REST — rotation CRUD | [backend/src/api/admin/rotation/route.ts](backend/src/api/admin/rotation/route.ts) |
+| Auto-stamp subscriber | [backend/src/subscribers/order-placed-stamp-owner.ts](backend/src/subscribers/order-placed-stamp-owner.ts) |
+| Customer owner widget | [backend/src/admin/widgets/customer-owner.tsx](backend/src/admin/widgets/customer-owner.tsx) |
+| Order owner widget | [backend/src/admin/widgets/order-owner.tsx](backend/src/admin/widgets/order-owner.tsx) |
+| Owner picker (reusable) | [backend/src/admin/components/owner-picker.tsx](backend/src/admin/components/owner-picker.tsx) |
+| Rotation admin page | [backend/src/admin/routes/rotation/page.tsx](backend/src/admin/routes/rotation/page.tsx) |
+
+**Rotation algorithm**: enabled rows are picked in order of oldest `last_picked_at` (or null = never picked) first, with `position` as tiebreaker. The picked row's `last_picked_at` is updated on each pick so subsequent calls rotate fairly. Toggling `enabled=false` pauses a teammate without losing rotation history (re-enabling resumes where they left off).
+
+**Manual assignment always wins over rotation**. Setting an owner via the widgets or REST API never gets overridden by the subscriber — the subscriber only acts when the order has no existing owner.
+
+**Quote `assigned_to`** is a parallel concept (the staff person responding to a quote) — separate from the customer/order owner. Phase 6 doesn't unify them; that's deferred to a follow-up because quote workflows can legitimately have a different person from the long-term account owner.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 
