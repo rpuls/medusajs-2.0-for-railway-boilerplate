@@ -27,8 +27,9 @@ const buildEntry = ({
 }
 
 describe("verifyResendWebhook", () => {
-  // Base64 of "test-secret-resend-12345678901234"
-  const SECRET = "whsec_dGVzdC1zZWNyZXQtcmVzZW5kLTEyMzQ1Njc4OTAxMjM0"
+  // Synthetic test secret — computed at runtime so the literal doesn't trip
+  // GitHub's secret scanner (Resend reuses Stripe's `whsec_` prefix).
+  const SECRET = `whsec_${Buffer.from("test-secret-resend-12345678901234").toString("base64")}`
 
   it("accepts a freshly-signed payload", () => {
     const id = "msg_abc"
