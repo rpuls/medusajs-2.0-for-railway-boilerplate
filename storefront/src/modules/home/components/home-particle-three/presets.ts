@@ -88,7 +88,7 @@ export const CURATED_PRESETS: Preset[] = [
   {
     id: "cursor-history-current",
     name: "3. Cursor-history wake (current)",
-    note: "Current build. Ports newmix's history-playback model. Visible band trailing the cursor's past path; trailingProbability controls density.",
+    note: "Current build. Full capture + behind-cursor carry, side swirl, and cursor-history wake (trailingProbability=1).",
     // Empty Partial — applyPreset() spreads THREE_TUNING_DEFAULTS at call
     // time. Spreading defaults *here* (at module top level) would TDZ-crash
     // because tuner-panel.tsx imports from this file and the circular
@@ -108,14 +108,22 @@ export const CURATED_PRESETS: Preset[] = [
       inBlend: 10,
       outBlend: 0.4,
       pointSize: 2.5,
-      trailingProbability: 0.65,
+      trailingProbability: 1,
       trailFollowMs: 2500,
-      wakePace: 0.52,
-      wakePaceJitter: 0.4,
-      wakeTimeOffsetMs: 1400,
+      wakePace: 0.48,
+      wakePaceJitter: 0.35,
+      wakeTimeOffsetMs: 1200,
       wakeAlongStretchBmp: 22,
       wakeBandSpreadBmp: 14,
-      wakeReleaseStaggerMs: 600,
+      wakeReleaseStaggerMs: 80,
+      carryLagBehind: 22,
+      sideSwirlForce: 7.5,
+      frontPush: 3.5,
+      backInward: 2.5,
+      motionGateSpeed: 1.2,
+      falloffPower: 1.4,
+      carryStrength: 0.94,
+      inBlend: 16,
     },
   },
 ]

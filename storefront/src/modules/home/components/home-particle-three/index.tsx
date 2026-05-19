@@ -6,10 +6,10 @@
  * Renders the SC Prints wordmark as a 140k-point cloud and reacts to the
  * cursor with two layered behaviours:
  *
- *   1. CARRY MODEL (in-disk) — particles inside the cursor radius lerp
- *      toward a per-particle target that's `carryStrength × falloff²` of
- *      the way from home to the cursor. The blend rate produces the
- *      comet head: particles bunch around the cursor and lag behind it.
+ *   1. CARRY MODEL (in-disk) — particles inside the cursor disk (by
+ *      current position) lerp toward an anchor slightly behind the cursor
+ *      along −motion, with Newmix-style side swirl. Targets use current
+ *      position, not home, so the whole captured blob travels with the pointer.
  *
  *   2. CURSOR-HISTORY WAKE — every frame the smooth cursor world position
  *      is appended to a ring buffer `{x, y, t}`. When a particle exits
@@ -109,6 +109,75 @@ function lookupCursorHistoryAtTime(
   return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u }
 }
 
+/** Newmix-style tangential + front/back offsets (position space, px/frame). */
+function swirlOffsetForParticle(
+  px: number,
+  py: number,
+  mx: number,
+  my: number,
+  cursorRadius: number,
+  motionUx: number,
+  motionUy: number,
+  motionSpeed: number,
+  nm: ThreeTuning
+): { ox: number; oy: number } {
+  const dx = px - mx
+  const dy = py - my
+  const dist = Math.hypot(dx, dy)
+  if (dist < 1e-4 || dist >= cursorRadius) {
+    return { ox: 0, oy: 0 }
+  }
+  const motionScale = Math.min(
+    1,
+    motionSpeed / Math.max(0.01, nm.motionGateSpeed)
+  )
+  if (motionScale < 1e-3) {
+    return { ox: 0, oy: 0 }
+  }
+
+  const ux = dx / dist
+  const uy = dy / dist
+  const edge = Math.max(0, (cursorRadius - dist) / cursorRadius)
+  const falloff = Math.pow(edge, nm.falloffPower)
+
+  const fxf = motionUx
+  const fyf = motionUy
+  const rx = -fyf
+  const ry = fxf
+  const along = dx * fxf + dy * fyf
+  const perp = dx * rx + dy * ry
+  const alongN = along / cursorRadius
+
+  const ccwX = -uy
+  const ccwY = ux
+  const vSgn = perp >= 0 ? -1 : 1
+  const tvx = vSgn * ccwX
+  const tvy = vSgn * ccwY
+
+  let ox = 0
+  let oy = 0
+
+  const sideGauss = Math.exp(-Math.pow(alongN / 0.7, 2))
+  const sideSw = nm.sideSwirlForce * falloff * sideGauss * motionScale
+  ox += tvx * sideSw
+  oy += tvy * sideSw
+
+  if (alongN > 0.07) {
+    const cap = Math.min(1, (alongN - 0.07) / 0.5)
+    const push = nm.frontPush * falloff * cap * motionScale
+    ox += ux * push
+    oy += uy * push
+  }
+  if (alongN < -0.04) {
+    const back = Math.min(1, -alongN / 0.62)
+    const inward = nm.backInward * falloff * back * motionScale
+    ox -= ux * inward
+    oy -= uy * inward
+  }
+
+  return { ox, oy }
+}
+
 type ParticleFieldProps = {
   stipple: StipplePoint[]
   width: number
@@ -135,6 +204,10 @@ function ParticleField({
    * exponentially toward this ref so the history buffer doesn't carry
    * noisy raw pointer jitter. */
   const smoothedCursor = useRef<{ x: number; y: number } | null>(null)
+  const prevSmoothedCursor = useRef<{ x: number; y: number } | null>(null)
+  /** Low-passed unit vector of cursor motion (bitmap/world px per frame). */
+  const motionDirRef = useRef({ ux: 1, uy: 0 })
+  const motionSpeedRef = useRef(0)
   /** Ring buffer of recent cursor positions with timestamps. Particles
    * read this when they're in the trailing state to follow the cursor's
    * historical path. Trimmed every frame in useFrame. */
@@ -337,6 +410,37 @@ function ParticleField({
     const hist = cursorHistory.current
     while (hist.length > 0 && hist[0]!.t < histCutoff) hist.shift()
 
+    const smCur = smoothedCursor.current
+    const smPrev = prevSmoothedCursor.current
+    if (smCur != null && smPrev != null) {
+      const mdx = smCur.x - smPrev.x
+      const mdy = smCur.y - smPrev.y
+      const frameSpeed = Math.hypot(mdx, mdy)
+      if (frameSpeed > 0.15) {
+        const ux = mdx / frameSpeed
+        const uy = mdy / frameSpeed
+        const k = 0.45
+        const dir = motionDirRef.current
+        dir.ux += (ux - dir.ux) * k
+        dir.uy += (uy - dir.uy) * k
+        const dlen = Math.hypot(dir.ux, dir.uy)
+        if (dlen > 1e-5) {
+          dir.ux /= dlen
+          dir.uy /= dlen
+        }
+        motionSpeedRef.current = frameSpeed
+      } else {
+        motionSpeedRef.current *= 0.85
+      }
+    }
+    if (smCur != null) {
+      prevSmoothedCursor.current = { x: smCur.x, y: smCur.y }
+    }
+
+    const motionUx = motionDirRef.current.ux
+    const motionUy = motionDirRef.current.uy
+    const motionSpeed = motionSpeedRef.current
+
     const mw = mouseWorld.current
     const mx = mw?.x ?? 0
     const my = mw?.y ?? 0
@@ -457,25 +561,45 @@ function ParticleField({
         trailFlags[i] = 0
       }
 
-      /** CARRY MODEL (in-disk pull + void clamp) + edge-detected release. */
+      /** CARRY MODEL — disk test uses current position so carried grains
+       * stay captured; anchor sits behind the cursor with side swirl. */
       let targetX = hx
       let targetY = hy
       let inDisk = false
-      let falloff = 0
 
       if (haveCursor) {
-        const dx = hx - mx
-        const dy = hy - my
+        const dx = px - mx
+        const dy = py - my
         const distSq = dx * dx + dy * dy
         if (distSq < radSq) {
           inDisk = true
           const dist = Math.sqrt(Math.max(distSq, 0.001))
           const norm = 1 - dist / cursorRadius
-          falloff = norm * norm
+          const falloff = norm * norm
+          const motionScale = Math.min(
+            1,
+            motionSpeed / Math.max(0.01, nm.motionGateSpeed)
+          )
+          const lag = nm.carryLagBehind * falloff * motionScale
+          let anchorX = mx - motionUx * lag
+          let anchorY = my - motionUy * lag
+          const swirl = swirlOffsetForParticle(
+            px,
+            py,
+            mx,
+            my,
+            cursorRadius,
+            motionUx,
+            motionUy,
+            motionSpeed,
+            nm
+          )
+          anchorX += swirl.ox
+          anchorY += swirl.oy
 
-          const carry = nm.carryStrength * falloff
-          targetX = hx + (mx - hx) * carry
-          targetY = hy + (my - hy) * carry
+          const carry = Math.min(1, nm.carryStrength * falloff)
+          targetX = px + (anchorX - px) * carry
+          targetY = py + (anchorY - py) * carry
 
           if (voidR > 0) {
             const tdx = targetX - mx
@@ -494,9 +618,8 @@ function ParticleField({
       px += (targetX - px) * alpha
       py += (targetY - py) * alpha
 
-      /** Edge detect: particle just exited the disk. Roll dice to release
-       * into wake-playback. Use the per-particle hash + time bucket so the
-       * roll is deterministic-ish but varies across exits. */
+      /** Edge detect: every particle that was in the disk and exits enters
+       * wake playback (trailingProbability defaults to 1). */
       if (haveCursor && wasInDisk[i] === 1 && !inDisk) {
         const h = trailHash[i]!
         const rollHash =
@@ -505,9 +628,6 @@ function ParticleField({
         if (roll < trailingProbability) {
           trailUntil[i] = nowTick + trailFollowMs
           releaseTime[i] = nowTick
-          /** Record where THIS particle is relative to the cursor at the
-           * moment of release. This is the offset that anchors the start
-           * of its wake to its actual interaction point. */
           trailOffX[i] = px - mx
           trailOffY[i] = py - my
         }
