@@ -500,19 +500,48 @@ const readFileAsDataUrl = (file: File) =>
  * decode errors) so a transient issue never blocks the upload entirely.
  * SVGs skip this path — they're text, not raster, and have no EXIF.
  */
+/**
+ * Cap on the longest edge of the canvas-bound raster. 2000px is well above
+ * the 300dpi requirement for our largest standard print (A4 ≈ 2480×3508 at
+ * 300dpi, but we always downsample to the actual placement rect during
+ * server-side render, so the canvas copy only needs to be sharp enough for
+ * the editor preview).
+ *
+ * Why this matters: a 4032×3024 iPhone photo encoded as base64 PNG inside
+ * the SVG inside the JSON payload to /api/customizer/render-* easily
+ * exceeds Vercel's 4.5MB function-body cap → 413 on both endpoints. Capping
+ * at 2000px + JPEG-85 brings a typical phone photo from ~5MB → ~400KB.
+ */
+const CANVAS_RASTER_MAX_EDGE_PX = 2000
+const CANVAS_RASTER_JPEG_QUALITY = 0.85
+
 const normalizeRasterDataUrl = async (file: File, fallbackDataUrl: string): Promise<string> => {
   if (typeof window === "undefined") return fallbackDataUrl
   if (typeof createImageBitmap !== "function") return fallbackDataUrl
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" })
     try {
+      const longest = Math.max(bitmap.width, bitmap.height)
+      const scale = longest > CANVAS_RASTER_MAX_EDGE_PX
+        ? CANVAS_RASTER_MAX_EDGE_PX / longest
+        : 1
+      const targetW = Math.max(1, Math.round(bitmap.width * scale))
+      const targetH = Math.max(1, Math.round(bitmap.height * scale))
+
       const canvas = document.createElement("canvas")
-      canvas.width = bitmap.width
-      canvas.height = bitmap.height
+      canvas.width = targetW
+      canvas.height = targetH
       const ctx = canvas.getContext("2d")
       if (!ctx) return fallbackDataUrl
-      ctx.drawImage(bitmap, 0, 0)
-      return canvas.toDataURL("image/png")
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH)
+
+      // JPEGs (typical iPhone camera output) re-encode as JPEG so the
+      // payload stays small. PNGs are preserved as PNG to keep any
+      // transparency intact — logo work depends on this.
+      const isPng = file.type === "image/png"
+      return isPng
+        ? canvas.toDataURL("image/png")
+        : canvas.toDataURL("image/jpeg", CANVAS_RASTER_JPEG_QUALITY)
     } finally {
       bitmap.close?.()
     }
