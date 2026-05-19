@@ -537,6 +537,17 @@ export const OWNER_AUTOSTAMP_ENABLED =
   String(process.env.OWNER_AUTOSTAMP_ENABLED).toLowerCase() === "true"
 
 /**
+ * CRM Phase 7 — Tasks system.
+ *
+ *  - `TASKS_OVERDUE_CRON_ENABLED`: daily 09:00 UTC cron that stamps
+ *    overdue tasks and writes audit/PostHog events for staff visibility.
+ *    Email/Slack delivery is deferred. Off by default so dev/staging
+ *    doesn't spam during testing.
+ */
+export const TASKS_OVERDUE_CRON_ENABLED =
+  String(process.env.TASKS_OVERDUE_CRON_ENABLED).toLowerCase() === "true"
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

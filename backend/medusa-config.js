@@ -328,6 +328,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/task",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {

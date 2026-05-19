@@ -605,6 +605,7 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `QUOTE_EXPIRY_CRON_ENABLED` | Daily cron that transitions `status = quoted` quotes whose `expires_at` is past to `status = expired`, appending a `QuoteEvent` + audit row. Off by default so dry-running quote workflows in dev doesn't auto-expire stale test data. See [backend/src/jobs/expire-quotes.ts](backend/src/jobs/expire-quotes.ts). | `false` |
 | `EMAIL_SUPPRESSION_TABLE_ENABLED` | Enables the suppression-table check inside `shouldSendMarketingEmail()` ([backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts)). Phase 8 ships the table and flips this to `true`. Until then the helper short-circuits the suppression check and relies only on `customer.metadata.marketing_consent_email`. | `false` |
 | `OWNER_AUTOSTAMP_ENABLED` | Auto-assigns ownership on every new order — inheriting the customer's owner first, falling back to `pickNextOwner()` from the rotation table. Off by default so existing orders aren't disrupted before the rotation is populated. See [backend/src/subscribers/order-placed-stamp-owner.ts](backend/src/subscribers/order-placed-stamp-owner.ts). | `false` |
+| `TASKS_OVERDUE_CRON_ENABLED` | Daily 09:00 UTC cron that walks active tasks with `due_at` in the past, stamps `last_overdue_notified_at`, writes audit rows on every anchored entity, and emits `task_overdue_notified` PostHog events. Email/Slack delivery is deferred to a follow-up. Off by default so dev/staging doesn't spam during testing. See [backend/src/jobs/notify-overdue-tasks.ts](backend/src/jobs/notify-overdue-tasks.ts). | `false` |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -1161,6 +1162,36 @@ Every customer and every order can have an "owner" (a Medusa admin User). Owner 
 **Manual assignment always wins over rotation**. Setting an owner via the widgets or REST API never gets overridden by the subscriber — the subscriber only acts when the order has no existing owner.
 
 **Quote `assigned_to`** is a parallel concept (the staff person responding to a quote) — separate from the customer/order owner. Phase 6 doesn't unify them; that's deferred to a follow-up because quote workflows can legitimately have a different person from the long-term account owner.
+
+### Tasks system (Phase 7)
+Staff to-do list. Each task has a single assignee, optional anchors (customer / order / quote / organisation), due_at, priority, status. Visible at `/app/tasks` with three buckets — Today / Overdue / All — filtered to the logged-in admin via `req.auth_context.actor_id`. Daily 09:00 UTC cron writes audit + PostHog events for tasks that stay overdue (delivery to email/Slack is deferred to a follow-up).
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/task/](backend/src/modules/task/) |
+| Model | [backend/src/modules/task/models/task.ts](backend/src/modules/task/models/task.ts) |
+| Migration | [backend/src/modules/task/migrations/Migration20270201000000.ts](backend/src/modules/task/migrations/Migration20270201000000.ts) |
+| Module registration | [backend/medusa-config.js](backend/medusa-config.js) (look for `./src/modules/task`) |
+| Customer↔tasks link (isList:true) | [backend/src/links/customer-tasks.ts](backend/src/links/customer-tasks.ts) |
+| Order↔tasks link (isList:true) | [backend/src/links/order-tasks.ts](backend/src/links/order-tasks.ts) |
+| Quote↔tasks link (isList:true) | [backend/src/links/quote-tasks.ts](backend/src/links/quote-tasks.ts) |
+| Organisation↔tasks link (isList:true) | [backend/src/links/organisation-tasks.ts](backend/src/links/organisation-tasks.ts) |
+| Admin REST — list + create | [backend/src/api/admin/tasks/route.ts](backend/src/api/admin/tasks/route.ts) |
+| Admin REST — task detail | [backend/src/api/admin/tasks/[id]/route.ts](backend/src/api/admin/tasks/[id]/route.ts) |
+| Admin REST — my queue | [backend/src/api/admin/tasks/mine/route.ts](backend/src/api/admin/tasks/mine/route.ts) |
+| Selection logic (pure) | [backend/src/services/tasks/build-candidates.ts](backend/src/services/tasks/build-candidates.ts) |
+| Overdue cron | [backend/src/jobs/notify-overdue-tasks.ts](backend/src/jobs/notify-overdue-tasks.ts) |
+| Admin page | [backend/src/admin/routes/tasks/page.tsx](backend/src/admin/routes/tasks/page.tsx) |
+
+**Statuses**: `open | in_progress | done | cancelled`. Setting status to `done` or `cancelled` stamps `completed_at` + `completed_by`; flipping back clears them.
+
+**Priorities**: `low | normal | high | urgent` — rendered as coloured badges in the admin page.
+
+**Idempotency for overdue notification**: each task has a `last_overdue_notified_at` column. The cron skips rows that have been notified within the past 23h (one-per-day cadence). Selection logic is a pure function — `selectOverdueForNotification(rows, now)` — tested without the DB.
+
+**Denormalised anchor columns alongside module links** (CLAUDE.md convention): `task.customer_id` / `order_id` / `quote_id` / `organisation_id` are FK strings indexed for the hot-path "my open tasks where customer_id = X" filter. The links layer graph-query traversal (`customer.tasks`) on top for admin widgets.
+
+**Email/Slack delivery + per-context create-task widgets** are deferred to a Phase 7 follow-up. Studio dashboard `tasks_due_today` bucket is also deferred.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 
