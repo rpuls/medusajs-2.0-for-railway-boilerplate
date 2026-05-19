@@ -40,24 +40,6 @@ const discoverLinks: Array<{ label: string; href: string; testId: string }> = [
   { label: "FAQ", href: "/faq", testId: "faq-link" },
 ]
 
-const policyLinks: Array<{ label: string; href: string; testId: string }> = [
-  {
-    label: "Shipping policy",
-    href: "/shipping-policy",
-    testId: "shipping-policy-link",
-  },
-  {
-    label: "Returns policy",
-    href: "/returns-policy",
-    testId: "returns-policy-link",
-  },
-  {
-    label: "Privacy policy",
-    href: "/privacy-policy",
-    testId: "privacy-policy-link",
-  },
-]
-
 export type MenuCollectionLink = {
   handle: string
   title: string
@@ -139,7 +121,7 @@ const SideMenu = ({
 
                       <div className="border-t border-[var(--brand-accent)]/35 pt-8 lg:col-span-6 lg:border-t-0 lg:pt-0">
                         <h2 className="mb-4 border-t border-[var(--brand-accent)]/35 pt-6 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)] lg:border-t-0 lg:pt-0">
-                          Browse products &amp; services
+                          Services
                         </h2>
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                           {browseGroups.map((group) => (
@@ -216,25 +198,6 @@ const SideMenu = ({
                           </ul>
                         </div>
 
-                        <div>
-                          <h2 className="mb-3 txt-compact-small uppercase tracking-[0.12em] text-[rgba(248,250,252,0.4)]">
-                            Policies
-                          </h2>
-                          <ul className="space-y-1.5">
-                            {policyLinks.map((item) => (
-                              <li key={item.href}>
-                                <NavLink
-                                  href={item.href}
-                                  onClick={close}
-                                  className="text-sm leading-6 text-[rgba(248,250,252,0.55)] transition-colors hover:text-[rgba(248,250,252,0.85)]"
-                                  data-testid={item.testId}
-                                >
-                                  {item.label}
-                                </NavLink>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
                       </div>
                     </div>
                   </div>
