@@ -428,7 +428,8 @@ Customer-facing approval PDF (one page per garment side, sizes table, watermarke
 | Component | Path |
 | --- | --- |
 | Service | [backend/src/services/mockup-pdf/](backend/src/services/mockup-pdf/) |
-| Admin page (request generation) | [backend/src/admin/routes/mockup-pdf/page.tsx](backend/src/admin/routes/mockup-pdf/page.tsx) |
+| Admin API | [backend/src/api/admin/orders/[id]/mockup-pdf/route.ts](backend/src/api/admin/orders/[id]/mockup-pdf/route.ts) |
+| Order-detail download button | [backend/src/admin/widgets/order-customizer-downloads.tsx](backend/src/admin/widgets/order-customizer-downloads.tsx) |
 | Brand assets (logo + fonts) | [backend/src/assets/](backend/src/assets/) |
 
 **Background removal**: corner-sampled white detection (threshold ≥220 RGB); edge flood-fill for black. Preserves design black at ≤30 RGB only if background is white. **Image fetch timeout**: 12s per URL; nulls drop silently.
