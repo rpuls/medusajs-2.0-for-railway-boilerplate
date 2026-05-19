@@ -104,8 +104,6 @@ export const CURATED_PRESETS: Preset[] = [
       particleCount: 140000,
       cursorRadius: 75,
       cursorDisplacement: 18,
-      carryStrength: 0.85,
-      inBlend: 10,
       outBlend: 0.4,
       pointSize: 2.5,
       trailingProbability: 1,
@@ -122,6 +120,9 @@ export const CURATED_PRESETS: Preset[] = [
       backInward: 2.5,
       motionGateSpeed: 1.2,
       falloffPower: 1.4,
+      // Later tuning passes — these were duplicate keys that JS silently
+      // overrode at runtime; explicit single declarations keep TS happy
+      // without changing behaviour.
       carryStrength: 0.94,
       inBlend: 16,
     },
