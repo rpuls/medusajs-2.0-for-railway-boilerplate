@@ -609,6 +609,9 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `UNSUBSCRIBE_LINK_SECRET` | HMAC key used to sign the one-click unsubscribe URL embedded in marketing emails. Same shape as `NPS_LINK_SECRET`: must be set in prod (so links can't be forged), dev placeholder used otherwise so links verify locally. | `unsubscribe-dev-secret-do-not-use-in-prod` |
 | `MARKETING_PREFERENCE_CENTER_URL` | Where one-click unsubscribe redirects after writing the suppression row. Storefront page that confirms the action / lets the customer toggle per-stream prefs. Falls back to `/` if unset. | unset (recommend `${STOREFRONT_URL}/email-preferences`) |
 | `AUTOMATION_EXPANDED_TRIGGERS_ENABLED` | Gates the Phase 10 trigger expansion (`customer.created`, `order.delivered`) and the new actions (`create_task`, `assign_owner`). Off by default so existing rules using only `order.placed` + `order.production_stage_changed` keep working unchanged until staff opt in. | `false` |
+| `QUOTE_CONVERSION_ENABLED` | Master switch for the quote-on-order-placed / quote-on-order-cancelled subscribers (Phase 11). ON by default — closing the quote loop is the desired behaviour in production. Set to `false` to disable the loop closure without removing the subscribers. | `true` |
+| `STALE_ORDER_ESCALATION_DAYS` | How many days an order stays in `metadata.is_stale = true` before the manager-escalation path fires (Phase 11). Distinct from `STALE_ORDER_THRESHOLD_DAYS` (which controls when "stale" is flagged in the first place). | `3` |
+| `STALE_ORDER_MANAGER_EMAIL` | Comma-separated inboxes that get the manager escalation when an order has been stale longer than `STALE_ORDER_ESCALATION_DAYS`. Unset = no escalation (the owner task + audit still fire). | unset |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -1263,6 +1266,29 @@ The automation-rules framework gets 2 new triggers and 2 new actions, gated by `
 - `customer.created` → `tag_customer` (label="new_customer", color="teal") — flag new accounts for the segmentation reports.
 
 **Remaining triggers + actions from the original plan** — `quote.created/accepted/lost`, `order.refunded`, `order.shipment_created`, `organisation.member_added` triggers + `send_customer_email` / `add_to_customer_group` / `add_organisation_member` actions — are deferred to a Phase 10 follow-up. The above 2+2 covers the highest-value rule patterns; the rest layer in cleanly once these are battle-tested.
+
+### Quote→Order auto-conversion + Stale-order escalation (Phase 11)
+Closes two loops that were previously manual:
+
+**Quote → Order conversion.** When an order lands that originated from an accepted quote (correlated via `cart.metadata.quote_id` ↔ `quote.metadata.cart_id`), the `quote-on-order-placed` subscriber stamps `quote.metadata.order_id`, transitions the quote to `accepted` if it isn't already, appends a `QuoteEvent` (`type: status_changed`), and writes audit rows on both the quote and customer entities. Idempotent — re-firing finds `metadata.order_id` already set and no-ops.
+
+Cancellation handling **never reverts the quote** (per the planning decision). The `quote-on-order-cancelled` subscriber appends a `QuoteEvent` note + writes an audit row; staff must create a new quote if the customer wants to re-order.
+
+**Stale-order escalation.** The existing daily 08:00 UTC `scan-stale-orders` cron now also calls `notifyStaleOrders()`:
+1. Look up the order's owner (or the customer's owner as fallback)
+2. Create a Phase 7 Task assigned to the owner ("Investigate stale order #N", due in 1 day, priority `high` or `urgent` after 7 days stale)
+3. Write audit + emit `stale_order_notified_owner` PostHog event
+4. If `days_in_stage ≥ STALE_ORDER_ESCALATION_DAYS` AND `STALE_ORDER_MANAGER_EMAIL` is set, stamp `order.metadata.stale_escalated_at` (once-per-streak), write audit, emit `stale_order_escalated_to_manager`
+
+| Component | Path |
+| --- | --- |
+| Conversion subscriber | [backend/src/subscribers/quote-on-order-placed.ts](backend/src/subscribers/quote-on-order-placed.ts) |
+| Cancellation subscriber | [backend/src/subscribers/quote-on-order-cancelled.ts](backend/src/subscribers/quote-on-order-cancelled.ts) |
+| Stale-order notify side-effects | [backend/src/services/stale-orders/notify.ts](backend/src/services/stale-orders/notify.ts) |
+| Scan wiring | [backend/src/services/stale-orders/scan.ts](backend/src/services/stale-orders/scan.ts) |
+| Cron entrypoint (unchanged schedule) | [backend/src/jobs/scan-stale-orders.ts](backend/src/jobs/scan-stale-orders.ts) |
+
+**Actual email delivery** (to the owner + manager) is intentionally not wired here — the task creation + audit + PostHog signals give staff visible surfacing via `/app/tasks` and the order Activity tab. Proper email templates (`stale-order-owner-alert`, `stale-order-manager-escalation`) ship in a follow-up.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 

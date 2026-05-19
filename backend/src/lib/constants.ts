@@ -577,6 +577,29 @@ export const AUTOMATION_EXPANDED_TRIGGERS_ENABLED =
   String(process.env.AUTOMATION_EXPANDED_TRIGGERS_ENABLED).toLowerCase() === "true"
 
 /**
+ * CRM Phase 11 — Quote → Order auto-conversion + Stale-order escalation.
+ *
+ *  - `QUOTE_CONVERSION_ENABLED`: master switch for the quote-on-order-
+ *    placed / quote-on-order-cancelled subscribers. ON by default —
+ *    closing the quote loop is the desired behaviour in production.
+ *  - `STALE_ORDER_ESCALATION_DAYS`: how many days an order stays
+ *    stale before the manager email fires. Distinct from
+ *    STALE_ORDER_THRESHOLD_DAYS (how long until "stale" is flagged).
+ *    Default 3 — gives the owner a few days to respond before
+ *    escalating.
+ *  - `STALE_ORDER_MANAGER_EMAIL`: comma-separated inboxes that
+ *    receive the manager escalation. Unset = no escalation (just the
+ *    owner notification + task creation).
+ */
+export const QUOTE_CONVERSION_ENABLED =
+  String(process.env.QUOTE_CONVERSION_ENABLED ?? "true").toLowerCase() !== "false"
+export const STALE_ORDER_ESCALATION_DAYS = parseIntEnv(
+  process.env.STALE_ORDER_ESCALATION_DAYS,
+  3
+)
+export const STALE_ORDER_MANAGER_EMAIL = process.env.STALE_ORDER_MANAGER_EMAIL
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

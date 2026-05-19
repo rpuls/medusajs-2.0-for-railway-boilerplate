@@ -8,6 +8,7 @@ import {
   SLACK_PRODUCTION_WEBHOOK_URL,
   STALE_ORDER_THRESHOLD_DAYS,
 } from "../../lib/constants"
+import { notifyStaleOrders, type NotifyResult } from "./notify"
 
 const TERMINAL_STAGES = new Set(["shipped", "delivered"])
 
@@ -24,6 +25,7 @@ export type ScanResult = {
   considered: number
   newly_stale: StaleOrderEntry[]
   cleared: number
+  notify?: NotifyResult
 }
 
 /**
@@ -118,7 +120,19 @@ export async function scanStaleOrders(
     )
   }
 
-  return { considered, newly_stale: newlyStale, cleared }
+  // Phase 11 — owner notification + task creation + manager escalation.
+  let notify: NotifyResult | undefined
+  if (newlyStale.length > 0) {
+    try {
+      notify = await notifyStaleOrders(container, newlyStale, { now })
+    } catch (err: any) {
+      logger.warn(
+        `stale-orders: notify side-effects failed: ${err?.message ?? err}`
+      )
+    }
+  }
+
+  return { considered, newly_stale: newlyStale, cleared, notify }
 }
 
 async function postSlackDigest(
