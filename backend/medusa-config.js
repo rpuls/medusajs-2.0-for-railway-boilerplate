@@ -332,6 +332,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/pos-session",
+    },
+
+    {
       key: Modules.FULFILLMENT,
       resolve: "@medusajs/fulfillment",
       options: {

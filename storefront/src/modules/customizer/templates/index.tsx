@@ -793,6 +793,15 @@ export default function CustomizerTemplate({
   // resolve to a CustomizerMetadata that we replay onto the canvas + state.
   const designIdFromUrl = initialVariantSearchParams?.get("design") ?? null
   const reorderRefFromUrl = initialVariantSearchParams?.get("reorder") ?? null
+
+  // POS mode: customizer launched in a popup from the admin POS page
+  // (/app/pos). The "Add to cart" button POSTs the rendered metadata
+  // back to /api/pos-bridge/items keyed by the session id, then closes
+  // the popup. No real cart line is created — the POS page composes
+  // them into a draft order at checkout time.
+  const posSessionIdFromUrl =
+    initialVariantSearchParams?.get("pos_session") ?? null
+  const isPOSMode = Boolean(posSessionIdFromUrl)
   const [pendingHydration, setPendingHydration] = useState<CustomizerMetadata | null>(null)
   const [hydrationApplied, setHydrationApplied] = useState(false)
   const [editingHydrated, setEditingHydrated] = useState(false)
@@ -3081,6 +3090,80 @@ export default function CustomizerTemplate({
         if (upload.dataUrl && upload.originalStorageUrl) {
           dataUrlToHostedUrl[upload.dataUrl] = upload.originalStorageUrl
         }
+      }
+
+      // POS mode: skip the cart and post each (variant × quantity) to the
+      // POS bridge instead. The admin POS page polls its session and
+      // surfaces the line items in its cart UI. We never touch
+      // addScpLineItemToCartSafe / vectorization / router.refresh in this
+      // branch — those are storefront-only concerns.
+      if (isPOSMode && posSessionIdFromUrl) {
+        try {
+          for (const quantityEntry of resolvedQuantities) {
+            const lineItemMetadata: CustomizerMetadata = {
+              ...metadataBase,
+              variantId: quantityEntry.variant.id,
+            }
+            const sanitized = sanitizeCustomizerDesignForCart(
+              lineItemMetadata,
+              dataUrlToHostedUrl
+            )
+            const variantPrice = (() => {
+              const p = (quantityEntry.variant as any)?.calculated_price
+              if (!p) return null
+              const amount =
+                typeof p.calculated_amount === "number"
+                  ? p.calculated_amount
+                  : Number(p.calculated_amount ?? 0)
+              if (!Number.isFinite(amount) || amount <= 0) return null
+              return Math.round(amount * 100)
+            })()
+            const bridgeRes = await fetch("/api/pos-bridge/items", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                pos_session_id: posSessionIdFromUrl,
+                kind: "customizer",
+                variant_id: quantityEntry.variant.id,
+                product_id: selectedProduct.id,
+                product_title: selectedProduct.title ?? "Custom design",
+                variant_title:
+                  (quantityEntry.variant as any)?.title ?? quantityEntry.size,
+                quantity: quantityEntry.quantity,
+                unit_price_cents: variantPrice,
+                metadata: {
+                  customizerDesign: sanitized,
+                  product_handle: selectedProduct.handle ?? undefined,
+                  product_title: selectedProduct.title ?? undefined,
+                  print_size_id: scpPrintSizeId,
+                },
+              }),
+            })
+            if (!bridgeRes.ok) {
+              const j = await bridgeRes.json().catch(() => ({}))
+              throw new Error(
+                (j as { error?: string })?.error ??
+                  `POS bridge failed (${bridgeRes.status})`
+              )
+            }
+          }
+          setStatusMessage(
+            "Saved to POS. You can close this window — the cart on the till has been updated."
+          )
+          // Best-effort: close the popup. If we weren't opened with a
+          // popup reference, the browser will refuse — leave the
+          // success message visible instead.
+          try {
+            window.close()
+          } catch {
+            /* noop */
+          }
+        } catch (err: any) {
+          setUploadError(err?.message ?? "Failed to save to POS")
+        } finally {
+          setIsSubmitting(false)
+        }
+        return
       }
 
       for (const quantityEntry of resolvedQuantities) {

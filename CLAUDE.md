@@ -372,6 +372,32 @@ Reference docs (CMYK ↔ DTF colour chart, etc.) live as TS data + page template
 | Guides module | [storefront/src/modules/guides/](storefront/src/modules/guides/) |
 | Guide pages | [storefront/src/app/[countryCode]/(main)/guides/](storefront/src/app/[countryCode]/(main)/guides/) |
 
+## Point of sale (POS) — walk-in transactions
+
+Admin page at `/app/pos` for in-store walk-in sales. Three-panel layout: product search left, cart middle, customer + payment right. Cash payments mark the order paid immediately; "Card (QR link)" generates a Stripe Payment Link rendered as a QR code for the customer to scan on their phone (reuses the existing payment-link feature). Customizer integration is a popup — clicking "Add custom design" opens the storefront customizer at `/[country]/customizer?pos_session=<id>`, the customizer's "Add to cart" path detects POS mode and POSTs each rendered line to the storefront's `/api/pos-bridge/items` relay, which forwards to the backend's `/store/pos-sessions/:id/items` route. The POS page polls the session every 2s and surfaces new customizer lines in the cart UI.
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/pos-session/](backend/src/modules/pos-session/) |
+| Migration | [backend/src/modules/pos-session/migrations/Migration20270401000000.ts](backend/src/modules/pos-session/migrations/Migration20270401000000.ts) |
+| Checkout service (draft → order + payment) | [backend/src/services/pos-checkout/checkout.ts](backend/src/services/pos-checkout/checkout.ts) |
+| Admin REST — sessions CRUD | [backend/src/api/admin/pos/sessions/route.ts](backend/src/api/admin/pos/sessions/route.ts) + [\[id\]/route.ts](backend/src/api/admin/pos/sessions/[id]/route.ts) |
+| Admin REST — admin-side item append | [backend/src/api/admin/pos/sessions/\[id\]/items/route.ts](backend/src/api/admin/pos/sessions/[id]/items/route.ts) |
+| Admin REST — checkout | [backend/src/api/admin/pos/checkout/route.ts](backend/src/api/admin/pos/checkout/route.ts) |
+| Store REST — customizer relay target | [backend/src/api/store/pos-sessions/\[id\]/items/route.ts](backend/src/api/store/pos-sessions/[id]/items/route.ts) |
+| Admin POS page | [backend/src/admin/routes/pos/page.tsx](backend/src/admin/routes/pos/page.tsx) |
+| Admin POS components | [backend/src/admin/routes/pos/components/](backend/src/admin/routes/pos/components/) |
+| Storefront customizer POS-mode hook | [storefront/src/modules/customizer/templates/index.tsx](storefront/src/modules/customizer/templates/index.tsx) — search `isPOSMode` |
+| Storefront bridge route | [storefront/src/app/api/pos-bridge/items/route.ts](storefront/src/app/api/pos-bridge/items/route.ts) |
+
+**Order shape**: a POS sale lands as a real Medusa order with `metadata.pos_session_id`, `metadata.pos_user_id`, `metadata.payment_method`. Each line item carries `metadata.pos_line_kind = "standard" | "customizer"`. Customizer lines preserve the full `customizerDesign` (`CustomizerMetadata`) shape so all the existing admin widgets (mockup PDF, customizer downloads, print details) work without a POS-specific branch.
+
+**Payment attribution**: cash payments stamp `payment.metadata.real_gateway = "pos_cash"`; card payments inherit `real_gateway = "stripe_payment_link"` via the existing handle-webhook flow. The payment-mix report buckets revenue accordingly.
+
+**Auth on the bridge route**: the storefront `/api/pos-bridge/items` route accepts requests with no auth header — the POS session ID itself is the capability (26-char ULID, 4-hour TTL). Acceptable for an in-store tool: worst case someone guesses a session ID and adds bogus lines, which staff immediately rejects on screen. Promote to a signed bridge-token if POS ever runs on a public guest network.
+
+**Config**: `POS_SESSION_TTL_HOURS` (default 4) controls how long an unfinished session stays "active" before it auto-expires. The customizer popup needs `STOREFRONT_URL` and `STOREFRONT_DEFAULT_COUNTRY_CODE` set on the backend (already required by other flows; surfaced through `/admin/scp-config`).
+
 ## Production-floor stack
 
 Operator surfaces beyond the customer-facing production-stage tracker. All live in admin; some surface customer-visible signals via emails or automation rules.
@@ -692,7 +718,7 @@ All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [bac
 ## First-time setup checklist
 
 1. `cd backend && pnpm install && cd ../storefront && pnpm install`
-2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace (now incl. Phase 6 `crm_owner_assignment` + `crm_owner_rotation` and Phase 8 `email_suppression`), report-alert, report-annotation, search-log, stripe-payment-link, task (Phase 7), …).
+2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace (now incl. Phase 6 `crm_owner_assignment` + `crm_owner_rotation` and Phase 8 `email_suppression`), report-alert, report-annotation, search-log, stripe-payment-link, task (Phase 7), pos-session (POS), …).
 3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises customer↔design, customer↔wishlist, product↔brand AND the new CRM links: customer↔crm_owner_assignment, order↔crm_owner_assignment (Phase 6), customer↔task, order↔task, quote↔task, organisation↔task (Phase 7).
 4. **Seed customer tiers** (B2B pricing): `cd backend && npx medusa exec src/scripts/seed-customer-tiers.ts` — creates the 8 "Tier: X" customer groups + matching price-list overrides.
 5. **Bootstrap shop categories** (mega-menu): `cd backend && npx medusa exec src/scripts/setup-shop-categories.ts` — creates the audience × garment-type tree and back-fills existing products.
