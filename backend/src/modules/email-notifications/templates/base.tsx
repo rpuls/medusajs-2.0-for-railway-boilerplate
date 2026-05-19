@@ -3,6 +3,102 @@ import * as React from 'react'
 
 const NAVY = '#1a1a2e'
 const MAGENTA = '#ff2e63'
+const ACCENT = '#3dcfc2'
+const SLATE = '#374151'
+const MUTED = '#9ca3af'
+const BORDER = '#ebebeb'
+const BG_SUBTLE = '#f9fafb'
+
+/** Shared style tokens — keep these in sync with the storefront design
+ *  system (border-l-4 eyebrow + h2 + brand-secondary CTA). Importing
+ *  from base.tsx is the canonical way to ensure templates don't drift.
+ */
+const STYLES = {
+  eyebrow: {
+    margin: 0,
+    fontSize: '11px',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.14em',
+    color: MUTED,
+  },
+  h1: {
+    margin: '8px 0 0',
+    fontSize: '24px',
+    fontWeight: 700,
+    color: NAVY,
+    lineHeight: '32px',
+  },
+  h2: {
+    margin: '0 0 4px',
+    fontSize: '18px',
+    fontWeight: 700,
+    color: NAVY,
+    lineHeight: '26px',
+  },
+  greeting: {
+    margin: '0 0 4px',
+    fontSize: '18px',
+    fontWeight: 700,
+    color: NAVY,
+  },
+  body: {
+    margin: '12px 0 0',
+    fontSize: '15px',
+    color: SLATE,
+    lineHeight: '23px',
+  },
+  meta: {
+    margin: 0,
+    fontSize: '12px',
+    color: MUTED,
+    lineHeight: '18px',
+  },
+  buttonPrimary: {
+    background: MAGENTA,
+    color: '#ffffff',
+    padding: '14px 28px',
+    fontSize: '15px',
+    fontWeight: 700,
+    borderRadius: '8px',
+    textDecoration: 'none',
+    display: 'inline-block' as const,
+  },
+  buttonSecondary: {
+    background: '#ffffff',
+    color: NAVY,
+    padding: '14px 28px',
+    fontSize: '15px',
+    fontWeight: 600,
+    borderRadius: '8px',
+    border: `1px solid ${BORDER}`,
+    textDecoration: 'none',
+    display: 'inline-block' as const,
+  },
+  link: {
+    color: MAGENTA,
+    textDecoration: 'underline' as const,
+  },
+  divider: {
+    margin: '24px 0',
+    borderColor: BORDER,
+    borderTopWidth: '1px',
+    borderStyle: 'solid' as const,
+    borderBottom: 'none',
+    borderLeft: 'none',
+    borderRight: 'none',
+  },
+  staffNote: {
+    margin: '20px 0 0',
+    fontSize: '14px',
+    color: SLATE,
+    fontStyle: 'italic' as const,
+    background: BG_SUBTLE,
+    padding: '12px 16px',
+    borderRadius: '8px',
+    borderLeft: `3px solid ${MAGENTA}`,
+  },
+}
 
 interface BaseProps {
   preview?: string
@@ -37,7 +133,8 @@ export const Base: React.FC<BaseProps> = ({ preview, children }) => {
             {/* Footer */}
             <Section style={{ padding: '16px 28px 24px', borderTop: '1px solid #ebebeb' }}>
               <Text style={{ margin: 0, fontSize: '11px', color: '#9ca3af', textAlign: 'center', lineHeight: '16px' }}>
-                SC Prints · Reply to this email for help · <a href="https://sc-prints.com.au" style={{ color: '#9ca3af' }}>sc-prints.com.au</a>
+                SC Prints &middot; Reply to this email for help &middot;{' '}
+                <a href="https://sc-prints.com.au" style={{ color: '#9ca3af' }}>sc-prints.com.au</a>
               </Text>
             </Section>
           </Container>
@@ -47,4 +144,4 @@ export const Base: React.FC<BaseProps> = ({ preview, children }) => {
   )
 }
 
-export { NAVY, MAGENTA }
+export { NAVY, MAGENTA, ACCENT, SLATE, MUTED, BORDER, BG_SUBTLE, STYLES }

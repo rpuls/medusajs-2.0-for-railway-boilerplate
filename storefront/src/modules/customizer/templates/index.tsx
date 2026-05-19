@@ -666,6 +666,8 @@ export default function CustomizerTemplate({
     left_sleeve: [],
     right_sleeve: [],
     printed_tag: [],
+    bottle_label: [],
+    bottle_back_label: [],
   })
   /**
    * Per-object manual size override. Keyed by `customizerId`. When set the
@@ -4073,6 +4075,8 @@ export default function CustomizerTemplate({
                 left_sleeve: "Left Sleeve",
                 right_sleeve: "Right Sleeve",
                 printed_tag: "Printed Tag",
+                bottle_label: "Bottle Label",
+                bottle_back_label: "Bottle Back Label",
               }
               const decoratedAllowed = decoratedSides.filter((s) => allowedPrintSides.includes(s))
               const decoratedCount = decoratedAllowed.length
@@ -4415,6 +4419,8 @@ export default function CustomizerTemplate({
                     left_sleeve: "Left Sleeve",
                     right_sleeve: "Right Sleeve",
                     printed_tag: "Printed Tag",
+                    bottle_label: "Bottle Label",
+                    bottle_back_label: "Bottle Back Label",
                   }
                   const sidesForSummary = decoratedSides.filter((s) => allowedPrintSides.includes(s))
                   if (sidesForSummary.length === 0) {

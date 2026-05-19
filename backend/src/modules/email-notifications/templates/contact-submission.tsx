@@ -1,5 +1,5 @@
 import { Hr, Section, Text } from "@react-email/components"
-import { Base } from "./base"
+import { Base, STYLES, NAVY, BG_SUBTLE } from "./base"
 
 export const CONTACT_SUBMISSION = "contact-submission"
 
@@ -34,41 +34,61 @@ export const ContactSubmissionEmail = ({
 
   return (
     <Base preview={preview}>
-      <Section>
-        <Text style={{ fontSize: "24px", fontWeight: "bold", margin: "0 0 18px" }}>
-          New Contact Submission
-        </Text>
+      <Text style={STYLES.eyebrow}>Contact form &middot; {submission.id}</Text>
+      <Text style={STYLES.h1}>New contact submission</Text>
 
-        <Text style={{ margin: "0 0 8px" }}>
-          <strong>Submission ID:</strong> {submission.id}
+      <Section style={{ margin: "20px 0 0" }}>
+        <Text style={{ ...STYLES.body, margin: 0 }}>
+          <strong style={{ color: NAVY }}>Name:</strong>{" "}
+          {senderName || "Not provided"}
         </Text>
-        <Text style={{ margin: "0 0 8px" }}>
-          <strong>Name:</strong> {senderName || "Not provided"}
+        <Text style={{ ...STYLES.body, margin: "4px 0 0" }}>
+          <strong style={{ color: NAVY }}>Email:</strong> {submission.email}
         </Text>
-        <Text style={{ margin: "0 0 8px" }}>
-          <strong>Email:</strong> {submission.email}
-        </Text>
-        <Text style={{ margin: "0 0 8px" }}>
-          <strong>Subject:</strong> {submission.subject || "Not provided"}
-        </Text>
-
-        <Hr style={{ margin: "18px 0" }} />
-
-        <Text style={{ fontWeight: "bold", margin: "0 0 6px" }}>Message</Text>
-        <Text style={{ whiteSpace: "pre-wrap", margin: "0 0 14px" }}>{submission.message}</Text>
-
-        <Hr style={{ margin: "18px 0" }} />
-
-        <Text style={{ margin: "0 0 6px" }}>
-          <strong>Origin:</strong> {submission.sourceOrigin || "Unknown"}
-        </Text>
-        <Text style={{ margin: "0 0 6px" }}>
-          <strong>IP:</strong> {submission.sourceIp || "Unknown"}
-        </Text>
-        <Text style={{ margin: "0" }}>
-          <strong>User Agent:</strong> {submission.userAgent || "Unknown"}
+        <Text style={{ ...STYLES.body, margin: "4px 0 0" }}>
+          <strong style={{ color: NAVY }}>Subject:</strong>{" "}
+          {submission.subject || "Not provided"}
         </Text>
       </Section>
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={STYLES.h2}>Message</Text>
+      <Section
+        style={{
+          margin: "12px 0 0",
+          padding: "14px 16px",
+          background: BG_SUBTLE,
+          borderRadius: "8px",
+        }}
+      >
+        <Text
+          style={{
+            whiteSpace: "pre-wrap",
+            margin: 0,
+            fontSize: "15px",
+            color: NAVY,
+            lineHeight: "23px",
+          }}
+        >
+          {submission.message}
+        </Text>
+      </Section>
+
+      <Hr style={STYLES.divider} />
+
+      <Text style={{ ...STYLES.meta, margin: "0 0 4px" }}>
+        <strong style={{ color: NAVY }}>Origin:</strong>{" "}
+        {submission.sourceOrigin || "Unknown"}
+      </Text>
+      <Text style={{ ...STYLES.meta, margin: "0 0 4px" }}>
+        <strong style={{ color: NAVY }}>IP:</strong>{" "}
+        {submission.sourceIp || "Unknown"}
+      </Text>
+      <Text style={STYLES.meta}>
+        <strong style={{ color: NAVY }}>User agent:</strong>{" "}
+        {submission.userAgent || "Unknown"}
+      </Text>
     </Base>
   )
 }

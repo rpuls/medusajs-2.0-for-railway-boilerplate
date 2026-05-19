@@ -14,6 +14,7 @@ import {
   SUPPORT_REPLY_TO_EMAIL,
 } from "../../lib/constants"
 import { getPostHog } from "../../lib/posthog"
+import { shouldSendMarketingEmail } from "../../lib/marketing-email"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 import { buildAbandonedCartCandidates } from "./build-candidates"
@@ -56,6 +57,17 @@ export async function sendAbandonedCartReminders(
         dryRunSkipped += 1
         continue
       }
+      // Belt-and-braces marketing gate. buildAbandonedCartCandidates
+      // already filters on `marketing_consent_email !== false`; this
+      // catches the suppression table (which the candidate stage
+      // doesn't read).
+      const gate = await shouldSendMarketingEmail({
+        container,
+        email: c.email,
+        customer_id: (c as any).customer_id ?? null,
+        template_kind: "cart_reminder",
+      })
+      if (!gate.ok) continue
       try {
         await notificationModuleService.createNotifications({
           to: c.email,

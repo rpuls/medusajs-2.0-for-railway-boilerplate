@@ -15,6 +15,7 @@ import {
 } from "../../lib/constants"
 import { tagUrl } from "../../lib/email-utm"
 import { getPostHog } from "../../lib/posthog"
+import { shouldSendMarketingEmail } from "../../lib/marketing-email"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 import { buildNpsCandidates } from "./build-candidates"
@@ -75,12 +76,29 @@ export async function sendNpsRequests(
   let sent = 0
   let failures = 0
   let dryRunSkipped = 0
+  let skippedNoConsent = 0
   const slice = candidates.slice(0, maxSends)
   for (const c of slice) {
     if (dryRun) {
       dryRunSkipped += 1
       continue
     }
+
+    // Marketing-email gate: per-customer consent + suppression list.
+    // NPS is borderline (post-purchase feedback request, not promo)
+    // but it goes to the marketing inbox stream so treat it as
+    // marketing for opt-out purposes — matches the Phase 8 plan.
+    const gate = await shouldSendMarketingEmail({
+      container,
+      email: c.email,
+      customer_id: c.customer_id ?? null,
+      template_kind: "nps_request",
+    })
+    if (!gate.ok) {
+      skippedNoConsent += 1
+      continue
+    }
+
     try {
       const ratingUrls = [1, 2, 3, 4, 5].map((score) => ({
         score,

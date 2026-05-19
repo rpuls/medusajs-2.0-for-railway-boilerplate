@@ -64,6 +64,19 @@ export type ThreeTuning = {
   /** When true, the canvas overlays a cursor-history polyline and tints
    * particles in the trailing-playback state magenta. Diagnostic only. */
   debugOverlay: boolean
+  /** World units behind the cursor along −motion. In-disk targets sit here
+   * so captured particles read as dragged in the wake, not piled on the tip. */
+  carryLagBehind: number
+  /** Tangential push on the counter-rotating side of the motion vector. */
+  sideSwirlForce: number
+  /** Outward push on the front (leading) side of the disk. */
+  frontPush: number
+  /** Inward pinch on the rear side of the disk. */
+  backInward: number
+  /** Cursor speed (px/frame) below which swirl forces fade out. */
+  motionGateSpeed: number
+  /** `((R - dist) / R) ^ power` falloff for swirl/carry. */
+  falloffPower: number
 }
 
 export const THREE_TUNING_DEFAULTS: ThreeTuning = {
@@ -71,25 +84,31 @@ export const THREE_TUNING_DEFAULTS: ThreeTuning = {
   cursorRadius: 98,
   /** Void zone at cursor tip — keeps a clean hole at the very centre. */
   cursorDisplacement: 20,
-  /** Carry strength — how far toward cursor particles are pulled (0–1).
-   * 0.75 = targets sit 75% of the way from home to cursor at full falloff. */
-  carryStrength: 0.75,
+  /** Pull from current position toward the behind-cursor anchor each frame. */
+  carryStrength: 0.94,
   trailDisplacement: 35,
   trailSpeedCap: 300,
-  /** inBlend=8 → alpha≈0.13/frame → particles chase cursor with natural lag. */
-  inBlend: 8,
+  /** Snappy in-disk follow so the whole disk moves with the cursor. */
+  inBlend: 16,
   /** outBlend=0.5 → alpha≈0.008/frame → ~2–3 s visible comet tail. */
   outBlend: 0.5,
   pointSize: 2.5,
-  trailingProbability: 0.65,
+  /** Every particle that leaves the disk enters wake playback. */
+  trailingProbability: 1,
   trailFollowMs: 2500,
-  wakePace: 0.52,
-  wakePaceJitter: 0.4,
-  wakeTimeOffsetMs: 1400,
+  wakePace: 0.48,
+  wakePaceJitter: 0.35,
+  wakeTimeOffsetMs: 1200,
   wakeAlongStretchBmp: 22,
   wakeBandSpreadBmp: 14,
-  wakeReleaseStaggerMs: 350,
+  wakeReleaseStaggerMs: 80,
   debugOverlay: false,
+  carryLagBehind: 22,
+  sideSwirlForce: 7.5,
+  frontPush: 3.5,
+  backInward: 2.5,
+  motionGateSpeed: 1.2,
+  falloffPower: 1.4,
 }
 
 /** Keys of `ThreeTuning` whose value is a number — excludes booleans like
@@ -177,7 +196,27 @@ const SLIDERS: SliderDef[] = [
     step: 0.01,
     format: (v) => v.toFixed(2),
     description:
-      "Fraction of exiting particles that enter the wake-playback state. 0 = no trail. ~0.65 reads as a dense ribbon without dragging every particle.",
+      "Fraction of exiting particles that enter wake playback. Default 1 = every captured particle trails the cursor path.",
+  },
+  {
+    key: "carryLagBehind",
+    label: "Carry lag behind",
+    min: 0,
+    max: 80,
+    step: 1,
+    format: (v) => `${v.toFixed(0)} px`,
+    description:
+      "In-disk anchor sits this many world units behind the cursor along −motion so grains drag in the wake instead of stacking on the tip.",
+  },
+  {
+    key: "sideSwirlForce",
+    label: "Side swirl",
+    min: 0,
+    max: 20,
+    step: 0.25,
+    format: (v) => v.toFixed(1),
+    description:
+      "Counter-rotating tangential offset — particles on opposite sides of the motion vector sweep apart (Newmix-style).",
   },
   {
     key: "trailFollowMs",
@@ -260,7 +299,7 @@ const SLIDERS: SliderDef[] = [
   },
 ]
 
-const LS_KEY = "particle-threejs-tuning-v6"
+const LS_KEY = "particle-threejs-tuning-v7"
 
 export function loadStoredTuning(): ThreeTuning {
   if (typeof window === "undefined") return THREE_TUNING_DEFAULTS

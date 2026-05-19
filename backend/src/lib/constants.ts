@@ -537,6 +537,69 @@ export const OWNER_AUTOSTAMP_ENABLED =
   String(process.env.OWNER_AUTOSTAMP_ENABLED).toLowerCase() === "true"
 
 /**
+ * CRM Phase 7 — Tasks system.
+ *
+ *  - `TASKS_OVERDUE_CRON_ENABLED`: daily 09:00 UTC cron that stamps
+ *    overdue tasks and writes audit/PostHog events for staff visibility.
+ *    Email/Slack delivery is deferred. Off by default so dev/staging
+ *    doesn't spam during testing.
+ */
+export const TASKS_OVERDUE_CRON_ENABLED =
+  String(process.env.TASKS_OVERDUE_CRON_ENABLED).toLowerCase() === "true"
+
+/**
+ * CRM Phase 8 — Marketing email compliance.
+ *
+ *  - `UNSUBSCRIBE_LINK_SECRET`: HMAC key used to sign the one-click
+ *    unsubscribe URL embedded in marketing emails. Same shape as
+ *    `NPS_LINK_SECRET`: must be set in prod, dev placeholder used
+ *    otherwise so links verify locally.
+ *  - `MARKETING_PREFERENCE_CENTER_URL`: where one-click unsubscribe
+ *    redirects after writing the suppression row. Defaults to
+ *    `${STOREFRONT_URL}/email-preferences`.
+ */
+export const UNSUBSCRIBE_LINK_SECRET =
+  process.env.UNSUBSCRIBE_LINK_SECRET ||
+  "unsubscribe-dev-secret-do-not-use-in-prod"
+export const MARKETING_PREFERENCE_CENTER_URL =
+  process.env.MARKETING_PREFERENCE_CENTER_URL
+
+/**
+ * CRM Phase 10 — automation rules expansion.
+ *
+ *  - `AUTOMATION_EXPANDED_TRIGGERS_ENABLED`: gates the new triggers
+ *    (`customer.created`, `order.delivered`) and the new actions
+ *    (`create_task`, `assign_owner`). Off by default so existing
+ *    rules using `order.placed` and `order.production_stage_changed`
+ *    keep working unchanged until staff explicitly opt in.
+ */
+export const AUTOMATION_EXPANDED_TRIGGERS_ENABLED =
+  String(process.env.AUTOMATION_EXPANDED_TRIGGERS_ENABLED).toLowerCase() === "true"
+
+/**
+ * CRM Phase 11 — Quote → Order auto-conversion + Stale-order escalation.
+ *
+ *  - `QUOTE_CONVERSION_ENABLED`: master switch for the quote-on-order-
+ *    placed / quote-on-order-cancelled subscribers. ON by default —
+ *    closing the quote loop is the desired behaviour in production.
+ *  - `STALE_ORDER_ESCALATION_DAYS`: how many days an order stays
+ *    stale before the manager email fires. Distinct from
+ *    STALE_ORDER_THRESHOLD_DAYS (how long until "stale" is flagged).
+ *    Default 3 — gives the owner a few days to respond before
+ *    escalating.
+ *  - `STALE_ORDER_MANAGER_EMAIL`: comma-separated inboxes that
+ *    receive the manager escalation. Unset = no escalation (just the
+ *    owner notification + task creation).
+ */
+export const QUOTE_CONVERSION_ENABLED =
+  String(process.env.QUOTE_CONVERSION_ENABLED ?? "true").toLowerCase() !== "false"
+export const STALE_ORDER_ESCALATION_DAYS = parseIntEnv(
+  process.env.STALE_ORDER_ESCALATION_DAYS,
+  3
+)
+export const STALE_ORDER_MANAGER_EMAIL = process.env.STALE_ORDER_MANAGER_EMAIL
+
+/**
  * 4. SYSTEM MODES
  */
 export const WORKER_MODE = (process.env.MEDUSA_WORKER_MODE) || 'shared'

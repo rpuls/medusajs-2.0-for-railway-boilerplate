@@ -12,6 +12,8 @@ const SIDE_LABEL: Record<GarmentSide, string> = {
   left_sleeve: "Left sleeve",
   right_sleeve: "Right sleeve",
   printed_tag: "Inner tag",
+  bottle_label: "Bottle label",
+  bottle_back_label: "Bottle back label",
 }
 
 const DIGITIZING_FEE_DEFAULT = 60 // AUD — surfaced in cart; backend re-prices.

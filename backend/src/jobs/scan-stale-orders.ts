@@ -18,8 +18,12 @@ export default async function scanStaleOrdersJob(container: MedusaContainer) {
   }
   try {
     const result = await scanStaleOrders(container)
+    const notify = result.notify
+    const notifyBits = notify
+      ? `, tasks_created=${notify.tasks_created}, owners_notified=${notify.owners_notified}, managers_escalated=${notify.managers_escalated}`
+      : ""
     logger.info(
-      `scan-stale-orders: considered=${result.considered}, newly_stale=${result.newly_stale.length}, cleared=${result.cleared}`
+      `scan-stale-orders: considered=${result.considered}, newly_stale=${result.newly_stale.length}, cleared=${result.cleared}${notifyBits}`
     )
   } catch (err: any) {
     logger.error(`scan-stale-orders: ${err?.message ?? err}`)

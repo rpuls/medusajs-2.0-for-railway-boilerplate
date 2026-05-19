@@ -1,6 +1,6 @@
 import { Hr, Section, Text } from "@react-email/components"
 
-import { Base } from "./base"
+import { Base, NAVY } from "./base"
 import type { MonthlyDigestPayload } from "../../../services/monthly-digest/build-digest"
 
 export const MONTHLY_DIGEST = "monthly-digest"
@@ -74,7 +74,7 @@ const KpiRow = ({
         margin: "2px 0 0 0",
         fontSize: "22px",
         fontWeight: 600,
-        color: "#111111",
+        color: NAVY,
       }}
     >
       {value}
@@ -120,7 +120,7 @@ export const MonthlyDigestEmail = ({
             margin: "4px 0 18px 0",
             fontSize: "24px",
             fontWeight: 700,
-            color: "#111111",
+            color: NAVY,
           }}
         >
           {digest.period.label}
@@ -155,7 +155,7 @@ export const MonthlyDigestEmail = ({
             margin: "0 0 8px 0",
             fontSize: "14px",
             fontWeight: 600,
-            color: "#111111",
+            color: NAVY,
           }}
         >
           Headline
@@ -197,7 +197,7 @@ export const MonthlyDigestEmail = ({
                 margin: "0 0 8px 0",
                 fontSize: "14px",
                 fontWeight: 600,
-                color: "#111111",
+                color: NAVY,
               }}
             >
               Top products
@@ -214,7 +214,7 @@ export const MonthlyDigestEmail = ({
                   style={{
                     margin: 0,
                     fontSize: "13px",
-                    color: "#111111",
+                    color: NAVY,
                   }}
                 >
                   {p.title}
@@ -239,7 +239,7 @@ export const MonthlyDigestEmail = ({
             margin: "0 0 8px 0",
             fontSize: "14px",
             fontWeight: 600,
-            color: "#111111",
+            color: NAVY,
           }}
         >
           Customer segments
@@ -264,7 +264,7 @@ export const MonthlyDigestEmail = ({
             margin: "0 0 8px 0",
             fontSize: "14px",
             fontWeight: 600,
-            color: "#111111",
+            color: NAVY,
           }}
         >
           Production health
@@ -315,7 +315,7 @@ export const MonthlyDigestEmail = ({
             margin: "0 0 8px 0",
             fontSize: "14px",
             fontWeight: 600,
-            color: "#111111",
+            color: NAVY,
           }}
         >
           Inventory

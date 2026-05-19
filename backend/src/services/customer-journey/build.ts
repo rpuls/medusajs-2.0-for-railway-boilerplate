@@ -8,11 +8,44 @@ import {
 } from "../../lib/constants"
 
 export type JourneyEvent = {
-  source: "order" | "posthog" | "nps" | "tag" | "design"
+  source: "order" | "posthog" | "nps" | "tag" | "design" | "audit"
   at: string
   title: string
   detail?: string | null
   href?: string | null
+}
+
+/**
+ * Phase 9: friendlier titles for the polymorphic `audit_log` rows that
+ * land on the customer timeline. Each `action` constant from
+ * `lib/audit-entities.ts` gets a short human label; anything we
+ * haven't mapped falls back to the raw verb.
+ */
+const AUDIT_ACTION_LABEL: Record<string, string> = {
+  created: "Account created",
+  status_changed: "Status changed",
+  owner_changed: "Owner changed",
+  assigned: "Assigned",
+  unassigned: "Unassigned",
+  tag_added: "Tag added",
+  tag_removed: "Tag removed",
+  note_added: "Note added",
+  note_pinned: "Note pinned",
+  note_snoozed: "Note snoozed",
+  note_deleted: "Note removed",
+  comment_posted: "Comment posted",
+  member_added: "Joined organisation",
+  member_removed: "Left organisation",
+  email_sent: "Email sent",
+  email_opened: "Email opened",
+  email_clicked: "Email clicked",
+  email_bounced: "Email bounced",
+  email_suppressed: "Unsubscribed",
+  payment_link_clicked: "Payment link clicked",
+  rule_fired: "Automation fired",
+  expired: "Quote expired",
+  converted: "Quote converted",
+  stage_changed: "Production stage changed",
 }
 
 const DEFAULT_HOST = "https://us.i.posthog.com"
@@ -28,8 +61,14 @@ const isPostHogConfigured = (): boolean =>
  *   - Orders the customer placed
  *   - NPS responses on those orders
  *   - Saved designs
- *   - Customer tag changes (audit log doesn't exist yet, so this is
- *     a no-op today — left as a hook for future)
+ *   - Customer tag changes (also surfaced via audit_log)
+ *   - audit_log rows where `entity = "customer"` (Phase 9): owner
+ *     changes, note add/pin/snooze, tag add/remove, organisation
+ *     joins/leaves, marketing unsubscribes, etc.
+ *
+ * Each source is independently capped at 200 events so audit-log
+ * spam (e.g. high-volume email open/click writes in later phases)
+ * can't crowd out the orders/design history the staff actually need.
  *
  * PostHog is queried via HogQL using the customer's email as the
  * distinct_id filter (matches how `phIdentify` is called in the
@@ -138,6 +177,58 @@ export async function buildCustomerJourney(
           at: t.created_at as string,
           title: `Tagged "${t.label}"`,
           detail: t.created_by ? `by ${t.created_by}` : null,
+        })
+      }
+    } catch {
+      // soft fail
+    }
+
+    // ---- audit_log rows (entity = "customer") — Phase 9 ----
+    try {
+      const { data: auditRows } = await query.graph({
+        entity: "audit_log",
+        fields: ["id", "action", "actor_id", "actor_email", "details", "created_at"],
+        filters: { entity: "customer", entity_id: customer.id },
+        pagination: { take: 200, skip: 0 },
+      })
+      for (const r of (auditRows as any[]) ?? []) {
+        if (!r?.created_at) continue
+        const action = String(r.action ?? "")
+        const title = AUDIT_ACTION_LABEL[action] ?? action.replace(/_/g, " ")
+        const actor = r.actor_email || r.actor_id || null
+        // Best-effort detail extraction from the freeform `details` JSON.
+        let detail: string | null = null
+        const d = r.details as Record<string, unknown> | null | undefined
+        if (d) {
+          if (action === "tag_added" && typeof d.label === "string") {
+            detail = `"${d.label}"${actor ? ` · by ${actor}` : ""}`
+          } else if (action === "tag_removed" && typeof d.label === "string") {
+            detail = `"${d.label}"${actor ? ` · by ${actor}` : ""}`
+          } else if (action === "note_added" && typeof d.excerpt === "string") {
+            detail = `${d.excerpt}${actor ? ` · by ${actor}` : ""}`
+          } else if (action === "owner_changed" && typeof d.to_user_id === "string") {
+            detail = `to ${d.to_user_id}${
+              typeof d.from_user_id === "string" ? ` (was ${d.from_user_id})` : ""
+            }`
+          } else if (action === "member_added" && typeof d.organisation_id === "string") {
+            detail = `org ${d.organisation_id}${
+              typeof d.role === "string" ? ` · ${d.role}` : ""
+            }`
+          } else if (action === "email_suppressed") {
+            const kind = (d as any).template_kind
+            detail = kind ? `Unsubscribed (${kind})` : "Unsubscribed (all marketing)"
+          } else if (actor) {
+            detail = `by ${actor}`
+          }
+        } else if (actor) {
+          detail = `by ${actor}`
+        }
+        events.push({
+          source: "audit",
+          at: r.created_at as string,
+          title,
+          detail,
+          href: null,
         })
       }
     } catch {

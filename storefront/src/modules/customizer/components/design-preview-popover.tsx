@@ -11,6 +11,8 @@ const SIDE_LABEL: Record<GarmentSide, string> = {
   left_sleeve: "Left Sleeve",
   right_sleeve: "Right Sleeve",
   printed_tag: "Printed Tag",
+  bottle_label: "Bottle Label",
+  bottle_back_label: "Bottle Back Label",
 }
 
 type DesignPreviewPopoverProps = {

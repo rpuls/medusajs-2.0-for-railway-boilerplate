@@ -8,6 +8,7 @@ import {
   isColorOptionTitle,
   toTitleSlug,
 } from "@modules/products/lib/variant-options"
+import { catalogSwatchBackgroundImageUrl } from "@lib/util/catalog-image-url"
 import { getProductListingCardPriceLines } from "@lib/util/listing-card-price-text"
 import type { VariantPrice } from "types/global"
 
@@ -87,10 +88,8 @@ export function buildProductListingCardData(
       getPrimaryGarmentImageUrl(product, variant) ?? catalogFallback ?? ""
     const slug = toTitleSlug(colorValue)
     const rawSwatchPhotoUrl = slug ? swatchPhotoMap.get(slug) : undefined
-    // Route through Next.js image optimizer: Vercel CDN caches after first load,
-    // serves WebP at 80px instead of the raw 800-1500px origin image.
     const swatchPhotoUrl = rawSwatchPhotoUrl
-      ? `/_next/image?url=${encodeURIComponent(rawSwatchPhotoUrl)}&w=80&q=40`
+      ? catalogSwatchBackgroundImageUrl(rawSwatchPhotoUrl)
       : undefined
     return {
       colorLabel: colorValue,

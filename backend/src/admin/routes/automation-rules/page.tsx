@@ -60,6 +60,9 @@ type RuleDraft = {
 const TRIGGER_LABELS: Record<string, string> = {
   "order.placed": "Order placed",
   "order.production_stage_changed": "Production stage changed",
+  // Phase 10 — gated by AUTOMATION_EXPANDED_TRIGGERS_ENABLED
+  "customer.created": "Customer created",
+  "order.delivered": "Order delivered",
 }
 
 const TRIGGER_FIELDS: Record<string, { field: string; hint: string }[]> = {
@@ -82,6 +85,20 @@ const TRIGGER_FIELDS: Record<string, { field: string; hint: string }[]> = {
     { field: "from_stage", hint: "Stage being moved out of" },
     { field: "changed_by", hint: "Actor ID who made the change" },
   ],
+  "customer.created": [
+    { field: "email", hint: "Customer email" },
+    { field: "has_account", hint: "true if registered, false if guest" },
+  ],
+  "order.delivered": [
+    { field: "total", hint: "Order total" },
+    { field: "currency_code", hint: "Currency code, e.g. aud" },
+    { field: "from_stage", hint: "Stage moved out of (always 'shipped')" },
+    {
+      field: "lifetime_value",
+      hint: "Customer's cumulative spend after this delivery",
+    },
+    { field: "order_count", hint: "Customer's cumulative order count" },
+  ],
 }
 
 const OP_LABELS: Record<string, string> = {
@@ -100,6 +117,9 @@ const ACTION_LABELS: Record<string, string> = {
   post_order_comment: "Post order comment",
   send_alert_email: "Send alert email",
   set_production_stage: "Set production stage",
+  // Phase 10
+  create_task: "Create task",
+  assign_owner: "Assign owner",
 }
 
 const PRODUCTION_STAGES = [

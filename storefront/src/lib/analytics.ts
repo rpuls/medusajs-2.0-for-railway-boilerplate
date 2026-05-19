@@ -314,10 +314,22 @@ type AnyLineItem = {
 const decorationMethodFromLineMeta = (meta: any): string | undefined => {
   const m = meta?.decorationDesign?.method
   if (typeof m === "string") return m
-  if (meta?.customizerDesign && typeof meta.customizerDesign === "object") {
-    return "screen"
-  }
-  return undefined
+  const design = meta?.customizerDesign
+  if (!design || typeof design !== "object") return undefined
+
+  const server = design.pricing?.server
+  const mode = typeof server?.mode === "string" ? server.mode : null
+  const sideMethods = design.sideDecorationMethods ?? {}
+  const hasEmbroidery = Object.values(sideMethods).some((v) => v === "embroidery")
+  const hasPrint =
+    Object.values(sideMethods).some((v) => !v || v === "print") ||
+    mode === "scp_dtf" ||
+    mode === "scp_dtf_mixed" ||
+    typeof design.scpPrintSizeId === "string" ||
+    (Array.isArray(design.prints) && design.prints.length > 0)
+
+  if (hasEmbroidery && !hasPrint) return "embroidery"
+  return "dtf"
 }
 
 export const productToItem = (

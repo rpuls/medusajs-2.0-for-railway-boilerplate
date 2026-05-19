@@ -1,6 +1,6 @@
 import { Hr, Section, Text, Button } from "@react-email/components"
 
-import { Base } from "./base"
+import { Base, STYLES, NAVY } from "./base"
 import type { ChurnSeverity } from "../../../services/churn-queue/build-queue"
 
 export const WINBACK = "winback"
@@ -49,94 +49,37 @@ export const WinbackEmail = ({ winback, preview }: WinbackEmailProps) => {
 
   return (
     <Base preview={previewText}>
-      <Section>
-        <Text
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 700,
-            color: "#111111",
-          }}
-        >
-          {greeting}
+      <Text style={STYLES.eyebrow}>Welcome back</Text>
+      <Text style={STYLES.h1}>{greeting}</Text>
+      <Text style={{ ...STYLES.h2, margin: "16px 0 0" }}>{copy.headline}</Text>
+      <Text style={STYLES.body}>{copy.body}</Text>
+
+      {ctaUrl ? (
+        <Section style={{ margin: "24px 0 0" }}>
+          <Button href={ctaUrl} style={STYLES.buttonPrimary}>
+            Start a new design &rarr;
+          </Button>
+        </Section>
+      ) : null}
+
+      {winback.storeOrdersUrl ? (
+        <Text style={{ ...STYLES.meta, margin: "16px 0 0", fontSize: "13px" }}>
+          Or{" "}
+          <a href={winback.storeOrdersUrl} style={STYLES.link}>
+            reorder something from your history
+          </a>{" "}
+          &mdash; we keep your past designs on file.
         </Text>
+      ) : null}
 
-        <Text
-          style={{
-            margin: "12px 0 0 0",
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "#111111",
-          }}
-        >
-          {copy.headline}
-        </Text>
+      <Hr style={STYLES.divider} />
 
-        <Text
-          style={{
-            margin: "10px 0 0 0",
-            fontSize: "15px",
-            color: "#1f2937",
-            lineHeight: "22px",
-          }}
-        >
-          {copy.body}
-        </Text>
-
-        {ctaUrl ? (
-          <Section style={{ margin: "20px 0" }}>
-            <Button
-              href={ctaUrl}
-              style={{
-                background: "#111111",
-                color: "#ffffff",
-                padding: "12px 18px",
-                fontSize: "14px",
-                fontWeight: 600,
-                borderRadius: "6px",
-                textDecoration: "none",
-              }}
-            >
-              Start a new design →
-            </Button>
-          </Section>
-        ) : null}
-
-        {winback.storeOrdersUrl ? (
-          <Text
-            style={{
-              margin: "10px 0 0 0",
-              fontSize: "13px",
-              color: "#737373",
-            }}
-          >
-            Or{" "}
-            <a
-              href={winback.storeOrdersUrl}
-              style={{ color: "#111111", textDecoration: "underline" }}
-            >
-              reorder something from your history
-            </a>{" "}
-            — we keep your past designs on file.
-          </Text>
-        ) : null}
-
-        <Hr style={{ margin: "24px 0", borderColor: "#e5e5e5" }} />
-
-        <Text
-          style={{
-            margin: 0,
-            fontSize: "12px",
-            color: "#737373",
-            lineHeight: "18px",
-          }}
-        >
-          You're getting this once because it's been{" "}
-          {Math.round(winback.daysSinceLast)} days since your last order. If
-          you'd rather we didn't reach out again, just reply with "stop" and
-          we'll mark your record.
-        </Text>
-      </Section>
+      <Text style={STYLES.meta}>
+        You&apos;re getting this once because it&apos;s been{" "}
+        {Math.round(winback.daysSinceLast)} days since your last order. If
+        you&apos;d rather we didn&apos;t reach out again, just reply with
+        &ldquo;stop&rdquo; and we&apos;ll mark your record.
+      </Text>
     </Base>
   )
 }

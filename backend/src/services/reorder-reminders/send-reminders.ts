@@ -11,6 +11,7 @@ import type {
 import { SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
 import { tagUrl } from "../../lib/email-utm"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
+import { shouldSendMarketingEmail } from "../../lib/marketing-email"
 import {
   buildReorderCandidates,
   type ReorderCandidate,
@@ -84,12 +85,28 @@ export async function sendReorderReminders(
   let sent = 0
   let failures = 0
   let dryRunSkipped = 0
+  let skippedNoConsent = 0
   const slice = candidates.slice(0, maxSends)
   for (const c of slice) {
     if (dryRun) {
       dryRunSkipped += 1
       continue
     }
+
+    // Marketing-email gate: per-customer consent + global/per-stream
+    // suppression list. Closes the consent gap that lived in this
+    // job before Phase 8.
+    const gate = await shouldSendMarketingEmail({
+      container,
+      email: c.email,
+      customer_id: c.customer_id ?? null,
+      template_kind: "reorder_reminder",
+    })
+    if (!gate.ok) {
+      skippedNoConsent += 1
+      continue
+    }
+
     const reorderUrl = tagUrl(buildReorderUrl(c), {
       medium: "marketing",
       campaign: "reorder_reminder",
@@ -147,7 +164,7 @@ export async function sendReorderReminders(
   }
 
   logger.info(
-    `reorder-reminders: ${dryRun ? "DRY RUN " : ""}considered=${candidates.length}, sent=${sent}, failures=${failures}, skipped_for_dry_run=${dryRunSkipped}`
+    `reorder-reminders: ${dryRun ? "DRY RUN " : ""}considered=${candidates.length}, sent=${sent}, failures=${failures}, skipped_for_dry_run=${dryRunSkipped}, skipped_no_consent=${skippedNoConsent}`
   )
 
   return {

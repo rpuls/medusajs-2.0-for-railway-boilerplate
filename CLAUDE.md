@@ -428,7 +428,8 @@ Customer-facing approval PDF (one page per garment side, sizes table, watermarke
 | Component | Path |
 | --- | --- |
 | Service | [backend/src/services/mockup-pdf/](backend/src/services/mockup-pdf/) |
-| Admin page (request generation) | [backend/src/admin/routes/mockup-pdf/page.tsx](backend/src/admin/routes/mockup-pdf/page.tsx) |
+| Admin API | [backend/src/api/admin/orders/[id]/mockup-pdf/route.ts](backend/src/api/admin/orders/[id]/mockup-pdf/route.ts) |
+| Order-detail download button | [backend/src/admin/widgets/order-customizer-downloads.tsx](backend/src/admin/widgets/order-customizer-downloads.tsx) |
 | Brand assets (logo + fonts) | [backend/src/assets/](backend/src/assets/) |
 
 **Background removal**: corner-sampled white detection (threshold ≥220 RGB); edge flood-fill for black. Preserves design black at ≤30 RGB only if background is white. **Image fetch timeout**: 12s per URL; nulls drop silently.
@@ -605,6 +606,13 @@ Always returns 204 so failures never break UX. Query length validated 1-500 char
 | `QUOTE_EXPIRY_CRON_ENABLED` | Daily cron that transitions `status = quoted` quotes whose `expires_at` is past to `status = expired`, appending a `QuoteEvent` + audit row. Off by default so dry-running quote workflows in dev doesn't auto-expire stale test data. See [backend/src/jobs/expire-quotes.ts](backend/src/jobs/expire-quotes.ts). | `false` |
 | `EMAIL_SUPPRESSION_TABLE_ENABLED` | Enables the suppression-table check inside `shouldSendMarketingEmail()` ([backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts)). Phase 8 ships the table and flips this to `true`. Until then the helper short-circuits the suppression check and relies only on `customer.metadata.marketing_consent_email`. | `false` |
 | `OWNER_AUTOSTAMP_ENABLED` | Auto-assigns ownership on every new order — inheriting the customer's owner first, falling back to `pickNextOwner()` from the rotation table. Off by default so existing orders aren't disrupted before the rotation is populated. See [backend/src/subscribers/order-placed-stamp-owner.ts](backend/src/subscribers/order-placed-stamp-owner.ts). | `false` |
+| `TASKS_OVERDUE_CRON_ENABLED` | Daily 09:00 UTC cron that walks active tasks with `due_at` in the past, stamps `last_overdue_notified_at`, writes audit rows on every anchored entity, and emits `task_overdue_notified` PostHog events. Email/Slack delivery is deferred to a follow-up. Off by default so dev/staging doesn't spam during testing. See [backend/src/jobs/notify-overdue-tasks.ts](backend/src/jobs/notify-overdue-tasks.ts). | `false` |
+| `UNSUBSCRIBE_LINK_SECRET` | HMAC key used to sign the one-click unsubscribe URL embedded in marketing emails. Same shape as `NPS_LINK_SECRET`: must be set in prod (so links can't be forged), dev placeholder used otherwise so links verify locally. | `unsubscribe-dev-secret-do-not-use-in-prod` |
+| `MARKETING_PREFERENCE_CENTER_URL` | Where one-click unsubscribe redirects after writing the suppression row. Storefront page that confirms the action / lets the customer toggle per-stream prefs. Falls back to `/` if unset. | unset (recommend `${STOREFRONT_URL}/email-preferences`) |
+| `AUTOMATION_EXPANDED_TRIGGERS_ENABLED` | Gates the Phase 10 trigger expansion (`customer.created`, `order.delivered`) and the new actions (`create_task`, `assign_owner`). Off by default so existing rules using only `order.placed` + `order.production_stage_changed` keep working unchanged until staff opt in. | `false` |
+| `QUOTE_CONVERSION_ENABLED` | Master switch for the quote-on-order-placed / quote-on-order-cancelled subscribers (Phase 11). ON by default — closing the quote loop is the desired behaviour in production. Set to `false` to disable the loop closure without removing the subscribers. | `true` |
+| `STALE_ORDER_ESCALATION_DAYS` | How many days an order stays in `metadata.is_stale = true` before the manager-escalation path fires (Phase 11). Distinct from `STALE_ORDER_THRESHOLD_DAYS` (which controls when "stale" is flagged in the first place). | `3` |
+| `STALE_ORDER_MANAGER_EMAIL` | Comma-separated inboxes that get the manager escalation when an order has been stale longer than `STALE_ORDER_ESCALATION_DAYS`. Unset = no escalation (the owner task + audit still fire). | unset |
 
 #### Customer-lifecycle send-gate flags (CRM)
 
@@ -684,8 +692,8 @@ All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [bac
 ## First-time setup checklist
 
 1. `cd backend && pnpm install && cd ../storefront && pnpm install`
-2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace, report-alert, report-annotation, search-log, stripe-payment-link, …).
-3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises the customer↔design, customer↔wishlist, and product↔brand link tables.
+2. **Run migrations**: `cd backend && npx medusa db:migrate` — runs every module's migrations (designs, wishlist, bundles, lookbook, quote, group-order, organisation, print-recipe, production-reject, automation-rule, admin-workspace (now incl. Phase 6 `crm_owner_assignment` + `crm_owner_rotation` and Phase 8 `email_suppression`), report-alert, report-annotation, search-log, stripe-payment-link, task (Phase 7), …).
+3. **Sync module links**: `cd backend && npx medusa db:sync-links` — materialises customer↔design, customer↔wishlist, product↔brand AND the new CRM links: customer↔crm_owner_assignment, order↔crm_owner_assignment (Phase 6), customer↔task, order↔task, quote↔task, organisation↔task (Phase 7).
 4. **Seed customer tiers** (B2B pricing): `cd backend && npx medusa exec src/scripts/seed-customer-tiers.ts` — creates the 8 "Tier: X" customer groups + matching price-list overrides.
 5. **Bootstrap shop categories** (mega-menu): `cd backend && npx medusa exec src/scripts/setup-shop-categories.ts` — creates the audience × garment-type tree and back-fills existing products.
 6. **Create the vectorization service product** in Medusa admin (Phase 4):
@@ -696,7 +704,9 @@ All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [bac
    - Copy the **variant ID** (not product ID) into `NEXT_PUBLIC_VECTORIZATION_VARIANT_ID`
 7. Add the env vars from the tables above (at minimum: Resend, NPS_LINK_SECRET, STOREFRONT_URL).
 8. Configure the **second** Stripe webhook endpoint for payment links if used (see "Stripe payment links" section below).
-9. Restart both apps.
+9. **Populate the owner rotation table** (Phase 6) at `/app/rotation` — add at least one teammate so `pickNextOwner()` has a target before flipping `OWNER_AUTOSTAMP_ENABLED=true`.
+10. **Activate the CRM phase env gates** as you're ready (all default OFF except `QUOTE_CONVERSION_ENABLED`): `QUOTE_EXPIRY_CRON_ENABLED`, `EMAIL_SUPPRESSION_TABLE_ENABLED`, `OWNER_AUTOSTAMP_ENABLED`, `TASKS_OVERDUE_CRON_ENABLED`, `AUTOMATION_EXPANDED_TRIGGERS_ENABLED`. Set `UNSUBSCRIBE_LINK_SECRET` in prod before sending any marketing email containing the new footer.
+11. Restart both apps.
 
 ## Stripe payment links — auto-link to orders
 
@@ -1161,6 +1171,127 @@ Every customer and every order can have an "owner" (a Medusa admin User). Owner 
 **Manual assignment always wins over rotation**. Setting an owner via the widgets or REST API never gets overridden by the subscriber — the subscriber only acts when the order has no existing owner.
 
 **Quote `assigned_to`** is a parallel concept (the staff person responding to a quote) — separate from the customer/order owner. Phase 6 doesn't unify them; that's deferred to a follow-up because quote workflows can legitimately have a different person from the long-term account owner.
+
+### Tasks system (Phase 7)
+Staff to-do list. Each task has a single assignee, optional anchors (customer / order / quote / organisation), due_at, priority, status. Visible at `/app/tasks` with three buckets — Today / Overdue / All — filtered to the logged-in admin via `req.auth_context.actor_id`. Daily 09:00 UTC cron writes audit + PostHog events for tasks that stay overdue (delivery to email/Slack is deferred to a follow-up).
+
+| Component | Path |
+| --- | --- |
+| Module + service | [backend/src/modules/task/](backend/src/modules/task/) |
+| Model | [backend/src/modules/task/models/task.ts](backend/src/modules/task/models/task.ts) |
+| Migration | [backend/src/modules/task/migrations/Migration20270201000000.ts](backend/src/modules/task/migrations/Migration20270201000000.ts) |
+| Module registration | [backend/medusa-config.js](backend/medusa-config.js) (look for `./src/modules/task`) |
+| Customer↔tasks link (isList:true) | [backend/src/links/customer-tasks.ts](backend/src/links/customer-tasks.ts) |
+| Order↔tasks link (isList:true) | [backend/src/links/order-tasks.ts](backend/src/links/order-tasks.ts) |
+| Quote↔tasks link (isList:true) | [backend/src/links/quote-tasks.ts](backend/src/links/quote-tasks.ts) |
+| Organisation↔tasks link (isList:true) | [backend/src/links/organisation-tasks.ts](backend/src/links/organisation-tasks.ts) |
+| Admin REST — list + create | [backend/src/api/admin/tasks/route.ts](backend/src/api/admin/tasks/route.ts) |
+| Admin REST — task detail | [backend/src/api/admin/tasks/[id]/route.ts](backend/src/api/admin/tasks/[id]/route.ts) |
+| Admin REST — my queue | [backend/src/api/admin/tasks/mine/route.ts](backend/src/api/admin/tasks/mine/route.ts) |
+| Selection logic (pure) | [backend/src/services/tasks/build-candidates.ts](backend/src/services/tasks/build-candidates.ts) |
+| Overdue cron | [backend/src/jobs/notify-overdue-tasks.ts](backend/src/jobs/notify-overdue-tasks.ts) |
+| Admin page | [backend/src/admin/routes/tasks/page.tsx](backend/src/admin/routes/tasks/page.tsx) |
+
+**Statuses**: `open | in_progress | done | cancelled`. Setting status to `done` or `cancelled` stamps `completed_at` + `completed_by`; flipping back clears them.
+
+**Priorities**: `low | normal | high | urgent` — rendered as coloured badges in the admin page.
+
+**Idempotency for overdue notification**: each task has a `last_overdue_notified_at` column. The cron skips rows that have been notified within the past 23h (one-per-day cadence). Selection logic is a pure function — `selectOverdueForNotification(rows, now)` — tested without the DB.
+
+**Denormalised anchor columns alongside module links** (CLAUDE.md convention): `task.customer_id` / `order_id` / `quote_id` / `organisation_id` are FK strings indexed for the hot-path "my open tasks where customer_id = X" filter. The links layer graph-query traversal (`customer.tasks`) on top for admin widgets.
+
+**Email/Slack delivery + per-context create-task widgets** are deferred to a Phase 7 follow-up. Studio dashboard `tasks_due_today` bucket is also deferred.
+
+### Marketing email compliance (Phase 8)
+Centralised opt-out + one-click unsubscribe. Every marketing send path (cart-reminder, reorder-reminder, winback, nps-request) now passes through `shouldSendMarketingEmail()` from [backend/src/lib/marketing-email.ts](backend/src/lib/marketing-email.ts), which composes a `customer.metadata.marketing_consent_email` check with the suppression table.
+
+| Component | Path |
+| --- | --- |
+| Suppression entity | [backend/src/modules/admin-workspace/models/email-suppression.ts](backend/src/modules/admin-workspace/models/email-suppression.ts) |
+| Migration | [backend/src/modules/admin-workspace/migrations/Migration20270301000000.ts](backend/src/modules/admin-workspace/migrations/Migration20270301000000.ts) |
+| Signed-token helper | [backend/src/lib/unsubscribe-token.ts](backend/src/lib/unsubscribe-token.ts) |
+| Public unsubscribe endpoint | [backend/src/api/email/unsubscribe/route.ts](backend/src/api/email/unsubscribe/route.ts) |
+| Admin REST — list / add | [backend/src/api/admin/email-suppressions/route.ts](backend/src/api/admin/email-suppressions/route.ts) |
+| Admin REST — remove | [backend/src/api/admin/email-suppressions/[id]/route.ts](backend/src/api/admin/email-suppressions/[id]/route.ts) |
+| Reorder-reminder gate (new) | [backend/src/services/reorder-reminders/send-reminders.ts](backend/src/services/reorder-reminders/send-reminders.ts) |
+| NPS gate (new) | [backend/src/services/nps-requests/send-requests.ts](backend/src/services/nps-requests/send-requests.ts) |
+| Abandoned-cart gate (belt-and-braces) | [backend/src/services/abandoned-cart-reminders/send-reminders.ts](backend/src/services/abandoned-cart-reminders/send-reminders.ts) |
+| Winback gate (belt-and-braces) | [backend/src/services/churn-queue/send-winback.ts](backend/src/services/churn-queue/send-winback.ts) |
+
+**Unsubscribe link shape**: `${BACKEND_URL}/email/unsubscribe?email=<lowered>&kind=<template_kind|all>&sig=<hex16>`. The signature is HMAC-SHA256 over `${email}:${kind}` keyed by `UNSUBSCRIBE_LINK_SECRET`, truncated to 16 hex chars. Same pattern as the NPS link signer.
+
+**Suppression scope**:
+- `template_kind = null` → global suppression, blocks every marketing template.
+- `template_kind = "winback"` (or another stream key) → per-stream opt-out; the customer still receives other streams.
+
+When a global unsubscribe lands, the public route ALSO flips `customer.metadata.marketing_consent_email = false` so the customer-side preference UI stays consistent.
+
+**Activating the suppression check**: ship the migration, then flip `EMAIL_SUPPRESSION_TABLE_ENABLED=true`. With the flag off, the helper falls back to consent-only and the table is just a passive admin record.
+
+**Footer + List-Unsubscribe header** on existing marketing templates is intentionally deferred to a Phase 8 follow-up — closing the consent gaps on NPS / reorder-reminder + the suppression table + admin surface is the load-bearing compliance work. The template footer that surfaces the URL to recipients comes next.
+
+**Storefront preference center page** is also deferred to a follow-up — for v1 the one-click link writes a global suppression and that's enough opt-out cover.
+
+### Activity timeline (Phase 9)
+The `customer-journey` widget now also surfaces `audit_log` rows where `entity = "customer"`. The audit source is rendered as a purple "Activity" badge alongside the existing Order / NPS / Tag / Design / Browse sources. Each source is independently capped at 200 events so high-volume signals (Resend opens/clicks, automation fires) can't crowd out the orders and design history staff actually need.
+
+| Component | Path |
+| --- | --- |
+| Journey builder (extended) | [backend/src/services/customer-journey/build.ts](backend/src/services/customer-journey/build.ts) |
+| Journey widget (purple "Activity" badge) | [backend/src/admin/widgets/customer-journey.tsx](backend/src/admin/widgets/customer-journey.tsx) |
+| Action-to-label map | `AUDIT_ACTION_LABEL` in [backend/src/services/customer-journey/build.ts](backend/src/services/customer-journey/build.ts) |
+
+**Friendly titles**: each `AUDIT_ACTION` constant from `lib/audit-entities.ts` gets a short human label (e.g. `tag_added` → "Tag added", `email_suppressed` → "Unsubscribed"). Unknown actions fall back to the raw verb with underscores converted to spaces, so adding a new `AUDIT_ACTION` in `lib/audit-entities.ts` immediately surfaces on the timeline without a follow-up commit to `AUDIT_ACTION_LABEL`.
+
+**Resend webhook for email opens/clicks** + **organisation activity tab** are deferred to a Phase 9 follow-up. The customer-side audit feed is the load-bearing improvement; per-org timelines + email-engagement signals are nice-to-have add-ons.
+
+### Automation rules expansion (Phase 10)
+The automation-rules framework gets 2 new triggers and 2 new actions, gated by `AUTOMATION_EXPANDED_TRIGGERS_ENABLED=true` so existing rules stay unchanged until staff opt in.
+
+**New triggers**:
+- `customer.created` — fires when a new customer is created (signup or admin-created). Conditions: `email`, `has_account`.
+- `order.delivered` — fires on `order.production_stage_changed` with `to_stage = "delivered"`. Conditions: `total`, `currency_code`, `from_stage`, `lifetime_value`, `order_count`.
+
+**New actions**:
+- `create_task` — creates a Phase 7 task. `assignee_user_id` can be a Medusa user ID or the literal `"owner"` sentinel (resolves to the entity's customer owner → order owner at fire time). Optional `due_offset_days`, `priority`, `body`.
+- `assign_owner` — calls Phase 6 `setOwner()`. Targets `entity: customer` or `entity: order`.
+
+| Component | Path |
+| --- | --- |
+| New triggers (subscribers) | [backend/src/subscribers/automation-on-customer-created.ts](backend/src/subscribers/automation-on-customer-created.ts), [backend/src/subscribers/automation-on-order-delivered.ts](backend/src/subscribers/automation-on-order-delivered.ts) |
+| Action `create_task` + `assign_owner` | [backend/src/services/automation-rules/evaluate.ts](backend/src/services/automation-rules/evaluate.ts) |
+| Admin UI (new TRIGGER_LABELS / TRIGGER_FIELDS / ACTION_LABELS entries) | [backend/src/admin/routes/automation-rules/page.tsx](backend/src/admin/routes/automation-rules/page.tsx) |
+
+**Useful rule recipes**:
+- `customer.created` → `assign_owner` (entity=customer, user_id=…) — manual override of the rotation pick for VIP signups.
+- `order.placed` + `lifetime_value gte 5000` → `create_task` (assignee="owner", title="VIP — call to thank", due_offset_days=1) — outbound follow-up on big orders.
+- `order.delivered` → `create_task` (assignee="owner", title="Send NPS request", due_offset_days=3) — handle review chase manually rather than via the lifecycle cron.
+- `customer.created` → `tag_customer` (label="new_customer", color="teal") — flag new accounts for the segmentation reports.
+
+**Remaining triggers + actions from the original plan** — `quote.created/accepted/lost`, `order.refunded`, `order.shipment_created`, `organisation.member_added` triggers + `send_customer_email` / `add_to_customer_group` / `add_organisation_member` actions — are deferred to a Phase 10 follow-up. The above 2+2 covers the highest-value rule patterns; the rest layer in cleanly once these are battle-tested.
+
+### Quote→Order auto-conversion + Stale-order escalation (Phase 11)
+Closes two loops that were previously manual:
+
+**Quote → Order conversion.** When an order lands that originated from an accepted quote (correlated via `cart.metadata.quote_id` ↔ `quote.metadata.cart_id`), the `quote-on-order-placed` subscriber stamps `quote.metadata.order_id`, transitions the quote to `accepted` if it isn't already, appends a `QuoteEvent` (`type: status_changed`), and writes audit rows on both the quote and customer entities. Idempotent — re-firing finds `metadata.order_id` already set and no-ops.
+
+Cancellation handling **never reverts the quote** (per the planning decision). The `quote-on-order-cancelled` subscriber appends a `QuoteEvent` note + writes an audit row; staff must create a new quote if the customer wants to re-order.
+
+**Stale-order escalation.** The existing daily 08:00 UTC `scan-stale-orders` cron now also calls `notifyStaleOrders()`:
+1. Look up the order's owner (or the customer's owner as fallback)
+2. Create a Phase 7 Task assigned to the owner ("Investigate stale order #N", due in 1 day, priority `high` or `urgent` after 7 days stale)
+3. Write audit + emit `stale_order_notified_owner` PostHog event
+4. If `days_in_stage ≥ STALE_ORDER_ESCALATION_DAYS` AND `STALE_ORDER_MANAGER_EMAIL` is set, stamp `order.metadata.stale_escalated_at` (once-per-streak), write audit, emit `stale_order_escalated_to_manager`
+
+| Component | Path |
+| --- | --- |
+| Conversion subscriber | [backend/src/subscribers/quote-on-order-placed.ts](backend/src/subscribers/quote-on-order-placed.ts) |
+| Cancellation subscriber | [backend/src/subscribers/quote-on-order-cancelled.ts](backend/src/subscribers/quote-on-order-cancelled.ts) |
+| Stale-order notify side-effects | [backend/src/services/stale-orders/notify.ts](backend/src/services/stale-orders/notify.ts) |
+| Scan wiring | [backend/src/services/stale-orders/scan.ts](backend/src/services/stale-orders/scan.ts) |
+| Cron entrypoint (unchanged schedule) | [backend/src/jobs/scan-stale-orders.ts](backend/src/jobs/scan-stale-orders.ts) |
+
+**Actual email delivery** (to the owner + manager) is intentionally not wired here — the task creation + audit + PostHog signals give staff visible surfacing via `/app/tasks` and the order Activity tab. Proper email templates (`stale-order-owner-alert`, `stale-order-manager-escalation`) ship in a follow-up.
 
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 
