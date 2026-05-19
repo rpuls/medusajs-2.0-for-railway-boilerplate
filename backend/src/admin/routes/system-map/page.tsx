@@ -16,10 +16,38 @@ type MermaidAPI = {
 let _m: MermaidAPI | null = null
 let _p: Promise<MermaidAPI> | null = null
 
+/**
+ * The admin bundle code-splits mermaid into its own chunk (currently
+ * ~500 KB gzipped). When a new deploy lands, browsers with the old
+ * admin HTML cached will request a chunk URL that no longer exists on
+ * the server, producing:
+ *
+ *   TypeError: Failed to fetch dynamically imported module: …/mermaid.core-<oldhash>.js
+ *
+ * We retry once after a short delay (covers genuine transient network
+ * failures), then surface the error to MermaidDiagram which renders a
+ * reload button.
+ */
+const dynamicImportMermaid = async (): Promise<typeof import("mermaid")> => {
+  try {
+    return await import("mermaid")
+  } catch (firstErr) {
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    try {
+      return await import("mermaid")
+    } catch {
+      // Reset cached promise so subsequent calls can retry from scratch
+      // (e.g. after the user reloads inline via the error button).
+      _p = null
+      throw firstErr
+    }
+  }
+}
+
 const loadMermaid = (): Promise<MermaidAPI> => {
   if (_m) return Promise.resolve(_m)
   if (_p) return _p
-  _p = import("mermaid").then((mod) => {
+  _p = dynamicImportMermaid().then((mod) => {
     const api = mod.default as MermaidAPI
     api.initialize({
       startOnLoad: false,
@@ -224,12 +252,38 @@ const MermaidDiagram = ({ chart, title }: { chart: string; title?: string }) => 
     }
   }, [dragging])
 
-  if (err)
+  if (err) {
+    // Chunk-load failures look like "Failed to fetch dynamically imported
+    // module" or "Loading chunk … failed". They almost always indicate the
+    // browser is holding stale HTML pointing at a chunk a newer deploy has
+    // replaced. A hard reload fixes it.
+    const isChunkLoadError =
+      /failed to fetch dynamically imported module|loading chunk|importing a module script failed/i.test(
+        err
+      )
     return (
       <div className="rounded border border-ui-border-error bg-ui-bg-subtle p-3 text-sm text-ui-fg-error">
-        Diagram render error — {err}
+        {isChunkLoadError ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span>
+              Diagram code couldn&apos;t load — looks like the admin has been
+              updated since this page opened. Reload to fetch the latest
+              assets.
+            </span>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-1.5 text-xs font-semibold text-ui-fg-base hover:bg-ui-bg-subtle"
+            >
+              Reload page
+            </button>
+          </div>
+        ) : (
+          <span>Diagram render error — {err}</span>
+        )}
       </div>
     )
+  }
 
   return (
     <div className="relative">
