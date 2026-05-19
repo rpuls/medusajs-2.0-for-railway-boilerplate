@@ -379,7 +379,7 @@ Admin page at `/app/pos` for in-store walk-in sales. Three-panel layout: product
 | Component | Path |
 | --- | --- |
 | Module + service | [backend/src/modules/pos-session/](backend/src/modules/pos-session/) |
-| Migration | [backend/src/modules/pos-session/migrations/Migration20270401000000.ts](backend/src/modules/pos-session/migrations/Migration20270401000000.ts) |
+| Migration | [backend/src/modules/pos-session/migrations/Migration20270520000000.ts](backend/src/modules/pos-session/migrations/Migration20270520000000.ts) |
 | Checkout service (draft → order + payment) | [backend/src/services/pos-checkout/checkout.ts](backend/src/services/pos-checkout/checkout.ts) |
 | Admin REST — sessions CRUD | [backend/src/api/admin/pos/sessions/route.ts](backend/src/api/admin/pos/sessions/route.ts) + [\[id\]/route.ts](backend/src/api/admin/pos/sessions/[id]/route.ts) |
 | Admin REST — checkout | [backend/src/api/admin/pos/checkout/route.ts](backend/src/api/admin/pos/checkout/route.ts) |
