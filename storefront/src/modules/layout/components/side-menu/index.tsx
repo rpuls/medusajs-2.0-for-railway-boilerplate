@@ -56,16 +56,26 @@ export type SideMenuBrandLink = {
   logoUrl: string | null
 }
 
+export type SideMenuBestSellerItem = {
+  handle: string
+  title: string
+  thumbnail: string | null
+  fromPriceLabel: string | null
+  variantCount: number
+}
+
 const SideMenu = ({
   regions,
   collectionLinks,
   categoryBrowseGroups = [],
   brandLinks = [],
+  bestSellerItems = [],
 }: {
   regions: HttpTypes.StoreRegion[] | null
   collectionLinks: MenuCollectionLink[]
   categoryBrowseGroups?: SideMenuBrowseGroup[]
   brandLinks?: SideMenuBrandLink[]
+  bestSellerItems?: SideMenuBestSellerItem[]
 }) => {
   const toggleState = useToggleState()
   const safeCollectionLinks = collectionLinks ?? []
@@ -233,6 +243,52 @@ const SideMenu = ({
 
                       </div>
                     </div>
+
+                    {bestSellerItems.length > 0 ? (
+                      <div className="mt-10 border-t border-[var(--brand-accent)]/35 pt-8">
+                        <h2 className="mb-4 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+                          Best sellers
+                        </h2>
+                        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {bestSellerItems.map((item) => (
+                            <li key={item.handle}>
+                              <NavLink
+                                href={`/products/${item.handle}`}
+                                onClick={close}
+                                className="group flex items-center gap-4 rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
+                                data-testid={`menu-best-seller-${item.handle}-link`}
+                              >
+                                <span className="relative flex h-20 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/10">
+                                  {item.thumbnail ? (
+                                    <img
+                                      src={item.thumbnail}
+                                      alt={item.title}
+                                      className="h-full w-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : null}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-medium leading-tight text-[rgba(248,250,252,0.96)] group-hover:text-[var(--brand-secondary)]">
+                                    {item.title}
+                                  </span>
+                                  {item.fromPriceLabel ? (
+                                    <span className="mt-1 block text-sm text-[var(--brand-accent)]">
+                                      {item.fromPriceLabel}
+                                    </span>
+                                  ) : null}
+                                  {item.variantCount > 1 ? (
+                                    <span className="mt-0.5 block text-xs text-[rgba(248,250,252,0.55)]">
+                                      {item.variantCount} options
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </NavLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
 
                     {brandLinks.length > 0 ? (
                       <div className="mt-10 border-t border-[var(--brand-accent)]/35 pt-8">

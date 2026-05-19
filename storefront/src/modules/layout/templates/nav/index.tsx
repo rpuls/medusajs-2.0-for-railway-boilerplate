@@ -5,16 +5,61 @@ import { MagnifyingGlassMini } from "@medusajs/icons"
 import { listBrands } from "@lib/data/brands"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
+import { getProductByHandle } from "@lib/data/products"
 import { listRegions } from "@lib/data/regions"
-import { StoreRegion } from "@medusajs/types"
+import { HttpTypes, StoreRegion } from "@medusajs/types"
+import { convertMinorToLocale } from "@lib/util/money"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu, {
+  type SideMenuBestSellerItem,
   type SideMenuBrandLink,
   type SideMenuBrowseGroup,
 } from "@modules/layout/components/side-menu"
 
 const MENU_BRAND_CAP = 8
+const MENU_BEST_SELLER_CAP = 3
+
+const parseBestSellerHandles = (raw: string | undefined): string[] => {
+  if (!raw) return []
+  return raw
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean)
+    .slice(0, MENU_BEST_SELLER_CAP)
+}
+
+const buildBestSellerItem = (
+  product: HttpTypes.StoreProduct
+): SideMenuBestSellerItem => {
+  const variantPrices: number[] = (product.variants ?? [])
+    .map((v) => {
+      const amount = (v as { calculated_price?: { calculated_amount?: unknown } })
+        ?.calculated_price?.calculated_amount
+      return typeof amount === "number" && Number.isFinite(amount) ? amount : null
+    })
+    .filter((p): p is number => p !== null)
+
+  let fromPriceLabel: string | null = null
+  if (variantPrices.length > 0) {
+    const lowest = Math.min(...variantPrices)
+    const currency =
+      (product.variants?.[0] as { calculated_price?: { currency_code?: string } })
+        ?.calculated_price?.currency_code ?? "AUD"
+    fromPriceLabel = `From ${convertMinorToLocale({
+      amount: lowest,
+      currency_code: currency,
+    })}`
+  }
+
+  return {
+    handle: product.handle ?? "",
+    title: product.title ?? "Untitled",
+    thumbnail: product.thumbnail ?? null,
+    fromPriceLabel,
+    variantCount: product.variants?.length ?? 0,
+  }
+}
 
 type RawCategory = {
   id?: string
@@ -83,12 +128,29 @@ const buildCategoryBrowseGroups = (
 }
 
 async function NavSideMenu() {
+  const bestSellerHandles = parseBestSellerHandles(
+    process.env.NEXT_PUBLIC_MENU_BEST_SELLER_PRODUCT_HANDLES
+  )
+
   const [regions, { collections }, categories, brands] = await Promise.all([
     listRegions().then((regions: StoreRegion[]) => regions),
     getCollectionsList(0, 100),
     listCategories().catch(() => [] as RawCategory[]),
     listBrands().catch(() => []),
   ])
+
+  const menuRegion = regions?.[0]
+  let bestSellerItems: SideMenuBestSellerItem[] = []
+  if (menuRegion && bestSellerHandles.length > 0) {
+    const fetched = await Promise.all(
+      bestSellerHandles.map((handle) =>
+        getProductByHandle(handle, menuRegion.id).catch(() => null)
+      )
+    )
+    bestSellerItems = fetched
+      .filter((p): p is HttpTypes.StoreProduct => p != null)
+      .map(buildBestSellerItem)
+  }
 
   const menuCollectionLinks = [...collections]
     .filter((c) => c.handle && c.title)
@@ -124,6 +186,7 @@ async function NavSideMenu() {
       collectionLinks={menuCollectionLinks}
       categoryBrowseGroups={categoryBrowseGroups}
       brandLinks={brandLinks}
+      bestSellerItems={bestSellerItems}
     />
   )
 }
