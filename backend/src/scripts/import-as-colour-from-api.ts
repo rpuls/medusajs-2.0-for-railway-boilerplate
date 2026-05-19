@@ -30,6 +30,10 @@ import {
   fetchAllProductTags,
   applyTypeAndTagsToProduct,
 } from "../lib/product-type-tag-sync"
+import {
+  assignCategoriesToProducts,
+  ensureCategoryTree,
+} from "../lib/shop-categories"
 
 /**
  * Convert the major-unit retail PriceLadder (built from the supplier cost via
@@ -475,6 +479,27 @@ export default async function importAsColourFromApi({ container, args }: ExecArg
     }
     for (const msg of unknownTaxonomy) logger.warn(`[taxonomy] ${msg}`)
     logger.info(`Type/tag sync: ${typeTagOk} ok, ${typeTagFail} failed.`)
+  }
+
+  // Shop categories — assign audience × garment-type so newly-imported
+  // products surface in the menu drill-down. Idempotent and safe — uses the
+  // shared lib that also powers `setup-shop-categories.ts`.
+  if (createdProducts.length) {
+    try {
+      const byHandle = await ensureCategoryTree(container, { logger })
+      const productIds = createdProducts
+        .map((p: any) => p?.id)
+        .filter((id: any): id is string => typeof id === "string")
+      const summary = await assignCategoriesToProducts(container, byHandle, {
+        productIds,
+        logger,
+      })
+      logger.info(
+        `Shop categories: ${summary.updated} categorized, ${summary.untyped} untyped, ${summary.failures} failed.`
+      )
+    } catch (err: any) {
+      logger.warn(`Shop category assignment failed: ${err?.message ?? err}`)
+    }
   }
 
   // 5c. Link each new product to the AS Colour Brand entity via the
