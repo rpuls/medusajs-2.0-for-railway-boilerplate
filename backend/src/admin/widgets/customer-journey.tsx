@@ -6,19 +6,20 @@ import { HelpTooltip } from "../components/reports/help-tooltip"
 import { withWidgetBoundary } from "../components/widget-error-boundary"
 
 type JourneyEvent = {
-  source: "order" | "posthog" | "nps" | "tag" | "design"
+  source: "order" | "posthog" | "nps" | "tag" | "design" | "audit"
   at: string
   title: string
   detail?: string | null
   href?: string | null
 }
 
-const SOURCE_COLORS: Record<string, "blue" | "green" | "orange" | "grey"> = {
+const SOURCE_COLORS: Record<string, "blue" | "green" | "orange" | "grey" | "purple"> = {
   order: "blue",
   nps: "green",
   tag: "orange",
   design: "blue",
   posthog: "grey",
+  audit: "purple",
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -27,6 +28,7 @@ const SOURCE_LABELS: Record<string, string> = {
   tag: "Tag",
   design: "Design",
   posthog: "Browse",
+  audit: "Activity",
 }
 
 const fmtTime = (iso: string) =>
@@ -77,13 +79,14 @@ const CustomerJourneyWidget = ({ data: customer }: { data: { id: string } }) => 
           <HelpTooltip
             text={{
               title: "Customer journey",
-              body: "Every signal we have on this customer in one chronological feed — orders, NPS responses, tag changes, saved designs, and PostHog browsing events.",
+              body: "Every signal we have on this customer in one chronological feed — orders, NPS responses, tag changes, saved designs, PostHog browsing events, and audit-log activity (owner changes, notes, unsubscribes, organisation joins, etc.).",
               bullets: [
                 "PostHog events are pulled live from your PostHog instance via POSTHOG_PERSONAL_API_KEY (already wired for SEO analytics — no extra cost).",
                 "PostHog is keyed by the customer's email (matches how phIdentify is called in the storefront).",
-                "Default window: last 30 days of PostHog events. Older orders/designs/tags are still included.",
-                "If PostHog isn't configured, only Medusa-side events show.",
-                "Use this before a sales call — see what the customer's been doing.",
+                "Activity rows come from the polymorphic audit_log table — every staff action that calls writeAudit() lands here.",
+                "Default window: last 30 days of PostHog events. Older orders/designs/tags/activity are still included.",
+                "Each source is capped at 200 events so high-volume signals (e.g. email opens) can't crowd out what staff actually need.",
+                "Use this before a sales call — see what the customer's been doing AND what teammates have done with their account.",
               ],
             }}
           />
@@ -111,6 +114,7 @@ const CustomerJourneyWidget = ({ data: customer }: { data: { id: string } }) => 
                       green: "rgb(16 185 129)",
                       orange: "rgb(245 158 11)",
                       grey: "rgb(115 115 115)",
+                      purple: "rgb(139 92 246)",
                     }[SOURCE_COLORS[e.source] ?? "grey"],
                   }}
                 />

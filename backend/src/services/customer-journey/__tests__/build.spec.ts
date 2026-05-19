@@ -17,6 +17,7 @@ const buildContainer = (rows: {
   orders?: Row[]
   designs?: Row[]
   tags?: Row[]
+  audit?: Row[]
 }) => {
   const query = {
     graph: jest.fn(async ({ entity }: { entity: string }) => {
@@ -24,6 +25,7 @@ const buildContainer = (rows: {
       if (entity === "order") return { data: rows.orders ?? [] }
       if (entity === "design") return { data: rows.designs ?? [] }
       if (entity === "customer_tag") return { data: rows.tags ?? [] }
+      if (entity === "audit_log") return { data: rows.audit ?? [] }
       return { data: [] }
     }),
   }
@@ -122,6 +124,52 @@ describe("buildCustomerJourney", () => {
     const dates = result.events.map((e) => e.at)
     const sorted = [...dates].sort((a, b) => (a < b ? 1 : -1))
     expect(dates).toEqual(sorted)
+  })
+
+  it("emits audit-log events with friendly titles (Phase 9)", async () => {
+    const container = buildContainer({
+      customer: { id: "c1", email: "x@y.z" },
+      audit: [
+        {
+          id: "aud_1",
+          action: "tag_added",
+          actor_id: "user_42",
+          actor_email: "ops@scprints.com.au",
+          details: { label: "VIP", color: "amber" },
+          created_at: "2026-05-10T10:00:00Z",
+        },
+        {
+          id: "aud_2",
+          action: "owner_changed",
+          actor_id: null,
+          actor_email: null,
+          details: { from_user_id: null, to_user_id: "user_alice" },
+          created_at: "2026-05-12T11:00:00Z",
+        },
+        {
+          id: "aud_3",
+          action: "email_suppressed",
+          actor_email: "x@y.z",
+          details: { template_kind: null, reason: "user_unsubscribe" },
+          created_at: "2026-05-15T09:00:00Z",
+        },
+        {
+          id: "aud_4",
+          action: "some_new_action_not_in_label_map",
+          details: null,
+          created_at: "2026-05-16T09:00:00Z",
+        },
+      ],
+    })
+    const result = await buildCustomerJourney(container, "c1")
+    const auditEvents = result.events.filter((e) => e.source === "audit")
+    expect(auditEvents).toHaveLength(4)
+    const titles = auditEvents.map((e) => e.title)
+    expect(titles).toContain("Tag added")
+    expect(titles).toContain("Owner changed")
+    expect(titles).toContain("Unsubscribed")
+    // Unknown actions fall back to the verb with underscores → spaces
+    expect(titles).toContain("some new action not in label map")
   })
 
   it("respects the limit option (clamps to N events)", async () => {

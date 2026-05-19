@@ -1225,6 +1225,19 @@ When a global unsubscribe lands, the public route ALSO flips `customer.metadata.
 
 **Storefront preference center page** is also deferred to a follow-up — for v1 the one-click link writes a global suppression and that's enough opt-out cover.
 
+### Activity timeline (Phase 9)
+The `customer-journey` widget now also surfaces `audit_log` rows where `entity = "customer"`. The audit source is rendered as a purple "Activity" badge alongside the existing Order / NPS / Tag / Design / Browse sources. Each source is independently capped at 200 events so high-volume signals (Resend opens/clicks, automation fires) can't crowd out the orders and design history staff actually need.
+
+| Component | Path |
+| --- | --- |
+| Journey builder (extended) | [backend/src/services/customer-journey/build.ts](backend/src/services/customer-journey/build.ts) |
+| Journey widget (purple "Activity" badge) | [backend/src/admin/widgets/customer-journey.tsx](backend/src/admin/widgets/customer-journey.tsx) |
+| Action-to-label map | `AUDIT_ACTION_LABEL` in [backend/src/services/customer-journey/build.ts](backend/src/services/customer-journey/build.ts) |
+
+**Friendly titles**: each `AUDIT_ACTION` constant from `lib/audit-entities.ts` gets a short human label (e.g. `tag_added` → "Tag added", `email_suppressed` → "Unsubscribed"). Unknown actions fall back to the raw verb with underscores converted to spaces, so adding a new `AUDIT_ACTION` in `lib/audit-entities.ts` immediately surfaces on the timeline without a follow-up commit to `AUDIT_ACTION_LABEL`.
+
+**Resend webhook for email opens/clicks** + **organisation activity tab** are deferred to a Phase 9 follow-up. The customer-side audit feed is the load-bearing improvement; per-org timelines + email-engagement signals are nice-to-have add-ons.
+
 ## Known issues (deferred bugs from the Phase 1-4 audit)
 
 All audit items from the original review have been resolved. See "Fixed" below for the history.
