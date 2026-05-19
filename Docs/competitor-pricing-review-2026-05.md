@@ -21,7 +21,7 @@
 
 5. **We have the strongest post-order story** — production stage tracker, save-design library, re-order rehydration, supplier-API live stock — and none of it is surfaced pre-purchase. That's the biggest free conversion win available to us.
 
-6. **Where we're clearly losing**: per-unit price at the common 20-100 qty band (Cartel beats us by $2-3/unit), pricing transparency on the PDP (we have the data but render it live-only inside the customizer), brand surfacing (data exists but isn't rendered), trust badges (none), BNPL hook (none), "+N colour" overflow (none).
+6. **Where we're clearly losing**: per-unit price at the common 20-100 qty band (Cartel beats us by $2-3/unit), pricing transparency on the PDP (we have the data but render it live-only inside the customizer), brand surfacing (data exists but isn't rendered), trust badges (none), BNPL hook (none), "+N colour" overflow (none), **product-category navigation in the main menu** (no Mens / Womens / Kids or T-shirts / Hoodies / Polos entries — see Section 4a).
 
 7. **Where we're clearly winning**: post-order experience, DPI warning + vectorization upsell, server-rendered print files, cross-sells / "often ordered together" on the PDP, production ETA with live queue status, mobile sticky CTA, large-format print at scale.
 
@@ -208,7 +208,103 @@ Print Bar trails us by $374 on this scenario. This is our strongest territory.
 
 ## 4. The storefront experience
 
-### 4a. PDP architecture — five distinct approaches
+### 4a. Site navigation & menu structure
+
+The discovery layer customers hit before they ever reach a PDP. All five players take meaningfully different approaches.
+
+| | SC Prints | The Colour Cartel | The Print Bar | PrintPod | Create Apparel |
+|---|---|---|---|---|---|
+| Pattern | Single overlay (X to close), 5 sections | 11 top-nav items with deep mega-dropdowns | 4 top-nav items + "Same Day" / "Print on Demand" utility | Image-tile grid + text dropdowns | 9 top-nav items + utility nav |
+| Audience nav (Mens / Womens / Kids) | ❌ | ✅ (first 3 navs) | ❌ | partial (image tiles) | ✅ ("Start Designing" 4-col grid) |
+| Garment-type nav (T-shirts / Hoodies / Polos / etc) | ❌ | ✅ (every audience menu has full breakdown) | ✅ (Clothing dropdown) | ✅ (image tiles) | partial |
+| Workwear / industry vertical | ❌ | ✅ Workwear nav + Industries dropdown (Trades / Events / Hospitality / Sports / Corporate / Schools) | ✅ Workwear sub-nav | ✅ (tile) | ✅ (Workwear + Corporate/Hospitality) |
+| Brands as top-level nav | ✅ | partial ("Premium" lists brand logos) | ❌ | ❌ | ✅ |
+| Decoration methods nav | ✅ "Browse Products & Services" | ✅ Services dropdown | implicit in MENU cards | ✅ Services | ✅ Services |
+| Same-day / express entry | ❌ | ❌ | ✅ "Same Day" top utility | partial | ✅ "Same Day Printing" |
+| Bulk / volume entry | ❌ | partial | ✅ "Bulk Orders" MENU card | ✅ "Bulk Buy Promo Packs" tile | ✅ "Bulk Packs" |
+| BYO printing entry | ✅ "BYO" | ❌ | ✅ "BYO Printing" MENU card | ❌ | ✅ "BYO Bring Your Own" |
+| Customizer entry | ✅ "Customizer" | "Design" services | ✅ "Custom Design Tool" MENU card | ✅ "Design Tool" top nav | ✅ "Start Designing" |
+| **Best Sellers preview in menu** | ❌ | ✅ **3 product cards (image + price + swatches) in EVERY dropdown** | ❌ | partial (whole nav is products) | ❌ |
+| Country / region selector | ✅ "Shipping to: Australia" | ✅ "Australia (AUD $)" | ❌ | ❌ | ❌ |
+| Policies (Shipping / Returns / Privacy) in main nav | ✅ | ❌ (footer only) | ❌ (footer only) | ❌ (footer only) | ❌ (footer only) |
+| Specialty tools (DTF builder / 3D Design / etc) | ✅ DTF builder, 3D Print Design | "Design" services | ❌ | ❌ | partial (DTF Transfers) |
+
+**Where our menu is genuinely weaker**
+
+1. **No product-category navigation.** Biggest gap. A customer who wants to browse hoodies can only get there via "Store" (one link to the whole catalog) or "Customizer". Every competitor lets them drill in from the nav — Cartel has 4 columns × audience × garment-type, Print Bar has a flat Clothing list, PrintPod uses image tiles.
+2. **No audience entry (Mens / Womens / Kids).** Standard apparel pattern. Cartel and Create Apparel both lead with it.
+3. **No industry / use-case verticals.** Cartel has Trades Uniforms, Event Merch, Hospitality, Corporate Merch, Sports & Clubs, Education. These are B2B conversion entry points and we have none.
+4. **"Browse Products & Services" is mislabelled.** It lists decoration methods (Screen Printing, Embroidery, Digital Transfers, UV Printing, UV DTF) — not products. A user reading "Browse Products" expects garments.
+5. **No Best Sellers panel in the menu.** Cartel embeds 3 best-selling products with image + price + colour swatches in every menu dropdown. Every menu interaction becomes a product showcase. We have a blank right column.
+6. **Policies in primary nav.** Shipping / Returns / Privacy belong in the footer (where all four competitors put them). Hosting them in the main mega-menu burns real estate that should be product/service nav.
+7. **No Same-Day or Bulk conversion entries.** Print Bar's "Same Day" is a top utility-nav item; Create Apparel has both "Same Day Printing" and "Bulk Packs" prominently. These are the highest-intent buyer entry points.
+
+**Where our menu is distinctive**
+
+1. **Single overlay pattern.** Clean, modern, full-screen takeover. Reads more like a luxury site than a Shopify catalog — but the content inside the overlay isn't earning its keep yet.
+2. **Customizer as a top-level entry.** Most competitors hide their designer under Services. We elevate it.
+3. **BYO as a top-level entry.** Matches Print Bar's positioning.
+4. **Brands as a top-level entry.** Neither Cartel nor Print Bar elevates brand discovery this way. With our brand-entity work + brand landing pages, this is a real differentiator — could be stronger if we showed brand logos in the dropdown (Cartel's "Premium" does this).
+5. **UV Printing + UV DTF + 3D Print Design** as specialty tools — none of the competitors list any of these.
+6. **Country selector visible** ("Shipping to: Australia"). Useful for international expansion.
+
+**Suggested menu restructure**
+
+```
+TOP UTILITY NAV (small, top of header):
+  Same Day · Bulk Orders · Customizer · Login · Cart · 🇦🇺 AU
+
+PRIMARY NAV (mega-menu items):
+  Shop ▾    Brands ▾    Services ▾    Industries ▾    BYO    Specialty ▾    Contact
+
+Shop ▾ (4 columns + best sellers panel)
+  ├─ Mens: T-Shirts · Hoodies · Polos · Jumpers · Tanks · Long Sleeves · Jackets · Workwear · Activewear
+  ├─ Womens: same shape
+  ├─ Kids / Youth: T-Shirts · Hoodies · Tanks · Singlets
+  ├─ Accessories: Headwear · Bags · Drinkware · Stickers
+  └─ [Best Sellers panel: 3 product cards with image + price + swatches]
+
+Brands ▾ (showcase logos)
+  ├─ AS Colour
+  ├─ FashionBiz family: Biz Collection · Biz Care · Biz Corporates · Syzmik
+  ├─ Aussie Pacific
+  ├─ JB's Wear · Gildan (if added)
+  └─ [Brand landing page CTA]
+
+Services ▾
+  ├─ Screen Printing · DTG · DTF · UV DTF · UV Printing · Embroidery · Sublimation · Vectorization
+  └─ [Service comparison + decoration estimator hook]
+
+Industries ▾
+  ├─ Trades & Workwear
+  ├─ Events & Festivals
+  ├─ Hospitality
+  ├─ Corporate & Uniforms
+  ├─ Sports & Clubs
+  ├─ Schools & Education
+  └─ Influencers / Streetwear
+
+Specialty ▾
+  ├─ DTF Builder
+  ├─ 3D Print Design
+  ├─ CMYK / DTF Guide
+  └─ Lookbook
+
+FOOTER (move from main nav):
+  Shipping · Returns · Privacy · FAQ · Contact · Sitemap
+```
+
+**Concrete menu moves (rough priority)**
+
+1. **Add a "Shop" mega-menu** with garment-type breakdown by audience. Single biggest gap — covers the most common discovery pattern in apparel.
+2. **Move Policies (Shipping / Returns / Privacy) to the footer.** Frees the menu for product/service content.
+3. **Rename "Browse Products & Services" → "Services" or "Decoration Methods".** Stop using "products" in the label when there are no products in the column.
+4. **Add a Best Sellers panel** to the right of the menu. Pull 3 top-selling products dynamically. Cartel does this in every dropdown — their highest-converting nav element.
+5. **Add an "Industries" entry** (Trades, Events, Hospitality, Corporate, Sports, Schools). Each becomes a B2B landing page. Cartel uses this exact structure — great for capturing intent-driven traffic.
+6. **Add "Same Day" and "Bulk Orders" as top-nav utility entries** *if/when* we operationally support them. (Until then, "Bulk Orders" alone is honest.)
+7. **Show brand logos in the Brands dropdown.** Cartel-style. Our brand entities already have logo URLs in the data — render them.
+
+### 4b. PDP architecture — five distinct approaches
 
 | Approach | Provider | The product page is… |
 |---|---|---|
@@ -218,7 +314,7 @@ Print Bar trails us by $374 on this scenario. This is our strongest territory.
 | **Designer-first / no PDP** | Create Apparel | Catalog goes straight to `/designer/customize/<id>`. No intermediate page. |
 | **Hybrid PDP + integrated customizer** | **SC Prints** | Sidebar with product info + production ETA + decoration estimator. Customizer expands into the main column when engaged. Closest to Print Bar architecturally but with more context visible. |
 
-### 4b. PDP feature comparison
+### 4c. PDP feature comparison
 
 | Dimension | SC Prints | Print Bar | Cartel | PrintPod | Create Apparel |
 |---|---|---|---|---|---|
@@ -239,7 +335,7 @@ Print Bar trails us by $374 on this scenario. This is our strongest territory.
 | Mobile sticky CTA | ✅ | likely | n/a | n/a | n/a |
 | Schema.org JSON-LD | ✅ Product + Brand + Offer | unknown | unknown | unknown | unknown |
 
-### 4c. Customizer feature comparison
+### 4d. Customizer feature comparison
 
 | Feature | SC Prints | Print Bar | PrintPod | Create Apparel | Cartel |
 |---|---|---|---|---|---|
@@ -254,7 +350,7 @@ Print Bar trails us by $374 on this scenario. This is our strongest territory.
 | Background removal | partial | ✅ marketed | unknown | unknown | n/a |
 | Turnaround in-flow | partial | ✅ "7 business days" | unknown | unknown | n/a |
 
-### 4d. Post-order experience
+### 4e. Post-order experience
 
 Only we publish meaningful detail here:
 
@@ -294,6 +390,10 @@ None of the competitor sites surface post-order tracking on landing or shop page
 9. **No "+N more colours" overflow** on the swatch grid. Print Bar's "+60" signals catalog depth without exploding the grid.
 10. **No published large-print pricing on the PDP.** Our DecorationEstimator does show it, but only inside the customizer flow.
 11. **Customizer marketing.** Print Bar markets mobile editing + background removal prominently. Even if we have comparable capabilities, we don't tell the story.
+12. **No product-category navigation in the menu.** Customers can't browse by garment type (Hoodies / Polos / T-Shirts) from the menu. Every competitor lets them. See Section 4a.
+13. **No audience or industry navigation.** Cartel has Mens / Womens / Kids / Workwear / Industries verticals. We have a single "Store" link.
+14. **Menu wastes real estate on policies.** Shipping / Returns / Privacy occupy a primary nav column that should be product or service content.
+15. **No Best Sellers panel in the menu.** Cartel surfaces 3 product cards (image + price + colour swatches) in every menu dropdown. Our right column is blank.
 
 ### Where it's roughly tied
 
@@ -318,18 +418,21 @@ None of the competitor sites surface post-order tracking on landing or shop page
 3. **Add a trust badge strip** below price: "Free Digital Proofs Before Production" / "Satisfaction Guarantee" / "Re-label & Swing Tag Ready" / "Elite Quality Finish" / "Real-Time Stock from AS Colour, FashionBiz, AP". We already do most of these.
 4. **"+N more colours" overflow** on the swatch grid for AS Colour / Biz Collection products with deep colour ranges.
 5. **Surface the production stage tracker pre-sale** — homepage tile or "How it works" page with a screenshot of the Domino's-style tracker. Our biggest invisible differentiator.
+6. **Restructure the main menu** (see Section 4a) — add a "Shop" mega-menu with audience × garment-type breakdown (Mens / Womens / Kids / Accessories with T-Shirts / Hoodies / Polos / etc.), move Shipping / Returns / Privacy to the footer, rename "Browse Products & Services" to "Services". Single biggest discovery improvement.
+7. **Add a Best Sellers panel to the mega-menu.** Pull 3 top-selling products dynamically (image + price + colour swatches). Cartel does this in every dropdown — their highest-converting nav element.
+8. **Add an "Industries" mega-menu entry** (Trades, Events, Hospitality, Corporate, Sports, Schools). Each becomes a B2B landing page — captures intent-driven traffic Cartel currently owns.
 
 ### Tier 2 — small backend or pricing change
 
-6. **Extend the bulk-tier ladder past 100+** (introduce 250 / 500 / 1000 bands). Captures margin headroom Cartel is currently winning at large orders.
-7. **Tighten our 1-9 and 10-19 tiers on A4+ prints** to compete with Print Bar's $8.50 flat — or introduce a "flat-rate small-order" lane.
-8. **Surface BNPL on the PDP** if Stripe / Afterpay is wired. Easy conversion lever.
+9. **Extend the bulk-tier ladder past 100+** (introduce 250 / 500 / 1000 bands). Captures margin headroom Cartel is currently winning at large orders.
+10. **Tighten our 1-9 and 10-19 tiers on A4+ prints** to compete with Print Bar's $8.50 flat — or introduce a "flat-rate small-order" lane.
+11. **Surface BNPL on the PDP** if Stripe / Afterpay is wired. Easy conversion lever.
 
 ### Tier 3 — strategic / operational
 
-9. **Add Gildan and one premium label** (e.g. James Harvest or Stormtech) to plug the two catalog gaps Print Bar / Cartel exploit.
-10. **Consider a same-day or express tier** with a flat surcharge similar to Print Bar's +$11.
-11. **A/B test transparency vs. quote-funnel** on a corporate landing page — does "here's the price" outperform "request a quote" for our buyer mix?
+12. **Add Gildan and one premium label** (e.g. James Harvest or Stormtech) to plug the two catalog gaps Print Bar / Cartel exploit.
+13. **Consider a same-day or express tier** with a flat surcharge similar to Print Bar's +$11.
+14. **A/B test transparency vs. quote-funnel** on a corporate landing page — does "here's the price" outperform "request a quote" for our buyer mix?
 
 ---
 
