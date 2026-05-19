@@ -442,6 +442,14 @@ None of the competitor sites surface post-order tracking on landing or shop page
 18. **Meta retargeting for cart-abandoners** — dynamic ads showing the customer's own design back to them + a small discount code. Closes the loop on customers who designed but didn't check out — usually the cheapest paid channel by ROAS.
 19. **Branded-search defence on Google Ads** — bid on "SC Prints" so we own the SERP for our own brand name. Cheap (low CPC on branded terms) and protects against competitor bid-jacking.
 
+### Tier 5 — PDP enrichments from the extended landscape
+
+20. **Multi-size quantity grid on the PDP** — let buyers enter quantities for XS / S / M / L / XL / 2XL / 3XL directly on the product page without entering the customizer. Garment Printing does this; well-suited to procurement and B2B buyers who know exactly what they need before designing.
+21. **Public review rating display** — a Trustpilot or Google Reviews badge with rating + review count on the PDP. Garment Printing publishes 4.3/5 publicly; we currently surface no social proof. Even a static screenshot from a real review platform is a meaningful trust signal.
+22. **Educational accordions on the PDP** — collapsible blocks for "Print method", "Artwork guidelines", "Production time", "Shipping & delivery", "Care instructions". The T-Shirt Co runs six of these on every product page; pure SEO + trust win, and most of the content already exists in our FAQ / help pages.
+23. **Style/SKU code as a PDP eyebrow** — render "AS COLOUR 5001" or "GILDAN 64000" above the product title. Procurement buyers shop by manufacturer SKU; we have the data in product metadata but don't surface it.
+24. **Dual CTA ("Design your own" + "Request a quote")** on the new `/industries/*` landing pages and on PDPs flagged as B2B-relevant. Caters to self-serve customers AND sales-led B2B buyers in the same surface. Garment Printing pattern.
+
 ---
 
 ## 7. The wider competitive landscape
@@ -455,6 +463,68 @@ The four players we deep-dived on (Cartel, PrintPod, Print Bar, Create Apparel) 
 | **Garment Printing** ([garmentprinting.com.au](https://garmentprinting.com.au)) | Sydney | Corporate uniforms, team wear, volume discounts | Plays squarely in the segment Cartel's Industries vertical dominates. Less self-serve, more sales-led — overlap with where we want our /industries pages to land. |
 | **OGO Print on Demand** ([ogo.com.au](https://ogo.com.au)) | Melbourne | POD / dropshipping focus, Shopify-first | Direct competitor to PrintPod and Create Apparel on the "start a clothing brand" segment. Not currently a segment we play in heavily. |
 | **Printify / Printful / Threadless** | Global, with AU fulfilment partners (e.g. Gelato) | International POD giants | Compete for the side-hustle / small-creator market with brand recognition and global creator-tool ecosystems we can't match. |
+
+### Detailed PDP observations (operator-supplied screenshots)
+
+Closer look at three of these players' actual PDPs — AS Colour Staple Tee on Tee Junction; Gildan Essential Tee on The T-Shirt Co; Gildan 64000 Unisex Promo Tee on Garment Printing. Each picks distinctive UX and pricing patterns:
+
+**Tee Junction — AS Colour Staple Tee**
+
+- *Local positioning*: "Printed with love in Melbourne" eyebrow above the header
+- *Colour picker*: ~70 AS Colour colours visible at once in a massive in-PDP grid — opposite of Print Bar's compact "+60" overflow indicator
+- *CTA*: single blue "START DESIGNING" — no separate buy-blank path
+- *Headline price*: "Digital DTF Printing **from $29.95** *" — bundled (blank + 1 DTF print), Cartel-style
+- *Multi-size flow*: "Add Another Size" link below the size dropdown, supports multi-size orders without entering the customizer
+- *Tabs*: Description / Sizing Details / Shipping / **Discounts** / Related Products — the Discounts tab implies a published bulk-tier ladder
+
+**The T-Shirt Co — Gildan Essential Tee**
+
+Real bulk tier table is published on the PDP (quantities + discount % + bundled-with-1-print price, inc-GST):
+
+| Qty | Discount on blank | Price /unit |
+|---|---|---|
+| 1–9 | 0% | A$21.95 |
+| 10–19 | 10% | A$19.76 |
+| 20–49 | 15% | A$18.66 |
+| 50+ | 20% | A$17.56 |
+
+Other notable patterns:
+
+- *Pricing copy*: "Includes 1 print. +$10 for printing on BOTH sides. Tax included." — bundle + clearly-priced add-on
+- *BNPL*: "or from $10/week with **Zip**" (different provider to PrintPod's Afterpay)
+- *Local fulfillment*: "Pickup available at The T-Shirt Co Production Facility, Brisbane — usually ready in 5+ days"
+- *Same-day*: "RUSH service for same day printing (when ordered before 12pm Monday-Friday)" — direct competitor to Print Bar's same-day toggle
+- *Trust strip* (footer): Free Shipping / No minimums or setup fees / Full Colour Printing / Double-sided printing available
+- *Educational accordions*: Shirt Colour Chart Guide / DTG Print Method / Artwork Guidelines / Product and Print Disclaimers / Production Time in Stock / Shipping and Delivery — six collapsible content blocks
+- *Production*: 3–5 business days — fastest standard turnaround in our benchmarked set
+- *CTA*: pink "PERSONALISE" button (softer than "Start Designing")
+
+**Garment Printing — Gildan Unisex Promo Tee (#64000)**
+
+- *Split-headline pricing*: "Blank **from $10.99 AUD***" + "Printing **from $20.99 AUD***" — the clearest "blank vs decoration" decomposition observed; different shape from Cartel's bundle, T-Shirt Co's bundle, or our line-itemed approach
+- *Multi-size grid on PDP*: row of size labels (XS · S · M · L · XL · 2XL · 3XL), each with its own quantity input directly on the product page. Built for bulk multi-size orders without entering the designer
+- *Dual CTA*: gradient "START DESIGNING" + pink "Request a quote" — caters to both self-serve and B2B sales-led customers in the same surface
+- *Style code visible*: "GILDAN 64000" eyebrow above the product title — appeals to procurement buyers who shop by manufacturer SKU
+- *Heavy city footer*: 13 metro cities listed under "We deliver to" (Sydney, Perth, Melbourne, Brisbane, Adelaide, Canberra, Hobart, Darwin, Gold Coast, Cairns, Townsville, Wollongong, Launceston) — aggressive local-SEO play
+- *Trustpilot rating*: 4.3/5 with star icons shown publicly in the footer
+- *Service breadth*: 10 decoration services + 10 product categories + 3 "Enterprise Solutions" links in the footer
+
+### What we'd take from each
+
+| Pattern | Source | In our plan as |
+|---|---|---|
+| Bulk-pricing table on the PDP | The T-Shirt Co (also Cartel) | Suggested Move **#2** |
+| 4-icon trust strip | The T-Shirt Co (also Cartel) | Suggested Move **#3** |
+| Wide colour palette visible in-PDP | Tee Junction | Extends Suggested Move **#4** — consider show-all vs "+N more" |
+| BNPL prominent on PDP | The T-Shirt Co (Zip), PrintPod (Afterpay) | Suggested Move **#18** (pick a provider) |
+| City-page localisation | Garment Printing, Tee Junction | Suggested Move **#15** |
+| Multi-size quantity grid on PDP | Garment Printing | New — Suggested Move **#20** below |
+| Public review rating (Trustpilot/Google) | Garment Printing | New — Suggested Move **#21** below |
+| Educational accordions on PDP | The T-Shirt Co | New — Suggested Move **#22** below |
+| Style/SKU code as PDP eyebrow | Garment Printing | New — Suggested Move **#23** below |
+| Dual CTA (Design + Request quote) | Garment Printing | New — Suggested Move **#24** below |
+| "Pickup available" local-presence signal | The T-Shirt Co | Park — only relevant if/when we offer retail pickup |
+| Same-day RUSH service | The T-Shirt Co (also Print Bar) | Suggested Move **#13** |
 
 **Implications**
 
