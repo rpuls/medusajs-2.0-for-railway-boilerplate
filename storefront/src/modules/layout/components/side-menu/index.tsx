@@ -81,10 +81,9 @@ const SideMenu = ({
   const safeCollectionLinks = collectionLinks ?? []
   const collectionPreview = safeCollectionLinks.slice(0, MENU_COLLECTIONS_CAP)
 
-  const browseGroups: SideMenuBrowseGroup[] = [
-    ...categoryBrowseGroups,
-    SERVICES_GROUP,
-  ].filter((g) => g.items.length > 0)
+  const shopGroups: SideMenuBrowseGroup[] = categoryBrowseGroups.filter(
+    (g) => g.items.length > 0
+  )
 
   return (
     <div className="h-full">
@@ -146,28 +145,19 @@ const SideMenu = ({
                         <h2 className="mb-4 border-t border-[var(--brand-accent)]/35 pt-6 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)] lg:border-t-0 lg:pt-0">
                           Services
                         </h2>
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                          {browseGroups.map((group) => (
-                            <div key={group.title} className="min-w-0">
-                              <h3 className="mb-2 txt-compact-small text-[var(--brand-accent)]">
-                                {group.title}
-                              </h3>
-                              <ul className="space-y-1">
-                                {group.items.map((item) => (
-                                  <li key={`${group.title}-${item.label}`}>
-                                    <NavLink
-                                      href={item.href}
-                                      onClick={close}
-                                      className="text-sm leading-6 text-[rgba(248,250,252,0.95)] transition-colors hover:text-[var(--brand-secondary)]"
-                                    >
-                                      {item.label}
-                                    </NavLink>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                        <ul className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                          {SERVICES_GROUP.items.map((item) => (
+                            <li key={`services-${item.label}`}>
+                              <NavLink
+                                href={item.href}
+                                onClick={close}
+                                className="text-sm leading-6 text-[rgba(248,250,252,0.95)] transition-colors hover:text-[var(--brand-secondary)]"
+                              >
+                                {item.label}
+                              </NavLink>
+                            </li>
                           ))}
-                        </div>
+                        </ul>
                       </div>
 
                       <div className="flex flex-col gap-8 border-t border-[var(--brand-accent)]/35 pt-8 lg:col-span-3 lg:border-t-0 lg:pt-0">
@@ -243,6 +233,36 @@ const SideMenu = ({
 
                       </div>
                     </div>
+
+                    {shopGroups.length > 0 ? (
+                      <div className="mt-10 border-t border-[var(--brand-accent)]/35 pt-8">
+                        <h2 className="mb-4 txt-compact-small uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+                          Shop
+                        </h2>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+                          {shopGroups.map((group) => (
+                            <div key={`shop-${group.title}`} className="min-w-0">
+                              <h3 className="mb-2 txt-compact-small text-[var(--brand-accent)]">
+                                {group.title}
+                              </h3>
+                              <ul className="space-y-1">
+                                {group.items.map((item) => (
+                                  <li key={`shop-${group.title}-${item.label}`}>
+                                    <NavLink
+                                      href={item.href}
+                                      onClick={close}
+                                      className="text-sm leading-6 text-[rgba(248,250,252,0.95)] transition-colors hover:text-[var(--brand-secondary)]"
+                                    >
+                                      {item.label}
+                                    </NavLink>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
 
                     {bestSellerItems.length > 0 ? (
                       <div className="mt-10 border-t border-[var(--brand-accent)]/35 pt-8">
