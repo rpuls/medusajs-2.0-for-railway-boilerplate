@@ -134,9 +134,12 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     /* best-effort */
   }
 
-  const target =
-    (MARKETING_PREFERENCE_CENTER_URL && MARKETING_PREFERENCE_CENTER_URL.length > 0
+  // Forward the signed token to the preference center so the customer
+  // can re-enable specific streams without needing a separate link.
+  const base =
+    MARKETING_PREFERENCE_CENTER_URL && MARKETING_PREFERENCE_CENTER_URL.length > 0
       ? MARKETING_PREFERENCE_CENTER_URL
-      : null) ?? "/"
+      : "/"
+  const target = `${base}${base.includes("?") ? "&" : "?"}email=${encodeURIComponent(email)}&kind=all&sig=${encodeURIComponent(String(q.sig ?? ""))}&unsubscribed=1`
   return res.redirect(303, target)
 }
