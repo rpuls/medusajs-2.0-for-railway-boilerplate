@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { useParams, useRouter } from "next/navigation"
 
 import { searchCustomizerProducts } from "@lib/data/customizer-product-search"
@@ -32,10 +33,20 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
   const [query, setQuery] = useState("")
   const [serverResults, setServerResults] = useState<CustomizerPickerProduct[] | null>(null)
   const [isSearching, setIsSearching] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   // Bumps on every search invocation so out-of-order responses (slow network +
   // fast typing) can't overwrite the freshest results.
   const searchTokenRef = useRef(0)
+
+  // Modal renders through a portal into <body> so it escapes any ancestor that
+  // creates a containing block for `position: fixed` (notably framer-motion's
+  // `motion.div layout` used in PdpLayoutGrid). Without this, the modal was
+  // being trapped inside the wizard column and the wizard's sticky panel
+  // bled through on top.
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -44,6 +55,17 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
+  }, [open])
+
+  // Lock background scroll while the modal is open so the body underneath
+  // doesn't move when the customer interacts with the picker.
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
   }, [open])
 
   // Server-side search effect. Initial-prop products only cover ~60 items, so
@@ -130,9 +152,9 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
         Change product
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 py-12 sm:py-20"
+          className="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 px-4 py-12 sm:py-20"
           role="dialog"
           aria-modal="true"
           aria-labelledby="customizer-product-picker-title"
@@ -255,7 +277,8 @@ const CustomizerProductPicker = ({ products, currentHandle, hasUnsavedDesign }: 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
