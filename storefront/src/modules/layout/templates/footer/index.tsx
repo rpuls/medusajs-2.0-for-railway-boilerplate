@@ -7,7 +7,10 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import NewsletterSignup from "./newsletter-signup"
 
 export default async function Footer() {
-  const { collections } = await getCollectionsList(0, 6)
+  const { collections } = await getCollectionsList(0, 6).catch(() => ({
+    collections: [],
+    count: 0,
+  }))
   const instagramUrl = getInstagramProfileUrl()
 
   return (

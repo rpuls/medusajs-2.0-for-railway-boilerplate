@@ -165,8 +165,11 @@ async function NavSideMenu() {
   )
 
   const [regions, { collections }, categories, brands] = await Promise.all([
-    listRegions().then((regions: StoreRegion[]) => regions),
-    getCollectionsList(0, 100),
+    listRegions().catch(() => [] as StoreRegion[]),
+    getCollectionsList(0, 100).catch(() => ({
+      collections: [] as HttpTypes.StoreCollection[],
+      count: 0,
+    })),
     listCategories().catch(() => [] as RawCategory[]),
     listBrands().catch(() => []),
   ])
