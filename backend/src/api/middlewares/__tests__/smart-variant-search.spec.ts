@@ -4,6 +4,8 @@ import { smartVariantSearchMiddleware } from "../smart-variant-search"
 
 type Query = Record<string, unknown>
 
+const fakeLogger = { info: jest.fn(), warn: jest.fn() }
+
 function buildReq(query: Query, fakePg: { raw: jest.Mock }) {
   return {
     query,
@@ -11,6 +13,9 @@ function buildReq(query: Query, fakePg: { raw: jest.Mock }) {
       resolve: jest.fn((key: string) => {
         if (key === ContainerRegistrationKeys.PG_CONNECTION) {
           return fakePg
+        }
+        if (key === ContainerRegistrationKeys.LOGGER) {
+          return fakeLogger
         }
         throw new Error(`unexpected resolve(${key})`)
       }),
@@ -25,6 +30,8 @@ describe("smartVariantSearchMiddleware", () => {
   beforeEach(() => {
     next = jest.fn()
     fakePg = { raw: jest.fn() }
+    fakeLogger.info.mockClear()
+    fakeLogger.warn.mockClear()
   })
 
   it("passes through single-token queries to Medusa's default search", async () => {
@@ -102,5 +109,18 @@ describe("smartVariantSearchMiddleware", () => {
 
     expect(fakePg.raw).toHaveBeenCalledTimes(1)
     expect(query.id).toEqual(["v_1"])
+  })
+
+  it("surfaces SQL errors via throw — staff see a 500 they can investigate, not silent zero results", async () => {
+    const boom = new Error("relation does not exist")
+    fakePg.raw.mockRejectedValue(boom)
+    const query: Query = { q: "staple black" }
+    const req = buildReq(query, fakePg)
+
+    await expect(
+      smartVariantSearchMiddleware(req, {} as any, next)
+    ).rejects.toThrow(boom)
+    expect(next).not.toHaveBeenCalled()
+    expect(fakeLogger.warn).toHaveBeenCalled()
   })
 })

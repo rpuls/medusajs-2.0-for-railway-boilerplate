@@ -43,8 +43,13 @@ export async function smartVariantSearchMiddleware(
   next: MedusaNextFunction
 ): Promise<void> {
   const query = req.query as Record<string, unknown>
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER) as {
+    info: (msg: string) => void
+    warn: (msg: string) => void
+  }
 
   if (query.id !== undefined) {
+    logger.info(`[smart-variant-search] skip: id already set`)
     return next()
   }
 
@@ -55,6 +60,9 @@ export async function smartVariantSearchMiddleware(
 
   const tokens = tokenize(q)
   if (tokens.length < 2) {
+    logger.info(
+      `[smart-variant-search] passthrough single-token q="${q}" (tokens=${tokens.length})`
+    )
     return next()
   }
 
@@ -62,7 +70,26 @@ export async function smartVariantSearchMiddleware(
     typeof smartSearchVariantIds
   >[0]
 
-  const matchingIds = await smartSearchVariantIds(pg, q)
+  const startedAt = Date.now()
+  let matchingIds: string[]
+  try {
+    matchingIds = await smartSearchVariantIds(pg, q)
+  } catch (err) {
+    logger.warn(
+      `[smart-variant-search] SQL failure for q="${q}" (tokens=${JSON.stringify(
+        tokens
+      )}): ${(err as Error).message}`
+    )
+    // Surface the failure to staff via Medusa's error pipeline rather than
+    // pretending we found nothing.
+    throw err
+  }
+  const elapsedMs = Date.now() - startedAt
+  logger.info(
+    `[smart-variant-search] q="${q}" tokens=${JSON.stringify(tokens)} matches=${
+      matchingIds.length
+    } elapsed_ms=${elapsedMs}`
+  )
 
   query.id = matchingIds.length > 0 ? matchingIds : [NO_MATCH_SENTINEL]
   delete query.q
