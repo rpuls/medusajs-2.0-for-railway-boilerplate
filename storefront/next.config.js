@@ -2,6 +2,30 @@ const checkEnvVariables = require("./check-env-variables")
 
 checkEnvVariables()
 
+/** Hostname only — env URLs may include paths (e.g. `https://store.com/au`). */
+function hostnameFromEnvUrl(value) {
+  if (!value || typeof value !== "string") {
+    return null
+  }
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+  try {
+    const withProtocol = /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`
+    return new URL(withProtocol).hostname
+  } catch {
+    return null
+  }
+}
+
+const catalogImagesUnoptimized =
+  process.env.NEXT_PUBLIC_UNOPTIMIZED_IMAGES === "true" ||
+  (process.env.VERCEL === "1" &&
+    process.env.NEXT_PUBLIC_UNOPTIMIZED_IMAGES !== "false")
+
 /**
  * @type {import('next').NextConfig}
  */
@@ -40,8 +64,14 @@ const nextConfig = {
     },
   },
   images: {
-    /** Set NEXT_PUBLIC_UNOPTIMIZED_IMAGES=true to skip the image optimizer (debug / broken remote hosts). Default: optimized WebP/AVIF + sizing via `/_next/image`. */
-    unoptimized: process.env.NEXT_PUBLIC_UNOPTIMIZED_IMAGES === "true",
+    /**
+     * Next 16 defaults qualities to [75] only; listing cards use quality={50}.
+     * On Vercel, `/_next/image` may return 402 when Image Optimization is unavailable —
+     * we default to unoptimized on Vercel (direct supplier CDN URLs). Override with
+     * NEXT_PUBLIC_UNOPTIMIZED_IMAGES=true|false.
+     */
+    unoptimized: catalogImagesUnoptimized,
+    qualities: [40, 50, 75],
     remotePatterns: [
       {
         protocol: "http",
@@ -49,12 +79,12 @@ const nextConfig = {
       },
       { 
         protocol: "https",
-        // Fallback to localhost if missing to prevent Next.js build crash
-        hostname: process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL.replace(/^https?:\/\//, '') : 'localhost',
+        hostname: hostnameFromEnvUrl(process.env.NEXT_PUBLIC_BASE_URL) ?? "localhost",
       },
       { 
         protocol: "https",
-        hostname: process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ? process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL.replace(/^https?:\/\//, '') : 'localhost',
+        hostname:
+          hostnameFromEnvUrl(process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL) ?? "localhost",
       },
       { 
         protocol: "https",
@@ -70,8 +100,8 @@ const nextConfig = {
       },
       { 
         protocol: "https",
-        // Added regex strip to ensure https:// doesn't crash the hostname
-        hostname: process.env.NEXT_PUBLIC_MINIO_ENDPOINT ? process.env.NEXT_PUBLIC_MINIO_ENDPOINT.replace(/^https?:\/\//, '') : 'localhost',
+        hostname:
+          hostnameFromEnvUrl(process.env.NEXT_PUBLIC_MINIO_ENDPOINT) ?? "localhost",
       },
       {
         protocol: "https",

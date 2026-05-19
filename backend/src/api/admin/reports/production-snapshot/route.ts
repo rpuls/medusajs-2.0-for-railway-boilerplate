@@ -7,6 +7,12 @@ import {
   type ProductionStage,
   isProductionStage,
 } from "../../../../lib/production-stage"
+import {
+  DECORATION_METHODS,
+  type DecorationMethod,
+  isDecorationMethodOrBlank,
+  itemMethod,
+} from "../../../../lib/reports/orders"
 
 /**
  * GET /admin/reports/production-snapshot
@@ -18,7 +24,8 @@ import {
  * round-trip.
  *
  * Filters supported:
- *   - method:    csv of decoration methods (matches `metadata.decorationDesign.method`)
+ *   - method:    csv of decoration methods (`decorationDesign.method` or inferred
+ *                from `customizerDesign` / SCP DTF pricing metadata)
  *                special key `blank` = no decoration metadata on the line
  *   - supplier:  "ascolour" | "other" — based on order metadata flag
  *   - stuck:     "1" — only return orders that are over their stage SLA
@@ -28,41 +35,6 @@ import {
  */
 
 const PER_STAGE_CAP = 100 // hard cap to keep payload small
-
-type LineItemMeta = {
-  decorationDesign?: { method?: unknown }
-  vectorization_for_order?: unknown
-  customizerDesign?: unknown
-}
-
-const DECORATION_METHODS = [
-  "embroidery",
-  "dtf",
-  "screen",
-  "uvdtf_sheet",
-  "uvdtf_applied",
-  "uv",
-] as const
-
-type DecorationMethod = (typeof DECORATION_METHODS)[number] | "blank"
-
-const isDecorationMethodOrBlank = (s: string): s is DecorationMethod =>
-  s === "blank" || (DECORATION_METHODS as readonly string[]).includes(s)
-
-const itemMethod = (item: { metadata?: unknown }): DecorationMethod => {
-  const meta = (item?.metadata ?? {}) as LineItemMeta
-  const m = meta?.decorationDesign?.method
-  if (typeof m === "string" && (DECORATION_METHODS as readonly string[]).includes(m)) {
-    return m as DecorationMethod
-  }
-  // Legacy customizer rows pre-date the explicit method tagging — surface
-  // them as `screen` because the print path that customizerDesign
-  // implies is screen-printed by default in SC Prints' history.
-  if (meta?.customizerDesign && typeof meta.customizerDesign === "object") {
-    return "screen"
-  }
-  return "blank"
-}
 
 const dayCount = (fromIso: string | null | undefined): number => {
   if (!fromIso) return 0

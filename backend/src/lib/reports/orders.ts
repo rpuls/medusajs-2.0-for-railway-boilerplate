@@ -27,10 +27,65 @@ type LineItemMeta = {
   reorder_source?: unknown
 }
 
+type CustomizerDesignLike = {
+  pricing?: {
+    server?: {
+      mode?: unknown
+      embroidery_side_keys?: unknown
+      print_side_keys?: unknown
+    }
+  }
+  sideDecorationMethods?: Record<string, string>
+  scpPrintSizeId?: unknown
+  prints?: unknown[]
+  artifacts?: unknown[]
+}
+
 /**
- * Classify a single line item by decoration method. Mirrors the logic
- * in /admin/reports/production-snapshot — change in one place, change
- * in both.
+ * Infer production/reporting decoration method from Fabric customizer metadata.
+ * Storefront customizer lines use `customizerDesign` (not `decorationDesign`);
+ * SCP DTF cart pricing stamps `pricing.server.mode` as `scp_dtf` / `scp_dtf_mixed`.
+ */
+export const inferDecorationMethodFromCustomizer = (
+  design: CustomizerDesignLike
+): DecorationMethod => {
+  const server = design.pricing?.server
+  const mode = typeof server?.mode === "string" ? server.mode : null
+
+  const sideMethods = design.sideDecorationMethods ?? {}
+  const embroideryKeys = Array.isArray(server?.embroidery_side_keys)
+    ? (server.embroidery_side_keys as string[]).filter(Boolean)
+    : Object.entries(sideMethods)
+        .filter(([, m]) => m === "embroidery")
+        .map(([side]) => side)
+  const printKeys = Array.isArray(server?.print_side_keys)
+    ? (server.print_side_keys as string[]).filter(Boolean)
+    : Object.entries(sideMethods)
+        .filter(([, m]) => !m || m === "print")
+        .map(([side]) => side)
+
+  const hasEmbroidery = embroideryKeys.length > 0
+  const hasPrint =
+    printKeys.length > 0 ||
+    mode === "scp_dtf" ||
+    typeof design.scpPrintSizeId === "string" ||
+    (Array.isArray(design.prints) && design.prints.length > 0)
+
+  if (hasEmbroidery && !hasPrint) return "embroidery"
+  if (hasPrint) return "dtf"
+
+  const hasDecoration =
+    (Array.isArray(design.artifacts) && design.artifacts.length > 0) ||
+    (Array.isArray(design.prints) && design.prints.length > 0)
+  if (hasDecoration) return "dtf"
+
+  // Current storefront customizer is DTF-only; screen print is not offered on PDP.
+  return "dtf"
+}
+
+/**
+ * Classify a single line item by decoration method. Used by the production
+ * dashboard snapshot and decoration-mix reports.
  */
 export const itemMethod = (item: { metadata?: unknown }): DecorationMethod => {
   const meta = (item?.metadata ?? {}) as LineItemMeta
@@ -39,7 +94,9 @@ export const itemMethod = (item: { metadata?: unknown }): DecorationMethod => {
     return m as DecorationMethod
   }
   if (meta?.customizerDesign && typeof meta.customizerDesign === "object") {
-    return "screen"
+    return inferDecorationMethodFromCustomizer(
+      meta.customizerDesign as CustomizerDesignLike
+    )
   }
   return "blank"
 }
