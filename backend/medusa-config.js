@@ -300,6 +300,10 @@ const medusaConfig = {
     },
 
     {
+      resolve: "./src/modules/bottle-shop",
+    },
+
+    {
       resolve: "./src/modules/bundles",
     },
 

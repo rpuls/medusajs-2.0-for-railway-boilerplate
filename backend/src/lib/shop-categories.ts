@@ -16,7 +16,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createProductCategoriesWorkflow } from "@medusajs/medusa/core-flows"
 
 export type CategoryHandle = string
-export type AudienceKey = "mens" | "womens" | "kids" | "accessories"
+export type AudienceKey = "mens" | "womens" | "kids" | "accessories" | "spirits"
 
 export type SubCategoryDef = {
   name: string
@@ -56,11 +56,24 @@ const ACCESSORY_SUBS: SubCategoryDef[] = [
   { name: "Other Accessories", handle: "other" },
 ]
 
+const SPIRIT_SUBS: SubCategoryDef[] = [
+  { name: "Vodka", handle: "vodka" },
+  { name: "Gin", handle: "gin" },
+  { name: "Whisky", handle: "whisky" },
+  { name: "Rum", handle: "rum" },
+  { name: "Tequila", handle: "tequila" },
+  { name: "Cognac", handle: "cognac" },
+  { name: "Champagne", handle: "champagne" },
+  { name: "Liqueur", handle: "liqueur" },
+  { name: "Mezcal", handle: "mezcal" },
+]
+
 export const TREE: AudienceDef[] = [
   { name: "Mens", handle: "mens", children: APPAREL_SUBS },
   { name: "Womens", handle: "womens", children: APPAREL_SUBS },
   { name: "Kids", handle: "kids", children: KIDS_SUBS },
   { name: "Accessories", handle: "accessories", children: ACCESSORY_SUBS },
+  { name: "Spirits", handle: "spirits", children: SPIRIT_SUBS },
 ]
 
 /**
@@ -89,6 +102,22 @@ const TYPE_TO_SUB_HANDLE: Record<string, CategoryHandle> = {
   stickers: "stickers",
 }
 
+/** Spirit-type → sub-category handle under the `spirits` audience. */
+const SPIRIT_TYPE_TO_SUB_HANDLE: Record<string, CategoryHandle> = {
+  vodka: "vodka",
+  gin: "gin",
+  whisky: "whisky",
+  whiskey: "whisky",
+  bourbon: "whisky",
+  scotch: "whisky",
+  rum: "rum",
+  tequila: "tequila",
+  cognac: "cognac",
+  champagne: "champagne",
+  liqueur: "liqueur",
+  mezcal: "mezcal",
+}
+
 const ACCESSORY_TYPES = new Set(["headwear", "bags", "drinkware", "stickers"])
 
 const KW_WOMENS = /\b(women|womens|woman|women's|ladies|ladie's|lady|female)s?\b/i
@@ -96,15 +125,21 @@ const KW_MENS = /\b(mens|men's|gents)\b/i
 const KW_KIDS = /\b(kid|kids|youth|child|children|infant|baby|babies|toddler)s?\b/i
 
 /**
- * Map a product to its audience cohort(s). Accessory-typed products always land
- * under `accessories`; explicit kids / womens / mens cues route to a single
- * audience; everything else is treated as unisex apparel and assigned to BOTH
- * mens and womens so it surfaces in either drill-down.
+ * Map a product to its audience cohort(s). Bottle products (where
+ * `metadata.product_class === "bottle"`) always land under `spirits`.
+ * Accessory-typed products always land under `accessories`; explicit kids /
+ * womens / mens cues route to a single audience; everything else is treated as
+ * unisex apparel and assigned to BOTH mens and womens so it surfaces in either
+ * drill-down.
  */
 export function inferAudience(
   title: string,
-  typeValue: string | null
+  typeValue: string | null,
+  metadata?: Record<string, unknown> | null
 ): AudienceKey[] {
+  if (metadata && metadata.product_class === "bottle") {
+    return ["spirits"]
+  }
   const normalizedType = (typeValue ?? "").trim().toLowerCase()
   if (normalizedType && ACCESSORY_TYPES.has(normalizedType)) {
     return ["accessories"]
@@ -116,8 +151,16 @@ export function inferAudience(
 }
 
 export function inferSubHandle(
-  typeValue: string | null
+  typeValue: string | null,
+  metadata?: Record<string, unknown> | null
 ): CategoryHandle | null {
+  if (metadata && metadata.product_class === "bottle") {
+    const spirit = (metadata.spirit_type as string | undefined)?.trim().toLowerCase()
+    if (spirit && SPIRIT_TYPE_TO_SUB_HANDLE[spirit]) {
+      return SPIRIT_TYPE_TO_SUB_HANDLE[spirit]
+    }
+    return null
+  }
   if (!typeValue) return null
   const key = typeValue.trim().toLowerCase()
   return TYPE_TO_SUB_HANDLE[key] ?? null
@@ -129,11 +172,12 @@ export function inferSubHandle(
  */
 export function resolveCategoryHandles(
   title: string,
-  typeValue: string | null
+  typeValue: string | null,
+  metadata?: Record<string, unknown> | null
 ): CategoryHandle[] {
-  const sub = inferSubHandle(typeValue)
+  const sub = inferSubHandle(typeValue, metadata)
   if (!sub) return []
-  const audiences = inferAudience(title, typeValue)
+  const audiences = inferAudience(title, typeValue, metadata)
   return audiences.map((a) => `${a}-${sub}`)
 }
 
@@ -263,6 +307,7 @@ type ProductRow = {
   title: string
   type: { value: string | null } | null
   categories: Array<{ id: string; handle: string }> | null
+  metadata: Record<string, unknown> | null
 }
 
 /**
@@ -299,7 +344,14 @@ export async function assignCategoriesToProducts(
     : undefined
   const { data } = await query.graph({
     entity: "product",
-    fields: ["id", "title", "type.value", "categories.id", "categories.handle"],
+    fields: [
+      "id",
+      "title",
+      "type.value",
+      "categories.id",
+      "categories.handle",
+      "metadata",
+    ],
     filters,
   })
 
@@ -315,7 +367,11 @@ export async function assignCategoriesToProducts(
 
   for (const product of rows) {
     const typeValue = product.type?.value ?? null
-    const targetHandles = resolveCategoryHandles(product.title ?? "", typeValue)
+    const targetHandles = resolveCategoryHandles(
+      product.title ?? "",
+      typeValue,
+      product.metadata ?? null
+    )
     if (targetHandles.length === 0) {
       summary.untyped++
       continue

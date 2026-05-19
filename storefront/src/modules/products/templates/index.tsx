@@ -16,6 +16,8 @@ import PdpCustomizerBoundary from "@modules/products/components/pdp-customizer-b
 import DtfAutoBuilderTemplate, {
   isDtfAutoBuilderProduct,
 } from "@modules/products/templates/dtf-auto-builder-template"
+import BottlePdpTemplate from "@modules/bottles/components/bottle-pdp-template"
+import { isBottleProduct } from "@modules/bottles/lib/is-bottle-product"
 import { DecorationEstimator } from "@modules/decoration/components"
 import { getEnabledDecorationMethods } from "@modules/decoration/lib/product"
 import { HttpTypes } from "@medusajs/types"
@@ -44,6 +46,16 @@ const ProductTemplate: React.FC<ProductTemplateProps> = async ({
   if (isDtfAutoBuilderProduct(product)) {
     return (
       <DtfAutoBuilderTemplate
+        product={product}
+        region={region}
+        countryCode={countryCode}
+      />
+    )
+  }
+
+  if (isBottleProduct(product)) {
+    return (
+      <BottlePdpTemplate
         product={product}
         region={region}
         countryCode={countryCode}

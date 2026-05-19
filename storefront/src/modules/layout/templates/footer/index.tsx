@@ -67,6 +67,11 @@ export default async function Footer() {
                 </LocalizedClientLink>
               </li>
               <li>
+                <LocalizedClientLink href="/spirits" className="hover:text-ui-fg-base">
+                  Custom bottles
+                </LocalizedClientLink>
+              </li>
+              <li>
                 <LocalizedClientLink href="/byo" className="hover:text-ui-fg-base">
                   BYO merch
                 </LocalizedClientLink>

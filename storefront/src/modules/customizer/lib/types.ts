@@ -1,4 +1,11 @@
-export type GarmentSide = "front" | "back" | "left_sleeve" | "right_sleeve" | "printed_tag"
+export type GarmentSide =
+  | "front"
+  | "back"
+  | "left_sleeve"
+  | "right_sleeve"
+  | "printed_tag"
+  | "bottle_label"
+  | "bottle_back_label"
 
 export type CustomizerElementType = "image" | "text" | "shape"
 

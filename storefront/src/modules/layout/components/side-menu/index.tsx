@@ -21,6 +21,7 @@ const SideMenuItems = {
   Customizer: "/customizer",
   Services: "/services",
   Brands: "/brands",
+  Spirits: "/spirits",
   BYO: "/byo",
   "Contact Us": "/contact",
 }

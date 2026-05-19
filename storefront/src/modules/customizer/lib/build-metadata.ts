@@ -18,6 +18,8 @@ const DESIGN_SIDES: GarmentSide[] = [
   "left_sleeve",
   "right_sleeve",
   "printed_tag",
+  "bottle_label",
+  "bottle_back_label",
 ]
 
 export type BuildCustomizerMetadataInput = {

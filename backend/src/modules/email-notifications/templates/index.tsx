@@ -52,6 +52,11 @@ import {
   ArtworkApprovalEmail,
   isArtworkApprovalData,
 } from './artwork-approval'
+import {
+  BOTTLE_SHOP_ORDER,
+  BottleShopOrderTemplate,
+  isBottleShopOrderData,
+} from './bottle-shop-order'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -66,6 +71,7 @@ export const EmailTemplates = {
   THRESHOLD_ALERT,
   NPS_REQUEST,
   ARTWORK_APPROVAL,
+  BOTTLE_SHOP_ORDER,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -180,6 +186,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <ArtworkApprovalEmail {...data} />
 
+    case EmailTemplates.BOTTLE_SHOP_ORDER:
+      if (!isBottleShopOrderData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.BOTTLE_SHOP_ORDER}"`
+        )
+      }
+      return <BottleShopOrderTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -199,4 +214,5 @@ export {
   ThresholdAlertEmail,
   NpsRequestEmail,
   ArtworkApprovalEmail,
+  BottleShopOrderTemplate,
 }
