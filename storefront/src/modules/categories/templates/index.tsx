@@ -39,6 +39,30 @@ export default function CategoryTemplate({
     (c) => c?.handle && c?.name
   )
 
+  // Related-categories navigation: when landing on a parent (e.g. /categories/mens)
+  // show its children; when landing on a leaf (e.g. /categories/mens/t-shirts) show
+  // sibling sub-categories so the customer can hop between drill-downs without
+  // walking back up. Two-level tree assumption — for deeper hierarchies the base
+  // path needs to include every ancestor handle.
+  const parentLeaf = parents[parents.length - 1]
+  const siblings = parentLeaf
+    ? (
+        (parentLeaf.category_children ??
+          []) as HttpTypes.StoreProductCategory[]
+      ).filter(
+        (c) => c?.handle && c?.name && c.id !== category?.id
+      )
+    : []
+  const relatedItems = children.length > 0 ? children : siblings
+  const relatedBasePath =
+    children.length > 0
+      ? `/categories/${category?.handle}`
+      : parentLeaf
+        ? `/categories/${parentLeaf.handle}`
+        : ""
+  const relatedLabel =
+    children.length === 0 && parentLeaf ? `More in ${parentLeaf.name}` : null
+
   if (!category || !countryCode) notFound()
 
   return (
@@ -80,20 +104,27 @@ export default function CategoryTemplate({
           </p>
         ) : null}
 
-        {children.length > 0 ? (
-          <ul className="mt-6 flex flex-wrap gap-2">
-            {children.map((c) => (
-              <li key={c.id}>
-                <LocalizedClientLink
-                  href={`/categories/${category.handle}/${c.handle}`}
-                  className="rounded-full border border-ui-border-base bg-ui-bg-subtle px-3 py-1 text-small-regular text-ui-fg-base hover:bg-ui-bg-subtle-hover"
-                  data-testid={`category-child-${c.handle}-link`}
-                >
-                  {c.name}
-                </LocalizedClientLink>
-              </li>
-            ))}
-          </ul>
+        {relatedItems.length > 0 ? (
+          <div className="mt-6">
+            {relatedLabel ? (
+              <p className="mb-2 text-xs uppercase tracking-[0.12em] text-ui-fg-muted">
+                {relatedLabel}
+              </p>
+            ) : null}
+            <ul className="flex flex-wrap gap-2">
+              {relatedItems.map((c) => (
+                <li key={c.id}>
+                  <LocalizedClientLink
+                    href={`${relatedBasePath}/${c.handle}`}
+                    className="rounded-full border border-ui-border-base bg-ui-bg-subtle px-3 py-1 text-small-regular text-ui-fg-base hover:bg-ui-bg-subtle-hover"
+                    data-testid={`category-related-${c.handle}-link`}
+                  >
+                    {c.name}
+                  </LocalizedClientLink>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </section>
 
