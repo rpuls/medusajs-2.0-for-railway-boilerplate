@@ -1,6 +1,5 @@
 "use client"
 
-import { XMark } from "@medusajs/icons"
 import React from "react"
 
 import Help from "@modules/order/components/help"
@@ -20,26 +19,51 @@ type OrderDetailsTemplateProps = {
   order: HttpTypes.StoreOrder
 }
 
+const ArrowLeftIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M13 8H3M7 4L3 8l4 4" />
+  </svg>
+)
+
 const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
   order,
 }) => {
   return (
-    <div className="flex flex-col justify-center gap-y-4">
-      <div className="flex gap-2 justify-between items-center flex-wrap">
-        <h1 className="text-2xl-semi">Order details</h1>
-        <div className="flex items-center gap-3">
-          <InvoiceDownloadButton orderId={order.id} />
-          <LocalizedClientLink
-            href="/account/orders"
-            className="flex gap-2 items-center text-ui-fg-subtle hover:text-ui-fg-base"
-            data-testid="back-to-overview-button"
-          >
-            <XMark /> Back to overview
-          </LocalizedClientLink>
+    <div className="flex flex-col justify-center gap-y-6">
+      <LocalizedClientLink
+        href="/account/orders"
+        className="group inline-flex items-center gap-1.5 text-sm font-semibold text-ui-fg-base underline underline-offset-4 transition hover:text-[var(--brand-secondary)]"
+        data-testid="back-to-overview-button"
+      >
+        <ArrowLeftIcon className="transition-transform group-hover:-translate-x-0.5" />
+        Back to orders
+      </LocalizedClientLink>
+
+      <div className="flex flex-wrap items-end justify-between gap-3 border-l-4 border-[var(--brand-secondary)] pl-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            Order #{order.display_id}
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-ui-fg-base small:text-3xl">
+            Order details
+          </h1>
         </div>
+        <InvoiceDownloadButton orderId={order.id} />
       </div>
+
       <div
-        className="flex flex-col gap-4 h-full bg-white w-full"
+        className="flex flex-col gap-4 h-full w-full"
         data-testid="order-details-container"
       >
         <OrderDetails order={order} showStatus />

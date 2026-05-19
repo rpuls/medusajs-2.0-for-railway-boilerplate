@@ -13,13 +13,18 @@ export default async function WishlistPage() {
 
   return (
     <div className="w-full" data-testid="wishlist-page-wrapper">
-      <div className="mb-8 flex flex-col gap-y-4">
-        <h1 className="text-2xl-semi">My wishlist</h1>
-        <p className="text-base-regular">
-          Products you&apos;ve saved for later. Open any one to customise it or
-          add it to your cart.
+      <header className="mb-8 border-l-4 border-[var(--brand-secondary)] pl-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+          Saved for later
         </p>
-      </div>
+        <h1 className="mt-2 text-2xl font-semibold text-ui-fg-base small:text-3xl">
+          My wishlist
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm text-ui-fg-subtle small:text-base">
+          Products you&apos;ve saved for later. Open any one to customise it
+          or add it to your cart.
+        </p>
+      </header>
       <WishlistGrid items={items} />
     </div>
   )

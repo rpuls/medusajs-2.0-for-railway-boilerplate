@@ -31,11 +31,16 @@ export default async function OrderCompletedTemplate({
           data-testid="order-complete-container"
         >
           <div className="border-l-4 border-[var(--brand-secondary)] pl-4 mb-8">
-            <h1 className="text-3xl sm:text-4xl font-semibold text-[var(--brand-primary)] leading-tight">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+              Order #{order.display_id} &middot; Confirmed
+            </p>
+            <h1 className="mt-2 text-3xl sm:text-4xl font-semibold text-[var(--brand-primary)] leading-tight">
               Thank you!
             </h1>
-            <p className="text-ui-fg-subtle mt-2 text-base">
-              Your order was placed successfully.
+            <p className="text-ui-fg-subtle mt-3 max-w-2xl text-base">
+              Your order was placed successfully. We&apos;ll email you a copy
+              of the receipt and keep you posted as it moves through
+              production.
             </p>
           </div>
 
@@ -66,13 +71,27 @@ export default async function OrderCompletedTemplate({
           <div className="mt-10 flex flex-col sm:flex-row gap-3">
             <LocalizedClientLink
               href="/store"
-              className="inline-flex items-center justify-center rounded-lg bg-[var(--brand-secondary)] hover:opacity-90 text-white px-5 py-3 font-medium transition"
+              className="group inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
             >
               Continue shopping
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-transform group-hover:translate-x-0.5"
+                aria-hidden
+              >
+                <path d="M3 8h10M9 4l4 4-4 4" />
+              </svg>
             </LocalizedClientLink>
             <LocalizedClientLink
               href="/account/orders"
-              className="inline-flex items-center justify-center rounded-lg border border-ui-border-base hover:bg-ui-bg-subtle text-[var(--brand-primary)] px-5 py-3 font-medium transition"
+              className="inline-flex items-center justify-center rounded-lg border border-ui-border-base bg-white px-6 py-3 text-sm font-semibold text-[var(--brand-primary)] transition hover:bg-ui-bg-subtle"
             >
               View my orders
             </LocalizedClientLink>

@@ -27,13 +27,18 @@ export default async function Addresses({
 
   return (
     <div className="w-full" data-testid="addresses-page-wrapper">
-      <div className="mb-8 flex flex-col gap-y-4">
-        <h1 className="text-2xl-semi">Shipping Addresses</h1>
-        <p className="text-base-regular">
-          View and update your shipping addresses, you can add as many as you
-          like. Saving your addresses will make them available during checkout.
+      <header className="mb-8 border-l-4 border-[var(--brand-secondary)] pl-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+          Shipping
         </p>
-      </div>
+        <h1 className="mt-2 text-2xl font-semibold text-ui-fg-base small:text-3xl">
+          Shipping addresses
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm text-ui-fg-subtle small:text-base">
+          View and update your shipping addresses &mdash; add as many as you
+          like. Saved addresses appear during checkout for quick selection.
+        </p>
+      </header>
       <AddressBook customer={customer} region={region} />
     </div>
   )

@@ -44,24 +44,23 @@ export default async function Checkout() {
   return (
     <div className="content-container py-8 small:py-10 pb-14">
       <BeginCheckoutTracker cart={cart} />
-      <div className="mb-8 small:mb-10 max-w-2xl">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-secondary)]">
+      <header className="mb-8 max-w-2xl border-l-4 border-[var(--brand-secondary)] pl-4 small:mb-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
           Secure checkout
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-[var(--brand-primary)] small:text-4xl">
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ui-fg-base small:text-4xl">
           Checkout
         </h1>
-        <p className="mt-2 text-sm text-ui-fg-subtle">
-          Review your details, delivery, and payment — same look and feel as the
-          rest of SC Prints.
+        <p className="mt-3 max-w-xl text-sm text-ui-fg-subtle small:text-base">
+          Review your delivery and payment details &mdash; we&apos;ll send a
+          confirmation as soon as your order is placed.
         </p>
-      </div>
+      </header>
 
       <PerksBanner perks={perks.perks} />
 
-
-      <div className="grid grid-cols-1 gap-8 small:grid-cols-[1fr_min(100%,400px)] small:gap-x-10 small:items-start">
-        <div className="rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-5 shadow-[0_4px_40px_rgba(26,26,46,0.08)] backdrop-blur-sm small:p-8">
+      <div className="mt-6 grid grid-cols-1 gap-8 small:grid-cols-[1fr_min(100%,400px)] small:items-start small:gap-x-10">
+        <div className="rounded-2xl border border-ui-border-base bg-white p-5 shadow-sm small:p-8">
           <Wrapper cart={cart}>
             <CheckoutForm cart={cart} customer={customer} />
           </Wrapper>

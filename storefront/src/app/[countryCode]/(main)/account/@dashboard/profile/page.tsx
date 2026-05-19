@@ -28,14 +28,19 @@ export default async function Profile() {
 
   return (
     <div className="w-full" data-testid="profile-page-wrapper">
-      <div className="mb-8 flex flex-col gap-y-4">
-        <h1 className="text-2xl-semi">Profile</h1>
-        <p className="text-base-regular">
-          View and update your profile information, including your name, email,
-          and phone number. You can also update your billing address, or change
-          your password.
+      <header className="mb-8 border-l-4 border-[var(--brand-secondary)] pl-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+          Your details
         </p>
-      </div>
+        <h1 className="mt-2 text-2xl font-semibold text-ui-fg-base small:text-3xl">
+          Profile
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm text-ui-fg-subtle small:text-base">
+          View and update your profile information, including your name,
+          email, and phone number. You can also update your billing address,
+          or change your password.
+        </p>
+      </header>
       <div className="flex flex-col gap-y-8 w-full">
         <ProfileName customer={customer} />
         <Divider />

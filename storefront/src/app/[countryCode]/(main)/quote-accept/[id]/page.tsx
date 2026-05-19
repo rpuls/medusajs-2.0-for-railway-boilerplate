@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 
 import AcceptForm from "@modules/quote-accept/components/accept-form"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getQuoteForAccept } from "@lib/data/quote-accept"
 
 export const metadata: Metadata = {
@@ -11,6 +12,56 @@ export const metadata: Metadata = {
 
 type RouteParams = { countryCode: string; id: string }
 type SearchParams = { sig?: string }
+
+const ArrowRightIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M3 8h10M9 4l4 4-4 4" />
+  </svg>
+)
+
+function ErrorState({
+  eyebrow,
+  title,
+  body,
+}: {
+  eyebrow: string
+  title: string
+  body: string
+}) {
+  return (
+    <div className="content-container py-14 small:py-20">
+      <div className="mx-auto max-w-xl text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary)]/70">
+          {eyebrow}
+        </p>
+        <h1 className="page-title-marketing mt-3 tracking-tight">{title}</h1>
+        <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-ui-fg-subtle">
+          {body}
+        </p>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <LocalizedClientLink
+            href="/contact"
+            className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+          >
+            Contact support
+            <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
+          </LocalizedClientLink>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default async function QuoteAcceptPage({
   params,
@@ -24,17 +75,11 @@ export default async function QuoteAcceptPage({
 
   if (!sig) {
     return (
-      <div className="content-container py-12 max-w-2xl">
-        <div className="rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-6 shadow-[0_4px_40px_rgba(26,26,46,0.08)]">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--brand-primary)]">
-            Link expired
-          </h1>
-          <p className="mt-2 text-sm text-ui-fg-subtle">
-            We couldn&apos;t verify that link. Reply to your quote email and
-            we&apos;ll resend it.
-          </p>
-        </div>
-      </div>
+      <ErrorState
+        eyebrow="Quote"
+        title="Link expired"
+        body="We couldn't verify that link. Reply to your quote email and we'll resend it."
+      />
     )
   }
 
@@ -42,17 +87,11 @@ export default async function QuoteAcceptPage({
 
   if (!quote) {
     return (
-      <div className="content-container py-12 max-w-2xl">
-        <div className="rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-6 shadow-[0_4px_40px_rgba(26,26,46,0.08)]">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--brand-primary)]">
-            Quote not found
-          </h1>
-          <p className="mt-2 text-sm text-ui-fg-subtle">
-            This quote may have been withdrawn or expired. Reply to your quote
-            email and we&apos;ll fix you up.
-          </p>
-        </div>
-      </div>
+      <ErrorState
+        eyebrow="Quote"
+        title="Quote not found"
+        body="This quote may have been withdrawn or expired. Reply to your quote email and we'll fix you up."
+      />
     )
   }
 

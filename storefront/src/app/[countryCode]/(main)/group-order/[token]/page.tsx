@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 
 import JoinForm from "@modules/group-order/components/join-form"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getGroupOrderByToken } from "@lib/data/group-order"
 
 export const metadata: Metadata = {
@@ -10,6 +11,23 @@ export const metadata: Metadata = {
 }
 
 type RouteParams = { countryCode: string; token: string }
+
+const ArrowRightIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M3 8h10M9 4l4 4-4 4" />
+  </svg>
+)
 
 export default async function GroupOrderJoinPage({
   params,
@@ -21,15 +39,27 @@ export default async function GroupOrderJoinPage({
 
   if (!data) {
     return (
-      <div className="content-container py-12 max-w-2xl">
-        <div className="rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-6 shadow-[0_4px_40px_rgba(26,26,46,0.08)]">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--brand-primary)]">
+      <div className="content-container py-14 small:py-20">
+        <div className="mx-auto max-w-xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary)]/70">
+            Group order
+          </p>
+          <h1 className="page-title-marketing mt-3 tracking-tight">
             Group order not found
           </h1>
-          <p className="mt-2 text-sm text-ui-fg-subtle">
+          <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-ui-fg-subtle">
             Double-check the link. If it&apos;s expired, reach out to whoever
             shared it.
           </p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <LocalizedClientLink
+              href="/contact"
+              className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-secondary)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+            >
+              Contact support
+              <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
+            </LocalizedClientLink>
+          </div>
         </div>
       </div>
     )
@@ -39,34 +69,48 @@ export default async function GroupOrderJoinPage({
   const preferredSizes = product_preview?.available_sizes ?? []
 
   return (
-    <div className="content-container py-12 max-w-3xl">
-      <div className="rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-6 shadow-[0_4px_40px_rgba(26,26,46,0.08)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-secondary)]">
-          {group_order.organisation_name ?? "Group order"}
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[var(--brand-primary)]">
-          {group_order.title}
-        </h1>
-        {group_order.owner_name ? (
-          <p className="mt-1 text-sm text-ui-fg-subtle">
-            Organised by {group_order.owner_name}
+    <div className="content-container max-w-3xl py-12">
+      <section className="rounded-2xl border border-ui-border-base bg-white p-6 shadow-sm small:p-8">
+        <header className="border-l-4 border-[var(--brand-secondary)] pl-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            {group_order.organisation_name ?? "Group order"}
           </p>
-        ) : null}
-        {group_order.deadline_at ? (
-          <p className="mt-2 text-sm text-ui-fg-subtle">
-            Submit by {new Date(group_order.deadline_at).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" })}
-          </p>
-        ) : null}
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ui-fg-base small:text-3xl">
+            {group_order.title}
+          </h1>
+          {group_order.owner_name ? (
+            <p className="mt-2 text-sm text-ui-fg-subtle">
+              Organised by{" "}
+              <span className="font-semibold text-ui-fg-base">
+                {group_order.owner_name}
+              </span>
+            </p>
+          ) : null}
+          {group_order.deadline_at ? (
+            <p className="mt-1 text-sm text-ui-fg-subtle">
+              Submit by{" "}
+              <span className="font-semibold text-ui-fg-base">
+                {new Date(group_order.deadline_at).toLocaleDateString("en-AU", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </p>
+          ) : null}
+        </header>
+
         {group_order.notes ? (
-          <p className="mt-4 text-sm text-ui-fg-base whitespace-pre-wrap">
+          <p className="mt-5 whitespace-pre-wrap rounded-xl bg-ui-bg-subtle px-4 py-3 text-sm leading-relaxed text-ui-fg-base">
             {group_order.notes}
           </p>
         ) : null}
 
         {(design_preview?.thumbnail_url || product_preview?.thumbnail) ? (
-          <div className="mt-5 grid grid-cols-1 small:grid-cols-2 gap-4">
+          <div className="mt-6 grid grid-cols-1 gap-4 small:grid-cols-2">
             {design_preview?.thumbnail_url ? (
-              <figure className="overflow-hidden rounded-xl border border-[rgba(26,26,46,0.08)] bg-ui-bg-subtle">
+              <figure className="overflow-hidden rounded-xl border border-ui-border-base bg-ui-bg-subtle">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={design_preview.thumbnail_url}
                   alt={design_preview.name ?? "Design preview"}
@@ -78,7 +122,8 @@ export default async function GroupOrderJoinPage({
               </figure>
             ) : null}
             {product_preview?.thumbnail ? (
-              <figure className="overflow-hidden rounded-xl border border-[rgba(26,26,46,0.08)] bg-ui-bg-subtle">
+              <figure className="overflow-hidden rounded-xl border border-ui-border-base bg-ui-bg-subtle">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={product_preview.thumbnail}
                   alt={product_preview.title ?? "Garment"}
@@ -92,42 +137,49 @@ export default async function GroupOrderJoinPage({
           </div>
         ) : null}
 
-        <hr className="my-6 border-[rgba(26,26,46,0.08)]" />
+        <hr className="my-6 border-ui-border-base" />
 
         {group_order.status !== "open" ? (
-          <p className="text-sm text-rose-700">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
             This group order is no longer accepting submissions.
-          </p>
+          </div>
         ) : (
           <JoinForm token={token} sizeOptions={preferredSizes} />
         )}
-      </div>
+      </section>
 
       {participants.length > 0 ? (
-        <div className="mt-6 rounded-2xl border border-[rgba(26,26,46,0.1)] bg-white/95 p-6 shadow-[0_4px_40px_rgba(26,26,46,0.08)]">
-          <h2 className="text-base font-semibold tracking-tight text-[var(--brand-primary)]">
-            Who&apos;s already in ({participants.length})
+        <section className="mt-6 rounded-2xl border border-ui-border-base bg-white p-6 shadow-sm small:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
+            Crew &middot; {participants.length} joined
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-ui-fg-base">
+            Who&apos;s already in
           </h2>
-          <ul className="mt-3 divide-y divide-[rgba(26,26,46,0.06)]">
+          <ul className="mt-4 list-none divide-y divide-ui-border-base p-0">
             {participants.map((p) => (
-              <li key={p.id} className="py-2 flex items-center justify-between">
+              <li key={p.id} className="flex items-center justify-between py-3">
                 <div>
-                  <p className="text-sm font-semibold text-[var(--brand-primary)]">
+                  <p className="text-sm font-semibold text-ui-fg-base">
                     {p.name}
-                    {p.player_number ? ` · #${p.player_number}` : ""}
+                    {p.player_number ? (
+                      <span className="ml-1 text-ui-fg-muted">
+                        &middot; #{p.player_number}
+                      </span>
+                    ) : null}
                   </p>
                   {p.custom_notes ? (
                     <p className="text-xs text-ui-fg-subtle">{p.custom_notes}</p>
                   ) : null}
                 </div>
-                <span className="text-sm text-ui-fg-base">
+                <span className="text-sm font-medium text-ui-fg-base">
                   Size {p.size_label}
                   {p.quantity > 1 ? ` × ${p.quantity}` : ""}
                 </span>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       ) : null}
     </div>
   )

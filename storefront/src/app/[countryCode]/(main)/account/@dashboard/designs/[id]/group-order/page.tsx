@@ -29,20 +29,20 @@ export default async function StartGroupOrderPage({ params }: Props) {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-secondary)]">
+      <header className="mb-8 border-l-4 border-[var(--brand-secondary)] pl-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]/80">
           Group order
         </p>
-        <h1 className="text-2xl-semi">
+        <h1 className="mt-2 text-2xl font-semibold text-ui-fg-base small:text-3xl">
           Set up a group order from &quot;{design.name}&quot;
         </h1>
-        <p className="mt-2 text-base-regular">
-          We&apos;ll save this design as the base, then generate a public share
-          link your team can use to submit their sizes. When everyone&apos;s
-          in, you click <strong>Convert to cart</strong> and check out as a
-          single order.
+        <p className="mt-3 max-w-2xl text-sm text-ui-fg-subtle small:text-base">
+          We&apos;ll save this design as the base, then generate a public
+          share link your team can use to submit their sizes. When
+          everyone&apos;s in, click <strong className="font-semibold text-ui-fg-base">Convert to cart</strong>
+          {" "}and check out as a single order.
         </p>
-      </div>
+      </header>
       <CreateFromDesignForm
         countryCode={countryCode}
         design={{
