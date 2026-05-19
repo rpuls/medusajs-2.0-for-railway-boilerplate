@@ -531,6 +531,7 @@ Other notable patterns:
 - The AU "online apparel customizer + AS Colour blanks" market is genuinely crowded. Tee Junction, The T-Shirt Co, Print Bar, and SC Prints all play similar games. Differentiation has to come from operational quality (production stage tracker, DPI warning, supplier-API live stock, vectorization upsell) or from pricing — not just "we have a designer".
 - The POD / dropshipping segment (PrintPod, Create Apparel, OGO, global giants) is a distinct sub-market. Real participation needs Shopify-integration tooling we don't have today; partial entry needs at least an API/webhook story for incoming dropship orders.
 - The corporate-uniform segment (Garment Printing, Cartel's Industries) is largely a B2B sales motion. Won less on self-serve UX, more on account management. Our new `/industries/*` landing pages are the right inbound surface — but conversion will rely on outbound + relationship-building, not just on the page.
+- **Cartel is testing a warehousing / fulfillment service** ("Print, store, and ship your garments directly to your customers") — moving up the value chain into 3PL territory and competing now with print-on-demand fulfilment players. Running heavily in their Meta ads (May 2026). Could shift the competitive dynamic if it sticks. See §9 Observed Creative for detail.
 
 ---
 
@@ -624,6 +625,42 @@ If (1), the highest-ROI starting points based on what the market does:
 - **[Meta Ad Library](https://www.facebook.com/ads/library/)** — filter to Australia + search "the print bar", "tee junction", "the colour cartel". Shows every active creative they're running right now. Reverse-engineer the hooks that look like they're working (high-engagement videos, retargeting offers, B2B pivots).
 - **[Ahrefs free keyword generator](https://ahrefs.com/keyword-generator)** or [Ubersuggest](https://neilpatel.com/ubersuggest/) — drop in theprintbar.com / teejunction.com.au to see their top organic pages and estimated traffic. Map against ours to find content gaps.
 
+### Observed creative — Ad Library reconnaissance (May 2026)
+
+Operator-supplied screenshots of the Meta Ad Library show **20+ active variants** running on The Print Bar Australia and **15+ active variants** on The Colour Cartel as of May 2026. Both competitors are investing meaningfully in paid creative. Patterns extracted:
+
+**The Print Bar — recurring hooks**
+
+- *Same-day urgency* — "Need it today? Custom tees printed same day. No stress. No minimums. Design online. Pick up today." (4 ads use this creative). Overlay text: "Order by 11am for same day pickup".
+- *"3 simple steps" framing* — "You're only 3 steps away from putting your latest design on a t-shirt, tote, cap, or any item from our wide range of options. Place your next order today." Pairs the design tool's UX with a low-friction promise.
+- *Creator collaboration* — "Shelly turned her designs into a brand. You can too. Print, design, and create with The Print Bar." (featuring **@forcharlieboy** as the named creator partner). 3 ads use this creative. UGC-style.
+- *Identity / values play* — "For the Creatives, the Activists and the Dreamers. We're for getting your project off the ground. Say something on something and get your ideas seen today!" Brand-voice ad rather than product feature. 3 ads.
+- *Product breadth* — "Your design. Any of our products. Print or embroider on tees, hoodies, caps, mugs and more."
+- *Team / B2B variant* — "It's never been easier for teams to look good both on and off the field!" + sportswear creative.
+- *Payment options as overlay text* — "Afterpay & Paypal payments available" / "No minimum order* Paypal payments available" rendered onto the ad assets themselves.
+- *CTAs* — predominantly **Shop Now** (transactional / mid-funnel) with a smaller mix of Learn More.
+
+**The Colour Cartel — recurring hooks**
+
+- *Supplier-brand namedrop in ad copy* — "🚀 Fast, reliable, and made in Australia. ✊ AS Colour, Bisley, Hard Yakka & more." Appears in **almost every Cartel ad**. Validates the supplier-brand-as-SEO-asset thesis (Suggested Move #16) — same tactic works inside paid copy, not just on the brand landing page.
+- ***New service: Warehousing + fulfillment*** — "Tired of storing + shipping tees? We've officially launched warehousing + fulfillment here at Colour Cartel 🙌 Let us print your garments, store them and ship them directly to your customers!" Running across **8 active ads** (two variants × 6 + 2 use this creative). **Meaningful strategic shift — Cartel is moving into 3PL territory**, competing with print-on-demand fulfilment services as well as print competitors. Tracked in §7 Implications.
+- *Brand-owner / creator targeting* — "So you wanna start a clothing brand? Here's your sign. 👇 At Colour Cartel, we print for hundreds of Aussie brands - from bedroom startups to businesses doing 6-figures a month."
+- *Customer review showcase* — "Don't just take our word for it—our customers say it best! ⭐⭐⭐⭐⭐ Reading your reviews makes our day…" Carousel ad with review imagery. CTA: "Check out our reviews". Validates Suggested Move #21 (public review rating display).
+- *Quality positioning* — "Your brand is built on quality—your apparel should be too. Whether it's workwear, merch, or uniforms, we deliver premium prints and embroidery that stand out and last." Used across 5-6 ads. Premium framing, not price.
+- *"Be A PRO with Colour Cartel"* — branding hook paired with "Save up to 50% plus free sample when you purchase in bulk".
+- *Workwear vertical* — "Work gear looking a bit tired? We've got you covered. Custom printed apparel, delivered in under 15 business days — no matter how big your order." Direct play at the trades segment.
+- *CTAs* — predominantly **Learn More** (top/mid-funnel consideration) rather than Shop Now. Suggests Cartel is running awareness / consideration creative while Print Bar leans further down-funnel.
+
+**Strategic takeaways**
+
+1. **Cartel's warehousing / fulfillment launch is the most important new datapoint** here. They're moving up the value chain into 3PL territory — competing now with print-on-demand fulfilment services like Printful / Printify (also see §7), as well as with printing competitors. Worth tracking.
+2. **Both competitors run 15-20+ active creative variants.** Starting paid at parity means producing comparable creative volume — not one or two test ads. Plan for a sustained creative pipeline.
+3. **Supplier-brand namedrop works in paid too.** Cartel's "AS Colour, Bisley, Hard Yakka & more" line is in nearly every ad. We're an integrated AS Colour distributor with live-stock — using "AS Colour custom printing" directly in our ad headlines is tested-and-running in this market (extends Suggested Move #16 from SEO into paid).
+4. **"3 simple steps" framing is a transferable hook for our customizer flow.** We already deliver that UX (PDP → side panel → designer → cart); the ad just needs to say so.
+5. **Creator-collaboration UGC is the highest-volume creative format in this category.** Both competitors use it (Print Bar with @forcharlieboy, Cartel with brand-owner testimonials). Identifying one Aussie micro-influencer to partner with would unlock this format for us cheaply.
+6. **CTA mix tells you funnel stage.** Print Bar = Shop Now (conversion), Cartel = Learn More (consideration). We can pick which funnel stage to lead with depending on the campaign goal — both are valid.
+7. **Payment options as overlay text on the ad asset itself** (Print Bar's "Afterpay & Paypal payments available") is a small but free trust-signal tactic. Effortless if we add BNPL (Suggested Move #18).
+
 ---
 
 ## 10. Caveats & method notes
@@ -648,6 +685,8 @@ If (1), the highest-ROI starting points based on what the market does:
 - **Pull a Meta Ad Library snapshot** for The Print Bar / Tee Junction / Colour Cartel / Create Apparel — capture what creative is currently active and what hooks they're testing. Worth doing monthly.
 - **Run Tee Junction and The T-Shirt Co URLs through Ahrefs** (free or paid) to see their highest-traffic organic pages — map against ours to find content gaps.
 - **Compare directly against Tee Junction and The T-Shirt Co** on pricing — they're closer mirrors of our designer-tool play than the four we deep-dived on, but their per-product pages may be similarly opaque without manual probing.
+- **Track Cartel's warehousing / fulfillment service.** Currently running across 8 active Meta ads (May 2026). If it gets traction, the AU competitive landscape gains a hybrid printer-plus-3PL player. Worth monthly Ad Library checks to see if creative volume holds, and a once-quarterly look at their landing page for that service to track positioning.
+- **Identify an Aussie micro-influencer for a creator-collaboration ad.** Both Print Bar (@forcharlieboy) and Cartel (brand-owner testimonials) run this format heavily; we don't. Even one paid creator partnership unlocks a tested-and-working ad format for us.
 - **Pull our actual landed costs** from the AS Colour API and re-run every cell in this review.
 - **Side-by-side customizer test sessions**: place an identical order through SC Prints, Cartel, Print Bar, PrintPod, Create Apparel — capture screenshots and pain points.
 - **Build the static-pricing-matrix PDP component** — the highest-leverage smallest-implementation move on the suggested-moves list.
