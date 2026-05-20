@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import net from "node:net"
+import tls from "node:tls"
 import { Client as PgClient } from "pg"
 
 import {
@@ -140,10 +141,13 @@ const checkRedis = async (): Promise<Check> => {
   }
   let host: string
   let port: number
+  let useTls: boolean
   try {
     const u = new URL(REDIS_URL)
     host = u.hostname
     port = u.port ? Number(u.port) : 6379
+    // `rediss://` (TLS) — Upstash and other managed Redis services require this.
+    useTls = u.protocol === "rediss:"
   } catch (err: any) {
     return {
       service: "Redis",
@@ -154,7 +158,9 @@ const checkRedis = async (): Promise<Check> => {
   }
   const start = Date.now()
   return new Promise<Check>((resolve) => {
-    const socket = new net.Socket()
+    const socket: net.Socket = useTls
+      ? tls.connect({ host, port, servername: host })
+      : new net.Socket()
     let settled = false
     const finish = (c: Check) => {
       if (settled) return
@@ -162,13 +168,18 @@ const checkRedis = async (): Promise<Check> => {
       socket.destroy()
       resolve(c)
     }
-    socket.setTimeout(TIMEOUT_MS)
-    socket.once("connect", () => {
-      // Send PING; expect "+PONG\r\n" back. On TLS or AUTH-required servers
-      // the server may close the connection instead — treat any response
-      // bytes as reachable.
+    const sendPing = () => {
+      // Send PING; expect "+PONG\r\n" back. With AUTH required, server will
+      // reply "-NOAUTH" which we treat as reachable.
       socket.write("*1\r\n$4\r\nPING\r\n")
-    })
+    }
+    socket.setTimeout(TIMEOUT_MS)
+    if (useTls) {
+      // TLS socket — handshake completes on `secureConnect`, not `connect`.
+      ;(socket as tls.TLSSocket).once("secureConnect", sendPing)
+    } else {
+      socket.once("connect", sendPing)
+    }
     socket.once("data", (buf) => {
       const reply = buf.toString("utf8")
       const latency = Date.now() - start
@@ -202,7 +213,9 @@ const checkRedis = async (): Promise<Check> => {
         detail: err.message,
       })
     })
-    socket.connect(port, host)
+    if (!useTls) {
+      socket.connect(port, host)
+    }
   })
 }
 
