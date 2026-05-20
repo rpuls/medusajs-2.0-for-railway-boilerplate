@@ -220,13 +220,15 @@ const checkRedis = async (): Promise<Check> => {
 }
 
 export async function GET(_req: MedusaRequest, res: MedusaResponse) {
-  // MinIO health URL: bucket existence is a cheap probe but uses the
-  // SDK; for HTTP-only reachability we just hit the root endpoint.
+  // S3-compatible storage health URL: just hit the bucket root. Real MinIO
+  // serves `/minio/health/live` but Cloudflare R2 (and other S3 hosts)
+  // doesn't implement that path — it returns 400. We treat any HTTP
+  // response as reachable because the alternative (the SDK probe) requires
+  // signed-request plumbing we don't need just for a liveness check.
   let minioUrl: string | null = null
   if (MINIO_ENDPOINT) {
-    minioUrl = MINIO_ENDPOINT.startsWith("http")
-      ? `${MINIO_ENDPOINT.replace(/\/$/, "")}/minio/health/live`
-      : `https://${MINIO_ENDPOINT.replace(/\/$/, "")}/minio/health/live`
+    const stripped = MINIO_ENDPOINT.replace(/^https?:\/\//, "").replace(/\/$/, "")
+    minioUrl = `https://${stripped}/`
   }
 
   const paypalHost = PAYPAL_IS_SANDBOX
@@ -261,17 +263,20 @@ export async function GET(_req: MedusaRequest, res: MedusaResponse) {
     }),
     ping("ShipStation", {
       configured: Boolean(SHIPSTATION_API_KEY),
-      // /v2/environment/account is a small auth-gated payload — much
-      // faster than /v2/carriers which returns every carrier service.
-      url: "https://api.shipstation.com/v2/environment/account",
+      // /v2/carriers is the smallest auth-gated payload that's documented
+      // and stable. /v2/environment/account doesn't exist in the v2 API and
+      // returns 404.
+      url: "https://api.shipstation.com/v2/carriers",
       headers: SHIPSTATION_API_KEY
         ? { "API-Key": SHIPSTATION_API_KEY }
         : undefined,
     }),
-    ping("MinIO", {
+    ping("Object storage", {
       configured: Boolean(MINIO_ENDPOINT),
       url: minioUrl ?? undefined,
-      expectedOkStatuses: [200, 204, 403],
+      // R2 returns 400 on the unauth root; MinIO returns 403; both prove
+      // reachability. Accept the broad range so we don't false-alarm.
+      expectedOkStatuses: [200, 204, 400, 403],
     }),
     ping("AS Colour", {
       configured: Boolean(ASCOLOUR_SUBSCRIPTION_KEY),
