@@ -50,7 +50,30 @@ Always use the `.medusa/server` path on the server image — other forms fail. S
 
 ## Hosting (production)
 
-Backend: **Fly.io** (`sc-prints-backend`). Storefront: **Vercel** (`sc-prints.com.au`). DB: **DigitalOcean**. Media: **Cloudflare R2**. Railway is retired — see [Docs/HOSTING.md](Docs/HOSTING.md).
+Migrated off Railway in May 2026 after a multi-day Railway outage. The new stack is cheaper, Australian-resident, and split into single-purpose services. See [Docs/HOSTING.md](Docs/HOSTING.md) for the full migration playbook.
+
+| Service | Provider | Region | Address / app | Cost |
+| --- | --- | --- | --- | --- |
+| Backend (Medusa server + admin SPA) | Fly.io | Sydney (`syd`) | `sc-prints-backend.fly.dev` | shared-cpu-1x · 2GB · ~$5/mo |
+| Storefront (Next.js) | Vercel | global (Sydney edge) | `medusajs-2-0-for-railway-vercel.vercel.app` (custom domain TBD) | Hobby (free) |
+| Postgres 16 | DigitalOcean Managed Postgres | SYD1 | `sc-prints-db-do-user-37546044-0.i.db.ondigitalocean.com:25060` | ~$15/mo |
+| File storage (S3-compatible) | Cloudflare R2 | Oceania | bucket `sc-prints-media`, public dev URL `https://pub-4b98c1b8d55d4d9597ff5cfac6aa611a.r2.dev` | free tier |
+| Search index | self-hosted Meilisearch v1.10 | Fly.io Sydney | `sc-prints-search.fly.dev` (separate Fly app, see [meilisearch/fly.toml](meilisearch/fly.toml)) | shared-cpu-1x 512MB + 1GB volume · ~$3/mo |
+| Event bus + workflow engine + locking | Upstash Redis | Sydney (`ap-southeast-2`) | `super-fawn-131470.upstash.io` (`rediss://`, TLS-required) | free tier (10k cmd/day) |
+| Transactional email | Resend | — | sender domain `scprints.com.au` (verified), default From `orders@scprints.com.au` | free tier |
+| Payments | Stripe (test mode + Payment Links) | — | two webhook endpoints: `/hooks/payment/stripe_stripe` and `/hooks/stripe-payment-link` | per-transaction |
+| Analytics | PostHog Cloud US, GA4, Google Search Console | — | reads via service account (DWD impersonates `info@scprints.com.au`) | free / per-event |
+
+**Deploy pipeline:**
+- **Backend**: `cd backend && fly deploy --app sc-prints-backend` from a clean working tree. The Dockerfile bakes `BACKEND_PUBLIC_URL=https://sc-prints-backend.fly.dev` into the admin SPA at build time so the SPA hits the right backend from the browser. fly.toml's `release_command` runs `db:migrate` + `db:sync-links` once per deploy (not on every boot). `min_machines_running = 1` keeps it warm.
+- **Storefront**: `git push origin master` — Vercel auto-deploys.
+- **Meilisearch**: `cd meilisearch && fly deploy --app sc-prints-search`. Image-only deploy (no Dockerfile), pulls `getmeili/meilisearch:v1.10`.
+
+**Secrets:** stored as Fly secrets on each app. Never committed. See [Docs/HOSTING.md](Docs/HOSTING.md) for the full list + how to rotate. Rotate by `fly secrets set --app <app> KEY=value` — secret change auto-triggers a rolling redeploy.
+
+**Constants resolution** ([backend/src/lib/constants.ts](backend/src/lib/constants.ts)):
+- `BACKEND_URL`: `process.env.BACKEND_PUBLIC_URL` → `https://${FLY_APP_NAME}.fly.dev` (auto-detected on Fly) → `http://localhost:9000`.
+- `NODE_TLS_REJECT_UNAUTHORIZED=0` is set on the Fly machine because DigitalOcean Postgres uses a self-signed cert. Keep this constrained to the backend secret, not anywhere else.
 
 ## Repo layout
 
@@ -719,13 +742,33 @@ Every reminder/digest job is gated behind an `*_ENABLED` flag so accidental boot
 | `SHIPSTATION_PACKAGE_LENGTH_CM` / `_WIDTH_CM` / `_HEIGHT_CM` | Default package dimensions for rate quotes. | unset |
 | `SHIPPING_PACKAGING_OVERHEAD_GRAMS` | Added to item weight for accurate rates. | sensible default |
 
-#### File storage (MinIO)
+#### File storage (S3-compatible)
+
+The MinIO module name is historical — we run against Cloudflare R2 in production. The MinIO SDK speaks the S3 API so it works against R2 with no code change.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `MINIO_ENDPOINT` | MinIO host (e.g. `minio.example.com:9000` or `https://minio.example.com`). Protocol parsed for port; default 443 for https, 80 for http. | unset — file uploads broken |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Credentials. | unset |
-| `MINIO_BUCKET` | Bucket name; auto-set to public-read on first use. | `medusa-media` |
+| `MINIO_ENDPOINT` | S3 host. For R2: `<account-id>.r2.cloudflarestorage.com` (no protocol). For self-hosted MinIO: `minio.example.com:9000` or `https://minio.example.com`. Protocol parsed for port; default 443 for https, 80 for http. | unset — file uploads broken |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Credentials. For R2: from the bucket's API token. | unset |
+| `MINIO_BUCKET` | Bucket name. R2 buckets don't accept the MinIO `setBucketPolicy` call; the service catches that error gracefully. | `medusa-media` |
+| `MINIO_PUBLIC_URL` | Public URL used in generated file URLs. Without it, URLs point at the (private) S3 endpoint and don't load in the browser. For R2: the bucket's Public Development URL, e.g. `https://pub-<hash>.r2.dev`. | unset — falls back to S3 endpoint |
+
+#### Search (Meilisearch)
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `MEILISEARCH_HOST` | Base URL of the Meilisearch instance. Production: self-hosted on Fly at `https://sc-prints-search.fly.dev`. | unset — search plugin doesn't load, search bar broken |
+| `MEILISEARCH_ADMIN_KEY` | Master key (or scoped admin key). Required for the plugin to push product updates. | unset |
+
+The plugin (`@rokmohar/medusa-plugin-meilisearch` in [backend/medusa-config.js](backend/medusa-config.js)) auto-indexes products on backend boot and on `product.created`/`product.updated`/`product.deleted` events. To force a full reindex after schema changes, restart the backend or call the plugin's reindex endpoint from admin.
+
+#### Redis (event bus + workflow engine + locking)
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `REDIS_URL` | Redis connection URL. **Must use `rediss://` (TLS) for Upstash and other managed providers.** Production: Upstash Sydney. | unset — Medusa falls back to in-process event bus + in-memory workflow engine + in-memory locking (only works on one machine, loses events on restart, prints warning on every boot) |
+
+The first connection from a cold Fly machine to Upstash can `ETIMEDOUT` a few times before succeeding (Upstash free-tier cold start). ioredis recovers and the warnings disappear after ~30s. The system-health check (`/admin/reports/system-health`) uses `tls.connect()` for `rediss://` URLs — raw TCP would be silently rejected.
 
 All other env vars (Medusa core, AS Colour, Stripe, etc.) are documented in [backend/src/lib/constants.ts](backend/src/lib/constants.ts).
 
@@ -910,19 +953,19 @@ AS Colour has no webhooks — every 15 minutes a job polls non-terminal AS Colou
 ### Aussie Pacific dropship dashboard
 See "Aussie Pacific API importer" section above. Dropship dashboard at `/app/dropship/aussie-pacific` (route at [backend/src/admin/routes/dropship/aussie-pacific/page.tsx](backend/src/admin/routes/dropship/aussie-pacific/page.tsx); the parent `/app/dropship` lives in [backend/src/admin/routes/dropship/page.tsx](backend/src/admin/routes/dropship/page.tsx)).
 
-## File storage (MinIO module)
+## File storage (MinIO module → Cloudflare R2)
 
-S3-compatible self-hosted file storage. Registered as Medusa's `FileProviderService`; all images and customer-uploaded artwork go through it.
+Module name is historical — the underlying MinIO SDK speaks S3 so the same code talks to Cloudflare R2 in production. Registered as Medusa's `FileProviderService`; all images and customer-uploaded artwork go through it.
 
 | Component | Path |
 | --- | --- |
 | Module + service | [backend/src/modules/minio-file/](backend/src/modules/minio-file/) |
 
-**Env**: `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` (default `medusa-media`).
+**Env**: `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` (default `medusa-media`), `MINIO_PUBLIC_URL` (R2's Public Development URL or a CDN domain — used in generated file URLs so files load in the browser).
 
-**Gotcha**: endpoint parsing strips protocol and extracts port; HTTPS implies 443, HTTP implies 80. Bucket policy auto-set to public-read on first use. Files keyed with ULID + extension; original filename in metadata.
+**Gotcha**: endpoint parsing strips protocol and extracts port; HTTPS implies 443, HTTP implies 80. The service calls `setBucketPolicy` on init — R2 returns "PutBucketPolicy not implemented", caught and logged as a warning, not fatal. Files keyed with ULID + extension; original filename in metadata.
 
-**Retention warning** (re-stated from Operational notes): if MinIO lifecycle policies GC `customer_original_files` URLs, re-order will display but add-to-cart will fail to re-render print PNGs. Treat these as indefinite retention.
+**Retention warning** (re-stated from Operational notes): if R2 lifecycle policies GC `customer_original_files` URLs, re-order will display but add-to-cart will fail to re-render print PNGs. Treat these as indefinite retention.
 
 ## Email notifications (Resend)
 
