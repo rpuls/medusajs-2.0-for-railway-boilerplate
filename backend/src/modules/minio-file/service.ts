@@ -21,6 +21,7 @@ interface MinioServiceConfig {
   accessKey: string
   secretKey: string
   bucket?: string
+  publicUrl?: string
 }
 
 export interface MinioFileProviderOptions {
@@ -28,6 +29,7 @@ export interface MinioFileProviderOptions {
   accessKey: string
   secretKey: string
   bucket?: string
+  publicUrl?: string
 }
 
 const DEFAULT_BUCKET = 'medusa-media'
@@ -77,7 +79,8 @@ class MinioFileProviderService extends AbstractFileProviderService {
       endPoint: endPoint,
       accessKey: options.accessKey,
       secretKey: options.secretKey,
-      bucket: options.bucket
+      bucket: options.bucket,
+      publicUrl: options.publicUrl?.replace(/\/$/, ''),
     }
 
     // Use provided bucket or default
@@ -222,9 +225,11 @@ class MinioFileProviderService extends AbstractFileProviderService {
         }
       )
 
-      // Generate URL using the endpoint and bucket with correct protocol
+      // Use publicUrl (CDN/custom domain) if configured, otherwise derive from S3 endpoint
       const protocol = this.useSSL ? 'https' : 'http'
-      const url = `${protocol}://${this.config_.endPoint}/${this.bucket}/${fileKey}`
+      const url = this.config_.publicUrl
+        ? `${this.config_.publicUrl}/${fileKey}`
+        : `${protocol}://${this.config_.endPoint}/${this.bucket}/${fileKey}`
 
       this.logger_.info(`Successfully uploaded file ${fileKey} to MinIO bucket ${this.bucket}`)
 

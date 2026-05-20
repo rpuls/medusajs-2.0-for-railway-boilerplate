@@ -52,9 +52,6 @@ importers:
       '@medusajs/medusa':
         specifier: 2.14.2
         version: 2.14.2(@medusajs/admin-sdk@2.14.2)(@medusajs/cli@2.14.2(@types/node@20.19.25))(@medusajs/framework@2.14.2(@medusajs/cli@2.14.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@4.4.3))(@medusajs/icons@2.14.2(react@18.3.1))(@medusajs/test-utils@2.14.2)(@medusajs/ui@4.1.9(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@swc/core@1.5.7(@swc/helpers@0.5.17))(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(awilix@8.0.1)(picomatch@4.0.3)(posthog-node@5.33.4(rxjs@7.8.2))(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(yaml@2.8.0)
-      '@medusajs/notification-sendgrid':
-        specifier: 2.14.2
-        version: 2.14.2(@medusajs/framework@2.14.2(@medusajs/cli@2.14.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@4.4.3))
       '@medusajs/payment-stripe':
         specifier: 2.14.2
         version: 2.14.2(@medusajs/framework@2.14.2(@medusajs/cli@2.14.2(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@4.4.3))

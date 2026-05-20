@@ -8,18 +8,15 @@ import type {
   MedusaContainer,
 } from "@medusajs/framework/types"
 
-import { BACKEND_URL, SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
+import { SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
 import { tagUrl } from "../../lib/email-utm"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
-import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
+import { buildUnsubscribeUrl } from "../../lib/unsubscribe-token"
 import {
   buildReorderCandidates,
   type ReorderCandidate,
 } from "./build-candidates"
-
-const buildUnsubscribeUrl = (email: string): string =>
-  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, "reorder_reminder")}`
 
 const STOREFRONT_URL = process.env.STOREFRONT_URL?.replace(/\/$/, "")
 const STOREFRONT_DEFAULT_COUNTRY_CODE =
@@ -122,7 +119,7 @@ export async function sendReorderReminders(
       content: "secondary_cta",
     })
 
-    const unsubscribeUrl = buildUnsubscribeUrl(c.email)
+    const unsubscribeUrl = buildUnsubscribeUrl(c.email, "reorder_reminder")
     try {
       await notificationModuleService.createNotifications({
         to: c.email,

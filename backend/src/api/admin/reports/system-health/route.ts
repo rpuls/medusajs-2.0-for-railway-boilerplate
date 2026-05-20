@@ -17,7 +17,6 @@ import {
   POSTHOG_PROJECT_ID,
   REDIS_URL,
   RESEND_API_KEY,
-  SENDGRID_API_KEY,
   SHIPSTATION_API_KEY,
   STRIPE_API_KEY,
 } from "../../../../lib/constants"
@@ -245,13 +244,6 @@ export async function GET(_req: MedusaRequest, res: MedusaResponse) {
       url: "https://api.resend.com/domains",
       headers: RESEND_API_KEY
         ? { Authorization: `Bearer ${RESEND_API_KEY}` }
-        : undefined,
-    }),
-    ping("SendGrid", {
-      configured: Boolean(SENDGRID_API_KEY),
-      url: "https://api.sendgrid.com/v3/scopes",
-      headers: SENDGRID_API_KEY
-        ? { Authorization: `Bearer ${SENDGRID_API_KEY}` }
         : undefined,
     }),
     ping("ShipStation", {

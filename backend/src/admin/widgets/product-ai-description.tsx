@@ -17,7 +17,7 @@ import { withWidgetBoundary } from "../components/widget-error-boundary"
 type Draft = { label: string; body: string }
 
 const NOT_CONFIGURED_HINT =
-  "AI provider not configured. Set AI_PROVIDER + the matching API key (OPENAI_API_KEY or ANTHROPIC_API_KEY) on Railway."
+  "AI provider not configured. Set AI_PROVIDER + the matching API key (OPENAI_API_KEY or ANTHROPIC_API_KEY) on Fly (backend secrets)."
 
 const ProductAiDescriptionWidget = ({
   data: product,

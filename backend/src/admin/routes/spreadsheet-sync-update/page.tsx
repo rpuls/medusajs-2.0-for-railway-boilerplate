@@ -276,7 +276,7 @@ const SpreadsheetSyncUpdatePage = () => {
         return (
           `${msg} — usually the browser lost the HTTP response (offline blip, wrong API base URL, or ` +
           `the server/proxy stopped the request while importing remote images). Image/thumbnail sync uses smaller batches; ` +
-          `if this persists, increase Railway/nginx timeouts or sync fewer products at once.`
+          `if this persists, increase proxy timeouts (Fly/nginx) or sync fewer products at once.`
         )
       }
       return msg

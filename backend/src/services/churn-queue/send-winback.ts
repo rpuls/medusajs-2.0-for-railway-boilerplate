@@ -8,15 +8,12 @@ import type {
   MedusaContainer,
 } from "@medusajs/framework/types"
 
-import { BACKEND_URL, SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
+import { SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
 import { tagUrl } from "../../lib/email-utm"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
-import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
+import { buildUnsubscribeUrl } from "../../lib/unsubscribe-token"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 import { buildChurnQueue, type ChurnCandidate } from "./build-queue"
-
-const buildUnsubscribeUrl = (email: string): string =>
-  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, "winback")}`
 
 const STOREFRONT_URL = process.env.STOREFRONT_URL?.replace(/\/$/, "")
 const STOREFRONT_DEFAULT_COUNTRY_CODE =
@@ -104,7 +101,7 @@ export async function sendWinbackEmails(
       template_kind: "winback",
     })
     if (!gate.ok) continue
-    const unsubscribeUrl = buildUnsubscribeUrl(c.email)
+    const unsubscribeUrl = buildUnsubscribeUrl(c.email, "winback")
     try {
       await notificationModuleService.createNotifications({
         to: c.email,

@@ -13,8 +13,6 @@ import {
   REDIS_URL,
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
-  SENDGRID_API_KEY,
-  SENDGRID_FROM_EMAIL,
   SHOULD_DISABLE_ADMIN,
   STORE_CORS,
   STRIPE_API_KEY,
@@ -53,6 +51,7 @@ import {
   MINIO_ACCESS_KEY,
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
+  MINIO_PUBLIC_URL,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
@@ -109,6 +108,7 @@ const medusaConfig = {
                   accessKey: MINIO_ACCESS_KEY,
                   secretKey: MINIO_SECRET_KEY,
                   bucket: MINIO_BUCKET,
+                  publicUrl: MINIO_PUBLIC_URL,
                 },
               }]
             : [{
@@ -142,35 +142,21 @@ const medusaConfig = {
         ]
       : []),
 
-    // Only one email provider is registered for the 'email' channel at a time.
-    // Resend takes priority; SendGrid is the fallback. Registering both would
-    // cause every notification to be sent twice (Medusa delivers to all
-    // providers registered for a channel).
-    ...(RESEND_API_KEY && RESEND_FROM_EMAIL || SENDGRID_API_KEY && SENDGRID_FROM_EMAIL
+    ...(RESEND_API_KEY && RESEND_FROM_EMAIL
       ? [{
           key: Modules.NOTIFICATION,
           resolve: '@medusajs/notification',
           options: {
             providers: [
-              ...(RESEND_API_KEY && RESEND_FROM_EMAIL
-                ? [{
-                    resolve: './src/modules/email-notifications',
-                    id: 'resend',
-                    options: {
-                      channels: ['email'],
-                      api_key: RESEND_API_KEY,
-                      from: RESEND_FROM_EMAIL,
-                    },
-                  }]
-                : [{
-                    resolve: '@medusajs/notification-sendgrid',
-                    id: 'sendgrid',
-                    options: {
-                      channels: ['email'],
-                      api_key: SENDGRID_API_KEY,
-                      from: SENDGRID_FROM_EMAIL,
-                    },
-                  }]),
+              {
+                resolve: './src/modules/email-notifications',
+                id: 'resend',
+                options: {
+                  channels: ['email'],
+                  api_key: RESEND_API_KEY,
+                  from: RESEND_FROM_EMAIL,
+                },
+              },
             ],
           },
         }]

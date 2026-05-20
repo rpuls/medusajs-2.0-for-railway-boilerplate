@@ -37,16 +37,20 @@ pnpm test-e2e             # Playwright E2E tests
 pnpm check-production-stage-sync   # validate backend & storefront production-stage files are in sync
 ```
 
-### One-off backend scripts (run via Railway exec or local medusa exec)
+### One-off backend scripts (run via Fly SSH or local medusa exec)
 
 ```bash
 # Local
 cd backend && npx medusa exec src/scripts/import-as-colour-from-api.ts
-# Railway
+# Fly.io production (fly ssh console --app sc-prints-backend)
 cd /app/.medusa/server && npx medusa exec src/scripts/<name>.js
 ```
 
-Always use the `.medusa/server` path on Railway — other forms fail.
+Always use the `.medusa/server` path on the server image — other forms fail. See [Docs/HOSTING.md](Docs/HOSTING.md) for the full stack (Fly + DigitalOcean + Cloudflare R2 + Vercel).
+
+## Hosting (production)
+
+Backend: **Fly.io** (`sc-prints-backend`). Storefront: **Vercel** (`sc-prints.com.au`). DB: **DigitalOcean**. Media: **Cloudflare R2**. Railway is retired — see [Docs/HOSTING.md](Docs/HOSTING.md).
 
 ## Repo layout
 
@@ -1380,8 +1384,8 @@ The original `init-backend` script (from `medusajs-launch-utils`) only seeds + m
 
 **During / after deploy:**
 
-- The backend boot will run pending migrations automatically (per the `start` script). Watch the Railway log for `Performing migration` lines.
-- If a migration fails, the boot fails and Railway will retry. Decide quickly whether to roll back the deploy or fix forward — every retry holds the migration lock briefly and blocks workers.
+- The backend boot will run pending migrations automatically (per the `start` script). Watch Fly logs (`fly logs --app sc-prints-backend`) for `Performing migration` lines.
+- If a migration fails, the boot fails and Fly will retry. Decide quickly whether to roll back the deploy or fix forward — every retry holds the migration lock briefly and blocks workers.
 - Smoke-test the admin (products list, product detail, "edit sales channels" modal) and a sample PDP on the storefront before declaring the deploy healthy.
 
 ## Server / client component pattern (App Router)

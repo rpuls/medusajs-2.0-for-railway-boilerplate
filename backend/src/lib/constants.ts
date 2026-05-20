@@ -9,9 +9,14 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
  */
 export const IS_DEV = process.env.NODE_ENV === 'development'
 
-export const BACKEND_URL = 
-  process.env.BACKEND_PUBLIC_URL ?? 
-  process.env.RAILWAY_PUBLIC_DOMAIN_VALUE ?? 
+const flyBackendUrl =
+  process.env.FLY_APP_NAME != null && process.env.FLY_APP_NAME !== ''
+    ? `https://${process.env.FLY_APP_NAME}.fly.dev`
+    : undefined
+
+export const BACKEND_URL =
+  process.env.BACKEND_PUBLIC_URL ??
+  flyBackendUrl ??
   'http://localhost:9000'
 
 // Use assertValue for critical infrastructure variables to fail fast if missing
@@ -125,16 +130,15 @@ export const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT
 export const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY
 export const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY
 export const MINIO_BUCKET = process.env.MINIO_BUCKET
+export const MINIO_PUBLIC_URL = process.env.MINIO_PUBLIC_URL
 
 export const RESEND_API_KEY = process.env.RESEND_API_KEY
 export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || process.env.RESEND_FROM
-export const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
-export const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || process.env.SENDGRID_FROM
 export const CONTACT_NOTIFICATION_EMAIL = process.env.CONTACT_NOTIFICATION_EMAIL
 
 /**
  * Comma-separated inboxes for internal "new order" alerts. Falls back to CONTACT_NOTIFICATION_EMAIL.
- * Requires notification module (Resend or SendGrid) like contact emails.
+ * Requires Resend notification module like contact emails.
  */
 export const ORDER_NOTIFICATION_EMAIL = process.env.ORDER_NOTIFICATION_EMAIL
 
@@ -144,7 +148,6 @@ export const ORDER_NOTIFICATION_EMAIL = process.env.ORDER_NOTIFICATION_EMAIL
 export const SUPPORT_REPLY_TO_EMAIL =
   process.env.SUPPORT_REPLY_TO_EMAIL?.trim() ||
   RESEND_FROM_EMAIL?.trim() ||
-  SENDGRID_FROM_EMAIL?.trim() ||
   undefined
 
 /**

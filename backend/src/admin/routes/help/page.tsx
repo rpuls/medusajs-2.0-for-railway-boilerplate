@@ -462,7 +462,7 @@ const SECTIONS: Section[] = [
 
         <Text className="mt-3 font-semibold">Activation checklist</Text>
         <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
-          <li>Set <code>UNSUBSCRIBE_LINK_SECRET</code> in Railway (must match across deploys or in-flight links break).</li>
+          <li>Set <code>UNSUBSCRIBE_LINK_SECRET</code> on Fly (must match across deploys or in-flight links break).</li>
           <li>Set <code>MARKETING_PREFERENCE_CENTER_URL</code> to your storefront preference page (e.g. <code>${'{STOREFRONT_URL}'}/email-preferences</code>).</li>
           <li>Flip <code>EMAIL_SUPPRESSION_TABLE_ENABLED=true</code> once the migration has applied — turns the suppression check on. Until you flip it the helper falls back to consent-only checks.</li>
         </ul>
@@ -529,7 +529,7 @@ const SECTIONS: Section[] = [
           <li><strong>What we pull</strong> — initial import via <code>src/scripts/import-as-colour-from-api.ts</code> creates one Medusa product per style and links it to the AS Colour Brand. Hourly stock delta at <em>AS Colour Warehouse</em> uses the <code>updatedAt:min</code> filter so we only pull what's changed. Pricelist drives <code>variant.metadata.cost_price_ex_gst_minor</code>, which feeds the public quantity ladder and the tier-pricing system.</li>
           <li><strong>What we push</strong> — dropship orders via <code>POST /v1/orders</code>. Trigger from the order detail page → <em>AS Colour dropship</em> widget; backend posts shipping address + SKU lines and stamps AS Colour's response on order metadata.</li>
           <li><strong>Quirk: discontinued styles</strong> — AS Colour appends <code>S</code> to a styleCode when it's superseded. The importer skips these by default. Set <code>IMPORT_INCLUDE_DISCONTINUED=1</code> only for one-off historical imports.</li>
-          <li><strong>Where to look when it breaks</strong> — Railway logs for the <code>sync-ascolour-inventory</code> job; the dropship widget surfaces any send-to-AS-Colour error inline.</li>
+          <li><strong>Where to look when it breaks</strong> — <code>fly logs --app sc-prints-backend</code> for the <code>sync-ascolour-inventory</code> job; the dropship widget surfaces any send-to-AS-Colour error inline.</li>
         </ul>
 
         <Text className="mt-4 font-semibold">FashionBiz</Text>
@@ -559,8 +559,8 @@ const SECTIONS: Section[] = [
 
         <Text className="mt-4 font-semibold">Common ops</Text>
         <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
-          <li><strong>Where do I check a sync ran?</strong> Railway logs filtered to <code>sync-ascolour-inventory</code> / <code>sync-fashionbiz-inventory</code> / <code>sync-aussie-pacific-inventory</code>. Each job logs the SKU count it touched.</li>
-          <li><strong>How do I import a new supplier brand or backfill?</strong> Run the importer on Railway: <code>cd /app/.medusa/server &amp;&amp; npx medusa exec src/scripts/import-&lt;supplier&gt;-from-api.js</code>. Locally, swap <code>.js</code> for <code>.ts</code> and use the <code>backend</code> working directory.</li>
+          <li><strong>Where do I check a sync ran?</strong> Fly logs filtered to <code>sync-ascolour-inventory</code> / <code>sync-fashionbiz-inventory</code> / <code>sync-aussie-pacific-inventory</code>. Each job logs the SKU count it touched.</li>
+          <li><strong>How do I import a new supplier brand or backfill?</strong> <code>fly ssh console --app sc-prints-backend</code>, then <code>cd /app/.medusa/server &amp;&amp; npx medusa exec src/scripts/import-&lt;supplier&gt;-from-api.js</code>. Locally, swap <code>.js</code> for <code>.ts</code> and use the <code>backend</code> working directory.</li>
           <li><strong>How do I confirm a supplier is configured?</strong> Each supplier's module only registers when its API token env var is set (<code>ASCOLOUR_SUBSCRIPTION_KEY</code>, <code>FASHIONBIZ_API_TOKEN</code>, <code>AUSSIE_PACIFIC_API_TOKEN</code>). If the token is missing the cron is a silent no-op rather than an error.</li>
           <li><strong>A supplier's portal shows a price that doesn't match what we billed against</strong> — check the cost-adjustment env var (<code>FASHIONBIZ_COST_ADJUSTMENT</code>, <code>AUSSIE_PACIFIC_COST_ADJUSTMENT</code>) and the <code>variant.metadata.cost_adjustment</code> field on a recent import. If the multiplier is wrong, raising it and re-importing corrects the cost cascade.</li>
         </ul>

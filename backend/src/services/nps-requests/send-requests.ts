@@ -16,12 +16,8 @@ import {
 import { tagUrl } from "../../lib/email-utm"
 import { getPostHog } from "../../lib/posthog"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
-import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
-import { BACKEND_URL } from "../../lib/constants"
+import { buildUnsubscribeUrl } from "../../lib/unsubscribe-token"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
-
-const buildUnsubscribeUrl = (email: string): string =>
-  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, "nps_request")}`
 
 import { buildNpsCandidates } from "./build-candidates"
 import { signNpsRating } from "./sign"
@@ -104,7 +100,7 @@ export async function sendNpsRequests(
       continue
     }
 
-    const unsubscribeUrl = buildUnsubscribeUrl(c.email)
+    const unsubscribeUrl = buildUnsubscribeUrl(c.email, "nps_request")
     try {
       const ratingUrls = [1, 2, 3, 4, 5].map((score) => ({
         score,

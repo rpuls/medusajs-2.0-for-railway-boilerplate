@@ -1,0 +1,47 @@
+---
+description: Production hosting stack — Fly.io, DigitalOcean, Cloudflare, Vercel (Railway is retired)
+alwaysApply: true
+---
+
+# Hosting environment (SC Prints)
+
+**Railway is no longer used.** Do not suggest Railway deploys, `railway run`, or `RAILWAY_*` env vars.
+
+## Production stack
+
+| Layer | Provider | URL / resource |
+| --- | --- | --- |
+| Medusa API + Admin | **Fly.io** | `https://sc-prints-backend.fly.dev` (app: `sc-prints-backend`, region: `syd`) |
+| Storefront | **Vercel** | `https://sc-prints.com.au` (project may still be named `medusajs-2-0-for-railway-vercel` on Vercel) |
+| Postgres | **DigitalOcean** | `DATABASE_URL` on Fly secrets |
+| Object storage | **Cloudflare R2** | S3-compatible via `MINIO_*` env (bucket `sc-prints-media`) |
+| Redis | **Required in prod** | Set `REDIS_URL` on Fly — without it Medusa uses fake Redis + in-memory sessions |
+
+## Commands agents should use
+
+```bash
+# Backend logs / deploy (Fly)
+fly logs --app sc-prints-backend
+fly deploy --app sc-prints-backend   # from backend/
+
+# One-off scripts on production (Fly SSH — not Railway)
+fly ssh console --app sc-prints-backend
+cd /app/.medusa/server && npx medusa exec src/scripts/<name>.js
+
+# Local one-off scripts
+cd backend && npx medusa exec src/scripts/<name>.ts
+```
+
+Always use `/app/.medusa/server` (or `backend/.medusa/server` locally after build) for `medusa exec` on the server image.
+
+## Env vars that must point at the new stack
+
+**Fly secrets (`sc-prints-backend`):** `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `COOKIE_SECRET`, `BACKEND_PUBLIC_URL=https://sc-prints-backend.fly.dev`, `STOREFRONT_URL`, `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS`, `MINIO_*`, integration keys.
+
+**Vercel production:** `NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://sc-prints-backend.fly.dev`, `NEXT_PUBLIC_BASE_URL=https://sc-prints.com.au`.
+
+**Webhooks:** Stripe/PayPal/ShipStation endpoints use `{BACKEND_PUBLIC_URL}/hooks/...` on Fly, not Railway.
+
+## Canonical doc
+
+Full migration checklist: [Docs/HOSTING.md](Docs/HOSTING.md).

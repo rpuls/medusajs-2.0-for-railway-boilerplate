@@ -50,7 +50,6 @@
     "@medusajs/icons": "2.14.2",
     "@medusajs/js-sdk": "2.14.2",
     "@medusajs/medusa": "2.14.2",
-    "@medusajs/notification-sendgrid": "2.14.2",
     "@medusajs/payment-stripe": "2.14.2",
     "@medusajs/ui": "4.1.9",
     "@medusajs/workflow-engine-redis": "2.14.2",

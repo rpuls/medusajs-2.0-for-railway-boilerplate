@@ -5,3 +5,9 @@
 .venv-upload/
 # Secrets for that script (use: --env-file medusa-upload.env)
 medusa-upload.env
+
+# Backend dev request log
+backend/logs/
+
+# Claude Code worktrees and session metadata
+.claude/worktrees/

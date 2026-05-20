@@ -4,21 +4,21 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 - `cd /backend`
 - `pnpm install` or `npm i`
 - Rename `.env.template` ->  `.env`
-- To connect to your online database from your local machine, copy the `DATABASE_URL` value auto-generated on Railway and add it to your `.env` file.
+- To connect to your online database from your local machine, copy `DATABASE_URL` from Fly secrets (`fly secrets list --app sc-prints-backend`) into `.env`. See [Docs/HOSTING.md](../Docs/HOSTING.md).
   - If connecting to a new database, for example a local one, run `pnpm ib` or `npm run ib` to seed the database.
 - `pnpm dev` or `npm run dev`
 
 ### requirements
-- **postgres database** (Automatic setup when using the Railway template)
-- **redis** (Automatic setup when using the Railway template) - fallback to simulated redis.
-- **MinIO storage** (Automatic setup when using the Railway template) - fallback to local storage.
-- **Meilisearch** (Automatic setup when using the Railway template)
+- **postgres database** (DigitalOcean in production; local Postgres for dev)
+- **redis** (required in production on Fly — set `REDIS_URL`; dev falls back to simulated redis)
+- **MinIO-compatible storage** (Cloudflare R2 in production via `MINIO_*`; dev falls back to local `static/`)
+- **Meilisearch** (optional; configure `MEILISEARCH_*` or omit)
 
 ### Stripe payments
 
 - Add **`STRIPE_API_KEY`** (secret key, `sk_test_...` or `sk_live_...`) and **`STRIPE_WEBHOOK_SECRET`** (`whsec_...`) to `backend/.env`. Both are required for the Payment module to register; restart the backend after changing them.
 - Add **`NEXT_PUBLIC_STRIPE_KEY`** (publishable key, `pk_test_...` or `pk_live_...`) to the storefront env and redeploy the storefront. Use the same Stripe mode (test vs live) as the backend.
-- **Stripe webhook URL:** `{your-backend-origin}/hooks/payment/stripe_stripe` (replace with your public backend URL, e.g. Railway).
+- **Stripe webhook URL:** `{your-backend-origin}/hooks/payment/stripe_stripe` (production: `https://sc-prints-backend.fly.dev/hooks/payment/stripe_stripe`).
 - **Recommended webhook events:** `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.amount_capturable_updated`, and `payment_intent.partially_funded` (when applicable).
 - For **local development**, run Stripe CLI: `stripe listen --forward-to localhost:9000/hooks/payment/stripe_stripe`, then set `STRIPE_WEBHOOK_SECRET` to the signing secret the CLI prints.
 - Regions must include the **`pp_stripe_stripe`** payment provider for Stripe at checkout. The seed script adds it automatically when both Stripe env vars are set before running migrations/seed; otherwise add Stripe under **Settings → Regions** in Medusa Admin.

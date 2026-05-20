@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 
-import { UNSUBSCRIBE_LINK_SECRET } from "./constants"
+import { BACKEND_URL, UNSUBSCRIBE_LINK_SECRET } from "./constants"
 
 /**
  * Signed one-click unsubscribe URL parameter.
@@ -37,6 +37,11 @@ export function buildUnsubscribeQuery(
   const lowered = String(email).trim().toLowerCase()
   const sig = sign(lowered, kind)
   return `email=${encodeURIComponent(lowered)}&kind=${encodeURIComponent(kind)}&sig=${sig}`
+}
+
+export function buildUnsubscribeUrl(email: string, kind: string): string {
+  const base = BACKEND_URL.replace(/\/$/, "")
+  return `${base}/email/unsubscribe?${buildUnsubscribeQuery(email, kind)}`
 }
 
 export function verifyUnsubscribe(

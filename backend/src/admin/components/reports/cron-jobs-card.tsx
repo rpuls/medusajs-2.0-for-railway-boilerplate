@@ -64,7 +64,7 @@ export const CronJobsCard = () => {
               body: "The cron registry — every background task scheduled to run on its own. Reads src/jobs/ at request-time and shows the next-fire estimate based on the cron schedule string.",
               bullets: [
                 "Use this to catch silent failures: if a digest didn't arrive last month, this is the first place to look.",
-                "Next-fire times are computed locally from the cron schedule, not pulled from job-history (Railway doesn't expose run history). Treat them as estimates.",
+                "Next-fire times are computed locally from the cron schedule, not pulled from job-history (Fly doesn't expose run history). Treat them as estimates.",
                 "If a job is missing here, the cron decorator probably wasn't registered correctly — check the job file's exports.",
                 "All times in UTC. The crontab on each line shows the schedule in standard cron syntax.",
               ],

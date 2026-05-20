@@ -2965,7 +2965,7 @@ export default function CustomizerTemplate({
       )
       if (uploadsWithoutArchive.length > 0) {
         setUploadError(
-          "Could not archive your uploaded file(s). On the Railway Medusa server set MinIO vars (MINIO_*), STORE_CORS to include your Vercel URL, " +
+          "Could not archive your uploaded file(s). On the Fly Medusa backend set MinIO vars (MINIO_*), STORE_CORS to include your storefront URL, " +
             "and redeploy. Then remove uploads in “My uploads” and choose your file again."
         )
         return
@@ -3396,7 +3396,7 @@ export default function CustomizerTemplate({
       // For everything else, route through the sanitizer so customers don't
       // see leaked stack traces or internal paths from older backend builds.
       const friendly = /^an unknown error occurred\.?$/i.test(baseMessage.trim())
-        ? "Add to cart failed on the server (no specific message returned). Open the browser console for details, or check the Railway backend logs around this timestamp."
+        ? "Add to cart failed on the server (no specific message returned). Open the browser console for details, or check Fly backend logs (sc-prints-backend) around this timestamp."
         : sanitizeCartAddError(baseMessage)
       setUploadError(friendly)
     } finally {

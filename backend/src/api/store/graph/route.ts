@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { isStorefrontOriginAllowed } from "../../../lib/storefront-origins"
 
 /**
  * GET /store/graph
@@ -316,44 +317,8 @@ function lowestPrice(row: ProductRow, preferredCurrency: string | null): GraphPr
   return all.reduce((min, p) => (p.amount < min.amount ? p : min))
 }
 
-/**
- * STORE_CORS entries may be plain origins (`https://foo.com`) or JS-style
- * regexes wrapped in slashes (`/\.vercel\.app$/`). We accept both so Vercel
- * preview URLs like `medusajs-2-0-for-railway-vercel-<hash>.vercel.app` can be
- * matched without hard-coding every deploy.
- */
 function isAllowedOrigin(origin: string): boolean {
-  if (!origin) return false
-
-  const defaults: Array<string | RegExp> = [
-    "https://medusajs-2-0-for-railway-vercel.vercel.app",
-    "http://localhost:8000",
-    /^https:\/\/medusajs-2-0-for-railway-vercel[a-z0-9-]*\.vercel\.app$/,
-  ]
-
-  const configured = (process.env.STORE_CORS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map<string | RegExp>((entry) => {
-      if (entry.startsWith("/") && entry.endsWith("/") && entry.length > 2) {
-        try {
-          return new RegExp(entry.slice(1, -1))
-        } catch {
-          return entry
-        }
-      }
-      return entry
-    })
-
-  for (const rule of [...defaults, ...configured]) {
-    if (typeof rule === "string") {
-      if (rule === origin) return true
-    } else if (rule.test(origin)) {
-      return true
-    }
-  }
-  return false
+  return isStorefrontOriginAllowed(origin)
 }
 
 function setCors(req: MedusaRequest, res: MedusaResponse) {

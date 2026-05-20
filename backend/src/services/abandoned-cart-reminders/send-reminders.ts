@@ -10,19 +10,15 @@ import { Pool } from "pg"
 
 import {
   ABANDONED_CART_MAX_SENDS_PER_RUN,
-  BACKEND_URL,
   DATABASE_URL,
   SUPPORT_REPLY_TO_EMAIL,
 } from "../../lib/constants"
 import { getPostHog } from "../../lib/posthog"
 import { shouldSendMarketingEmail } from "../../lib/marketing-email"
-import { buildUnsubscribeQuery } from "../../lib/unsubscribe-token"
+import { buildUnsubscribeUrl } from "../../lib/unsubscribe-token"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
 
 import { buildAbandonedCartCandidates } from "./build-candidates"
-
-const buildUnsubscribeUrl = (email: string, kind: string): string =>
-  `${BACKEND_URL.replace(/\/$/, "")}/email/unsubscribe?${buildUnsubscribeQuery(email, kind)}`
 
 export type SendResult = {
   considered: number

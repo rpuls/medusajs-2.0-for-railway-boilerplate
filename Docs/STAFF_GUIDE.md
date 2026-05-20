@@ -253,7 +253,7 @@ Click *Generate drafts* and the system returns 3 description variants (short →
 
 - Doesn't send pricing, SKUs, or stock to the LLM.
 - The optional *Hint* field biases the model — try "team kit", "winter casual", or similar.
-- If the AI provider isn't configured the widget shows a hint to set `AI_PROVIDER` + the matching API key on Railway.
+- If the AI provider isn't configured the widget shows a hint to set `AI_PROVIDER` + the matching API key on Fly (backend secrets).
 - Apply replaces the existing description in place. Roll back via Medusa core if needed.
 
 ---
@@ -347,7 +347,7 @@ These features exist as backend infrastructure but don't have admin UI:
 ## When something looks wrong
 
 1. **Check `/app/reports/system-health`** — quick view of cron statuses and external services.
-2. **Check the Railway logs** — every cron + subscriber logs a one-liner on each run.
+2. **Check the Fly logs** (`fly logs --app sc-prints-backend`) — every cron + subscriber logs a one-liner on each run.
 3. **Check the order's timeline widget** — every event the system captured for that order, newest first.
 4. **Ask in `#production` Slack** — many alerts post there automatically.
 

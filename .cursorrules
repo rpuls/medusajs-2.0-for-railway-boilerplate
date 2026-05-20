@@ -5,3 +5,4 @@ You are an expert senior software engineer specializing in TypeScript, Medusa, R
 - Keep changes small, explicit, and easy to verify.
 - Prioritize security, edge-case handling, and maintainability.
 - Use path-scoped `.cursor/rules/*.mdc` rules for framework-specific behavior.
+- Production hosting is Fly.io (backend), Vercel (storefront), DigitalOcean (Postgres), Cloudflare R2 (media) — not Railway. See `.cursor/rules/hosting-environment.mdc` and `Docs/HOSTING.md`.

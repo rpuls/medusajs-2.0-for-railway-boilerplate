@@ -6,13 +6,24 @@ import { AUTOMATION_RULE_MODULE } from "../../../../modules/automation-rule"
 const VALID_TRIGGERS = new Set([
   "order.placed",
   "order.production_stage_changed",
+  // Phase 10 (gated by AUTOMATION_EXPANDED_TRIGGERS_ENABLED in the evaluator)
+  "customer.created",
+  "order.delivered",
 ])
 const VALID_OPS = new Set(["eq", "neq", "gt", "gte", "lt", "lte", "contains", "exists"])
+const VALID_FIELDS = new Set([
+  "total", "currency_code", "line_count", "quantity_total",
+  "lifetime_value", "order_count",
+  "email", "has_account", "from_stage",
+])
 const VALID_ACTIONS = new Set([
   "tag_customer",
   "post_order_comment",
   "send_alert_email",
   "set_production_stage",
+  // Phase 10
+  "create_task",
+  "assign_owner",
 ])
 
 /**
@@ -75,6 +86,16 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
   if (body.conditions && !Array.isArray(body.conditions)) {
     return res.status(400).json({ error: "conditions must be an array" })
+  }
+  if (Array.isArray(body.conditions)) {
+    for (const c of body.conditions) {
+      if (typeof c?.field !== "string" || !VALID_FIELDS.has(c.field)) {
+        return res.status(400).json({ error: `unknown condition field: ${c?.field}` })
+      }
+      if (!VALID_OPS.has(c?.op)) {
+        return res.status(400).json({ error: `invalid condition op: ${c?.op}` })
+      }
+    }
   }
 
   const actor = (req as any).auth_context?.actor_id ?? null

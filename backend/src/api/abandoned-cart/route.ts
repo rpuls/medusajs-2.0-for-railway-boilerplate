@@ -6,12 +6,8 @@ import { ulid } from "ulid"
 
 import { CONTACT_NOTIFICATION_EMAIL, DATABASE_URL, SUPPORT_REPLY_TO_EMAIL } from "../../lib/constants"
 import { getPostHog } from "../../lib/posthog"
+import { getStorefrontOriginAllowlist } from "../../lib/storefront-origins"
 import { EmailTemplates } from "../../modules/email-notifications/templates"
-
-const DEFAULT_ALLOWED_ORIGINS = [
-  "https://medusajs-2-0-for-railway-vercel.vercel.app",
-  "http://localhost:8000",
-]
 
 const abandonedCartPool = new Pool({
   connectionString: DATABASE_URL,
@@ -20,12 +16,7 @@ const abandonedCartPool = new Pool({
 let ensureAbandonedCartTablePromise: Promise<void> | null = null
 
 function getAllowedOrigins() {
-  const configuredStoreCors = (process.env.STORE_CORS ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean)
-
-  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configuredStoreCors])
+  return new Set(getStorefrontOriginAllowlist())
 }
 
 function setManualCors(req: MedusaRequest, res: MedusaResponse) {

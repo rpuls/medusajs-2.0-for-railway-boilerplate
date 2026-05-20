@@ -150,7 +150,6 @@ flow are wired through three custom routes plus a few env vars.
 | `SHIPSTATION_API_KEY` | — | When unset the ShipStation provider is not registered; only manual flat rates are seeded/served. |
 | `SHIPSTATION_WEBHOOK_SECRET` | — | HMAC-SHA256 secret used to verify incoming webhook payloads. Required for `/hooks/shipstation`. |
 | `SHIPSTATION_WAREHOUSE_*` | — | Origin (ship-from) defaults used when a Medusa stock location is missing fields (`POSTCODE`, `COUNTRY_CODE`, `CITY`, `STATE`, `NAME`, `ADDRESS_1`, `PHONE`). |
-| `SENDGRID_ORDER_SHIPPED_TEMPLATE_ID` | — | Optional SendGrid dynamic template ID for the dispatch (`ORDER_SHIPPED`) email. |
 
 ### Storefront shipping endpoint
 

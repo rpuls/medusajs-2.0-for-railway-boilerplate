@@ -10,21 +10,13 @@ import {
 } from "../../../lib/constants"
 import { isValidEmail } from "../../../lib/email-validation"
 import { getPostHog } from "../../../lib/posthog"
+import { getStorefrontOriginAllowlist } from "../../../lib/storefront-origins"
 import { EmailTemplates } from "../../../modules/email-notifications/templates"
 import { QUOTE_MODULE } from "../../../modules/quote"
 import type QuoteModuleService from "../../../modules/quote/service"
 
-const DEFAULT_ALLOWED_ORIGINS = [
-  "https://medusajs-2-0-for-railway-vercel.vercel.app",
-  "http://localhost:8000",
-]
-
 function getAllowedOrigins() {
-  const configuredStoreCors = (process.env.STORE_CORS ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean)
-  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configuredStoreCors])
+  return new Set(getStorefrontOriginAllowlist())
 }
 
 function setManualCors(req: MedusaRequest, res: MedusaResponse) {
