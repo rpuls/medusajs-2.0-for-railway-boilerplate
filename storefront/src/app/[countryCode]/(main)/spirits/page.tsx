@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { notFound } from "next/navigation"
 
 import { SPIRIT_TYPES } from "@lib/data/spirits"
 import { buildAbsoluteUrl, SEO } from "@lib/util/seo"
@@ -51,6 +52,8 @@ const ArrowRightIcon = ({ className }: { className?: string }) => (
 )
 
 export default async function SpiritsHubPage({ params }: Props) {
+  notFound()
+
   const { countryCode } = await params
 
   return (

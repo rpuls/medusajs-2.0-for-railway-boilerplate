@@ -65,6 +65,8 @@ export default async function SpiritTypePage({
   params,
   searchParams,
 }: Props) {
+  notFound()
+
   const { type, countryCode } = await params
   const search = await searchParams
   const spirit = SPIRIT_BY_SLUG[type]
