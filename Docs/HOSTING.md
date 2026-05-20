@@ -30,7 +30,7 @@ cd backend
 fly deploy --app sc-prints-backend
 ```
 
-Boot runs `db:migrate` + `db:sync-links` then `medusa start` (see `backend/package.json` `start` script). Expect ~2–4 minute cold starts until migrations are moved to a release command.
+Migrations run as a Fly release command (once per deploy via `[deploy] release_command` in `fly.toml`). Boot just runs `medusa start`. Suspend mode means idle resume is ~500ms, not a 2-4 minute cold start.
 
 ### Logs
 

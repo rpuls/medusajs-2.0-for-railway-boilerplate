@@ -4,6 +4,11 @@ primary_region = 'syd'
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  # Run migrations once per deploy, not on every boot.
+  # This moves the 2-4 minute migration step out of the hot path.
+  release_command = "sh -c 'cd .medusa/server && npx medusa db:migrate && npx medusa db:sync-links'"
+
 [env]
   PORT = '9000'
   NODE_ENV = 'production'
@@ -11,15 +16,8 @@ primary_region = 'syd'
 [http_service]
   internal_port = 9000
   force_https = true
-  # Always-warm: 'stop' auto-suspends idle machines to disk which forces a
-  # 10+ second cold-boot on next request (machine restart + container start
-  # + Node bootstrap + DB connection pool warm). Backend is on the hot path
-  # for every storefront SSR — cannot tolerate that latency. 'off' pins the
-  # machine in `started` state 24/7. Costs ~$5-10/mo extra for the 2GB
-  # shared-cpu-1x machine; well worth it vs the customer UX hit.
-  # If we ever want to scale-to-zero for cost savings, prefer 'suspend' over
-  # 'stop' — suspends to RAM and wakes in ~250ms instead of 10+s.
-  auto_stop_machines = 'off'
+  # Testing suspend first (~250ms wake). Use 'off' for always-warm if SSR is still slow.
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 1
 

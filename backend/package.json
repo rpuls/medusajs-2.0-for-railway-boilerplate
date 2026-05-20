@@ -30,7 +30,7 @@
     "import-tidied-types-tags": "npx medusa exec ./src/scripts/import-tidied-types-and-tags-csv.ts --",
     "list-product-types-tags": "npx medusa exec ./src/scripts/list-product-types-and-tags.ts --",
     "ib": "init-backend",
-    "start": "init-backend && cd .medusa/server && npx medusa db:migrate && npx medusa db:sync-links && npx medusa start --verbose",
+    "start": "init-backend && cd .medusa/server && npx medusa start --verbose",
     "dev": "npx medusa develop",
     "apply-garment-images-from-csv": "npx medusa exec ./src/scripts/apply-garment-images-from-template-csv.ts",
     "test": "jest --config jest.config.cjs",
