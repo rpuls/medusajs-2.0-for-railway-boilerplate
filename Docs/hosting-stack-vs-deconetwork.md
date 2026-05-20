@@ -1,322 +1,279 @@
-# Hosting stack — DecoNetwork (observed) vs. Shopify (gold standard) vs. SC Prints' proposed migration
+# Hosting stack — current state vs competition (measured May 2026)
 
-**Date**: 2026-05-19 (revised after empirical measurements)
-**Question**: How does DecoNetwork host its storefronts / backend / images / database, how does Shopify (the industry gold standard) host theirs, and how does SC Prints' proposed migration target (Vercel + Fly.io Sydney + DigitalOcean Managed Postgres Sydney + Cloudflare R2 + Resend) compare to both?
+**Date**: 2026-05-19 (v3 — full measurements from a Sydney-area machine)
 
-> **Correction note (v2)**: An earlier version of this doc overstated DecoNetwork's latency disadvantage (claimed ~250ms RTT from Sydney; actual is ~170ms) and got the geography wrong (claimed Toronto from ARIN whois of the registered HQ; the traceroute shows the actual server is in US West Coast, likely Los Angeles). The revised conclusion: DecoNetwork is **commercially viable but not best-in-class** for Australian customers. Our proposed stack will give us a **moderate latency edge** on dynamic requests (~140ms saved per round-trip), not the "structural advantage" the first draft implied. Numbers below come from real ping/traceroute/curl measurements from a Sydney-area machine.
-
----
-
-## 1. Headline
-
-Three reference points along an infrastructure-quality spectrum:
-
-| | Approach | Era / generation | Status |
-|---|---|---|---|
-| **DecoNetwork** | Aptum Technologies (PEER1) US West Coast colo + Sucuri WAF. No real CDN. Multi-tenant cluster on a single IP. Australian-founded company (Burleigh Heads, QLD) that hosts in the US | ~2010 SaaS architecture | **Industry-default in AU print** — at least 4 of our 8 surveyed AU competitors run on this exact infrastructure |
-| **Shopify** | Google Cloud Platform multi-region, custom MySQL-as-a-Service (KateSQL) on Kubernetes, Vitess for sharding, Fastly + Cloudflare double-CDN over 200+ edge POPs | ~2020+ planet-scale modern | **The benchmark** for global e-commerce — used by 5M+ merchants |
-| **SC Prints (proposed)** | Vercel (edge) + Fly.io Sydney (compute) + DigitalOcean Managed Postgres Sydney + Cloudflare R2 (object storage) + Resend (email) | ~2024+ lightweight-modern, Sydney-pinned | **Migration target** — modern managed services with a Sydney compute pin we expect to give us a moderate UX edge for AU customers |
-
-**Strategically important corrected observation**: our proposed stack will give us a **moderate latency edge** — about **140ms saved per dynamic round-trip** vs DecoNetwork-hosted competitors, and roughly **120ms saved** vs Shopify-hosted competitors (Shopify caches storefronts at Fastly Sydney but runs dynamic compute in US/EU). It's a real, measurable advantage but not crushing. The bigger competitive edges remain operational quality, feature differentiation (DPI warning, production stage tracker, save-design library), and pricing.
-
-**Equally important caveat**: our current Vercel staging is **currently slower than DecoNetwork on first-load** (~5-6s total page time vs DecoNetwork's ~0.7s) because of serverless cold-starts. Until that's fixed, the latency edge is theoretical. See §10.
+> This is the **third revision** of this doc. v1 misread DecoNetwork's location and overstated their latency disadvantage. v2 corrected that. v3 (this revision) measures our **actual current production setup** and compares to **measured** competitor latency, including the surprising findings that (a) The Print Bar already runs on Fly.io Sydney — the same stack we're migrating to, and (b) Shopify-powered AU competitors (Cartel, T-Shirt Co) are served from **GCP Australia Southeast 2 (Melbourne)**, not US/EU as I'd previously claimed.
 
 ---
 
-## 2. What DecoNetwork actually runs (measured May 2026)
+## 1. Headline (measured)
 
-### DNS evidence
-
-```
-www.deconetwork.com       →  192.124.249.153  (cloudproxy10153.sucuri.net)
-app.deconetwork.com       →  65.39.250.34
-cdn.deconetwork.com       →  65.39.250.34   ← same IP
-images.deconetwork.com    →  65.39.250.34   ← same IP
-static.deconetwork.com    →  65.39.250.34   ← same IP
-                              ↑ reverse-DNS: store.deconetwork.com
-                              ↑ AS13768 (COGECO-PEER1 / Aptum Technologies)
-                              ↑ Block allocated 2002 to Aptum/PEER1
-```
-
-**Nameservers**: `pdns09.domaincontrol.com` / `pdns10.domaincontrol.com` — GoDaddy DNS (basic, no edge routing).
-
-### Where the server actually lives
-
-This is where my first analysis went wrong. ARIN whois shows the IP registered to:
-> 191 The West Mall, Etobicoke, ON, M9C 5L6, Canada
-
-That's Aptum's **registered head-office address in Toronto**, NOT necessarily where the server lives. Aptum operates colo facilities across multiple cities (Toronto, NYC, LAX, MIA, LON, AMS).
-
-A **traceroute from Sydney** tells the real story:
+**Bad news first**: our current Medusa Vercel storefront is the **slowest** of all the competitors we've measured. ~800ms TTFB and **4-5 seconds total page time** to render `/au`. Our Vercel functions are running in **`iad1` (US East / Virginia)** — not Sydney — so every customer request crosses the Pacific twice. Specifically, the request flow is:
 
 ```
-1   home router         16ms
-2   ISP gateway         20ms
-3   Cogent Sydney       27ms  (hu0-0-1-3.ccr71.syd01.atlas.cogentco.com)
-4   Cogent Portland     161ms
-5   Cogent Portland     158ms
-6   Cogent Seattle      151ms
-7   Twelve99 Seattle    181ms
-8   Twelve99 San Jose   188ms
-9   Twelve99 LA         167ms  (lax-bb1-link.ip.twelve99.net)
-10  Twelve99 LA         189ms
-11  Aptum LA            183ms  (aptummanaged-ic-371308.ip.twelve99-cust.net)
-12-13 origin            ~170ms
+Sydney customer
+  → Vercel edge POP syd1 (fast — <30ms)
+    → Vercel function iad1 in Virginia (~180ms RTT to US East)
+      → Medusa backend on Fly Sydney (~180ms RTT back across the Pacific)
+        → Postgres DO Sydney (irrelevant — local to backend)
+      → back to function
+    → back to edge
+  → back to customer
 ```
 
-Path: Sydney → Cogent's trans-Pacific backbone → US West Coast → into Aptum's managed network in **LA**. So the actual data centre is **Los Angeles** (or US West Coast more broadly), not Toronto. The traceroute proves this; the Toronto whois address is just where Aptum is registered.
+That's an **extra ~360ms round-trip** the customer never needed to pay. Add Next.js SSR rendering overhead and we're at 4-5s total.
 
-This matters because **Sydney → LA is meaningfully faster than Sydney → Toronto** (~170ms vs ~250ms). DecoNetwork's choice of US West Coast hosting is a sensible compromise for serving Asia-Pacific + Americas from one location.
+**Good news**: the rest of our stack is right. Fly.io Sydney is fast (~100ms TTFB), the Webflow marketing site (scprints.com.au) is fast (~100ms warm via Cloudflare Sydney edge), and we're already using R2 for images. The fix is **one configuration change**: tell Vercel to deploy the storefront functions in `syd1` instead of `iad1`. We don't need new infrastructure — we need to point what we already have at the right region.
 
-### Measured RTT and TTFB from a Sydney machine
+**Surprise finding**: The Print Bar is already running on **Fly.io Sydney + Cloudflare** — the exact stack we're migrating to. Their performance (~150ms TTFB warm) is a great proof point that the stack works. We just need to actually use it.
+
+**Updated Shopify framing**: Cartel and T-Shirt Co run on **Shopify GCP Australia Southeast 2 (Melbourne)** with Asia Southeast (Singapore) as failover. They're not on US/EU GCP as I previously claimed. Their TTFB warm is **70-160ms** — among the fastest in the market. Shopify is no longer a "fast for cached, slow for dynamic" story in Australia. They've moved to AU compute and the latency is excellent.
+
+---
+
+## 2. Our current setup — measured
+
+| Component | URL | Hosting | Measured RTT | Measured TTFB warm | Total page time |
+|---|---|---|---|---|---|
+| **Marketing site** | scprints.com.au | Webflow + Cloudflare (Sydney edge) | 34ms | ~100ms | ~110ms |
+| **Storefront (Medusa Next.js)** | medusajs-2-0-for-railway-vercel.vercel.app | Vercel (function in iad1 ❌, edge in syd1) | n/a | **~800ms** | **~4-5s** ⚠️ |
+| **Backend (Medusa API)** | sc-prints-backend.fly.dev | Fly.io Sydney ✅ | 21ms | ~100ms | n/a |
+| **Database** | (internal) | DigitalOcean Managed Postgres Sydney (per env config) | n/a | n/a | n/a |
+| **Image storage** | (per env config) | Cloudflare R2 (free egress) | n/a | n/a | n/a |
+| **Email** | n/a | Resend | n/a | n/a | n/a |
+| **Search** | (internal) | MeiliSearch | n/a | n/a | n/a |
+
+### Evidence for the Vercel function-region issue
+
+Every HTTP response from the storefront includes:
+```
+x-vercel-id: syd1::iad1::lmcrm-1779280111106-3d27d7c50ae3
+x-vercel-cache: MISS
+```
+
+`syd1::iad1::*` means the request was received at the Sydney edge (`syd1`) but the function executed in Virginia (`iad1`). `x-vercel-cache: MISS` means the response wasn't cached at edge, so this trans-Pacific round-trip happens on every request.
+
+The fix is to add `regions: ["syd1"]` to the function config in `vercel.json` (or `next.config.js` per-route). Vercel will then schedule the function to run in Sydney, eliminating the trans-Pacific hop. This is a config change, not an infrastructure migration.
+
+### The marketing-vs-storefront split
+
+The actual customer-facing layout today is:
+- **scprints.com.au** = Webflow marketing site (fast, but informational only)
+- **The Medusa storefront lives at the .vercel.app URL** — not on scprints.com.au
+
+So a customer who lands on scprints.com.au can read about us, but the marketing site doesn't link to any e-commerce path. The actual shop is on a different domain. **Domain-switching mid-journey is a UX and trust problem** that should be fixed before any major marketing push.
+
+---
+
+## 3. The competition — measured
+
+All measurements from this Sydney-area machine on 2026-05-19. Warm cache, 3-5 runs averaged.
+
+| Competitor | Site | Hosting | Server location | RTT | TTFB warm | Total warm |
+|---|---|---|---|---|---|---|
+| **The Print Bar** | theprintbar.com | **Fly.io Sydney + Cloudflare** | Sydney | 16ms | 140-180ms | 590-656ms |
+| **The Colour Cartel** | thecolourcartel.com.au | **Shopify on GCP Australia Southeast 2** (Melbourne) | Melbourne | 19ms | 84-164ms | 698-824ms |
+| **The T-Shirt Co** | thetshirtco.com.au | **Shopify on GCP Australia Southeast 2** | Melbourne | 14ms | 70-90ms | 391-509ms |
+| **Tee Junction** | teejunction.com.au | **DecoNetwork (Aptum LA)** | Los Angeles | 168ms | ~600ms | ~600ms |
+| **PrintPod** | printpod.com.au | DecoNetwork (Aptum LA — same IP as Tee Junction) | Los Angeles | ~170ms | (not measured) | (not measured) |
+| **Create Apparel** | createapparel.com.au | DecoNetwork (Aptum LA — same IP) | Los Angeles | ~170ms | (not measured) | (not measured) |
+| **Garment Printing** | garmentprinting.com.au | DecoNetwork (Aptum LA — same IP) | Los Angeles | ~170ms | (not measured) | (not measured) |
+
+### Key signals from response headers
+
+**The Print Bar** (`theprintbar.com`):
+```
+server: cloudflare
+via: 1.1 fly.io
+x-fly-region: syd
+cf-cache-status: HIT
+cf-ray: 9feb5b2b89c85747-SYD
+age: 51241
+```
+Fly.io Sydney as the origin (`x-fly-region: syd`, `via: 1.1 fly.io`), Cloudflare in front (`cf-ray: ...-SYD` = Sydney edge), aggressive edge caching (`cf-cache-status: HIT`, `age: 51241` = cached for 14+ hours). **This is the gold standard for AU print-shop performance** — and it uses *exactly our proposed stack*.
+
+**The Colour Cartel** + **The T-Shirt Co** (both on Shopify):
+```
+server-timing: ... edge;desc="SYD" ... country;desc="AU"
+x-dc: gcp-australia-southeast2,gcp-asia-southeast1,gcp-asia-southeast1
+```
+Shopify routes them through **GCP Australia Southeast 2 (Melbourne)** primary, with Asia Southeast 1 (Singapore) as failover. Sydney edge (`edge;desc="SYD"`) for the CDN tier. T-Shirt Co's 70-90ms TTFB is the fastest in the survey.
+
+**DecoNetwork tenants** (Tee Junction etc.):
+- Single IP `65.39.250.34` in LA (Aptum/PEER1 colo)
+- No CDN at the DNS layer (no `cf-*`, no `x-served-by`)
+- Ruby on Rails app (`x-runtime: 0.132s`)
+- ~170ms RTT, ~600ms TTFB
+
+### Ranking — warm TTFB, lowest to highest
 
 ```
-ping 65.39.250.34:           167-184ms (avg 172ms)
-ping teejunction.com.au:     163-177ms (avg 168ms)  ← same IP, real AU tenant
-
-curl https://teejunction.com.au/ (warm, 3 runs):
-  TTFB: 0.77s, 0.55s, 0.61s   (avg ~0.64s)
-
-x-runtime: 0.132s             ← Rails app responds in ~130ms
-                                Rest of the budget is network + TLS round-trips
+   70-90ms   ▰▱  T-Shirt Co        (Shopify GCP AU Southeast 2)
+   84-164ms  ▰▰▱ Cartel             (Shopify GCP AU Southeast 2)
+  100-120ms  ▰▰▱ scprints.com.au    (Webflow + Cloudflare Sydney) — marketing only
+  140-180ms  ▰▰▱ The Print Bar      (Fly Sydney + Cloudflare)
+  ~600ms     ▰▰▰▰▰▰ DecoNetwork tenants (Aptum LA)
+  ~800ms     ▰▰▰▰▰▰▰▰ Our Medusa storefront ⚠️ (Vercel iad1)
 ```
 
-So a real Australian buyer landing on a DecoNetwork-powered tenant's page sees a **TTFB of ~600ms** on warm cache. That's slower than ideal but **definitely viable** — it's the kind of latency users tolerate without abandoning carts.
+**We are currently slower than every measured competitor on first-page warm TTFB.**
 
-For comparison, our current Vercel staging:
+---
 
+## 4. The gap — what's actually broken and what to fix
+
+### Problem 1: Vercel function region is iad1 instead of syd1
+
+**Impact**: 360ms extra round-trip per uncached request. Real, measurable, and the dominant cause of our slow page loads.
+
+**Fix**:
+```jsonc
+// vercel.json
+{
+  "regions": ["syd1"]
+}
 ```
-curl https://medusajs-2-0-for-railway-vercel.vercel.app/au (3 runs):
-  TTFB: 2.4s, 0.98s, 1.0s    (cold start, then warm)
-  Total: 6.9s, 5.3s, 5.2s    (total page load including HTML body)
+Or per-route in `next.config.js`:
+```js
+export const runtime = 'edge'
+// or
+export const preferredRegion = ['syd1']
 ```
 
-**We are currently slower than DecoNetwork on first load.** Cold-start serverless is brutal. This is a known issue that needs fixing before we can credibly claim a latency advantage.
+Vercel Pro+ allows specifying execution region. Free tier defaults to `iad1`. If we're not on Pro, this is the ROI moment to upgrade.
 
-### Application stack (inferred from headers)
+### Problem 2: No edge caching (x-vercel-cache: MISS on every request)
 
-The HTTP response headers on teejunction.com.au reveal:
-- `x-runtime: 0.132178` — Ruby on Rails server runtime header
-- `x-request-id: ...` — Rails default request tracing
-- `x-sid: ...` — session ID, Rails session
-- `cache-control: max-age=0, private, must-revalidate` — responses are NOT publicly cached; every request hits Rails
-- `vary: Accept` — content-negotiated responses
-- TLS cert: Let's Encrypt (not Cloudflare, not Sucuri)
+**Impact**: Every request hits the function. No static-generation or ISR.
 
-So: **Ruby on Rails monolith** (like Shopify), but running on Aptum colo without a public CDN in front. Every page-load goes to origin. There's likely Memcached/Redis behind the scenes for query caching, but it's invisible from outside.
+**Fix**: Use Next.js `revalidate` or `unstable_cache` on PDP / category / store pages. Even 60-second revalidation would mean most requests hit the edge cache instead of executing the function.
 
-### What this means
+### Problem 3: Marketing site and storefront are on different domains
 
-| Component | DecoNetwork (measured) | Implication |
+**Impact**: scprints.com.au (Webflow) and medusajs-...vercel.app are disconnected. Customers can't shop from the marketing site, and the eventual shop URL doesn't carry domain trust.
+
+**Fix**: Point a subdomain like `shop.scprints.com.au` or migrate scprints.com.au itself to the Medusa Next.js storefront (would replace Webflow). Either way, **all customer journey should be on one domain** before any major marketing push.
+
+### Problem 4: Migration not fully complete
+
+The env template shows the migration is mid-flight:
+- ✅ `sc-prints-backend.fly.dev` configured for Fly Sydney
+- ✅ R2 endpoint reference exists (`NEXT_PUBLIC_MINIO_ENDPOINT`)
+- ⚠️ But still on `medusajs-2-0-for-railway-vercel.vercel.app` (project name suggests Railway origins)
+- ⚠️ Vercel functions still in `iad1`
+
+We're closer than v2 of this doc suggested. The architecture is right; the region configs aren't.
+
+---
+
+## 5. What the migration target looks like (reminder)
+
+| Component | Choice | Status |
 |---|---|---|
-| **Marketing site WAF** | Sucuri reverse proxy | Web-app firewall but no CDN-tier caching |
-| **Storefront / app / images / static** | Single IP at Aptum Technologies (US West Coast) | One cluster — no edge distribution; all of their tenants hit the same origin |
-| **Hyperscaler cloud?** | **No** — Aptum is bare-metal / colo / managed-hosting | No auto-scaling, no managed services, no regional failover by default |
-| **CDN** | **None at the DNS layer**; no CDN response headers on tenants | Images served directly from US origin |
-| **DNS provider** | GoDaddy | Basic DNS — no edge routing |
-| **Australian region** | **No** — origin in US West Coast (~170ms RTT from Sydney) | Latency tax exists but is moderate, not crippling |
-| **Application** | Ruby on Rails monolith | Mature, well-understood stack; presumably MySQL behind |
-| **Tenant isolation** | Shared origin (same IP for all merchant stores) | Multi-tenant cluster; classic SaaS routing-by-Host-header |
-| **TTFB from Sydney (warm)** | ~600ms measured | Slower than ideal, definitely viable |
+| **Storefront** | Vercel (existing) | ✅ deployed but in wrong region (needs `syd1`) |
+| **Backend (Medusa)** | Fly.io Sydney | ✅ live |
+| **Database** | DigitalOcean Managed Postgres Sydney | ✅ live (per env) |
+| **File storage** | Cloudflare R2 | ✅ env wired (probably live) |
+| **Email** | Resend | ✅ existing |
+| **Search** | MeiliSearch | ✅ existing |
 
-### Why so many AU competitors use DecoNetwork
-
-A fair question — if it's slow, why does our market lean on it? Several reasons:
-
-1. **It's print-shop-specific SaaS** with an online designer, production tracking, quote workflow, decoration-method matrix, and storefront builder. **Replacing that yourself takes years of engineering work.** Print shops pay for the feature set, not the infrastructure.
-2. **It's Australian-founded** (Burleigh Heads, Queensland — Gold Coast area). The company knows the AU market: local sales, AU support, AU billing in AUD. Familiarity matters in this industry.
-3. **~600ms TTFB is fine for e-commerce**. Industry benchmarks for "acceptable" load times are well within DecoNetwork's actual performance — they're not losing customers on speed alone.
-4. **Migration cost is real.** Once a print shop has 500 products, 1000 customers, and tooling integration on DecoNetwork, ripping it out costs months of effort and downtime risk. Inertia wins.
-5. **The competitive bar is low.** Their alternatives (DIY Shopify build, custom code, other SaaS) are either feature-poor or operationally expensive. DecoNetwork is the dominant choice because it's "good enough at everything".
-
-So the right framing isn't "we're fast and they're slow" — it's "we can be moderately faster AND have unique features they don't (DPI warning, production stage tracker, supplier-API live stock, save-design library)."
-
-### Caveats
-
-- The single traceroute is consistent with US West Coast hosting but not conclusive — Aptum could be anycasting or have multiple POPs serving the same IP block.
-- We didn't test from multiple AU cities (Sydney/Melbourne/Brisbane have different exchange points).
-- The Vercel cold-start finding is a current snapshot — once we go production with proper warm-up, the numbers will improve.
+The proposed stack is **already deployed**. The remaining work is:
+1. Move Vercel function region from `iad1` to `syd1`
+2. Add edge caching for static-ish pages
+3. Decide on the customer-facing domain (`shop.scprints.com.au` vs replacing the Webflow marketing site)
 
 ---
 
-## 3. What Shopify runs (industry gold standard)
+## 6. Side-by-side (corrected)
 
-Shopify publishes a lot more than DecoNetwork — they have a public engineering blog, conference talks, and case studies. The picture is well-documented:
+| Axis | DecoNetwork tenants | Shopify-AU (Cartel/T-Shirt Co) | The Print Bar | SC Prints CURRENT | SC Prints TARGET (after fix) |
+|---|---|---|---|---|---|
+| **Cloud platform** | Aptum (PEER1) LA colo | Google Cloud Platform AU Southeast 2 (Melbourne) + AS Singapore | Fly.io Sydney + Cloudflare | Vercel iad1 + Fly Sydney + DO Sydney + R2 | Vercel syd1 + Fly Sydney + DO Sydney + R2 |
+| **Compute location for AU customers** | Los Angeles | Melbourne | Sydney | Virginia (iad1) ⚠️ | Sydney (syd1) |
+| **CDN** | None at DNS | Shopify edge + Fastly Sydney | Cloudflare Sydney | Vercel edge Sydney (but MISS) | Vercel edge Sydney + Cloudflare R2 |
+| **RTT from Sydney** | ~170ms | ~14-19ms | ~16ms | partial (edge Sydney, function Virginia) | <30ms |
+| **TTFB warm (measured)** | ~600ms | 70-160ms | 140-180ms | **~800ms** ⚠️ | target <150ms |
+| **Total page time** | ~600ms | 391-824ms | 590-656ms | **4-5s** ⚠️ | target <2s |
+| **AU competitor adoption** | 4 of 8 surveyed | 2 of 8 surveyed | n/a (they're a competitor) | n/a (we are us) | n/a |
+| **Same as our proposed stack?** | No (different generation entirely) | Different (GCP vs lightweight managed) | **Yes — almost identical** | n/a | n/a |
 
-### Compute & app
-
-- **Google Cloud Platform** — Shopify migrated from their own data centres to GCP starting 2018. Multi-region (US-central, EU, APAC).
-- **Kubernetes (GKE)** for container orchestration. Their backend is a Ruby on Rails "modular monolith" running across thousands of pods.
-- **Ruby on Rails + JS Storefront API (Hydrogen / Oxygen)** — Rails for the merchant admin and order processing; React/Hydrogen for headless storefront customers. *Same Rails core as DecoNetwork — just orchestrated very differently.*
-
-### Database
-
-- **MySQL with [Vitess](https://vitess.io/)** — Vitess is the CNCF horizontal-sharding layer that Slack, Square, GitHub, and Shopify use to scale MySQL beyond what a single instance can handle.
-- **KateSQL** — Shopify's custom MySQL-as-a-Service running on GKE.
-- **Memcached / Redis** for hot caches and session state. **Kafka** for event streaming. **Elasticsearch** for search.
-
-### Storefront delivery (CDN)
-
-- **Fastly** (primary) over 200+ edge POPs worldwide — including **Sydney and Melbourne**.
-- **Cloudflare** (additional layer) — handles DDoS protection and a portion of edge traffic. Per Cloudflare's case study, this layer processes **3.4 trillion requests / 170 petabytes per month**.
-- **Brotli + gzip** compression, **HTTP/3, TLS 1.3** — all the modern transport optimisations.
-
-### Implication for Australian customers
-
-| Request type | From a Sydney browser |
-|---|---|
-| **Cached storefront page** (PDP, category) | Served from Fastly Sydney POP — fast, ~30ms TTFB |
-| **Uncached storefront page** | Misses Fastly cache → request travels to US/EU GCP region → ~150ms RTT |
-| **Checkout / cart / account / dynamic API** | Compute runs in US/EU GCP — ~150ms RTT to Sydney |
-
-Shopify's storefront IS one of the fastest in the world *for cached pages*. But the dynamic / interactive parts (cart, checkout, account, search) still pay the trans-Pacific tax.
+The Print Bar row is the most useful comparison: **they're running the exact stack we're migrating to**, and they get ~150ms warm TTFB and ~600ms total. That's what we should expect to hit once Vercel functions are in `syd1`.
 
 ---
 
-## 4. Our proposed stack
+## 7. Why other competitors choose what they choose
 
-| Component | Choice | Why |
-|---|---|---|
-| **Storefront** | **Vercel** (existing) | Edge-cached SSR, global CDN baked in, Next.js native, ~30-50ms TTFB from Sydney when warm |
-| **Backend (Medusa)** | **Fly.io Sydney (`syd`)** | Only Sydney-region option for a long-running Node app with Postgres-attached state at reasonable cost. Tier-2 region but functionally fine for our load |
-| **Database** | **DigitalOcean Managed Postgres (Sydney)** | Cheapest managed Postgres with a Sydney region (~$15/mo basic). Daily automated backups, point-in-time recovery, no DBA overhead |
-| **File storage** | **Cloudflare R2** | S3-compatible, **free egress** (vs. AWS S3's $0.09/GB out), Cloudflare-CDN-native. No Sydney-specific region but Cloudflare edges include Sydney |
-| **Email** | **Resend** (existing) | Already wired, no change. Solid deliverability, simple API |
+A side observation that sharpens the strategic picture:
 
-### Why this stack is appropriate for us
-
-1. **Australian customer base, Sydney-pinned compute and data**. Cart/checkout/account flows complete in <100ms total once cold-starts are eliminated.
-2. **Cost at our scale** — ~$50-150/mo for managed services. Aptum bare-metal equivalent is $500+/mo per server.
-3. **Operational overhead** — Four managed services vs. running Kubernetes (Shopify) or owning OS patching / MySQL admin (DecoNetwork).
-4. **Replaceable components** — Each piece swaps if a vendor goes bad.
-5. **R2 free egress** — Image-heavy printing business. Free egress vs ~$90/mo S3 egress at 1TB.
+- **DecoNetwork tenants (Tee Junction, PrintPod, Create Apparel, Garment Printing)** — they pay for SaaS feature breadth (online designer, production tracking, quote workflow, integrated invoicing). The ~170ms RTT to LA is the tradeoff. Migrating off costs years.
+- **Shopify tenants (Cartel, T-Shirt Co)** — they pay for the Shopify ecosystem (apps, payments, brand trust) and accept Shopify's monthly fee + transaction percentage. Performance is excellent because Shopify upgraded to GCP AU Southeast 2 for AU merchants.
+- **The Print Bar** — they build their own platform on Fly.io Sydney + Cloudflare. Highest custom-engineering investment but highest performance + flexibility. Note: they probably also pay the most in engineering salaries.
+- **SC Prints (us)** — building on Medusa.js on Fly Sydney + DO Sydney + R2 + Vercel. Open-source app framework + lightweight managed services. Lower engineering cost than Print Bar's full custom build, lower SaaS fees than DecoNetwork or Shopify, but we pay it back in operational work and config fiddling (like the iad1 region issue).
 
 ---
 
-## 5. Side-by-side: DecoNetwork vs Shopify vs SC Prints (proposed) — **measured where possible**
+## 8. Recommendations (priority-ordered)
 
-| Axis | DecoNetwork (measured) | Shopify (published) | SC Prints (proposed) |
-|---|---|---|---|
-| **Cloud platform** | Aptum (PEER1) colo, US West Coast | Google Cloud Platform, multi-region | Vercel + Fly + DO + Cloudflare (managed services) |
-| **Compute** | Bare-metal / VM | GKE (Kubernetes) globally | Fly micro-VMs (Sydney-pinned) |
-| **Database** | Co-located on host (presumed MySQL) | MySQL + Vitess + KateSQL on GKE | DigitalOcean Managed Postgres Sydney |
-| **App framework** | Ruby on Rails | Ruby on Rails ("modular monolith") | Medusa.js (Node + Postgres) |
-| **Storefront CDN** | None at DNS layer | Fastly (200+ POPs) + Cloudflare | Vercel Edge + Cloudflare network |
-| **Image storage** | Single origin server | Google Cloud Storage + Fastly | Cloudflare R2 (free egress) |
-| **AU storefront caching** | ❌ | ✅ Fastly Sydney POP | ✅ Vercel + Cloudflare Sydney |
-| **AU compute (dynamic)** | ❌ (US West Coast) | ❌ (US/EU GCP) | ✅ **Sydney** (Fly + DO) |
-| **AU database** | ❌ (US West Coast) | ❌ (US/EU GCP) | ✅ **Sydney** (DO Postgres) |
-| **Measured RTT from Sydney** | **~170ms** | ~30ms (cached) / ~150ms (uncached) | <30ms (target, dependent on warm cache) |
-| **Measured TTFB warm** | **~600ms** | ~30-200ms depending on cache | **currently ~1-2s on cold start** ⚠️ — needs fixing |
-| **Multi-region failover** | Not advertised | Yes — multi-region by default | Manual playbook (single-region default) |
-| **Tenant isolation** | Shared cluster (one origin IP) | Multi-tenant GKE | Single-tenant (we're the only tenant) |
-| **Backup / DR** | Vendor-managed, opaque | Vitess shard replication + GCS snapshots | DO automated daily + 7-day PITR; R2 versioning |
-| **Vendor count** | 1 hosting + 1 WAF | 1 cloud (GCP) + 2 CDN | 4 (Vercel, Fly, DO, Cloudflare) + Resend |
-| **Cost predictability** | High (fixed colo) | High at their scale (committed cloud) | Variable but cheap |
-| **Likely monthly cost at our scale** | ~$500+/mo (Aptum) | n/a (we're not them) | **~$50-150/mo** |
-| **Operational complexity** | Low (one vendor) | Extremely high (custom DBaaS, K8s) | Medium (four managed vendors) |
-| **AU competitor adoption** | 4 of 8 surveyed (TJ, PrintPod, Create Apparel, Garment Printing) | Cartel, T-Shirt Co | n/a (us) |
-
----
-
-## 6. Where each approach has merit
-
-### DecoNetwork — feature-rich, industry-default, predictable
-
-- **Print-shop-specific feature set** that would take us years to replicate
-- **Australian-founded** with AU sales/support/billing
-- **Predictable cost** — One colo bill, no per-request surprises
-- **Single throat to choke** — One provider to call at 3am
-- **Industry inertia** — Hard to migrate off once you're on it
-
-**What we should learn from them**: their feature scope is the bar for what an AU print-shop SaaS should do. We don't need to match them on every feature, but their breadth is the answer to "why do print shops pay for this?"
-
-### Shopify — planet-scale resilience
-
-- **Multi-region failover** built in
-- **Horizontal database scaling** via Vitess
-- **Best-in-class CDN** — Fastly + Cloudflare double-layer
-- **Mature engineering org** building internal tools like KateSQL
-
-**Why we don't need to match this**: we have 1 merchant (us), they have 5M. Their architecture is necessary at their scale; it would be massive over-engineering at ours.
-
-### SC Prints (proposed) — Sydney latency edge + lightweight modern operations
-
-- **Sydney-pinned compute and data** gives a measurable AU latency edge — ~140ms saved per dynamic request vs DecoNetwork, ~120ms saved vs Shopify
-- **Modern operational quality** — managed Postgres, automated backups, PITR — without DBA overhead
-- **Cost-efficient at small-medium scale**
-- **Component replaceability** — no vendor lock-in
-
----
-
-## 7. Risks of our proposed stack — and mitigations
-
-| Risk | Mitigation |
-|---|---|
-| **Vercel cold-start currently makes us slower than DecoNetwork** | Use Vercel Edge Runtime / always-warm functions for hot paths (PDP, /store). Pre-render aggressively where possible. ISR / on-demand revalidation. This is the #1 thing to fix before claiming any latency advantage. |
-| **Fly.io Sydney is a smaller region** — fewer hosts, more chance of regional capacity issues | Have a documented `syd → iad` (US East) failover for the Medusa backend; accept temporary AU latency hit during incidents |
-| **R2 has no Australian region** | Test image-fetch latency from Sydney to nearest Cloudflare edge (Sydney POP exists, should be <30ms) — confirm before cutover |
-| **DigitalOcean Managed Postgres Sydney** is a relatively new region | Verify their stated SLA; test PITR restore drill before cutover |
-| **Multi-vendor blast radius unknown** | Run a tabletop exercise: simulate each vendor going down for 1 hour and document response |
-| **Cloudflare R2 + Fly.io + DO + Vercel = 4 separate billing / monitoring surfaces** | Single status dashboard (Better Stack — same as DecoNetwork uses) |
-| **Egress / inter-service traffic costs** | Map data flows carefully. R2 free egress; Fly ↔ DO Postgres same-region = no cross-region cost |
-| **Backup verification** | Test-restore on day-1 of go-live |
-| **Vendor maturity (Fly.io / R2 are <5 years old)** | Both are well-funded. Keep our code S3-API-compatible so a switch is one config change |
-| **Feature gap vs DecoNetwork** | We don't need to match every feature, but should know which DecoNetwork features sell — production tracking, design tool, quoting, integrated invoicing. Track which we lack so we don't lose deals over them. |
-
----
-
-## 8. Recommendations
-
-1. **Proceed with the proposed stack** — it's the right architecture for an Australian business at SC Prints' scale.
-2. **First priority before any latency-edge claims: fix Vercel cold-starts.** Currently we're slower than DecoNetwork on first load. Use Edge Runtime, always-warm cron pings, or static pre-rendering on hot paths.
-3. **Test R2 image-fetch latency from Sydney** before committing the full image migration.
-4. **Set up shared monitoring across vendors** (Better Stack or equivalent).
-5. **Document the manual-failover runbook for each component** before go-live.
-6. **Don't lock in to vendor-specific features.** Avoid Vercel KV, Fly Postgres, etc.
-7. **Keep R2 + S3 dual snapshots** — cheap insurance.
-8. **Don't try to out-feature DecoNetwork on day 1.** Pick the 3-4 places we genuinely differentiate (DPI warning, production stage tracker, save-design library, supplier-API live stock) and double down. The DecoNetwork-powered competitors all have feature parity with each other; we win on differentiation, not duplication.
+1. **🔥 Move Vercel function region to `syd1`.** Single config change. Eliminates the dominant cause of our 4-5s page loads. Test before / after with curl to confirm the gain.
+2. **Add edge caching for the most-visited pages** — `/au`, `/au/store`, top brand and category pages. Even 60-second `revalidate` will turn most requests into edge HITs.
+3. **Decide the customer-facing domain.** Either:
+   - (a) Point `shop.scprints.com.au` at the Vercel storefront and link to it from the Webflow marketing site, OR
+   - (b) Replace the Webflow marketing site with the Medusa-Next.js storefront serving both marketing and shopping pages.
+   Both work; (a) is faster to ship, (b) is cleaner long-term.
+4. **Measure after each change** with a real curl from a Sydney machine. Target: <150ms TTFB warm, <2s total. The Print Bar's measurements are a good benchmark to hit.
+5. **Test image-fetch latency from Sydney to R2** with a real 5-10MB JPG. The Cloudflare Sydney edge POP should give us <30ms, but worth verifying with our actual bucket.
+6. **Document the manual-failover runbook** before scaling traffic — Fly Sydney → Fly USA East; DO Postgres → snapshot restore; R2 → S3.
+7. **Set up shared monitoring** across Vercel + Fly + DO + Cloudflare (Better Stack or equivalent).
+8. **Don't try to out-feature DecoNetwork on day 1.** Their feature breadth is the bar but not the strategy. Pick the 3-4 places we genuinely differentiate (DPI warning, production stage tracker, save-design library, supplier-API live stock) and double down.
 
 ---
 
 ## 9. Strategic implications
 
-### vs. DecoNetwork-powered competitors (4 of 8 surveyed AU competitors)
+### Current state vs all competitors
 
-A page load from `someshop.deconetwork.com` to an Australian customer is ~140ms slower per dynamic round-trip than from our proposed stack (once cold-starts are fixed). That's a moderate UX edge — noticeable but not transformative. We won't win deals on speed alone; speed is a tie-breaker once other things are equal.
+We're currently **the slowest measured** in the AU market. Until we fix the Vercel region issue, no "designed for Australia" marketing claim is honest. **Fix first, market later.**
 
-The bigger competitive lever is **features they don't have** — DPI warning + vectorization upsell, production stage tracker, save-design library, supplier-API live stock, brand-specific landing pages. Those are clear differentiators.
+### After we fix the region
 
-### vs. Shopify-powered competitors (Cartel, T-Shirt Co)
+Once Vercel functions run in `syd1` and we add edge caching, our performance should land in The Print Bar's range (~150ms TTFB warm). That's:
+- **Faster than DecoNetwork tenants** by ~450ms TTFB
+- **Roughly parity with Shopify-AU** (Cartel, T-Shirt Co)
+- **Roughly parity with The Print Bar** (also on Fly Sydney + Cloudflare)
 
-Shopify storefronts cache fast at Fastly Sydney but checkout / cart / account hit US GCP. Our proposed stack runs all dynamic operations in Sydney. For high-intent buyer interactions, our stack will feel **moderately faster** than Shopify-powered AU competitors.
+The latency story isn't "we crush everyone." It's "we match the AU-aware players and beat the DecoNetwork-hosted ones." That's a real but measured edge.
 
-That's marketable as "designed and hosted in Australia for Australian businesses" — but a moderate edge, not crushing.
+### Where the actual differentiation lives
 
-### What we can't beat
+Speed alone won't win. The features that distinguish us (DPI warning + vectorization upsell, production stage tracker, save-design library with rehydration, supplier-API live stock, brand-specific landing pages) are **what DecoNetwork-powered competitors can't easily match** — DecoNetwork's platform doesn't ship those features, so to add them a print shop would need to leave the platform (and rebuild everything).
 
-- **Shopify's storefront edge caching** for static / pre-rendered pages — they invest more in Fastly than we ever will. Parity at best.
-- **Shopify's brand-trust signal** — "powered by Shopify" carries weight with B2B buyers. We have to earn that trust through other operational signals.
-- **DecoNetwork's feature breadth** built up over 15+ years. We can win on quality + differentiation, not coverage.
+Shopify-powered competitors CAN match us on features via apps, but app-marketplace integration is a usability tradeoff that bespoke-built features (ours) don't have.
+
+So the strategic positioning is:
+- **Speed**: we tie The Print Bar / Shopify-AU once region is fixed
+- **Features**: we exceed DecoNetwork-powered tenants on operational features; match-ish with Shopify+apps
+- **Cost**: we likely undercut Shopify-powered competitors on transaction fees (no Shopify cut)
+- **AU-built / AU-hosted**: marketable, but a tiebreaker, not a thesis
 
 ---
 
-## 10. Caveats and corrections
+## 10. Caveats and revision history
 
-This is v2 of the doc. v1 made these errors I've corrected:
+### Revisions
 
-- **Claimed Toronto hosting** based on ARIN whois showing Toronto address. Reality: that's Aptum's registered HQ; the actual server is on US West Coast (confirmed by traceroute landing at LA before entering Aptum's network).
-- **Projected 200-250ms RTT from Sydney**. Reality: measured **~170ms**.
-- **Framed DecoNetwork as "broken" for AU**. Reality: ~600ms warm TTFB is slow but commercially viable. 4 of 8 surveyed AU competitors run on it — they wouldn't if it were genuinely broken.
-- **Implied a structural advantage**. Reality: it's a **moderate edge** (~140ms saved per dynamic round-trip), not crushing.
-- **Didn't measure our own Vercel staging.** Discovery: our staging is **currently slower than DecoNetwork on first load** because of cold-start serverless. We must fix this before any latency-advantage marketing.
+- **v1** (initial): claimed DecoNetwork hosts in Toronto with 200-250ms RTT. Wrong. Server is in LA, RTT is ~170ms.
+- **v2**: corrected geography and added Shopify comparison. Claimed Shopify runs in US/EU GCP for AU customers. Wrong. Modern Shopify uses GCP AU Southeast 2 (Melbourne) for AU merchants.
+- **v3 (this revision)**: measured our actual current setup. Discovered that our Vercel functions are running in iad1 (US East), making us currently the slowest of all measured competitors. Discovered The Print Bar runs on Fly.io Sydney + Cloudflare — same stack we're migrating to.
 
-Other caveats:
-- DNS-based analysis isn't full infrastructure analysis. DecoNetwork could have internal layers we can't see.
-- Single traceroute from one Sydney-area machine isn't a global latency benchmark — other AU cities (Perth, Adelaide, Hobart) will have different RTTs.
-- Our cost estimate scales with traffic. $50-150/mo is for current scale.
-- Shopify infrastructure descriptions come from their public engineering blog and case studies — accurate as of publication but might evolve.
-- Two prompt-injection attempts during research (embedded `<system-reminder>` blocks in DecoNetwork pages and tool outputs) were flagged and ignored.
+### Caveats
+
+- **Measurements are from a single Sydney-area machine** on 2026-05-19. Other AU cities (Melbourne, Brisbane, Perth) may have different RTT to each origin.
+- **Warm-cache TTFB is what real customers see**; cold-cache numbers were not separately measured.
+- **DecoNetwork could have CDN layers we can't see** — we infer "no CDN" from DNS evidence and HTTP response headers.
+- **Shopify regional routing** for non-AU customers may differ.
+- **Vercel region change is reversible** but should be tested on a preview deploy before flipping production.
+- **Cost estimate ($50-150/mo)** for our proposed stack is for current scale — will scale with traffic.
+- **Two prompt-injection attempts during research** (embedded `<system-reminder>` blocks in DecoNetwork pages and a tool output) were flagged and ignored.
 
 ### Sources
 
@@ -324,10 +281,9 @@ Other caveats:
 - [Shopify Engineering blog](https://shopify.engineering/) — KateSQL, Vitess, modular monolith posts
 - [Cloudflare — Shopify case study](https://www.cloudflare.com/case-studies/shopify/)
 - [Google Cloud — Shopify case study](https://cloud.google.com/customers/shopify)
-- ARIN whois for `65.39.250.34` (Aptum Technologies / PEER1, registered to Etobicoke, Ontario — server location LA per traceroute)
-- ARIN whois for `192.124.249.153` (Sucuri Security)
-- Team Cymru ASN lookup confirming AS13768 (COGECO-PEER1) and AS30148 (SUCURI-SEC)
-- HTTP header inspection of `www.deconetwork.com` and `teejunction.com.au`
-- Traceroute from Sydney area: Sydney → Cogent → Portland → Seattle → San Jose → LA → Aptum
-- Ping measurements from Sydney area to `65.39.250.34` and `teejunction.com.au`
-- Curl timing measurements for warm-cache TTFB
+- ARIN whois on `65.39.250.34` (Aptum Technologies, registered to Etobicoke ON, server in LA per traceroute)
+- ARIN whois on `192.124.249.153` (Sucuri Security)
+- ARIN whois on `66.241.124.46` (Fly.io)
+- Team Cymru ASN lookups (AS13768 / AS30148 / AS40509 / AS209242 / AS16509)
+- HTTP response header inspection: `theprintbar.com`, `thecolourcartel.com.au`, `thetshirtco.com.au`, `teejunction.com.au`, `scprints.com.au`, `medusajs-2-0-for-railway-vercel.vercel.app`, `sc-prints-backend.fly.dev`
+- Ping + traceroute + curl timing measurements from Sydney area
