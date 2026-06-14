@@ -29,6 +29,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "statics.pancake.vn",
       },
+      { // Stitch / Google-hosted editorial images (hero, banners)
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
       ...(process.env.NEXT_PUBLIC_BASE_URL
         ? [{ // Note: needed to serve images from /public folder
             protocol: process.env.NEXT_PUBLIC_BASE_URL.startsWith("https") ? "https" : "http",
