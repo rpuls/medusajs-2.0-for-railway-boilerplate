@@ -1,153 +1,107 @@
-import { getCategoriesList } from "@lib/data/categories"
-import { getCollectionsList } from "@lib/data/collections"
-import { Text, clx } from "@medusajs/ui"
-
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import MedusaCTA from "@modules/layout/components/medusa-cta"
+
+const footerLinks = {
+  shop: {
+    title: "Mua sắm",
+    links: [
+      { label: "Binder", href: "/collections/binder" },
+      { label: "Thời trang", href: "/collections/thoi-trang" },
+      { label: "Phụ kiện", href: "/collections/phu-kien" },
+      { label: "Tất cả sản phẩm", href: "/store" },
+    ],
+  },
+  support: {
+    title: "Hỗ trợ",
+    links: [
+      { label: "Hướng dẫn chọn size", href: "/store?category=size-guide" },
+      { label: "Chính sách đổi size", href: "/doi-tra" },
+      { label: "Vận chuyển & thanh toán", href: "/van-chuyen" },
+      { label: "Câu hỏi thường gặp", href: "/faq" },
+    ],
+  },
+  about: {
+    title: "Về KIN",
+    links: [
+      { label: "Câu chuyện thương hiệu", href: "/cau-chuyen" },
+      { label: "Nhật ký", href: "/blog" },
+      { label: "Chính sách bảo mật", href: "/bao-mat" },
+      { label: "Điều khoản", href: "/dieu-khoan" },
+    ],
+  },
+}
 
 export default async function Footer() {
-  const { collections } = await getCollectionsList(0, 6)
-  const { product_categories } = await getCategoriesList(0, 6)
-
   return (
-    <footer className="border-t border-ui-border-base w-full">
-      <div className="content-container flex flex-col w-full">
-        <div className="flex flex-col gap-y-6 xsmall:flex-row items-start justify-between py-40">
-          <div>
+    <footer className="w-full bg-kin-surface-container border-t border-kin-outline-variant">
+      <div className="max-w-kin mx-auto px-kin-mobile md:px-kin-desktop py-16">
+        <div className="flex flex-col md:flex-row justify-between gap-12">
+          {/* Brand + contact */}
+          <div className="flex flex-col gap-4 max-w-sm">
             <LocalizedClientLink
               href="/"
-              className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
+              className="font-hanken text-2xl font-bold tracking-tighter text-kin-primary"
             >
-              Medusa Store
+              KIN STORE
             </LocalizedClientLink>
+            <p className="font-vietnam text-sm text-kin-on-surface-variant leading-relaxed">
+              Thời trang định hình dành cho cộng đồng Transmasculine tại Việt
+              Nam. Đồng hành cùng bạn trong mọi chuyển động.
+            </p>
+            <div className="flex flex-col gap-1 mt-2 font-vietnam text-sm text-kin-on-surface-variant">
+              <a
+                href="https://zalo.me"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-kin-primary transition-colors"
+              >
+                Tư vấn kín đáo qua Zalo
+              </a>
+              <a
+                href="https://m.me"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-kin-primary transition-colors"
+              >
+                Nhắn tin Messenger
+              </a>
+            </div>
           </div>
-          <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
-            {product_categories && product_categories?.length > 0 && (
-              <div className="flex flex-col gap-y-2">
-                <span className="txt-small-plus txt-ui-fg-base">
-                  Categories
-                </span>
-                <ul
-                  className="grid grid-cols-1 gap-2"
-                  data-testid="footer-categories"
-                >
-                  {product_categories?.slice(0, 6).map((c) => {
-                    if (c.parent_category) {
-                      return
-                    }
 
-                    const children =
-                      c.category_children?.map((child) => ({
-                        name: child.name,
-                        handle: child.handle,
-                        id: child.id,
-                      })) || null
-
-                    return (
-                      <li
-                        className="flex flex-col gap-2 text-ui-fg-subtle txt-small"
-                        key={c.id}
-                      >
-                        <LocalizedClientLink
-                          className={clx(
-                            "hover:text-ui-fg-base",
-                            children && "txt-small-plus"
-                          )}
-                          href={`/categories/${c.handle}`}
-                          data-testid="category-link"
-                        >
-                          {c.name}
-                        </LocalizedClientLink>
-                        {children && (
-                          <ul className="grid grid-cols-1 ml-3 gap-2">
-                            {children &&
-                              children.map((child) => (
-                                <li key={child.id}>
-                                  <LocalizedClientLink
-                                    className="hover:text-ui-fg-base"
-                                    href={`/categories/${child.handle}`}
-                                    data-testid="category-link"
-                                  >
-                                    {child.name}
-                                  </LocalizedClientLink>
-                                </li>
-                              ))}
-                          </ul>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )}
-            {collections && collections.length > 0 && (
-              <div className="flex flex-col gap-y-2">
-                <span className="txt-small-plus txt-ui-fg-base">
-                  Collections
+          {/* Link columns */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-16">
+            {Object.values(footerLinks).map((col) => (
+              <div key={col.title} className="flex flex-col gap-4">
+                <span className="font-hanken text-xs font-semibold text-kin-primary uppercase tracking-widest">
+                  {col.title}
                 </span>
-                <ul
-                  className={clx(
-                    "grid grid-cols-1 gap-2 text-ui-fg-subtle txt-small",
-                    {
-                      "grid-cols-2": (collections?.length || 0) > 3,
-                    }
-                  )}
-                >
-                  {collections?.slice(0, 6).map((c) => (
-                    <li key={c.id}>
+                <ul className="flex flex-col gap-3">
+                  {col.links.map((link) => (
+                    <li key={link.href}>
                       <LocalizedClientLink
-                        className="hover:text-ui-fg-base"
-                        href={`/collections/${c.handle}`}
+                        href={link.href}
+                        className="font-vietnam text-sm text-kin-on-surface-variant hover:text-kin-primary transition-colors"
                       >
-                        {c.title}
+                        {link.label}
                       </LocalizedClientLink>
                     </li>
                   ))}
                 </ul>
               </div>
-            )}
-            <div className="flex flex-col gap-y-2">
-              <span className="txt-small-plus txt-ui-fg-base">Medusa</span>
-              <ul className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle txt-small">
-                <li>
-                  <a
-                    href="https://github.com/medusajs"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-ui-fg-base"
-                  >
-                    GitHub
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://docs.medusajs.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-ui-fg-base"
-                  >
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://github.com/medusajs/nextjs-starter-medusa"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-ui-fg-base"
-                  >
-                    Source code
-                  </a>
-                </li>
-              </ul>
-            </div>
+            ))}
           </div>
         </div>
-        <div className="flex w-full mb-16 justify-between text-ui-fg-muted">
-          <Text className="txt-compact-small">
-            © {new Date().getFullYear()} Medusa Store. All rights reserved.
-          </Text>
-          <MedusaCTA />
+
+        {/* Bottom bar */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-16 pt-8 border-t border-kin-outline-variant">
+          <p className="font-vietnam text-xs text-kin-on-surface-variant">
+            © {new Date().getFullYear()} KIN STORE. Dành cho cộng đồng
+            Transmasculine Việt Nam.
+          </p>
+          <div className="flex items-center gap-4 font-vietnam text-xs text-kin-on-surface-variant">
+            <span>Đóng gói kín đáo</span>
+            <span className="text-kin-outline-variant">·</span>
+            <span>Hỗ trợ COD toàn quốc</span>
+          </div>
         </div>
       </div>
     </footer>

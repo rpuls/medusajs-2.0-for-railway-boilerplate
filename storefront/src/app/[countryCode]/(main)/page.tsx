@@ -6,6 +6,8 @@ import TrustBar from "@modules/home/components/trust-bar"
 import CampaignBanner from "@modules/home/components/campaign-banner"
 import SizeFinderBanner from "@modules/home/components/size-finder-banner"
 import CommunitySection from "@modules/home/components/community-section"
+import CategoryGrid from "@modules/home/components/category-grid"
+import BinderCompare from "@modules/home/components/binder-compare"
 import { getCollectionsWithProducts } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 
@@ -50,7 +52,11 @@ export default async function Home({
         </ul>
       </section>
 
+      <CategoryGrid />
+
       <CampaignBanner />
+
+      <BinderCompare />
 
       <SizeFinderBanner />
 
