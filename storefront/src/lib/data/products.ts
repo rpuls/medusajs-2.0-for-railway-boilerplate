@@ -77,11 +77,14 @@ export const getProductsList = cache(async function ({
     )
     .then(({ products, count }) => {
       const nextPage = count > offset + limit ? pageParam + 1 : null
+      const withImages = products.filter(
+        (p) => p.thumbnail || (p.images && p.images.length > 0)
+      )
 
       return {
         response: {
-          products,
-          count,
+          products: withImages,
+          count: withImages.length,
         },
         nextPage: nextPage,
         queryParams,
@@ -121,7 +124,10 @@ export const getProductsListWithSort = cache(async function ({
     countryCode,
   })
 
-  const sortedProducts = sortProducts(products, sortBy)
+  const withImages = products.filter(
+    (p) => p.thumbnail || (p.images && p.images.length > 0)
+  )
+  const sortedProducts = sortProducts(withImages, sortBy)
 
   const pageParam = (page - 1) * limit
 
