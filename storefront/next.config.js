@@ -14,11 +14,20 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2678400, // 31 days
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
+      },
+      { // Pancake CDN — product images
+        protocol: "https",
+        hostname: "content.pancake.vn",
+      },
+      { // Pancake CDN — statics variant
+        protocol: "https",
+        hostname: "statics.pancake.vn",
       },
       ...(process.env.NEXT_PUBLIC_BASE_URL
         ? [{ // Note: needed to serve images from /public folder
