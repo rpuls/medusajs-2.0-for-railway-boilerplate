@@ -34,6 +34,24 @@ module.exports = {
           80: "#1F2937",
           90: "#111827",
         },
+        // Kin Store design tokens
+        "kin-primary": "#000000",
+        "kin-on-primary": "#ffffff",
+        "kin-forest": "#1B3022",
+        "kin-forest-dark": "#2D4034",
+        "kin-beige": "#F5F2ED",
+        "kin-warm-grey": "#A3A3A3",
+        "kin-surface": "#f9f9f9",
+        "kin-on-surface": "#1a1c1c",
+        "kin-on-surface-variant": "#444748",
+        "kin-outline": "#747878",
+        "kin-outline-variant": "#c4c7c7",
+        "kin-surface-container": "#eeeeee",
+        "kin-surface-high": "#e8e8e8",
+        "kin-surface-highest": "#e2e2e2",
+        "kin-secondary": "#4f6356",
+        "kin-secondary-container": "#cfe5d4",
+        "kin-error": "#ba1a1a",
       },
       borderRadius: {
         none: "0px",
@@ -45,6 +63,12 @@ module.exports = {
       },
       maxWidth: {
         "8xl": "100rem",
+        "kin": "1280px",
+      },
+      spacing: {
+        "kin-desktop": "64px",
+        "kin-mobile": "20px",
+        "kin-gutter": "24px",
       },
       screens: {
         "2xsmall": "320px",
@@ -60,6 +84,8 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          "var(--font-vietnam)",
+          "Be Vietnam Pro",
           "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
@@ -69,6 +95,8 @@ module.exports = {
           "Ubuntu",
           "sans-serif",
         ],
+        "hanken": ["var(--font-hanken)", "Hanken Grotesk", "sans-serif"],
+        "vietnam": ["var(--font-vietnam)", "Be Vietnam Pro", "sans-serif"],
       },
       keyframes: {
         ring: {
