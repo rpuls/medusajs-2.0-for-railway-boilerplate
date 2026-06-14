@@ -6,9 +6,10 @@ const Hero = () => {
     <section className="relative w-full h-[88vh] min-h-[600px] flex items-end pb-16 md:pb-24">
       <div className="absolute inset-0 w-full h-full">
         <Image
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzMw_Jt-XVH6ErbqUJP0NtGo6PGxOkXPDnkgWRHU7dLEMydXnBZaE35zYhz8R7iYs2ngNKYYguYTXswYRVZU4PBN4yH6DdcyTqb5U0iTQQOHhglCU7iMjrFUASJ43JyPAQZxbCWwuYjpAcldT_E7j47t8vpqCFaU7etAGkyTom4cMrlb1JIwQvbcCEwvX0w2JaBWBJytkAsHdlXTZtnV1Rkx5CDh2s8HdBSrvRAw1dY84p2wA5OTYtRiYot4gFaVYjJnw7NxwsIiHg"
+          src="/images/kin-store-hero-4k-v1.png"
           alt="KIN STORE - Tự tin là chính mình"
           fill
+          sizes="100vw"
           className="object-cover object-center"
           priority
         />
