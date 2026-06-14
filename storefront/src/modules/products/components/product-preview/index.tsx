@@ -4,6 +4,7 @@ import { getProductPrice } from "@lib/util/get-product-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getProductsById } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
+import WishlistButton from "@modules/common/components/wishlist-button"
 
 export default async function ProductPreview({
   product,
@@ -46,8 +47,29 @@ export default async function ProductPreview({
               className="object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
             />
           )}
+          <div className="absolute top-2 right-2 z-10">
+            <WishlistButton productId={product.id!} size="sm" />
+          </div>
         </div>
         <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            {(() => {
+              const level = product.metadata?.compression_level as string | undefined
+              if (!level) return null
+              const map: Record<string, { label: string; cls: string }> = {
+                light:  { label: "Nhẹ — cả ngày",     cls: "bg-green-50 text-green-700" },
+                medium: { label: "Vừa — 6–8 tiếng",   cls: "bg-yellow-50 text-yellow-700" },
+                strong: { label: "Mạnh — max 6 tiếng", cls: "bg-red-50 text-red-700" },
+              }
+              const cfg = map[level]
+              if (!cfg) return null
+              return (
+                <span className={`inline-block text-[10px] font-semibold font-hanken px-2 py-0.5 rounded-full uppercase tracking-wide ${cfg.cls}`}>
+                  {cfg.label}
+                </span>
+              )
+            })()}
+          </div>
           <h3
             className="font-hanken text-base font-semibold text-kin-primary leading-snug"
             data-testid="product-title"

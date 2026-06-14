@@ -326,6 +326,11 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     const sameAsBilling = formData.get("same_as_billing")
     if (sameAsBilling === "on") data.billing_address = data.shipping_address
 
+    const discreetPackaging = formData.get("discreet_packaging")
+    if (discreetPackaging !== null) {
+      data.metadata = { discreet_packaging: discreetPackaging === "on" }
+    }
+
     if (sameAsBilling !== "on")
       data.billing_address = {
         first_name: formData.get("billing_address.first_name"),

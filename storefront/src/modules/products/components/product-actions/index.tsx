@@ -10,6 +10,8 @@ import OptionSelect from "@modules/products/components/product-actions/option-se
 import MobileActions from "./mobile-actions"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
+import WishlistButton from "@modules/common/components/wishlist-button"
+import NotifyBackInStock from "@modules/common/components/notify-back-in-stock"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -186,7 +188,13 @@ export default function ProductActions({
               ? "Hết hàng"
               : "Thêm vào giỏ"}
           </button>
+          <WishlistButton productId={product.id!} />
         </div>
+
+        {/* Hết hàng — notify */}
+        {selectedVariant && !inStock && (
+          <NotifyBackInStock productId={product.id!} productTitle={product.title} />
+        )}
 
         {/* Trust Badge */}
         <div className="flex items-center gap-2 py-3 px-4 bg-kin-surface border border-kin-warm-grey">

@@ -10,11 +10,13 @@ import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
 const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Search: "/search",
-  Account: "/account",
-  Cart: "/cart",
+  "Trang chủ": "/",
+  "Cửa hàng": "/store",
+  "Câu chuyện": "/cau-chuyen",
+  "Chọn size": "/chon-size",
+  "Tìm kiếm": "/search",
+  "Tài khoản": "/account",
+  "Giỏ hàng": "/cart",
 }
 
 const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {

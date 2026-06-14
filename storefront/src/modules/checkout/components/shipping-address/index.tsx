@@ -19,6 +19,9 @@ const ShippingAddress = ({
   onChange: () => void
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [discreetPackaging, setDiscreetPackaging] = useState(
+    cart?.metadata?.discreet_packaging === true
+  )
 
   const countriesInRegion = useMemo(
     () => cart?.region?.countries?.map((c) => c.iso_2),
@@ -172,7 +175,7 @@ const ShippingAddress = ({
           data-testid="shipping-province-input"
         />
       </div>
-      <div className="my-8">
+      <div className="my-8 flex flex-col gap-y-3">
         <Checkbox
           label="Billing address same as shipping address"
           name="same_as_billing"
@@ -180,6 +183,30 @@ const ShippingAddress = ({
           onChange={onChange}
           data-testid="billing-address-checkbox"
         />
+        <div className="flex items-start gap-x-3 cursor-pointer group" onClick={() => setDiscreetPackaging(!discreetPackaging)}>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={discreetPackaging}
+            onClick={e => { e.stopPropagation(); setDiscreetPackaging(!discreetPackaging) }}
+            className={`w-5 h-5 mt-0.5 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${
+              discreetPackaging
+                ? "bg-kin-primary border-kin-primary"
+                : "bg-white border-gray-300 group-hover:border-kin-primary"
+            }`}
+          >
+            {discreetPackaging && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
+          <input type="hidden" name="discreet_packaging" value={discreetPackaging ? "on" : "off"} />
+          <div>
+            <p className="text-sm font-medium text-ui-fg-base">Đóng gói kín đáo</p>
+            <p className="text-xs text-ui-fg-subtle mt-0.5">Không in tên thương hiệu hoặc nội dung đơn hàng lên bao bì giao hàng.</p>
+          </div>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <Input

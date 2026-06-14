@@ -1,6 +1,7 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
 import { Hanken_Grotesk, Be_Vietnam_Pro } from "next/font/google"
+import { WishlistProvider } from "@lib/context/wishlist-context"
 import "styles/globals.css"
 
 const hankenGrotesk = Hanken_Grotesk({
@@ -37,7 +38,9 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         />
       </head>
       <body className="font-vietnam antialiased bg-kin-surface text-kin-on-surface">
-        <main className="relative">{props.children}</main>
+        <WishlistProvider>
+          <main className="relative">{props.children}</main>
+        </WishlistProvider>
       </body>
     </html>
   )

@@ -3,6 +3,7 @@ import { getRegion } from "@lib/data/regions"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { GOAL_TAG_MAP } from "@modules/store/components/body-goal-filter"
 
 const PRODUCT_LIMIT = 12
 
@@ -21,6 +22,7 @@ export default async function PaginatedProducts({
   categoryId,
   productsIds,
   countryCode,
+  goal,
 }: {
   sortBy?: SortOptions
   page: number
@@ -28,6 +30,7 @@ export default async function PaginatedProducts({
   categoryId?: string
   productsIds?: string[]
   countryCode: string
+  goal?: string
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: 12,
@@ -64,10 +67,23 @@ export default async function PaginatedProducts({
     countryCode,
   })
 
+  // Client-side tag filter for body goal
+  if (goal && goal !== "all" && GOAL_TAG_MAP[goal]) {
+    const requiredTag = GOAL_TAG_MAP[goal]
+    products = products.filter((p) =>
+      p.tags?.some((t) => t.value?.toLowerCase() === requiredTag)
+    )
+  }
+
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 
   return (
     <>
+      {products.length === 0 && (
+        <p className="font-vietnam text-kin-on-surface-variant text-base py-12">
+          Chưa có sản phẩm phù hợp với mục tiêu này. Vui lòng thử lại sau.
+        </p>
+      )}
       <ul
         className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
         data-testid="products-list"

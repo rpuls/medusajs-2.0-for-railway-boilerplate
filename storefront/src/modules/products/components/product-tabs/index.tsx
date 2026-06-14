@@ -16,6 +16,8 @@ type TabItem = {
 const ProductTabs = ({ product }: ProductTabsProps) => {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
 
+  const compressionLevel = (product.metadata?.compression_level as string) || null
+
   const tabs: TabItem[] = [
     {
       label: "Mô tả sản phẩm",
@@ -35,6 +37,58 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
             Giặt tay hoặc giặt máy ở chế độ nhẹ với nước lạnh. Không sử dụng chất
             tẩy. Phơi khô tự nhiên, tránh ánh nắng trực tiếp.
           </p>
+        </div>
+      ),
+    },
+    {
+      label: "Hướng dẫn mặc an toàn",
+      content: (
+        <div className="font-vietnam text-base text-kin-on-surface-variant leading-relaxed space-y-4">
+          {compressionLevel && (
+            <div className={clx(
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold mb-2",
+              {
+                "bg-green-50 text-green-700": compressionLevel === "light",
+                "bg-yellow-50 text-yellow-700": compressionLevel === "medium",
+                "bg-red-50 text-red-700": compressionLevel === "strong",
+              }
+            )}>
+              <span className={clx("w-2 h-2 rounded-full", {
+                "bg-green-500": compressionLevel === "light",
+                "bg-yellow-500": compressionLevel === "medium",
+                "bg-red-500": compressionLevel === "strong",
+              })} />
+              {compressionLevel === "light" && "Compression nhẹ — mặc cả ngày"}
+              {compressionLevel === "medium" && "Compression vừa — khuyến nghị 6–8 tiếng"}
+              {compressionLevel === "strong" && "Compression mạnh — tối đa 6 tiếng"}
+            </div>
+          )}
+          <ul className="space-y-3">
+            <li className="flex gap-3">
+              <span className="text-kin-primary font-bold shrink-0">①</span>
+              <span><strong>Giới hạn thời gian:</strong> Không mặc quá 8 tiếng liên tục. Tháo ra để cơ thể nghỉ ngơi ít nhất 30 phút trước khi mặc lại.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-kin-primary font-bold shrink-0">②</span>
+              <span><strong>Không mặc khi ngủ:</strong> Việc mặc binder khi ngủ có thể ảnh hưởng đến hô hấp và gây tổn thương xương sườn về lâu dài.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-kin-primary font-bold shrink-0">③</span>
+              <span><strong>Tháo ra ngay nếu:</strong> Cảm thấy khó thở, đau ngực, tê tay hoặc chóng mặt. Đây là dấu hiệu sản phẩm quá chật hoặc mặc quá lâu.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-kin-primary font-bold shrink-0">④</span>
+              <span><strong>Không tập thể thao cường độ cao</strong> khi đang mặc binder loại strong. Với hoạt động vận động, chọn loại compression nhẹ hơn.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-kin-primary font-bold shrink-0">⑤</span>
+              <span><strong>Chọn đúng size:</strong> Binder quá chật không hiệu quả hơn — chỉ gây hại. Tham khảo{" "}
+                <a href="/vn/chon-size" className="text-kin-primary underline underline-offset-2 hover:opacity-70">
+                  hướng dẫn chọn size
+                </a>{" "}của chúng tôi.
+              </span>
+            </li>
+          </ul>
         </div>
       ),
     },
