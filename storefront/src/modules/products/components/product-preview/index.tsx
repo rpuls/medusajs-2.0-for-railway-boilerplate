@@ -47,15 +47,15 @@ export default async function ProductPreview({
             />
           )}
         </div>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-1">
           <h3
-            className="font-hanken text-sm font-semibold text-kin-primary"
+            className="font-hanken text-base font-semibold text-kin-primary leading-snug"
             data-testid="product-title"
           >
             {product.title}
           </h3>
           {cheapestPrice && (
-            <span className="font-vietnam text-base text-kin-on-surface-variant">
+            <span className="font-vietnam text-base font-medium text-kin-on-surface-variant">
               {cheapestPrice.calculated_price}
             </span>
           )}

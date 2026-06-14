@@ -20,33 +20,33 @@ export default async function Nav() {
 
       {/* Main navigation */}
       <header className="bg-kin-surface border-b border-kin-outline-variant">
-        <nav className="max-w-kin mx-auto px-kin-desktop flex items-center justify-between h-16">
+        <nav className="max-w-kin mx-auto px-5 md:px-12 flex items-center justify-between h-20">
           {/* Left links */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8">
             <LocalizedClientLink
-              href="/store"
-              className="font-hanken text-xs font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-widest"
-            >
-              Sản phẩm
-            </LocalizedClientLink>
-            <LocalizedClientLink
-              href="/store?category=binder"
-              className="font-hanken text-xs font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-widest"
+              href="/collections/binder"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
             >
               Binder
             </LocalizedClientLink>
             <LocalizedClientLink
-              href="/store?category=fashion"
-              className="font-hanken text-xs font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-widest"
+              href="/collections/thoi-trang"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
             >
               Thời trang
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/store"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
+            >
+              Tất cả
             </LocalizedClientLink>
           </div>
 
           {/* Center logo */}
           <LocalizedClientLink
             href="/"
-            className="font-hanken text-2xl font-bold tracking-tighter text-kin-primary absolute left-1/2 -translate-x-1/2"
+            className="font-hanken text-3xl font-extrabold tracking-tighter text-kin-primary absolute left-1/2 -translate-x-1/2"
             data-testid="nav-store-link"
           >
             KIN STORE
@@ -59,16 +59,16 @@ export default async function Nav() {
 
           {/* Right actions */}
           <div className="flex items-center gap-4 ml-auto">
-            <div className="hidden md:flex items-center gap-6 mr-4">
+            <div className="hidden md:flex items-center gap-8 mr-4">
               <LocalizedClientLink
                 href="/store?category=size-guide"
-                className="font-hanken text-xs font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-widest"
+                className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
               >
                 Chọn size
               </LocalizedClientLink>
               <LocalizedClientLink
                 href="/blog"
-                className="font-hanken text-xs font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-widest"
+                className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
               >
                 Nhật ký
               </LocalizedClientLink>
@@ -79,7 +79,7 @@ export default async function Nav() {
               aria-label="Tìm kiếm"
               data-testid="nav-search-link"
             >
-              <span className="material-symbols-outlined text-xl">search</span>
+              <span className="material-symbols-outlined text-2xl">search</span>
             </LocalizedClientLink>
             <LocalizedClientLink
               href="/account"
@@ -87,7 +87,7 @@ export default async function Nav() {
               aria-label="Tài khoản"
               data-testid="nav-account-link"
             >
-              <span className="material-symbols-outlined text-xl">person</span>
+              <span className="material-symbols-outlined text-2xl">person</span>
             </LocalizedClientLink>
             <Suspense
               fallback={
@@ -96,7 +96,7 @@ export default async function Nav() {
                   className="text-kin-primary hover:opacity-70 transition-opacity"
                   data-testid="nav-cart-link"
                 >
-                  <span className="material-symbols-outlined text-xl">shopping_bag</span>
+                  <span className="material-symbols-outlined text-2xl">shopping_bag</span>
                 </LocalizedClientLink>
               }
             >

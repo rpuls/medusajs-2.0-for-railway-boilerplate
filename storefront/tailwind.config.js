@@ -63,7 +63,7 @@ module.exports = {
       },
       maxWidth: {
         "8xl": "100rem",
-        "kin": "1280px",
+        "kin": "1440px",
       },
       spacing: {
         "kin-desktop": "64px",

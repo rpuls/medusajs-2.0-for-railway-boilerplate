@@ -7,15 +7,15 @@ const TrustBar = () => {
   ]
 
   return (
-    <section className="py-16 bg-kin-surface border-t border-kin-outline-variant">
-      <div className="max-w-kin mx-auto px-kin-desktop">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-kin-outline-variant">
+    <section className="py-12 md:py-16 bg-kin-surface border-t border-kin-outline-variant">
+      <div className="max-w-kin mx-auto px-5 md:px-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:divide-x divide-kin-outline-variant">
           {items.map((item) => (
             <div key={item.title} className="px-4">
               <span className="material-symbols-outlined text-4xl text-kin-forest mb-4 block" style={{ fontVariationSettings: "'FILL' 0, 'wght' 300" }}>
                 {item.icon}
               </span>
-              <h4 className="font-hanken text-xs font-semibold text-kin-primary uppercase tracking-widest mb-2">
+              <h4 className="font-hanken text-sm font-semibold text-kin-primary uppercase tracking-wider mb-2">
                 {item.title}
               </h4>
               <p className="font-vietnam text-sm text-kin-on-surface-variant">

@@ -6,7 +6,6 @@ const footerLinks = {
     links: [
       { label: "Binder", href: "/collections/binder" },
       { label: "Thời trang", href: "/collections/thoi-trang" },
-      { label: "Phụ kiện", href: "/collections/phu-kien" },
       { label: "Tất cả sản phẩm", href: "/store" },
     ],
   },
@@ -15,17 +14,7 @@ const footerLinks = {
     links: [
       { label: "Hướng dẫn chọn size", href: "/store?category=size-guide" },
       { label: "Chính sách đổi size", href: "/doi-tra" },
-      { label: "Vận chuyển & thanh toán", href: "/van-chuyen" },
       { label: "Câu hỏi thường gặp", href: "/faq" },
-    ],
-  },
-  about: {
-    title: "Về KIN",
-    links: [
-      { label: "Câu chuyện thương hiệu", href: "/cau-chuyen" },
-      { label: "Nhật ký", href: "/blog" },
-      { label: "Chính sách bảo mật", href: "/bao-mat" },
-      { label: "Điều khoản", href: "/dieu-khoan" },
     ],
   },
 }
@@ -33,7 +22,7 @@ const footerLinks = {
 export default async function Footer() {
   return (
     <footer className="w-full bg-kin-surface-container border-t border-kin-outline-variant">
-      <div className="max-w-kin mx-auto px-kin-mobile md:px-kin-desktop py-16">
+      <div className="max-w-kin mx-auto px-5 md:px-12 py-14">
         <div className="flex flex-col md:flex-row justify-between gap-12">
           {/* Brand + contact */}
           <div className="flex flex-col gap-4 max-w-sm">
