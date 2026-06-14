@@ -1,9 +1,7 @@
-import { Text } from "@medusajs/ui"
+import Image from "next/image"
 
 import { getProductPrice } from "@lib/util/get-product-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import Thumbnail from "../thumbnail"
-import PreviewPrice from "./price"
 import { getProductsById } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 
@@ -29,22 +27,38 @@ export default async function ProductPreview({
     product: pricedProduct,
   })
 
+  const thumbnail = product.thumbnail || product.images?.[0]?.url
+
   return (
-    <LocalizedClientLink href={`/products/${product.handle}`} className="group">
+    <LocalizedClientLink
+      href={`/products/${product.handle}`}
+      className="group block cursor-pointer"
+    >
       <div data-testid="product-wrapper">
-        <Thumbnail
-          thumbnail={product.thumbnail}
-          images={product.images}
-          size="full"
-          isFeatured={isFeatured}
-        />
-        <div className="flex txt-compact-medium mt-4 justify-between">
-          <Text className="text-ui-fg-subtle" data-testid="product-title">
+        <div className="w-full aspect-[3/4] bg-kin-beige mb-4 overflow-hidden relative">
+          {thumbnail && (
+            <Image
+              src={thumbnail}
+              alt={product.title}
+              fill
+              quality={60}
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+            />
+          )}
+        </div>
+        <div className="flex justify-between items-start">
+          <h3
+            className="font-hanken text-sm font-semibold text-kin-primary"
+            data-testid="product-title"
+          >
             {product.title}
-          </Text>
-          <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
-          </div>
+          </h3>
+          {cheapestPrice && (
+            <span className="font-vietnam text-base text-kin-on-surface-variant">
+              {cheapestPrice.calculated_price}
+            </span>
+          )}
         </div>
       </div>
     </LocalizedClientLink>

@@ -1,119 +1,84 @@
 "use client"
 
-import Back from "@modules/common/icons/back"
-import FastDelivery from "@modules/common/icons/fast-delivery"
-import Refresh from "@modules/common/icons/refresh"
-
-import Accordion from "./accordion"
+import { useState } from "react"
+import { clx } from "@medusajs/ui"
 import { HttpTypes } from "@medusajs/types"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
 }
 
+type TabItem = {
+  label: string
+  content: React.ReactNode
+}
+
 const ProductTabs = ({ product }: ProductTabsProps) => {
-  const tabs = [
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
+
+  const tabs: TabItem[] = [
     {
-      label: "Product Information",
-      component: <ProductInfoTab product={product} />,
+      label: "Mô tả sản phẩm",
+      content: (
+        <p className="font-vietnam text-base text-kin-on-surface-variant leading-relaxed whitespace-pre-line">
+          {product.description ||
+            "Sản phẩm được thiết kế cho cộng đồng Transmasculine với chất liệu thoải mái, an toàn và hiệu quả làm phẳng tối ưu."}
+        </p>
+      ),
     },
     {
-      label: "Shipping & Returns",
-      component: <ShippingInfoTab />,
+      label: "Chất liệu & Hướng dẫn giặt",
+      content: (
+        <div className="font-vietnam text-base text-kin-on-surface-variant leading-relaxed space-y-2">
+          <p>Chất liệu: {product.material || "Vải co giãn 4 chiều, thoáng khí"}</p>
+          <p>
+            Giặt tay hoặc giặt máy ở chế độ nhẹ với nước lạnh. Không sử dụng chất
+            tẩy. Phơi khô tự nhiên, tránh ánh nắng trực tiếp.
+          </p>
+        </div>
+      ),
+    },
+    {
+      label: "Chính sách đổi trả",
+      content: (
+        <p className="font-vietnam text-base text-kin-on-surface-variant leading-relaxed">
+          Đổi size miễn phí lần đầu trong vòng 7 ngày. Sản phẩm cần còn nguyên
+          tem mác và chưa qua sử dụng. Đóng gói kín đáo, bảo mật thông tin khách
+          hàng.
+        </p>
+      ),
     },
   ]
 
   return (
-    <div className="w-full">
-      <Accordion type="multiple">
-        {tabs.map((tab, i) => (
-          <Accordion.Item
-            key={i}
-            title={tab.label}
-            headingSize="medium"
-            value={tab.label}
-          >
-            {tab.component}
-          </Accordion.Item>
-        ))}
-      </Accordion>
-    </div>
-  )
-}
-
-const ProductInfoTab = ({ product }: ProductTabsProps) => {
-  return (
-    <div className="text-small-regular py-8">
-      <div className="grid grid-cols-2 gap-x-8">
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
+    <div className="border-t border-kin-warm-grey">
+      {tabs.map((tab, i) => {
+        const isOpen = openIndex === i
+        return (
+          <div key={i} className="border-b border-kin-warm-grey">
+            <button
+              type="button"
+              onClick={() => setOpenIndex(isOpen ? null : i)}
+              className="w-full py-4 flex justify-between items-center text-left focus:outline-none group"
+            >
+              <span className="font-hanken text-sm font-semibold text-kin-primary uppercase tracking-wider">
+                {tab.label}
+              </span>
+              <span className="material-symbols-outlined text-kin-warm-grey group-hover:text-kin-primary transition-colors">
+                {isOpen ? "expand_less" : "expand_more"}
+              </span>
+            </button>
+            <div
+              className={clx("overflow-hidden transition-all", {
+                "max-h-0": !isOpen,
+                "max-h-96 pb-4": isOpen,
+              })}
+            >
+              {tab.content}
+            </div>
           </div>
-          <div>
-            <span className="font-semibold">Country of origin</span>
-            <p>{product.origin_country ? product.origin_country : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Type</span>
-            <p>{product.type ? product.type.value : "-"}</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Weight</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Dimensions</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
-                : "-"}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const ShippingInfoTab = () => {
-  return (
-    <div className="text-small-regular py-8">
-      <div className="grid grid-cols-1 gap-y-8">
-        <div className="flex items-start gap-x-2">
-          <FastDelivery />
-          <div>
-            <span className="font-semibold">Fast delivery</span>
-            <p className="max-w-sm">
-              Your package will arrive in 3-5 business days at your pick up
-              location or in the comfort of your home.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-x-2">
-          <Refresh />
-          <div>
-            <span className="font-semibold">Simple exchanges</span>
-            <p className="max-w-sm">
-              Is the fit not quite right? No worries - we&apos;ll exchange your
-              product for a new one.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-x-2">
-          <Back />
-          <div>
-            <span className="font-semibold">Easy returns</span>
-            <p className="max-w-sm">
-              Just return your product and we&apos;ll refund your money. No
-              questions asked – we&apos;ll do our best to make sure your return
-              is hassle-free.
-            </p>
-          </div>
-        </div>
-      </div>
+        )
+      })}
     </div>
   )
 }
