@@ -1,6 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import SizeGuideModal from "@modules/products/components/size-guide-modal"
+import { SizeChartType } from "@lib/data/size-charts"
 import React from "react"
 
 type OptionSelectProps = {
@@ -9,6 +10,7 @@ type OptionSelectProps = {
   updateOption: (title: string, value: string) => void
   title: string
   disabled: boolean
+  sizeChartType?: SizeChartType
   "data-testid"?: string
 }
 
@@ -20,6 +22,7 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
   current,
   updateOption,
   title,
+  sizeChartType,
   "data-testid": dataTestId,
   disabled,
 }) => {
@@ -32,17 +35,7 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
         <span className="font-hanken text-sm font-semibold text-kin-primary uppercase tracking-wider">
           {isSize ? "Kích thước" : title}
         </span>
-        {isSize && (
-          <LocalizedClientLink
-            href="/store?category=size-guide"
-            className="font-hanken text-xs font-semibold text-kin-forest hover:underline flex items-center gap-1"
-          >
-            Hướng dẫn chọn size
-            <span className="material-symbols-outlined text-[16px]">
-              arrow_forward
-            </span>
-          </LocalizedClientLink>
-        )}
+        {isSize && <SizeGuideModal defaultType={sizeChartType ?? "binder"} />}
       </div>
       <div className="flex flex-wrap gap-3" data-testid={dataTestId}>
         {filteredOptions?.map((v) => {

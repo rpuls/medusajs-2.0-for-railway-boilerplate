@@ -61,7 +61,7 @@ export default async function Nav() {
           <div className="flex items-center gap-4 ml-auto">
             <div className="hidden md:flex items-center gap-8 mr-4">
               <LocalizedClientLink
-                href="/store?category=size-guide"
+                href="/chon-size"
                 className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
               >
                 Chọn size

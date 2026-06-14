@@ -12,7 +12,7 @@ const footerLinks = {
   support: {
     title: "Hỗ trợ",
     links: [
-      { label: "Hướng dẫn chọn size", href: "/store?category=size-guide" },
+      { label: "Hướng dẫn chọn size", href: "/chon-size" },
       { label: "Chính sách đổi size", href: "/doi-tra" },
       { label: "Câu hỏi thường gặp", href: "/faq" },
     ],

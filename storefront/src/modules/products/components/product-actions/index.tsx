@@ -17,6 +17,18 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
+// Pick which size chart applies to a product based on its collection / title.
+const getSizeChartType = (
+  product: HttpTypes.StoreProduct
+): "binder" | "quan" | "so-mi" => {
+  const coll = (product as any).collection?.handle
+  const title = (product.title || "").toLowerCase()
+  if (coll === "binder" || /binder|nịt|nit/.test(title)) return "binder"
+  if (/sơ mi|so mi|sơmi/.test(title)) return "so-mi"
+  if (/quần|quan|short/.test(title)) return "quan"
+  return "binder"
+}
+
 const optionsAsKeymap = (variantOptions: any) => {
   return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
     if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
@@ -119,6 +131,7 @@ export default function ProductActions({
                     current={options[option.title ?? ""]}
                     updateOption={setOptionValue}
                     title={option.title ?? ""}
+                    sizeChartType={getSizeChartType(product)}
                     data-testid="product-options"
                     disabled={!!disabled || isAdding}
                   />

@@ -31,7 +31,7 @@ const Hero = () => {
             Khám phá binder
           </LocalizedClientLink>
           <LocalizedClientLink
-            href="/store?category=size-guide"
+            href="/chon-size"
             className="bg-transparent text-white px-8 py-4 font-hanken text-sm font-semibold uppercase tracking-widest text-center border border-white hover:bg-white hover:text-kin-primary transition-colors"
           >
             Tìm size của bạn

@@ -14,7 +14,7 @@ const SizeFinderBanner = () => {
             câu hỏi để tìm size phù hợp.
           </p>
           <Link
-            href="/store?category=size-guide"
+            href="/chon-size"
             className="bg-kin-primary text-white px-8 py-4 font-hanken text-sm font-semibold uppercase tracking-widest text-center self-start hover:bg-kin-forest transition-colors"
           >
             Tìm size trong 60 giây
