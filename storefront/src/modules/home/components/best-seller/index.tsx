@@ -13,7 +13,7 @@ export default async function BestSeller({
   const {
     response: { products },
   } = await getProductsList({
-    queryParams: { limit: 8 },
+    queryParams: { limit: 5 },
     countryCode,
   })
 
@@ -37,7 +37,7 @@ export default async function BestSeller({
           </span>
         </LocalizedClientLink>
       </div>
-      <ul className="grid grid-cols-2 md:grid-cols-4 gap-x-5 gap-y-10 md:gap-x-8 md:gap-y-14">
+      <ul className="grid grid-cols-2 md:grid-cols-5 gap-x-5 gap-y-10 md:gap-x-8 md:gap-y-14">
         {products.map((product) => (
           <li key={product.id}>
             <ProductPreview product={product} region={region} />
