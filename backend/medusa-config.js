@@ -51,6 +51,10 @@ const medusaConfig = {
   },
   modules: [
     {
+      key: "storySubmission",
+      resolve: "./src/modules/story-submission",
+    },
+    {
       key: Modules.FILE,
       resolve: '@medusajs/file',
       options: {

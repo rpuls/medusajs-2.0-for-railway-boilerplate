@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { stories } from "@lib/data/stories"
+import StorySubmitForm from "@modules/community/components/story-submit-form"
 
 export const metadata: Metadata = {
   title: "Câu chuyện của mình | KIN STORE",
@@ -68,21 +69,15 @@ export default function CauChuyenPage() {
         ))}
       </div>
 
-      {/* CTA chia sẻ */}
-      <div className="bg-kin-primary/5 border border-kin-primary/20 rounded-2xl p-8 md:p-12 text-center max-w-2xl mx-auto">
-        <h2 className="font-hanken text-2xl font-bold text-kin-primary mb-3">
+      {/* Form chia sẻ */}
+      <div className="bg-kin-primary/5 border border-kin-primary/20 rounded-2xl p-8 md:p-12 max-w-2xl mx-auto">
+        <h2 className="font-hanken text-2xl font-bold text-kin-primary mb-2">
           Bạn muốn chia sẻ câu chuyện của mình?
         </h2>
-        <p className="font-vietnam text-base text-kin-on-surface-variant mb-6 leading-relaxed">
-          Bạn có thể ẩn danh hoàn toàn. Chỉ cần câu chuyện — chúng tôi sẽ lo
-          phần còn lại.
+        <p className="font-vietnam text-base text-kin-on-surface-variant mb-8 leading-relaxed">
+          Bạn có thể ẩn danh hoàn toàn. Chúng tôi sẽ liên hệ hỏi ý kiến trước khi đăng.
         </p>
-        <a
-          href="mailto:hello@kinstore.vn?subject=Câu chuyện của mình"
-          className="inline-block bg-kin-primary text-white font-hanken text-sm font-semibold uppercase tracking-widest px-8 py-4 rounded-full hover:opacity-90 transition-opacity"
-        >
-          Gửi câu chuyện của bạn
-        </a>
+        <StorySubmitForm />
       </div>
     </div>
   )
