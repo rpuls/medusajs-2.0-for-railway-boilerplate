@@ -37,6 +37,12 @@ export default async function Nav() {
               Thời trang
             </LocalizedClientLink>
             <LocalizedClientLink
+              href="/collections/phu-kien"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
+            >
+              Phụ kiện
+            </LocalizedClientLink>
+            <LocalizedClientLink
               href="/store"
               className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
             >

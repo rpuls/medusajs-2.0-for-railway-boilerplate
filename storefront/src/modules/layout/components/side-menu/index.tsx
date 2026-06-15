@@ -12,21 +12,9 @@ import { HttpTypes } from "@medusajs/types"
 
 const menuCategories = [
   {
-    label: "Áo Nam",
-    href: "/collections/ao-nam",
-    sub: [
-      { label: "Áo thun", href: "/collections/ao-thun" },
-      { label: "Áo sơ mi", href: "/collections/ao-so-mi" },
-      { label: "Áo khoác", href: "/collections/ao-khoac" },
-    ],
-  },
-  {
-    label: "Quần Nam",
-    href: "/collections/quan-nam",
-    sub: [
-      { label: "Quần dài", href: "/collections/quan-dai" },
-      { label: "Quần short", href: "/collections/quan-short" },
-    ],
+    label: "Thời Trang",
+    href: "/collections/thoi-trang",
+    sub: [],
   },
   {
     label: "Binder",
