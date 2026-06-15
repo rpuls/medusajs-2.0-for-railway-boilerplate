@@ -28,7 +28,6 @@ export async function POST(
     email:     email?.trim() || null,
     anonymous: anonymous !== false,
     status:    "pending",
-    created_at: new Date(),
   })
 
   res.status(201).json({ id: submission.id, message: "Cảm ơn bạn đã chia sẻ câu chuyện!" })
