@@ -33,7 +33,7 @@ const WishlistButton = ({ productId, className, size = "md" }: Props) => {
         fill={saved ? "currentColor" : "none"}
         stroke="currentColor"
         strokeWidth={2}
-        className={size === "sm" ? "w-3.5 h-3.5" : "w-4.5 h-4.5"}
+        className={size === "sm" ? "w-3.5 h-3.5" : "w-[18px] h-[18px]"}
       >
         <path
           strokeLinecap="round"
