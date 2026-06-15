@@ -20,8 +20,9 @@ export default async function Nav() {
 
       {/* Main navigation */}
       <header className="bg-kin-surface border-b border-kin-outline-variant">
-        <nav className="max-w-kin mx-auto px-5 md:px-12 flex items-center justify-between h-20">
-          {/* Left links */}
+        <nav className="max-w-kin mx-auto px-5 md:px-12 h-16 md:h-20 flex items-center">
+
+          {/* Desktop: left links */}
           <div className="hidden md:flex items-center gap-8">
             <LocalizedClientLink
               href="/collections/binder"
@@ -43,22 +44,24 @@ export default async function Nav() {
             </LocalizedClientLink>
           </div>
 
-          {/* Center logo */}
-          <LocalizedClientLink
-            href="/"
-            className="font-hanken text-3xl font-extrabold tracking-tighter text-kin-primary absolute left-1/2 -translate-x-1/2"
-            data-testid="nav-store-link"
-          >
-            KIN STORE
-          </LocalizedClientLink>
-
-          {/* Mobile menu */}
-          <div className="md:hidden flex-1">
+          {/* Mobile: hamburger */}
+          <div className="md:hidden">
             <SideMenu regions={regions} />
           </div>
 
+          {/* Center logo — absolute on desktop, flex-1 centered on mobile */}
+          <div className="flex-1 flex justify-center md:absolute md:left-1/2 md:-translate-x-1/2">
+            <LocalizedClientLink
+              href="/"
+              className="font-hanken text-2xl md:text-3xl font-extrabold tracking-tighter text-kin-primary"
+              data-testid="nav-store-link"
+            >
+              KIN STORE
+            </LocalizedClientLink>
+          </div>
+
           {/* Right actions */}
-          <div className="flex items-center gap-4 ml-auto">
+          <div className="flex items-center gap-3 md:gap-4 md:ml-auto">
             <div className="hidden md:flex items-center gap-8 mr-4">
               <LocalizedClientLink
                 href="/chon-size"
@@ -79,7 +82,7 @@ export default async function Nav() {
               aria-label="Tìm kiếm"
               data-testid="nav-search-link"
             >
-              <span className="material-symbols-outlined text-2xl">search</span>
+              <span className="material-symbols-outlined text-[22px]">search</span>
             </LocalizedClientLink>
             <LocalizedClientLink
               href="/account"
@@ -87,7 +90,7 @@ export default async function Nav() {
               aria-label="Tài khoản"
               data-testid="nav-account-link"
             >
-              <span className="material-symbols-outlined text-2xl">person</span>
+              <span className="material-symbols-outlined text-[22px]">person</span>
             </LocalizedClientLink>
             <Suspense
               fallback={
@@ -96,13 +99,14 @@ export default async function Nav() {
                   className="text-kin-primary hover:opacity-70 transition-opacity"
                   data-testid="nav-cart-link"
                 >
-                  <span className="material-symbols-outlined text-2xl">shopping_bag</span>
+                  <span className="material-symbols-outlined text-[22px]">shopping_bag</span>
                 </LocalizedClientLink>
               }
             >
               <CartButton />
             </Suspense>
           </div>
+
         </nav>
       </header>
     </div>
