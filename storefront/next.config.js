@@ -65,6 +65,20 @@ const nextConfig = {
   },
   serverRuntimeConfig: {
     port: process.env.PORT || 3000
+  },
+  async redirects() {
+    return [
+      {
+        source: "/:countryCode/blog",
+        destination: "/:countryCode/cau-chuyen",
+        permanent: true,
+      },
+      {
+        source: "/:countryCode/blog/:slug",
+        destination: "/:countryCode/cau-chuyen/:slug",
+        permanent: true,
+      },
+    ]
   }
 }
 
