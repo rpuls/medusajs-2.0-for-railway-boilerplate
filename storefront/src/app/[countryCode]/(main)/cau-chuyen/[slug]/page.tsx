@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default function StoryPage({ params }: Props) {
   const story = getStory(params.slug)
-  if (!story) notFound()
+  if (!story) return notFound()
 
   const paragraphs = story.content.split("\n\n").filter(Boolean)
 
