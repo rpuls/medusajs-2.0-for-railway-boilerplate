@@ -1,14 +1,12 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { getStory, stories } from "@lib/data/stories"
+import { getStory } from "@lib/data/stories"
+
+export const dynamic = "force-dynamic"
 
 type Props = {
   params: { slug: string; countryCode: string }
-}
-
-export async function generateStaticParams() {
-  return stories.map((s) => ({ slug: s.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
