@@ -83,13 +83,6 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         </div>
       </main>
 
-      {/* Safety Strip */}
-      <div className="w-full bg-kin-forest text-kin-on-primary py-4 text-center">
-        <p className="font-hanken text-sm font-semibold uppercase tracking-widest">
-          Không mặc quá 8 tiếng liên tục
-        </p>
-      </div>
-
       {/* Related Products */}
       <section
         className="w-full max-w-kin mx-auto px-kin-mobile md:px-kin-desktop py-24"
