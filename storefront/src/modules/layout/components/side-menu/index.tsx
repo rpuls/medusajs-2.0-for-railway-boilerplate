@@ -30,7 +30,7 @@ const menuCategories = [
 
 const flatLinks = [
   { label: "Câu chuyện", href: "/cau-chuyen" },
-  { label: "Hệ thống cửa hàng", href: "/store" },
+  { label: "Hệ thống cửa hàng", href: "/he-thong-cua-hang" },
 ]
 
 const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
