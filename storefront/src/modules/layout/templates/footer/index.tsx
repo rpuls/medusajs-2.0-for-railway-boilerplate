@@ -36,24 +36,14 @@ export default async function Footer() {
               Thời trang định hình dành cho cộng đồng Transmasculine tại Việt
               Nam. Đồng hành cùng bạn trong mọi chuyển động.
             </p>
-            <div className="flex flex-col gap-1 mt-2 font-vietnam text-sm text-kin-on-surface-variant">
-              <a
-                href="https://zalo.me"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-kin-primary transition-colors"
-              >
-                Tư vấn kín đáo qua Zalo
-              </a>
-              <a
-                href="https://m.me"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-kin-primary transition-colors"
-              >
-                Nhắn tin Messenger
-              </a>
-            </div>
+            <a
+              href="https://www.facebook.com/AoNitNgucKinStore"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 font-vietnam text-sm text-kin-on-surface-variant hover:text-kin-primary transition-colors"
+            >
+              Tư vấn kín đáo qua Messenger
+            </a>
           </div>
 
           {/* Link columns */}
