@@ -18,7 +18,7 @@ const CONTACTS = [
   },
   {
     key: "messenger",
-    href: "https://www.facebook.com/AoNitNgucKinStore",
+    href: "https://m.me/AoNitNgucKinStore",
     label: "Messenger",
     title: "Nhắn tin Messenger",
     bg: "linear-gradient(135deg,#0668E1 0%,#9B59B6 100%)",

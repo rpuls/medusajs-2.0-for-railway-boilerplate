@@ -37,7 +37,7 @@ export default async function Footer() {
               Nam. Đồng hành cùng bạn trong mọi chuyển động.
             </p>
             <a
-              href="https://www.facebook.com/AoNitNgucKinStore"
+              href="https://m.me/AoNitNgucKinStore"
               target="_blank"
               rel="noreferrer"
               className="mt-2 font-vietnam text-sm text-kin-on-surface-variant hover:text-kin-primary transition-colors"
