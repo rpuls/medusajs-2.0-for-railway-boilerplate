@@ -102,7 +102,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
           <div className="w-full flex items-center">
             <div className="flex flex-col w-full">
               <Heading className="txt-medium mb-2">
-                Promotion(s) applied:
+                Mã giảm giá đã áp dụng:
               </Heading>
 
               {promotions.map((promotion) => {
@@ -158,7 +158,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                       >
                         <Trash size={14} />
                         <span className="sr-only">
-                          Remove discount code from order
+                          Xóa mã giảm giá khỏi đơn hàng
                         </span>
                       </button>
                     )}
