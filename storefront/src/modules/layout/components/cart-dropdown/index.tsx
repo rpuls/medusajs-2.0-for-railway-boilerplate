@@ -17,7 +17,6 @@ const CartDropdown = ({
   cart?: HttpTypes.StoreCart | null
 }) => {
   const [open, setOpen] = useState(false)
-  const [activeTimer, setActiveTimer] = useState<NodeJS.Timer | undefined>(undefined)
 
   const totalItems =
     cartState?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
@@ -27,28 +26,16 @@ const CartDropdown = ({
 
   const openCart = () => setOpen(true)
   const closeCart = () => setOpen(false)
+  const toggleCart = () => setOpen((v) => !v)
 
-  const timedOpen = () => {
-    openCart()
-    const timer = setTimeout(closeCart, 5000)
-    setActiveTimer(timer)
-  }
-
-  const openAndCancel = () => {
-    if (activeTimer) clearTimeout(activeTimer)
-    openCart()
-  }
-
-  useEffect(() => {
-    return () => { if (activeTimer) clearTimeout(activeTimer) }
-  }, [activeTimer])
-
+  // Tự mở khi thêm sản phẩm vào giỏ
   useEffect(() => {
     if (itemRef.current !== totalItems && !pathname.includes("/cart")) {
-      timedOpen()
+      openCart()
     }
+    itemRef.current = totalItems
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalItems, itemRef.current])
+  }, [totalItems])
 
   const sortedItems = [...(cartState?.items || [])].sort((a, b) =>
     (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
@@ -64,19 +51,16 @@ const CartDropdown = ({
         />
       )}
 
-      {/* Trigger */}
-      <div
-        className="h-full z-50 relative"
-        onMouseEnter={openAndCancel}
-        onMouseLeave={closeCart}
-      >
-        <LocalizedClientLink
-          className="hover:text-ui-fg-base"
-          href="/cart"
+      {/* Trigger — click để mở/đóng panel */}
+      <div className="h-full z-50 relative">
+        <button
+          onClick={toggleCart}
+          className="hover:text-ui-fg-base h-full"
           data-testid="nav-cart-link"
+          aria-label="Mở giỏ hàng"
         >
           {`Giỏ (${totalItems})`}
-        </LocalizedClientLink>
+        </button>
       </div>
 
       {/* Slide-in panel từ bên phải */}
