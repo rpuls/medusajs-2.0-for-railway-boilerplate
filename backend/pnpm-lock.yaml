@@ -47,13 +47,16 @@ importers:
         version: 1.0.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@rokmohar/medusa-plugin-meilisearch':
         specifier: 1.3.5
-        version: 1.3.5(ckludu6hruqdlumvpx7q2lm5oq)
+        version: 1.3.5(v3e5v332r3kgvevcyj47iywvf4)
       medusajs-launch-utils:
         specifier: 0.0.18
         version: 0.0.18
       minio:
         specifier: ^8.0.6
         version: 8.0.7
+      pg:
+        specifier: ^8.22.0
+        version: 8.22.0
       resend:
         specifier: 4.0.1
         version: 4.0.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -79,6 +82,9 @@ importers:
       '@types/node':
         specifier: ^20.19.25
         version: 20.19.25
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
       '@types/react':
         specifier: ^18.3.27
         version: 18.3.27
@@ -4473,6 +4479,9 @@ packages:
   '@types/pg-pool@2.0.6':
     resolution: {integrity: sha512-TaAUE5rq2VQYxab5Ts7WZhKNmuN78Q6PiFonTDdpbx8a1H0M1vhy3rhiMjl+e2iHmogyMw7jZF4FrE6eJUy5HQ==}
 
+  '@types/pg@8.20.0':
+    resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
+
   '@types/pg@8.6.1':
     resolution: {integrity: sha512-1Kc4oAGzAl7uqUStZCDvaLFqZrW9qWSjXOmBfdgyBP5La7Us6Mg4GBvRlSoaZMhQF/zSj1C8CtKMBkoiT8eL8w==}
 
@@ -6774,20 +6783,20 @@ packages:
   peberminta@0.9.0:
     resolution: {integrity: sha512-XIxfHpEuSJbITd1H3EeQwpcZbTLHc+VVr8ANI9t5sit565tsI4/xK3KWTUFE2e6QiangUkh3B0jihzmGnNrRsQ==}
 
-  pg-cloudflare@1.2.7:
-    resolution: {integrity: sha512-YgCtzMH0ptvZJslLM1ffsY4EuGaU0cx4XSdXLRFae8bPP4dS5xL1tNB3k2o/N64cHJpwU7dxKli/nZ2lUa5fLg==}
-
   pg-cloudflare@1.3.0:
     resolution: {integrity: sha512-6lswVVSztmHiRtD6I8hw4qP/nDm1EJbKMRhf3HCYaqud7frGysPv7FYJ5noZQdhQtN2xJnimfMtvQq21pdbzyQ==}
+
+  pg-cloudflare@1.4.0:
+    resolution: {integrity: sha512-Vo7z/6rrQYxpNRylp4Tlob2elzbh+N/MOQbxFVWCxS7oEx6jF53GTJFxK2WWpKuBRkmiin4Mt+xofFDjx09R0A==}
 
   pg-connection-string@2.12.0:
     resolution: {integrity: sha512-U7qg+bpswf3Cs5xLzRqbXbQl85ng0mfSV/J0nnA31MCLgvEaAo7CIhmeyrmJpOr7o+zm0rXK+hNnT5l9RHkCkQ==}
 
+  pg-connection-string@2.14.0:
+    resolution: {integrity: sha512-XwWDGcLRGCXAR8F/AM5bG7Q+A3Wm2s6QeEjlOKZLlH3UYcguiqCWKyWXVag5TLTIjR7oOJUY8kcADaZgWPyLeg==}
+
   pg-connection-string@2.6.2:
     resolution: {integrity: sha512-ch6OwaeaPYcova4kKZ15sbJ2hKb/VP48ZD2gE7i1J+L4MspCtBMAx8nMgz7bksc7IojCIIWuEhHibSMFH8m8oA==}
-
-  pg-connection-string@2.9.1:
-    resolution: {integrity: sha512-nkc6NpDcvPVpZXxrreI/FOtX3XemeLl8E0qFr6F2Lrm/I8WOnaWNhIPK2Z7OHpw7gh5XJThi6j6ppgNoaT1w4w==}
 
   pg-god@1.0.12:
     resolution: {integrity: sha512-6bxfBlyu0w9NN5hwHg5TksPNJZm729cGIsff0m1BiwX4NUsHY7FoTWVAfgMaSy4QPL4rVR7ShyUv/AZ4Yd2Rug==}
@@ -6798,28 +6807,25 @@ packages:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
     engines: {node: '>=4.0.0'}
 
-  pg-pool@3.10.1:
-    resolution: {integrity: sha512-Tu8jMlcX+9d8+QVzKIvM/uJtp07PKr82IUOYEphaWcoBhIYkoHpLXN3qO59nAI11ripznDsEzEv8nUxBVWajGg==}
-    peerDependencies:
-      pg: '>=8.0'
-
   pg-pool@3.13.0:
     resolution: {integrity: sha512-gB+R+Xud1gLFuRD/QgOIgGOBE2KCQPaPwkzBBGC9oG69pHTkhQeIuejVIk3/cnDyX39av2AxomQiyPT13WKHQA==}
     peerDependencies:
       pg: '>=8.0'
 
-  pg-protocol@1.10.3:
-    resolution: {integrity: sha512-6DIBgBQaTKDJyxnXaLiLR8wBpQQcGWuAESkRBX/t6OwA8YsqP+iVSiond2EDy6Y/dsGk8rh/jtax3js5NeV7JQ==}
+  pg-pool@3.14.0:
+    resolution: {integrity: sha512-gKtPkFdQPU3DksooVLi9LsjZxrsBUZIpa+7aVx+LV5pNh0KzP4Zleud2po+ConrxbuXGBJ6Hfer6hdgpIBpBaw==}
+    peerDependencies:
+      pg: '>=8.0'
 
-  pg-protocol@1.13.0:
-    resolution: {integrity: sha512-zzdvXfS6v89r6v7OcFCHfHlyG/wvry1ALxZo4LqgUoy7W9xhBDMaqOuMiF3qEV45VqsN6rdlcehHrfDtlCPc8w==}
+  pg-protocol@1.15.0:
+    resolution: {integrity: sha512-cq9sECI5s0+uPUXjbz8ioyPJni6RzsRib0US67i5IoTZKw8fNeYlVE7u8F4dG7vEJJtc5wdD1K189lCCUwqWTQ==}
 
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
 
-  pg@8.16.3:
-    resolution: {integrity: sha512-enxc1h0jA/aq5oSDMvqyW3q89ra6XIIDZgCX9vkMrnz5DFTw/Ny3Li2lFQ+pt3L6MCgm/5o2o8HW9hiJji+xvw==}
+  pg@8.20.0:
+    resolution: {integrity: sha512-ldhMxz2r8fl/6QkXnBD3CR9/xg694oT6DZQ2s6c/RI28OjtSOpxnPrUCGOBJ46RCUxcWdx3p6kw/xnDHjKvaRA==}
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -6827,8 +6833,8 @@ packages:
       pg-native:
         optional: true
 
-  pg@8.20.0:
-    resolution: {integrity: sha512-ldhMxz2r8fl/6QkXnBD3CR9/xg694oT6DZQ2s6c/RI28OjtSOpxnPrUCGOBJ46RCUxcWdx3p6kw/xnDHjKvaRA==}
+  pg@8.22.0:
+    resolution: {integrity: sha512-8wih1vVIBMxoUM2oB4soJsD9tDnDpLv4OXBJ+EJzFsvycD+lfyIreC2gGHq78f8jbLLt+bvlPTFdFZfJkOuzAA==}
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -10161,10 +10167,10 @@ snapshots:
 
   '@medusajs/deps@2.13.6(@types/node@20.19.25)':
     dependencies:
-      '@mikro-orm/cli': 6.6.12(pg@8.20.0)
+      '@mikro-orm/cli': 6.6.12(pg@8.22.0)
       '@mikro-orm/core': 6.6.12
-      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.20.0)
-      '@mikro-orm/migrations': 6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.20.0)
+      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.22.0)
+      '@mikro-orm/migrations': 6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.22.0)
       '@mikro-orm/postgresql': 6.6.12(@mikro-orm/core@6.6.12)
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/instrumentation-pg': 0.52.0(@opentelemetry/api@1.9.0)
@@ -10172,7 +10178,7 @@ snapshots:
       '@opentelemetry/sdk-node': 0.200.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-node': 2.2.0(@opentelemetry/api@1.9.0)
       awilix: 8.0.1
-      pg: 8.20.0
+      pg: 8.22.0
       zod: 3.25.76
     transitivePeerDependencies:
       - '@types/node'
@@ -10693,32 +10699,11 @@ snapshots:
       - supports-color
       - tedious
 
-  '@mikro-orm/cli@6.6.12(pg@8.16.3)':
+  '@mikro-orm/cli@6.6.12(pg@8.22.0)':
     dependencies:
       '@jercle/yargonaut': 1.1.5
       '@mikro-orm/core': 6.6.12
-      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.16.3)
-      fs-extra: 11.3.3
-      tsconfig-paths: 4.2.0
-      yargs: 17.7.2
-    transitivePeerDependencies:
-      - better-sqlite3
-      - libsql
-      - mariadb
-      - mysql
-      - mysql2
-      - pg
-      - pg-native
-      - pg-query-stream
-      - sqlite3
-      - supports-color
-      - tedious
-
-  '@mikro-orm/cli@6.6.12(pg@8.20.0)':
-    dependencies:
-      '@jercle/yargonaut': 1.1.5
-      '@mikro-orm/core': 6.6.12
-      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.20.0)
+      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.22.0)
       fs-extra: 11.3.3
       tsconfig-paths: 4.2.0
       yargs: 17.7.2
@@ -10745,22 +10730,6 @@ snapshots:
       mikro-orm: 6.6.12
       reflect-metadata: 0.2.2
 
-  '@mikro-orm/knex@6.6.12(@mikro-orm/core@6.6.12)(pg@8.16.3)':
-    dependencies:
-      '@mikro-orm/core': 6.6.12
-      fs-extra: 11.3.3
-      knex: 3.2.8(pg@8.16.3)
-      sqlstring: 2.3.3
-    transitivePeerDependencies:
-      - mysql
-      - mysql2
-      - pg
-      - pg-native
-      - pg-query-stream
-      - sqlite3
-      - supports-color
-      - tedious
-
   '@mikro-orm/knex@6.6.12(@mikro-orm/core@6.6.12)(pg@8.20.0)':
     dependencies:
       '@mikro-orm/core': 6.6.12
@@ -10777,17 +10746,13 @@ snapshots:
       - supports-color
       - tedious
 
-  '@mikro-orm/migrations@6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.16.3)':
+  '@mikro-orm/knex@6.6.12(@mikro-orm/core@6.6.12)(pg@8.22.0)':
     dependencies:
       '@mikro-orm/core': 6.6.12
-      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.16.3)
       fs-extra: 11.3.3
-      umzug: 3.8.2(@types/node@20.19.25)
+      knex: 3.2.8(pg@8.22.0)
+      sqlstring: 2.3.3
     transitivePeerDependencies:
-      - '@types/node'
-      - better-sqlite3
-      - libsql
-      - mariadb
       - mysql
       - mysql2
       - pg
@@ -10797,10 +10762,10 @@ snapshots:
       - supports-color
       - tedious
 
-  '@mikro-orm/migrations@6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.20.0)':
+  '@mikro-orm/migrations@6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.22.0)':
     dependencies:
       '@mikro-orm/core': 6.6.12
-      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.20.0)
+      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.22.0)
       fs-extra: 11.3.3
       umzug: 3.8.2(@types/node@20.19.25)
     transitivePeerDependencies:
@@ -13277,7 +13242,7 @@ snapshots:
 
   '@remix-run/router@1.23.2': {}
 
-  '@rokmohar/medusa-plugin-meilisearch@1.3.5(ckludu6hruqdlumvpx7q2lm5oq)':
+  '@rokmohar/medusa-plugin-meilisearch@1.3.5(v3e5v332r3kgvevcyj47iywvf4)':
     dependencies:
       '@medusajs/admin-sdk': 2.13.6
       '@medusajs/cli': 2.13.6(@types/node@20.19.25)
@@ -13286,15 +13251,15 @@ snapshots:
       '@medusajs/medusa': 2.13.6(@medusajs/admin-sdk@2.13.6)(@medusajs/cli@2.13.6(@types/node@20.19.25))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/icons@2.13.6(react@18.3.1))(@medusajs/test-utils@2.13.6)(@medusajs/ui@4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@swc/core@1.5.7(@swc/helpers@0.5.17))(@types/node@20.19.25)(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(awilix@8.0.1)(picomatch@4.0.3)(posthog-node@4.18.0)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(yaml@2.8.0)
       '@medusajs/test-utils': 2.13.6(@medusajs/core-flows@2.13.6(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76)))(@medusajs/framework@2.13.6(@medusajs/cli@2.13.6(@types/node@20.19.25))(@types/node@20.19.25)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.25))(zod@3.25.76))(@medusajs/medusa@2.13.6)
       '@medusajs/ui': 4.1.6(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
-      '@mikro-orm/cli': 6.6.12(pg@8.16.3)
+      '@mikro-orm/cli': 6.6.12(pg@8.22.0)
       '@mikro-orm/core': 6.6.12
-      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.16.3)
-      '@mikro-orm/migrations': 6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.16.3)
+      '@mikro-orm/knex': 6.6.12(@mikro-orm/core@6.6.12)(pg@8.22.0)
+      '@mikro-orm/migrations': 6.6.12(@mikro-orm/core@6.6.12)(@types/node@20.19.25)(pg@8.22.0)
       '@mikro-orm/postgresql': 6.6.12(@mikro-orm/core@6.6.12)
       '@tanstack/react-query': 5.64.2(react@18.3.1)
       awilix: 8.0.1
       meilisearch: 0.53.0
-      pg: 8.16.3
+      pg: 8.22.0
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
@@ -13956,12 +13921,18 @@ snapshots:
 
   '@types/pg-pool@2.0.6':
     dependencies:
-      '@types/pg': 8.6.1
+      '@types/pg': 8.20.0
+
+  '@types/pg@8.20.0':
+    dependencies:
+      '@types/node': 20.19.25
+      pg-protocol: 1.15.0
+      pg-types: 2.2.0
 
   '@types/pg@8.6.1':
     dependencies:
       '@types/node': 20.19.25
-      pg-protocol: 1.13.0
+      pg-protocol: 1.15.0
       pg-types: 2.2.0
 
   '@types/pluralize@0.0.33': {}
@@ -16006,27 +15977,6 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  knex@3.2.8(pg@8.16.3):
-    dependencies:
-      colorette: 2.0.19
-      commander: 10.0.1
-      debug: 4.3.4
-      escalade: 3.2.0
-      esm: 3.2.25
-      get-package-type: 0.1.0
-      getopts: 2.3.0
-      interpret: 2.2.0
-      lodash: 4.17.21
-      pg-connection-string: 2.6.2
-      rechoir: 0.8.0
-      resolve-from: 5.0.0
-      tarn: 3.0.2
-      tildify: 2.0.0
-    optionalDependencies:
-      pg: 8.16.3
-    transitivePeerDependencies:
-      - supports-color
-
   knex@3.2.8(pg@8.20.0):
     dependencies:
       colorette: 2.0.19
@@ -16045,6 +15995,27 @@ snapshots:
       tildify: 2.0.0
     optionalDependencies:
       pg: 8.20.0
+    transitivePeerDependencies:
+      - supports-color
+
+  knex@3.2.8(pg@8.22.0):
+    dependencies:
+      colorette: 2.0.19
+      commander: 10.0.1
+      debug: 4.3.4
+      escalade: 3.2.0
+      esm: 3.2.25
+      get-package-type: 0.1.0
+      getopts: 2.3.0
+      interpret: 2.2.0
+      lodash: 4.17.21
+      pg-connection-string: 2.6.2
+      rechoir: 0.8.0
+      resolve-from: 5.0.0
+      tarn: 3.0.2
+      tildify: 2.0.0
+    optionalDependencies:
+      pg: 8.22.0
     transitivePeerDependencies:
       - supports-color
 
@@ -16181,7 +16152,7 @@ snapshots:
     dependencies:
       axios: 1.13.2
       dotenv: 10.0.0
-      pg: 8.16.3
+      pg: 8.22.0
     transitivePeerDependencies:
       - debug
       - pg-native
@@ -16576,17 +16547,17 @@ snapshots:
 
   peberminta@0.9.0: {}
 
-  pg-cloudflare@1.2.7:
+  pg-cloudflare@1.3.0:
     optional: true
 
-  pg-cloudflare@1.3.0:
+  pg-cloudflare@1.4.0:
     optional: true
 
   pg-connection-string@2.12.0: {}
 
-  pg-connection-string@2.6.2: {}
+  pg-connection-string@2.14.0: {}
 
-  pg-connection-string@2.9.1: {}
+  pg-connection-string@2.6.2: {}
 
   pg-god@1.0.12:
     dependencies:
@@ -16594,7 +16565,7 @@ snapshots:
       '@oclif/config': 1.18.17
       '@oclif/plugin-help': 3.3.1
       cli-ux: 5.6.7(@oclif/config@1.18.17)
-      pg: 8.20.0
+      pg: 8.22.0
       tslib: 1.14.1
     transitivePeerDependencies:
       - pg-native
@@ -16602,17 +16573,15 @@ snapshots:
 
   pg-int8@1.0.1: {}
 
-  pg-pool@3.10.1(pg@8.16.3):
-    dependencies:
-      pg: 8.16.3
-
   pg-pool@3.13.0(pg@8.20.0):
     dependencies:
       pg: 8.20.0
 
-  pg-protocol@1.10.3: {}
+  pg-pool@3.14.0(pg@8.22.0):
+    dependencies:
+      pg: 8.22.0
 
-  pg-protocol@1.13.0: {}
+  pg-protocol@1.15.0: {}
 
   pg-types@2.2.0:
     dependencies:
@@ -16622,25 +16591,25 @@ snapshots:
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
 
-  pg@8.16.3:
-    dependencies:
-      pg-connection-string: 2.9.1
-      pg-pool: 3.10.1(pg@8.16.3)
-      pg-protocol: 1.10.3
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.2.7
-
   pg@8.20.0:
     dependencies:
       pg-connection-string: 2.12.0
       pg-pool: 3.13.0(pg@8.20.0)
-      pg-protocol: 1.13.0
+      pg-protocol: 1.15.0
       pg-types: 2.2.0
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.3.0
+
+  pg@8.22.0:
+    dependencies:
+      pg-connection-string: 2.14.0
+      pg-pool: 3.14.0(pg@8.22.0)
+      pg-protocol: 1.15.0
+      pg-types: 2.2.0
+      pgpass: 1.0.5
+    optionalDependencies:
+      pg-cloudflare: 1.4.0
 
   pgpass@1.0.5:
     dependencies:

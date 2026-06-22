@@ -91,6 +91,25 @@ export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
 export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 
 /**
+ * (optional) Pancake POS — đồng bộ danh mục sản phẩm cho video content
+ */
+export const PANCAKE_API_BASE = process.env.PANCAKE_API_BASE || 'https://pos.pages.fm/api/v1'
+export const PANCAKE_API_KEY = process.env.PANCAKE_API_KEY
+export const PANCAKE_SHOP_ID = process.env.PANCAKE_SHOP_ID
+
+/**
+ * (optional) Facebook/Meta Graph API — đăng bài & lấy insights cho video content
+ */
+export const FB_SYSTEM_TOKEN = process.env.FB_SYSTEM_TOKEN
+export const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN
+export const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL
+
+/**
+ * (optional) Gemini API — phân tích & chấm điểm video content bằng AI
+ */
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+
+/**
  * Worker mode
  */
 export const WORKER_MODE =
