@@ -35,26 +35,41 @@ function getDriveFileId(url: string): string | null {
 }
 
 function DrivePreview({ link, label = "Xem" }: { link: string; label?: string }) {
-  const [show, setShow] = useState(false)
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const fileId = getDriveFileId(link)
   if (!fileId) return <a href={link} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}>{label}</a>
-  const thumb = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
+  const thumb = `https://lh3.googleusercontent.com/d/${fileId}`
+
+  function handleEnter(e: React.MouseEvent<HTMLAnchorElement>) {
+    const r = e.currentTarget.getBoundingClientRect()
+    setPos({ x: r.left + r.width / 2, y: r.top })
+  }
+
   return (
-    <div style={{ position: "relative", display: "inline-block" }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <a href={link} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}>{label}</a>
-      {show && (
+    <>
+      <a
+        href={link} target="_blank" rel="noreferrer"
+        style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}
+        onMouseEnter={handleEnter}
+        onMouseLeave={() => setPos(null)}
+      >{label}</a>
+      {pos && (
         <div style={{
-          position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
-          zIndex: 9999, background: "#fff", borderRadius: 8, padding: 4,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.25)", pointerEvents: "none",
+          position: "fixed",
+          left: pos.x, top: pos.y - 8,
+          transform: "translate(-50%, -100%)",
+          zIndex: 99999, background: "#fff", borderRadius: 8, padding: 4,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.3)", pointerEvents: "none",
         }}>
-          <img src={thumb} alt="preview" style={{ width: 200, height: "auto", borderRadius: 6, display: "block" }} />
+          <img
+            src={thumb} alt="preview"
+            referrerPolicy="no-referrer"
+            style={{ width: 220, height: "auto", borderRadius: 6, display: "block" }}
+            onError={e => { (e.target as HTMLImageElement).src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400` }}
+          />
         </div>
       )}
-    </div>
+    </>
   )
 }
 
