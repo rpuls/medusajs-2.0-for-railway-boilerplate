@@ -616,30 +616,41 @@ function FbPostTab() {
         )}
       </div>
 
-      {/* Lịch sử bài đã đăng */}
-      <LichDangSection />
     </div>
   )
 }
 
-function LichDangSection() {
+// ── Tab: Lịch đăng (list + calendar) ───────────────────────────────────────────
+function LichDangTab() {
   const [posts, setPosts] = useState<any[]>([])
   const [filterStatus, setFilterStatus] = useState("all")
+  const [filterFrom, setFilterFrom] = useState("")
+  const [filterTo, setFilterTo] = useState("")
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list")
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   const load = () => {
     setLoading(true)
     const params = new URLSearchParams({ posts: "1" })
     if (filterStatus !== "all") params.set("status", filterStatus)
+    if (filterFrom) params.set("from", filterFrom)
+    if (filterTo) params.set("to", filterTo)
     api(`/post?${params}`).then(d => setPosts(d.posts || [])).catch(() => {}).finally(() => setLoading(false))
   }
-  useEffect(() => { load() }, [filterStatus])
+  useEffect(() => { load() }, [filterStatus, filterFrom, filterTo])
 
-  const grouped: Record<string, any[]> = {}
-  for (const p of posts) {
-    const d = new Date(p.published_at || p.scheduled_for || p.created_at || Date.now())
-    const key = d.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })
-    ;(grouped[key] = grouped[key] || []).push(p)
+  const handleCancel = async (postId: string) => {
+    if (!confirm("Hủy bài lên lịch này?")) return
+    setCancellingId(postId)
+    try {
+      await api(`/post/${postId}`, { method: "DELETE" })
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, status: "cancelled" } : p))
+    } catch (e: any) {
+      alert("Lỗi hủy bài: " + (e.message || "unknown"))
+    } finally {
+      setCancellingId(null)
+    }
   }
 
   const inp: React.CSSProperties = { background: T.card, color: "#111827", border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, outline: "none" }
@@ -647,18 +658,44 @@ function LichDangSection() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontWeight: 700, fontSize: 14, color: T.text }}>Lịch sử đăng bài</span>
+        <div style={{ display: "flex", gap: 2, background: T.subtle, borderRadius: 8, padding: 2 }}>
+          <button onClick={() => setViewMode("calendar")} style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: viewMode === "calendar" ? T.card : "transparent", fontSize: 13, cursor: "pointer", boxShadow: viewMode === "calendar" ? T.shadowSm : "none" }}>📅 Lịch</button>
+          <button onClick={() => setViewMode("list")} style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: viewMode === "list" ? T.card : "transparent", fontSize: 13, cursor: "pointer", boxShadow: viewMode === "list" ? T.shadowSm : "none" }}>☰ Danh sách</button>
+        </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={inp}>
           <option value="all">Tất cả trạng thái</option>
           <option value="published">Đã đăng</option>
           <option value="scheduled">Lên lịch</option>
+          <option value="cancelled">Đã hủy</option>
           <option value="failed">Lỗi</option>
         </select>
+        {viewMode === "list" && (
+          <>
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} style={inp} />
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} style={inp} />
+          </>
+        )}
         <button onClick={load} style={{ ...btnSecondary }}>↻ Làm mới</button>
         <span style={{ color: T.text3, fontSize: 12, marginLeft: "auto" }}>{posts.length} bài</span>
       </div>
       {loading && <div style={{ padding: 20, textAlign: "center", color: T.text3 }}>Đang tải…</div>}
-      {!loading && Object.entries(grouped).map(([day, dayPosts]) => (
+      {!loading && viewMode === "calendar" && <CalendarView posts={posts} onCancel={handleCancel} cancellingId={cancellingId} />}
+      {!loading && viewMode === "list" && <PostListView posts={posts} onCancel={handleCancel} cancellingId={cancellingId} />}
+      {!loading && posts.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.text3 }}>Chưa có bài nào</div>}
+    </div>
+  )
+}
+
+function PostListView({ posts, onCancel, cancellingId }: { posts: any[]; onCancel: (id: string) => void; cancellingId: string | null }) {
+  const grouped: Record<string, any[]> = {}
+  for (const p of posts) {
+    const d = new Date(p.published_at || p.scheduled_for || p.created_at || Date.now())
+    const key = d.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })
+    ;(grouped[key] = grouped[key] || []).push(p)
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {Object.entries(grouped).map(([day, dayPosts]) => (
         <div key={day}>
           <div style={{ color: T.text2, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{day}</div>
           <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
@@ -669,7 +706,7 @@ function LichDangSection() {
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderBottom: i < dayPosts.length - 1 ? `1px solid ${T.border}` : "none" }}>
                   <div style={{ minWidth: 65, textAlign: "center", paddingTop: 2 }}>
-                    <div style={{ color: T.text, fontSize: 12, fontWeight: 600 }}>{time}</div>
+                    <div style={{ color: T.text1, fontSize: 12, fontWeight: 600 }}>{time}</div>
                     <span style={{ background: st.bg, color: st.c, borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{st.label}</span>
                   </div>
                   <div style={{ fontSize: 20, paddingTop: 2 }}>{MEDIA_ICON[p.media_type] || "📝"}</div>
@@ -686,13 +723,309 @@ function LichDangSection() {
                   {p.drive_url && (
                     <a href={p.drive_url} target="_blank" rel="noreferrer" style={{ color: T.text3, fontSize: 11, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>📁 Drive</a>
                   )}
+                  {p.status === "scheduled" && (
+                    <button onClick={() => onCancel(p.id)} disabled={cancellingId === p.id} style={{ ...btnSecondary, color: T.sErr, flexShrink: 0 }}>
+                      {cancellingId === p.id ? "..." : "Hủy lịch"}
+                    </button>
+                  )}
                 </div>
               )
             })}
           </div>
         </div>
       ))}
-      {!loading && posts.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.text3 }}>Chưa có bài nào</div>}
+    </div>
+  )
+}
+
+function CalendarView({ posts, onCancel, cancellingId }: { posts: any[]; onCancel: (id: string) => void; cancellingId: string | null }) {
+  const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d })
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
+
+  const dayKey = (d: Date) => d.toISOString().slice(0, 10)
+  const postDate = (p: any) => new Date(p.published_at || p.scheduled_for || p.created_at || Date.now())
+
+  const byDay: Record<string, any[]> = {}
+  for (const p of posts) {
+    const k = dayKey(postDate(p))
+    ;(byDay[k] = byDay[k] || []).push(p)
+  }
+
+  const year = cursor.getFullYear(), month = cursor.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const startOffset = (firstDay.getDay() + 6) % 7 // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const todayKey = dayKey(new Date())
+
+  const cells: (Date | null)[] = []
+  for (let i = 0; i < startOffset; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
+
+  const selectedPosts = selectedDay ? (byDay[selectedDay] || []) : []
+
+  return (
+    <div style={{ display: "flex", gap: 16 }}>
+      <div style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <button onClick={() => setCursor(new Date(year, month - 1, 1))} style={btnSecondary}>‹</button>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>Tháng {month + 1}/{year}</span>
+          <button onClick={() => setCursor(new Date(year, month + 1, 1))} style={btnSecondary}>›</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+          {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map(d => (
+            <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: T.text3 }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+          {cells.map((d, i) => {
+            if (!d) return <div key={i} />
+            const k = dayKey(d)
+            const dayPosts = byDay[k] || []
+            const isToday = k === todayKey
+            const isSelected = k === selectedDay
+            return (
+              <div
+                key={i}
+                onClick={() => setSelectedDay(k)}
+                style={{
+                  minHeight: 64, padding: 6, borderRadius: 8, cursor: "pointer",
+                  background: isSelected ? T.accentSubtle : T.subtle,
+                  border: isSelected ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
+                }}
+              >
+                <div style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 20, height: 20, borderRadius: "50%", fontSize: 11, fontWeight: 700,
+                  background: isToday ? T.accent : "transparent", color: isToday ? "#fff" : T.text1,
+                }}>{d.getDate()}</div>
+                {dayPosts.length > 0 && (
+                  <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                    {dayPosts.slice(0, 3).map((p, pi) => (
+                      <div key={pi} style={{ fontSize: 9, padding: "1px 4px", borderRadius: 4, background: (STATUS_POST[p.status] || STATUS_POST.pending).bg, color: (STATUS_POST[p.status] || STATUS_POST.pending).c, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                        {MEDIA_ICON[p.media_type] || "📝"} {p.page_name}
+                      </div>
+                    ))}
+                    {dayPosts.length > 3 && <div style={{ fontSize: 9, color: T.text3 }}>+{dayPosts.length - 3} nữa</div>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      {selectedDay && (
+        <div style={{ width: 300, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 16, flexShrink: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+            {new Date(selectedDay).toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}
+          </div>
+          <div style={{ color: T.text3, fontSize: 12, marginBottom: 12 }}>{selectedPosts.length} bài</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {selectedPosts.map(p => {
+              const st = STATUS_POST[p.status] || STATUS_POST.pending
+              const time = postDate(p).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+              return (
+                <div key={p.id} style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, color: T.text3 }}>{time}</span>
+                    <span>{MEDIA_ICON[p.media_type] || "📝"}</span>
+                    <span style={{ background: st.bg, color: st.c, borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{st.label}</span>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{p.page_name}</div>
+                  <div style={{ fontSize: 12, color: T.text2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{p.message}</div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {p.post_id && <a href={`https://www.facebook.com/${p.post_id}`} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 11, fontWeight: 600 }}>↗ Xem bài</a>}
+                    {p.status === "scheduled" && (
+                      <button onClick={() => onCancel(p.id)} disabled={cancellingId === p.id} style={{ background: "none", border: "none", color: T.sErr, fontSize: 11, cursor: "pointer", padding: 0 }}>
+                        {cancellingId === p.id ? "..." : "Hủy lịch"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Tab: Tổng hợp bài viết ──────────────────────────────────────────────────────
+function PostStatsTab() {
+  const [posts, setPosts] = useState<any[]>([])
+  const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState<any>(null)
+  const [pages, setPages] = useState<Page[]>([])
+  const [products, setProducts] = useState<{ code: string; name: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [page, setPage] = useState(0)
+  const [filterPage, setFilterPage] = useState("")
+  const [filterProduct, setFilterProduct] = useState("")
+  const [filterFrom, setFilterFrom] = useState("")
+  const [filterTo, setFilterTo] = useState("")
+  const [sort, setSort] = useState("published_at")
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table")
+  const [toast, setToast] = useState<string | null>(null)
+  const PAGE_SIZE = 50
+
+  const load = () => {
+    setLoading(true)
+    const p = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE), sort })
+    if (filterPage) p.set("page_id", filterPage)
+    if (filterProduct) p.set("product_code", filterProduct)
+    if (filterFrom) p.set("from", filterFrom)
+    if (filterTo) p.set("to", filterTo)
+    api(`/post-stats?${p}`).then(d => {
+      setPosts(d.posts ?? []); setTotal(d.total ?? 0); setSummary(d.summary ?? null)
+    }).catch(() => {}).finally(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [filterPage, filterProduct, filterFrom, filterTo, sort, page])
+  useEffect(() => {
+    api("/pages?all=true").then(d => setPages(d.pages || [])).catch(() => {})
+    api("/products").then(d => setProducts((d.products ?? []).filter((p: any) => p.code))).catch(() => {})
+  }, [])
+
+  const refresh = async (pageId?: string) => {
+    setSyncing(true)
+    try {
+      const r = await api("/post-stats", { method: "POST", body: JSON.stringify(pageId ? { page_id: pageId } : {}) })
+      if (r.ok) { setToast(`Đã sync ${r.synced} bài từ ${r.pages} page`); load() }
+      else setToast(`Lỗi: ${r.error || "unknown"}`)
+    } catch (e: any) {
+      setToast("Lỗi: " + e.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const clearFilters = () => { setFilterPage(""); setFilterProduct(""); setFilterFrom(""); setFilterTo(""); setPage(0) }
+
+  const inp: React.CSSProperties = { background: T.card, color: "#111827", border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, outline: "none" }
+  const kpi = (label: string, value: any, icon: string) => (
+    <div style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px 16px" }}>
+      <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>{value ?? 0}</div>
+      <div style={{ fontSize: 11, color: T.text3 }}>{label}</div>
+    </div>
+  )
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {toast && <FbToast msg={toast} onDone={() => setToast(null)} />}
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {kpi("Tổng bài", total, "📄")}
+        {kpi("Tổng Likes", summary?.total_likes, "👍")}
+        {kpi("Tổng Comments", summary?.total_comments, "💬")}
+        {kpi("Tổng Shares", summary?.total_shares, "🔁")}
+        {kpi("Tổng Reach", summary?.total_reach, "👁")}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <select value={filterPage} onChange={e => { setFilterPage(e.target.value); setPage(0) }} style={inp}>
+          <option value="">Tất cả trang</option>
+          {pages.map(p => <option key={p.page_id} value={p.page_id}>{p.page_name}</option>)}
+        </select>
+        <select value={filterProduct} onChange={e => { setFilterProduct(e.target.value); setPage(0) }} style={inp}>
+          <option value="">Tất cả sản phẩm</option>
+          {products.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+        </select>
+        <select value={sort} onChange={e => setSort(e.target.value)} style={inp}>
+          <option value="published_at">Sắp xếp: Ngày đăng</option>
+          <option value="likes">Likes</option>
+          <option value="comments">Comments</option>
+          <option value="shares">Shares</option>
+          <option value="reach">Reach</option>
+        </select>
+        <input type="date" value={filterFrom} onChange={e => { setFilterFrom(e.target.value); setPage(0) }} style={inp} />
+        <input type="date" value={filterTo} onChange={e => { setFilterTo(e.target.value); setPage(0) }} style={inp} />
+        <button onClick={clearFilters} style={btnSecondary}>Xóa lọc</button>
+        {summary?.last_synced && <span style={{ color: T.text3, fontSize: 11 }}>Cập nhật: {new Date(summary.last_synced).toLocaleString("vi-VN")}</span>}
+        <button onClick={() => refresh()} disabled={syncing} style={{ ...btnPrimary, background: "#1877F2" }}>{syncing ? "Đang sync…" : "↻ Refresh"}</button>
+        <div style={{ display: "flex", gap: 2, background: T.subtle, borderRadius: 8, padding: 2, marginLeft: "auto" }}>
+          <button onClick={() => setViewMode("table")} style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: viewMode === "table" ? T.card : "transparent", fontSize: 13, cursor: "pointer" }}>≡</button>
+          <button onClick={() => setViewMode("grid")} style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: viewMode === "grid" ? T.card : "transparent", fontSize: 13, cursor: "pointer" }}>⊞</button>
+        </div>
+      </div>
+
+      {loading && <div style={{ padding: 20, textAlign: "center", color: T.text3 }}>Đang tải…</div>}
+
+      {!loading && viewMode === "table" && (
+        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: T.subtle }}>
+                {["Trang", "Sản phẩm", "Nội dung", "Ngày đăng", "👍", "💬", "🔁", "👁 Reach", "Thao tác"].map(h => (
+                  <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: T.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((p, i) => (
+                <tr key={p.post_id} style={{ borderBottom: i < posts.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                  <td style={{ padding: "8px 12px", fontSize: 13 }}>
+                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: pageColor(p.page_id), marginRight: 6 }} />
+                    {p.page_name}
+                  </td>
+                  <td style={{ padding: "8px 12px", fontSize: 12 }}>
+                    {p.product_name ? <>{p.product_name} {p.product_code && <code style={{ background: T.subtle, padding: "1px 6px", borderRadius: 4, fontSize: 11 }}>{p.product_code}</code>}</> : "—"}
+                  </td>
+                  <td style={{ padding: "8px 12px", fontSize: 12, color: T.text2, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.message || "—"}</td>
+                  <td style={{ padding: "8px 12px", fontSize: 12, color: T.text3, whiteSpace: "nowrap" }}>{p.published_at ? new Date(p.published_at).toLocaleString("vi-VN") : "—"}</td>
+                  <td style={{ padding: "8px 12px", fontSize: 13 }}>{p.likes}</td>
+                  <td style={{ padding: "8px 12px", fontSize: 13 }}>{p.comments}</td>
+                  <td style={{ padding: "8px 12px", fontSize: 13 }}>{p.shares}</td>
+                  <td style={{ padding: "8px 12px", fontSize: 13 }}>{p.reach}</td>
+                  <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>
+                    <a href={`https://www.facebook.com/${p.post_id}`} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 12, marginRight: 8 }}>↗</a>
+                    <button onClick={() => navigator.clipboard?.writeText(p.post_id)} style={{ ...btnSecondary, padding: "2px 6px", fontSize: 11 }}>Copy ID</button>
+                  </td>
+                </tr>
+              ))}
+              {posts.length === 0 && <tr><td colSpan={9} style={{ padding: 30, textAlign: "center", color: T.text3 }}>Chưa có bài nào</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!loading && viewMode === "grid" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+          {posts.map(p => (
+            <div key={p.post_id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+              {p.thumbnail_url && (
+                <div style={{ position: "relative", height: 140, background: "#000" }}>
+                  <img src={p.thumbnail_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {p.media_type === "video" && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#fff" }}>▶</div>}
+                </div>
+              )}
+              <div style={{ padding: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: pageColor(p.page_id) }} />
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{p.page_name}</span>
+                </div>
+                <div style={{ fontSize: 12, color: T.text2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const, marginBottom: 8 }}>{p.message}</div>
+                <div style={{ fontSize: 11, color: T.text3, marginBottom: 8 }}>
+                  {p.published_at ? new Date(p.published_at).toLocaleDateString("vi-VN") : ""} {p.product_code && `· ${p.product_code}`} {p.created_by && `· ${p.created_by}`}
+                </div>
+                <div style={{ display: "flex", gap: 12, fontSize: 12, color: T.text2, borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
+                  <span>👍 {p.likes}</span><span>💬 {p.comments}</span><span>🔁 {p.shares}</span><span>👁 {p.reach}</span>
+                  <a href={`https://www.facebook.com/${p.post_id}`} target="_blank" rel="noreferrer" style={{ marginLeft: "auto", color: "#1877F2" }}>↗</a>
+                </div>
+              </div>
+            </div>
+          ))}
+          {posts.length === 0 && <div style={{ padding: 30, textAlign: "center", color: T.text3, gridColumn: "1/-1" }}>Chưa có bài nào</div>}
+        </div>
+      )}
+
+      {!loading && total > PAGE_SIZE && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}>
+          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={btnSecondary}>‹ Trước</button>
+          <span style={{ fontSize: 12, color: T.text3 }}>Trang {page + 1} / {Math.ceil(total / PAGE_SIZE)}</span>
+          <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= total} style={btnSecondary}>Sau ›</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -951,6 +1284,8 @@ function ProductsTab() {
 const TABS = [
   { id: "bang", label: "Bảng" },
   { id: "fb", label: "Đăng Facebook" },
+  { id: "lich", label: "Lịch đăng" },
+  { id: "stats", label: "Tổng hợp bài viết" },
   { id: "pages", label: "Quản lý Page" },
   { id: "products", label: "📦 Danh mục SP" },
 ]
@@ -977,6 +1312,8 @@ const VideoContentPage = () => {
       </div>
       {tab === "bang" && (<><ProductsSyncBar /><VideoTableTab /></>)}
       {tab === "fb" && <FbPostTab />}
+      {tab === "lich" && <LichDangTab />}
+      {tab === "stats" && <PostStatsTab />}
       {tab === "pages" && <PageManageTab />}
       {tab === "products" && <ProductsTab />}
     </div>

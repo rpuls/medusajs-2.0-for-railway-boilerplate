@@ -107,6 +107,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const params: any[] = []
     let where = "WHERE 1=1"
     if (q.status) { params.push(q.status); where += ` AND p.status = $${params.length}` }
+    if (q.from) { params.push(q.from); where += ` AND COALESCE(p.published_at, p.scheduled_for, p.created_at) >= $${params.length}` }
+    if (q.to)   { params.push(q.to);   where += ` AND COALESCE(p.published_at, p.scheduled_for, p.created_at) <= $${params.length}` }
     if (!auth.isAdmin && auth.email) { params.push(auth.email); where += ` AND p.created_by = $${params.length}` }
 
     const { rows } = await pool.query(

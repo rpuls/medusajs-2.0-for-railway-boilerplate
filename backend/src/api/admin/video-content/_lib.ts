@@ -151,6 +151,13 @@ export async function ensureTables(pool: Pool): Promise<void> {
       post_id       VARCHAR(64) PRIMARY KEY,
       page_id       VARCHAR(32) NOT NULL,
       page_name     VARCHAR(255),
+      message       TEXT,
+      media_type    VARCHAR(16),
+      thumbnail_url TEXT,
+      product_code  VARCHAR(64),
+      product_name  VARCHAR(255),
+      created_by    VARCHAR(255),
+      published_at  TIMESTAMPTZ,
       likes         INT DEFAULT 0,
       comments      INT DEFAULT 0,
       shares        INT DEFAULT 0,
@@ -159,6 +166,15 @@ export async function ensureTables(pool: Pool): Promise<void> {
       synced_at     TIMESTAMPTZ DEFAULT now()
     )
   `)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS message TEXT`)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS media_type VARCHAR(16)`)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS thumbnail_url TEXT`)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS product_code VARCHAR(64)`)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS product_name VARCHAR(255)`)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS created_by VARCHAR(255)`)
+  await pool.query(`ALTER TABLE fb_post_stats ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_fb_stats_page ON fb_post_stats (page_id, published_at DESC)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_fb_stats_product ON fb_post_stats (product_code)`)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS fb_publish_job (
       id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
