@@ -90,6 +90,7 @@ function Td({ children, width }: { children?: React.ReactNode; width: number }) 
 
 function VideoTableTab() {
   const [rows, setRows] = useState<VideoRow[]>([])
+  const [products, setProducts] = useState<{ name: string; code: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [filterMaker, setFilterMaker] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
@@ -117,6 +118,9 @@ function VideoTableTab() {
   }
 
   useEffect(() => { load() }, [filterMaker, filterStatus])
+  useEffect(() => {
+    api("/products").then(d => setProducts((d.products ?? []).filter((p: any) => p.name && p.active !== false))).catch(() => {})
+  }, [])
 
   const makers = useMemo(() => Array.from(new Set(rows.map(r => r.nguoiLam))).filter(Boolean), [rows])
 
@@ -179,6 +183,10 @@ function VideoTableTab() {
         <button onClick={load} style={btnPrimary}>Tải lại</button>
       </div>
 
+      <datalist id="mkt-products">
+        {products.map(p => <option key={p.code || p.name} value={p.name} />)}
+      </datalist>
+
       <div style={{ overflowX: "auto", border: `1px solid ${T.border}`, borderRadius: 8, background: T.card }}>
         <table style={{ borderCollapse: "collapse", width: "max-content" }}>
           <thead>
@@ -213,7 +221,7 @@ function VideoTableTab() {
               </Td>
               <Td width={colWidths.deadline}></Td>
               <Td width={colWidths.sp}>
-                <input placeholder="Sản phẩm" value={quickAdd.sp} onChange={e => setQuickAdd(q => ({ ...q, sp: e.target.value }))} style={miniInput} />
+                <input list="mkt-products" placeholder="Sản phẩm" value={quickAdd.sp} onChange={e => setQuickAdd(q => ({ ...q, sp: e.target.value }))} style={miniInput} />
               </Td>
               <Td width={colWidths.loai}>
                 <select value={quickAdd.loaiVideo} onChange={e => setQuickAdd(q => ({ ...q, loaiVideo: e.target.value }))} style={miniInput}>
@@ -240,17 +248,30 @@ function VideoTableTab() {
                 <Td width={colWidths.stt}>{i + 1}</Td>
                 <Td width={colWidths.vd}>{r.vdCode}</Td>
                 <Td width={colWidths.ngay}>{r.ngayDang}</Td>
-                <Td width={colWidths.nguon}>{r.nguon}</Td>
-                <Td width={colWidths.nguoilam}>{r.nguoiLam}</Td>
+                <Td width={colWidths.nguon}>
+                  <select defaultValue={r.nguon} onChange={e => updateRow(r.id, { nguon: e.target.value })} style={miniInput}>
+                    <option>Team</option><option>CTV</option>
+                  </select>
+                </Td>
+                <Td width={colWidths.nguoilam}>
+                  <input defaultValue={r.nguoiLam} onBlur={e => updateRow(r.id, { nguoiLam: e.target.value })} style={miniInput} />
+                </Td>
                 <Td width={colWidths.deadline}>
                   <input type="date" defaultValue={r.deadline || ""} onBlur={e => updateRow(r.id, { deadline: e.target.value })} style={miniInput} />
                 </Td>
-                <Td width={colWidths.sp}>{r.sp}</Td>
+                <Td width={colWidths.sp}>
+                  <input list="mkt-products" defaultValue={r.sp} onBlur={e => updateRow(r.id, { sp: e.target.value })} style={miniInput} />
+                </Td>
                 <Td width={colWidths.loai}>
-                  <span style={{ color: VT_COLORS[r.loaiVideo] || T.text2, fontWeight: 600 }}>{r.loaiVideo}</span>
+                  <select defaultValue={r.loaiVideo} onChange={e => updateRow(r.id, { loaiVideo: e.target.value })} style={{ ...miniInput, color: VT_COLORS[r.loaiVideo] || T.text2, fontWeight: 600 }}>
+                    {Object.keys(VT_COLORS).map(v => <option key={v}>{v}</option>)}
+                  </select>
                 </Td>
                 <Td width={colWidths.link}>
-                  {r.link ? <a href={r.link} target="_blank" rel="noreferrer" style={{ color: T.accent }}>Xem</a> : "—"}
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <input defaultValue={r.link} onBlur={e => updateRow(r.id, { link: e.target.value })} style={{ ...miniInput, flex: 1 }} />
+                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}>Xem</a>}
+                  </div>
                 </Td>
                 <Td width={colWidths.trangthai}>
                   <select value={r.trangThai} onChange={e => updateRow(r.id, { trangThai: e.target.value })} style={miniInput}>
