@@ -145,6 +145,7 @@ function VideoTableTab() {
   const [search, setSearch] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [aiModalRow, setAiModalRow] = useState<VideoRow | null>(null)
+  const [postModalRow, setPostModalRow] = useState<VideoRow | null>(null)
   const [quickAdd, setQuickAdd] = useState({ nguoiLam: "", sp: "", loaiVideo: "Video AI", link: "", nguon: "Team", mediaType: "" })
 
   const { colWidths, onResizeMouseDown } = useResizableColumns("video-content-bang.col-widths.v1", BANG_TAB_COLS)
@@ -361,6 +362,7 @@ function VideoTableTab() {
                     {r.aiScore != null && (
                       <button onClick={() => setAiModalRow(r)} style={{ ...btnSecondary, fontWeight: 700 }}>{r.aiScore}/10</button>
                     )}
+                    <button onClick={() => setPostModalRow(r)} disabled={!r.link} style={{ ...btnSecondary, color: "#1877F2" }}>Đăng</button>
                     <button onClick={() => deleteRow(r.id)} style={{ ...btnSecondary, color: T.sErr }}>Xoá</button>
                   </div>
                 </Td>
@@ -372,6 +374,117 @@ function VideoTableTab() {
       {loading && <div style={{ padding: 12, color: T.text3 }}>Đang tải...</div>}
 
       {aiModalRow && <AiReviewModal row={aiModalRow} onClose={() => setAiModalRow(null)} />}
+      {postModalRow && <PostFromRowModal row={postModalRow} onClose={() => setPostModalRow(null)} onPosted={() => updateRow(postModalRow.id, { trangThai: "Đã đăng" })} />}
+    </div>
+  )
+}
+
+function PostFromRowModal({ row, onClose, onPosted }: { row: VideoRow; onClose: () => void; onPosted: () => void }) {
+  const [pages, setPages] = useState<Page[]>([])
+  const [selPages, setSelPages] = useState<Set<string>>(new Set())
+  const [message, setMessage] = useState(row.ghiChu || "")
+  const [mediaType, setMediaType] = useState<"text" | "video" | "photo">(row.mediaType === "image" ? "photo" : "video")
+  const [schedule, setSchedule] = useState<"now" | "schedule">("now")
+  const [schedTime, setSchedTime] = useState(() => {
+    const d = new Date(); d.setMinutes(d.getMinutes() + 15)
+    return d.toISOString().slice(0, 16)
+  })
+  const [posting, setPosting] = useState(false)
+  const [progress, setProgress] = useState({ done: 0, total: 0 })
+  const [results, setResults] = useState<any[]>([])
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => { api("/pages").then(d => setPages(d.pages || [])).catch(() => {}) }, [])
+
+  const togglePage = (id: string) => setSelPages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+
+  const pollJob = (jobId: string) => {
+    const iv = setInterval(async () => {
+      try {
+        const d = await api(`/post/status?jobId=${jobId}`)
+        setProgress({ done: d.done, total: d.total })
+        setResults(d.progress || [])
+        if (d.status !== "running") {
+          clearInterval(iv); setPosting(false)
+          const ok = (d.progress || []).filter((p: any) => p.status === "success").length
+          if (ok > 0) onPosted()
+        }
+      } catch { clearInterval(iv); setPosting(false) }
+    }, 2000)
+  }
+
+  const handlePost = async () => {
+    if (!selPages.size) return
+    setErr(null); setPosting(true); setResults([]); setProgress({ done: 0, total: selPages.size })
+    try {
+      const body: any = { page_ids: [...selPages], message, drive_url: row.link, media_type: mediaType }
+      if (schedule === "schedule") body.scheduled_for = new Date(schedTime).toISOString()
+      const d = await api("/post", { method: "POST", body: JSON.stringify(body) })
+      if (d?.jobId) pollJob(d.jobId)
+      else { setPosting(false); setErr("Không tạo được job") }
+    } catch (e: any) { setPosting(false); setErr(e.message) }
+  }
+
+  const inp: React.CSSProperties = { background: "#F0F1F5", color: "#111827", border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, outline: "none", width: "100%" }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: 12, padding: 24, width: 480, maxHeight: "85vh", overflowY: "auto", boxShadow: T.shadowMd, display: "flex", flexDirection: "column", gap: 12 }}>
+        <h3 style={{ margin: 0 }}>Đăng bài — {row.vdCode}</h3>
+        <div style={{ fontSize: 12, color: T.text3, wordBreak: "break-all" }}>{row.link}</div>
+
+        <select value={mediaType} onChange={e => setMediaType(e.target.value as any)} style={inp}>
+          <option value="video">🎬 Video</option>
+          <option value="photo">🖼 Ảnh</option>
+          <option value="text">📝 Text</option>
+        </select>
+
+        <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Nội dung bài đăng..." rows={3} style={{ ...inp, resize: "vertical" }} />
+
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Chọn page ({selPages.size} đã chọn)</div>
+          <div style={{ maxHeight: 160, overflowY: "auto", border: `1px solid ${T.border}`, borderRadius: 8 }}>
+            {pages.map(p => (
+              <label key={p.page_id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", fontSize: 13, cursor: "pointer", borderBottom: `1px solid ${T.border}` }}>
+                <input type="checkbox" checked={selPages.has(p.page_id)} onChange={() => togglePage(p.page_id)} />
+                {p.page_name}
+              </label>
+            ))}
+            {pages.length === 0 && <div style={{ padding: 10, color: T.text3, fontSize: 12 }}>Đang tải pages…</div>}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
+            <input type="radio" checked={schedule === "now"} onChange={() => setSchedule("now")} /> Đăng ngay
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}>
+            <input type="radio" checked={schedule === "schedule"} onChange={() => setSchedule("schedule")} /> Lên lịch
+          </label>
+        </div>
+        {schedule === "schedule" && (
+          <input type="datetime-local" value={schedTime} onChange={e => setSchedTime(e.target.value)} style={inp} />
+        )}
+
+        {posting && <div style={{ fontSize: 12, color: T.text3 }}>Đang đăng… {progress.done}/{progress.total}</div>}
+        {results.length > 0 && (
+          <div style={{ fontSize: 12 }}>
+            {results.map((r, i) => (
+              <div key={i} style={{ color: r.status === "success" ? "#059669" : "#DC2626" }}>
+                {r.status === "success" ? "✓" : "✗"} {r.page_name}{r.error ? `: ${r.error}` : ""}
+              </div>
+            ))}
+          </div>
+        )}
+        {err && <div style={{ color: "#DC2626", fontSize: 12 }}>{err}</div>}
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+          <button onClick={onClose} style={btnSecondary}>Đóng</button>
+          <button onClick={handlePost} disabled={!selPages.size || posting} style={{ ...btnPrimary, background: "#1877F2" }}>
+            {posting ? "Đang đăng…" : schedule === "schedule" ? "Lên lịch" : "Đăng ngay"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
