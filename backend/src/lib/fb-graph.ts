@@ -12,6 +12,13 @@ export function isTokenError(e: any): boolean {
   return /access token|OAuthException|code 190/i.test(msg)
 }
 
+/** Convert link Google Drive dạng /view → direct-download để FB Graph API đọc được byte file. */
+function toDirectFileUrl(url: string): string {
+  const m = url.match(/drive\.google\.com\/file\/d\/([^/]+)/)
+  if (m) return `https://drive.google.com/uc?export=download&id=${m[1]}`
+  return url
+}
+
 /** Gọi FB Graph API. method GET/POST. body cho POST (form-encoded). */
 export async function callFb(method: "GET" | "POST", path: string, body?: Record<string, any>): Promise<any> {
   const token = getSysToken()
@@ -67,7 +74,7 @@ export async function publishPost(opts: {
     const f = new URLSearchParams()
     f.append("access_token", opts.pageToken)
     f.append("description", opts.message)
-    f.append("file_url", opts.driveUrl)
+    f.append("file_url", toDirectFileUrl(opts.driveUrl))
     if (opts.title) f.append("title", opts.title)
     if (isScheduled) {
       f.append("published", "false")
@@ -82,7 +89,7 @@ export async function publishPost(opts: {
     const f = new URLSearchParams()
     f.append("access_token", opts.pageToken)
     f.append("caption", opts.message)
-    f.append("url", opts.driveUrl)
+    f.append("url", toDirectFileUrl(opts.driveUrl))
     if (isScheduled) {
       f.append("published", "false")
       f.append("scheduled_publish_time", String(opts.scheduledTime))
