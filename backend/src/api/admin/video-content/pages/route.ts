@@ -23,6 +23,13 @@ async function getPageTokens(pool: any, force = false) {
       [p.page_id, p.page_name, p.access_token, p.category, p.fan_count]
     )
   }
+  if (force) {
+    const ids = pages.map(p => p.page_id)
+    await pool.query(
+      `DELETE FROM fb_page_token WHERE NOT (page_id = ANY($1::text[]))`,
+      [ids.length ? ids : [""]]
+    )
+  }
   return pages.map(p => ({ ...p, hoat_dong: "active" }))
 }
 
