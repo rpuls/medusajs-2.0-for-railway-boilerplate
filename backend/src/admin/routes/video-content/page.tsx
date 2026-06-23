@@ -429,10 +429,137 @@ function ProductsSyncBar() {
   )
 }
 
+type Product = { id: number; name: string; code: string; pancake_id?: string | null; active?: boolean }
+
+function ProductsTab() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editDraft, setEditDraft] = useState({ name: "", code: "" })
+  const [newForm, setNewForm] = useState({ name: "", code: "" })
+  const [msg, setMsg] = useState<string | null>(null)
+
+  function load() {
+    setLoading(true)
+    api("/products").then(d => setProducts(d.products ?? [])).catch(() => {}).finally(() => setLoading(false))
+  }
+  useEffect(load, [])
+
+  async function sync() {
+    setSyncing(true)
+    setMsg(null)
+    try {
+      const r = await api("/products", { method: "POST", body: JSON.stringify({ action: "sync" }) })
+      setMsg(r.ok ? `Đã sync ${r.synced ?? r.total ?? "?"} sản phẩm từ Pancake` : `Lỗi: ${r.error || "unknown"}`)
+      load()
+    } catch {
+      setMsg("Sync thất bại")
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  async function saveEdit(id: number) {
+    await api(`/products/${id}`, { method: "PATCH", body: JSON.stringify(editDraft) })
+    setEditId(null)
+    load()
+  }
+
+  async function del(id: number) {
+    if (!confirm("Xóa sản phẩm này?")) return
+    await api(`/products/${id}`, { method: "DELETE" })
+    load()
+  }
+
+  async function addNew() {
+    if (!newForm.name.trim()) return
+    await api("/products", { method: "POST", body: JSON.stringify(newForm) })
+    setNewForm({ name: "", code: "" })
+    load()
+  }
+
+  const inp: React.CSSProperties = { border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 8px", fontSize: 13, width: "100%" }
+  const th: React.CSSProperties = { padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 12, color: T.text2, borderBottom: `2px solid ${T.border}`, background: T.subtle, whiteSpace: "nowrap" }
+  const td: React.CSSProperties = { padding: "9px 12px", fontSize: 13, borderBottom: `1px solid ${T.border}`, verticalAlign: "middle" }
+
+  return (
+    <div style={{ padding: 4, maxWidth: 900 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Danh mục Sản phẩm</h2>
+        <button onClick={sync} disabled={syncing} style={btnPrimary}>{syncing ? "Đang sync..." : "↻ Sync từ Pancake"}</button>
+        {msg && <span style={{ fontSize: 12, color: "#16A34A" }}>{msg}</span>}
+        <span style={{ fontSize: 12, color: T.text2, marginLeft: "auto" }}>{products.length} sản phẩm</span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "flex-end" }}>
+        <div style={{ flex: 2 }}>
+          <div style={{ fontSize: 11, color: T.text2, marginBottom: 3 }}>Tên SP</div>
+          <input style={inp} placeholder="Tên sản phẩm..." value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: T.text2, marginBottom: 3 }}>Mã SP</div>
+          <input style={inp} placeholder="VD: PHVVN036NC" value={newForm.code} onChange={e => setNewForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} />
+        </div>
+        <button onClick={addNew} style={btnPrimary}>+ Thêm</button>
+      </div>
+
+      {loading ? <div style={{ color: T.text3, padding: 20 }}>Đang tải...</div> : (
+        <table style={{ width: "100%", borderCollapse: "collapse", background: T.card, borderRadius: 8, overflow: "hidden", boxShadow: T.shadowSm }}>
+          <thead>
+            <tr>
+              <th style={th}>#</th>
+              <th style={th}>Tên sản phẩm</th>
+              <th style={th}>Mã SP</th>
+              <th style={th}>Pancake ID</th>
+              <th style={th}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p, i) => (
+              <tr key={p.id}>
+                <td style={{ ...td, color: T.text3, width: 40 }}>{i + 1}</td>
+                <td style={td}>
+                  {editId === p.id
+                    ? <input style={inp} value={editDraft.name} onChange={e => setEditDraft(d => ({ ...d, name: e.target.value }))} />
+                    : p.name}
+                </td>
+                <td style={td}>
+                  {editId === p.id
+                    ? <input style={{ ...inp, width: 140, fontFamily: "monospace" }} value={editDraft.code} onChange={e => setEditDraft(d => ({ ...d, code: e.target.value.toUpperCase() }))} />
+                    : <code style={{ background: T.subtle, padding: "2px 8px", borderRadius: 4, fontSize: 12 }}>{p.code || "—"}</code>}
+                </td>
+                <td style={{ ...td, color: T.text3, fontSize: 12 }}>{p.pancake_id || "—"}</td>
+                <td style={{ ...td, whiteSpace: "nowrap" }}>
+                  {editId === p.id ? (
+                    <>
+                      <button onClick={() => saveEdit(p.id)} style={{ ...btnPrimary, padding: "3px 10px", fontSize: 12, marginRight: 4 }}>Lưu</button>
+                      <button onClick={() => setEditId(null)} style={{ ...btnSecondary, padding: "3px 10px" }}>Hủy</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => { setEditId(p.id); setEditDraft({ name: p.name, code: p.code }) }} style={{ ...btnSecondary, padding: "3px 10px", marginRight: 4 }}>Sửa</button>
+                      <button onClick={() => del(p.id)} style={{ padding: "3px 10px", borderRadius: 5, border: "none", background: T.sErrBg, color: T.sErr, fontSize: 12, cursor: "pointer" }}>Xóa</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {products.length === 0 && (
+              <tr><td colSpan={5} style={{ ...td, textAlign: "center", color: T.text3, padding: 32 }}>Chưa có SP nào — bấm "Sync từ Pancake" để tải về</td></tr>
+            )}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
 const TABS = [
   { id: "bang", label: "Bảng" },
   { id: "fb", label: "Đăng Facebook" },
   { id: "pages", label: "Quản lý Page" },
+  { id: "products", label: "📦 Danh mục SP" },
 ]
 
 const VideoContentPage = () => {
@@ -458,6 +585,7 @@ const VideoContentPage = () => {
       {tab === "bang" && (<><ProductsSyncBar /><VideoTableTab /></>)}
       {tab === "fb" && <FbPostTab />}
       {tab === "pages" && <PageManageTab />}
+      {tab === "products" && <ProductsTab />}
     </div>
   )
 }
