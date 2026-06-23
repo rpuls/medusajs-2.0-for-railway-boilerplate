@@ -398,99 +398,404 @@ function AiReviewModal({ row, onClose }: { row: VideoRow; onClose: () => void })
   )
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function pageColor(id: string) {
+  const colors = ["#1877F2","#E84042","#F59E0B","#10B981","#8B5CF6","#EF4444","#06B6D4","#F97316","#6366F1","#EC4899","#84CC16"]
+  let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return colors[h % colors.length]
+}
+
+function FbToast({ msg, onDone }: { msg: string; onDone: () => void }) {
+  useEffect(() => { const t = setTimeout(onDone, 2800); return () => clearTimeout(t) }, [])
+  return <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, background: "#1877F2", color: "#fff", boxShadow: "0 4px 16px rgba(0,0,0,0.10)", borderRadius: 12, padding: "12px 18px", fontSize: 13, fontWeight: 500 }}>✓ {msg}</div>
+}
+
+const STATUS_POST: Record<string, { label: string; c: string; bg: string }> = {
+  success:   { label: "Đã đăng",    c: "#059669", bg: "#DCFCE7" },
+  published: { label: "Đã đăng",    c: "#059669", bg: "#DCFCE7" },
+  scheduled: { label: "Lên lịch",   c: "#D97706", bg: "#FEF3C7" },
+  cancelled: { label: "Đã hủy",     c: "#6B7280", bg: "#F3F4F6" },
+  failed:    { label: "Lỗi",        c: "#DC2626", bg: "#FEE2E2" },
+  pending:   { label: "Chờ",        c: "#6B7280", bg: "#F3F4F6" },
+  running:   { label: "Đang xử lý", c: "#2563EB", bg: "#DBEAFE" },
+}
+const MEDIA_ICON: Record<string, string> = { video: "🎬", photo: "🖼️", text: "📝" }
+
+// ── Tab: Đăng Facebook ─────────────────────────────────────────────────────────
+const DRAFT_KEY = "kin_fb_dangbai_draft"
+
 function FbPostTab() {
+  const savedDraft = (() => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") } catch { return null } })()
+  const [content, setContent] = useState(savedDraft?.content || "")
+  const [title, setTitle] = useState(savedDraft?.title || "")
+  const [driveLink, setDriveLink] = useState(savedDraft?.driveLink || "")
+  const [postType, setPostType] = useState<"text" | "video" | "anh">(savedDraft?.postType || "video")
+  const [schedule, setSchedule] = useState<"now" | "schedule">("now")
+  const [schedTime, setSchedTime] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0)
+    return d.toISOString().slice(0, 16)
+  })
   const [pages, setPages] = useState<Page[]>([])
-  const [selectedPages, setSelectedPages] = useState<string[]>([])
-  const [message, setMessage] = useState("")
+  const [selPages, setSelPages] = useState<Set<string>>(new Set())
+  const [pageQ, setPageQ] = useState("")
   const [posting, setPosting] = useState(false)
-  const [posts, setPosts] = useState<any[]>([])
+  const [progress, setProgress] = useState({ done: 0, total: 0 })
+  const [results, setResults] = useState<any[]>([])
+  const [showSim, setShowSim] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [hasDraft, setHasDraft] = useState(!!savedDraft)
 
-  async function loadPages() {
-    const data = await api("/pages").catch(() => ({ pages: [] }))
-    setPages(data.pages || [])
-  }
-  async function loadPosts() {
-    const data = await api("/post?posts=1").catch(() => ({ posts: [] }))
-    setPosts(data.posts || [])
-  }
-  useEffect(() => { loadPages(); loadPosts() }, [])
+  // Autosave draft
+  useEffect(() => {
+    if (posting) return
+    if (!content && !driveLink && !title) { localStorage.removeItem(DRAFT_KEY); return }
+    const t = setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ content, title, driveLink, postType }))
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [content, title, driveLink, postType, posting])
 
-  async function submitPost() {
-    if (!selectedPages.length || !message.trim()) return
-    setPosting(true)
+  useEffect(() => {
+    api("/pages").then(d => {
+      if (d.error === "FB_TOKEN_EXPIRED") setToast("Token FB hết hạn — liên hệ admin cập nhật FB_SYSTEM_TOKEN")
+      setPages(d.pages || [])
+    }).catch(() => {})
+  }, [])
+
+  const filteredPages = pages.filter(p => p.page_name.toLowerCase().includes(pageQ.toLowerCase()))
+  const togglePage = (id: string) => setSelPages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const selectAll = () => setSelPages(selPages.size === filteredPages.length ? new Set() : new Set(filteredPages.map(p => p.page_id)))
+
+  const clearDraft = () => { localStorage.removeItem(DRAFT_KEY); setHasDraft(false); setTitle(""); setContent(""); setDriveLink("") }
+
+  const pollJob = (jobId: string) => {
+    const iv = setInterval(async () => {
+      try {
+        const d = await api(`/post/status?jobId=${jobId}`)
+        setProgress({ done: d.done, total: d.total })
+        setResults(d.progress || [])
+        if (d.status !== "running") {
+          clearInterval(iv); setPosting(false)
+          const ok = (d.progress || []).filter((p: any) => p.status === "success").length
+          setToast(`Hoàn thành: ${ok}/${d.total} trang thành công`)
+        }
+      } catch { clearInterval(iv); setPosting(false) }
+    }, 2000)
+  }
+
+  const handlePost = async () => {
+    if (!selPages.size) return
+    setPosting(true); setShowSim(true); setResults([]); setProgress({ done: 0, total: selPages.size })
     try {
-      await api("/post", { method: "POST", body: JSON.stringify({ page_ids: selectedPages, message, media_type: "text" }) })
-      setMessage("")
-      setTimeout(loadPosts, 2000)
-    } catch (e: any) {
-      alert(e.message)
-    } finally {
-      setPosting(false)
-    }
+      const body: any = {
+        page_ids: [...selPages], message: content,
+        drive_url: driveLink, media_type: postType === "anh" ? "photo" : postType,
+      }
+      if (title.trim()) body.title = title.trim()
+      if (schedule === "schedule") body.scheduled_for = new Date(schedTime).toISOString()
+      const d = await api("/post", { method: "POST", body: JSON.stringify(body) })
+      if (d?.jobId) { clearDraft(); pollJob(d.jobId) }
+      else { setPosting(false); setToast("Lỗi: không tạo được job") }
+    } catch (e: any) { setPosting(false); setToast("Lỗi: " + e.message) }
   }
+
+  const inpCls: React.CSSProperties = { background: "#F0F1F5", color: "#111827", border: `1px solid ${T.border}`, borderRadius: 9, padding: "9px 12px", fontSize: 13, outline: "none", width: "100%" }
 
   return (
-    <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        {pages.map(p => (
-          <label key={p.page_id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 13 }}>
-            <input
-              type="checkbox"
-              checked={selectedPages.includes(p.page_id)}
-              onChange={e => setSelectedPages(prev => e.target.checked ? [...prev, p.page_id] : prev.filter(id => id !== p.page_id))}
-            />
-            {p.page_name}
-          </label>
-        ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {toast && <FbToast msg={toast} onDone={() => setToast(null)} />}
+      {hasDraft && (
+        <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 16 }}>📝</span>
+          <span style={{ color: "#92400E", fontSize: 13, flex: 1 }}>Đã khôi phục bản nháp từ lần trước.</span>
+          <button onClick={clearDraft} style={{ background: "none", border: "1px solid #FDE68A", borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "#92400E", cursor: "pointer" }}>Xóa nháp</button>
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 16 }}>
+        {/* LEFT */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ color: T.text2, fontSize: 12, fontWeight: 600, marginBottom: 8 }}>NỘI DUNG BÀI ĐĂNG</div>
+            <textarea value={content} onChange={e => setContent(e.target.value)} rows={6} placeholder="Nhập nội dung bài đăng…" style={{ ...inpCls, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box" }} />
+            <div style={{ color: T.text3, fontSize: 11, textAlign: "right", marginTop: 4 }}>{content.length} ký tự</div>
+          </div>
+          {postType === "video" && (
+            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+              <div style={{ color: T.text2, fontSize: 12, fontWeight: 600, marginBottom: 8 }}>TIÊU ĐỀ VIDEO <span style={{ color: T.text3, fontWeight: 400 }}>(tuỳ chọn)</span></div>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: BỘ SƠ MI XANH PASTEL…" style={inpCls} />
+            </div>
+          )}
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ color: T.text2, fontSize: 12, fontWeight: 600, marginBottom: 8 }}>LINK GOOGLE DRIVE</div>
+            <input value={driveLink} onChange={e => setDriveLink(e.target.value)} placeholder="https://drive.google.com/file/…" style={inpCls} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, padding: "7px 10px", background: "#FEF3C7", border: "1px solid #F59E0B40", borderRadius: 8 }}>
+              <span>⚠️</span><span style={{ color: "#92400E", fontSize: 12 }}>File phải để chế độ <b>"Anyone with the link"</b></span>
+            </div>
+          </div>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ color: T.text2, fontSize: 12, fontWeight: 600, marginBottom: 10 }}>LOẠI NỘI DUNG</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {([["text","Văn bản"],["video","Video"],["anh","Ảnh"]] as const).map(([v, l]) => (
+                <button key={v} onClick={() => setPostType(v)} style={{ flex: 1, padding: "8px 0", background: postType === v ? "#1877F2" : T.subtle, color: postType === v ? "#fff" : T.text2, border: `1px solid ${postType === v ? "#1877F2" : T.border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ color: T.text2, fontSize: 12, fontWeight: 600, marginBottom: 10 }}>THỜI GIAN ĐĂNG</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {([["now","Đăng ngay"],["schedule","Lên lịch"]] as const).map(([v, l]) => (
+                <button key={v} onClick={() => setSchedule(v)} style={{ flex: 1, padding: "8px 0", background: schedule === v ? "#1877F2" : T.subtle, color: schedule === v ? "#fff" : T.text2, border: `1px solid ${schedule === v ? "#1877F2" : T.border}`, borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+              ))}
+            </div>
+            {schedule === "schedule" && <input type="datetime-local" value={schedTime} onChange={e => setSchedTime(e.target.value)} style={{ ...inpCls, width: "auto" }} />}
+          </div>
+        </div>
+        {/* RIGHT — chọn trang */}
+        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ color: T.text2, fontSize: 12, fontWeight: 600, marginBottom: 10 }}>CHỌN TRANG ĐĂNG ({pages.length} trang)</div>
+            <input value={pageQ} onChange={e => setPageQ(e.target.value)} placeholder="Tìm trang…" style={{ width: "100%", background: T.subtle, border: `1px solid ${T.border}`, borderRadius: 9, padding: "7px 12px", fontSize: 12, color: "#111827", outline: "none", marginBottom: 10, boxSizing: "border-box" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button onClick={selectAll} style={{ color: "#1877F2", background: "none", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                {selPages.size === filteredPages.length && filteredPages.length > 0 ? "Bỏ chọn tất cả" : `Chọn tất cả (${filteredPages.length})`}
+              </button>
+              {selPages.size > 0 && <span style={{ background: "#1877F2", color: "#fff", borderRadius: 20, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>{selPages.size} trang</span>}
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", maxHeight: 400 }}>
+            {filteredPages.map(p => (
+              <label key={p.page_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", cursor: "pointer", borderBottom: `1px solid ${T.border}` }}>
+                <input type="checkbox" checked={selPages.has(p.page_id)} onChange={() => togglePage(p.page_id)} style={{ accentColor: "#1877F2", width: 15, height: 15, flexShrink: 0 }} />
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: pageColor(p.page_id), flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700 }}>{p.page_name.slice(0, 2).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: "#111827", fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.page_name}</div>
+                  <div style={{ color: T.text3, fontSize: 11 }}>{(p.fan_count || 0).toLocaleString("vi-VN")} người theo dõi</div>
+                </div>
+              </label>
+            ))}
+            {filteredPages.length === 0 && <div style={{ padding: 30, textAlign: "center", color: T.text3, fontSize: 13 }}>Không có trang nào</div>}
+          </div>
+        </div>
       </div>
-      <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Nội dung bài đăng..." rows={4} style={{ width: "100%", borderRadius: 8, border: `1px solid ${T.border}`, padding: 10, fontSize: 13 }} />
-      <button onClick={submitPost} disabled={posting} style={{ ...btnPrimary, marginTop: 8 }}>{posting ? "Đang đăng..." : "Đăng ngay"}</button>
 
-      <h4 style={{ marginTop: 24 }}>Bài đã đăng / lên lịch</h4>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <thead><tr><Th width={150}>Page</Th><Th width={300}>Nội dung</Th><Th width={100}>Trạng thái</Th></tr></thead>
-        <tbody>
-          {posts.map(p => (
-            <tr key={p.id}>
-              <Td width={150}>{p.page_name}</Td>
-              <Td width={300}>{p.message}</Td>
-              <Td width={100}>{p.status}</Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Post button + progress */}
+      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={handlePost} disabled={!selPages.size || posting} style={{ background: selPages.size > 0 ? "#1877F2" : T.subtle, color: selPages.size > 0 ? "#fff" : T.text3, border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 14, fontWeight: 700, cursor: selPages.size > 0 ? "pointer" : "default", opacity: posting ? 0.7 : 1 }}>
+            {posting ? "Đang đăng…" : `Đăng ${selPages.size > 0 ? selPages.size : ""} trang`}
+          </button>
+          {selPages.size === 0 && <span style={{ color: T.text3, fontSize: 13 }}>Vui lòng chọn ít nhất 1 trang</span>}
+        </div>
+        {showSim && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ color: T.text2, fontSize: 13 }}>{posting ? "Đang đăng…" : "Hoàn thành"}</span>
+              <span style={{ color: "#1877F2", fontSize: 13, fontWeight: 700 }}>{progress.done}/{progress.total}</span>
+            </div>
+            <div style={{ background: T.border, borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 14 }}>
+              <div style={{ height: "100%", background: "#1877F2", width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%`, transition: "width 0.5s ease", borderRadius: 6 }} />
+            </div>
+            {results.length > 0 && (
+              <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: T.subtle }}>{["Trang","Trạng thái","Post ID","Lỗi"].map((h, i) => <th key={i} style={{ padding: "8px 12px", textAlign: "left", color: T.text3, fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, borderBottom: `1px solid ${T.border}` }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {results.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: i < results.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                        <td style={{ padding: "8px 12px", color: "#111827", fontSize: 13 }}>{r.page_name}</td>
+                        <td style={{ padding: "8px 12px" }}><span style={{ background: r.status === "success" ? "#D1FAE5" : "#FEE2E2", color: r.status === "success" ? "#059669" : "#DC2626", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{r.status === "success" ? "Thành công" : "Lỗi"}</span></td>
+                        <td style={{ padding: "8px 12px", color: T.text3, fontSize: 11, fontFamily: "monospace" }}>{r.post_id || "—"}</td>
+                        <td style={{ padding: "8px 12px", color: "#DC2626", fontSize: 12 }}>{r.error || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Lịch sử bài đã đăng */}
+      <LichDangSection />
     </div>
   )
 }
 
+function LichDangSection() {
+  const [posts, setPosts] = useState<any[]>([])
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [loading, setLoading] = useState(true)
+
+  const load = () => {
+    setLoading(true)
+    const params = new URLSearchParams({ posts: "1" })
+    if (filterStatus !== "all") params.set("status", filterStatus)
+    api(`/post?${params}`).then(d => setPosts(d.posts || [])).catch(() => {}).finally(() => setLoading(false))
+  }
+  useEffect(() => { load() }, [filterStatus])
+
+  const grouped: Record<string, any[]> = {}
+  for (const p of posts) {
+    const d = new Date(p.published_at || p.scheduled_for || p.created_at || Date.now())
+    const key = d.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })
+    ;(grouped[key] = grouped[key] || []).push(p)
+  }
+
+  const inp: React.CSSProperties = { background: T.card, color: "#111827", border: `1px solid ${T.border}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, outline: "none" }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontWeight: 700, fontSize: 14, color: T.text }}>Lịch sử đăng bài</span>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={inp}>
+          <option value="all">Tất cả trạng thái</option>
+          <option value="published">Đã đăng</option>
+          <option value="scheduled">Lên lịch</option>
+          <option value="failed">Lỗi</option>
+        </select>
+        <button onClick={load} style={{ ...btnSecondary }}>↻ Làm mới</button>
+        <span style={{ color: T.text3, fontSize: 12, marginLeft: "auto" }}>{posts.length} bài</span>
+      </div>
+      {loading && <div style={{ padding: 20, textAlign: "center", color: T.text3 }}>Đang tải…</div>}
+      {!loading && Object.entries(grouped).map(([day, dayPosts]) => (
+        <div key={day}>
+          <div style={{ color: T.text2, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{day}</div>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+            {dayPosts.map((p, i) => {
+              const st = STATUS_POST[p.status] || STATUS_POST.pending
+              const d = new Date(p.published_at || p.scheduled_for || p.created_at || Date.now())
+              const time = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderBottom: i < dayPosts.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                  <div style={{ minWidth: 65, textAlign: "center", paddingTop: 2 }}>
+                    <div style={{ color: T.text, fontSize: 12, fontWeight: 600 }}>{time}</div>
+                    <span style={{ background: st.bg, color: st.c, borderRadius: 20, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{st.label}</span>
+                  </div>
+                  <div style={{ fontSize: 20, paddingTop: 2 }}>{MEDIA_ICON[p.media_type] || "📝"}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ color: "#111827", fontSize: 13, fontWeight: 600 }}>{p.page_name || "—"}</span>
+                      {p.post_id && (
+                        <a href={`https://www.facebook.com/${p.post_id}`} target="_blank" rel="noreferrer" style={{ color: "#1877F2", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>↗ Xem bài</a>
+                      )}
+                    </div>
+                    <div style={{ color: T.text2, fontSize: 12, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.message || "—"}</div>
+                    {p.error_msg && <div style={{ color: "#DC2626", fontSize: 11, marginTop: 4 }}>⚠️ {p.error_msg}</div>}
+                  </div>
+                  {p.drive_url && (
+                    <a href={p.drive_url} target="_blank" rel="noreferrer" style={{ color: T.text3, fontSize: 11, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>📁 Drive</a>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+      {!loading && posts.length === 0 && <div style={{ padding: 40, textAlign: "center", color: T.text3 }}>Chưa có bài nào</div>}
+    </div>
+  )
+}
+
+// ── Tab: Quản lý Page ──────────────────────────────────────────────────────────
 function PageManageTab() {
   const [pages, setPages] = useState<Page[]>([])
-  useEffect(() => { api("/pages?all=true").then(d => setPages(d.pages || [])).catch(() => {}) }, [])
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [q, setQ] = useState("")
 
-  async function setStatus(page_id: string, hoat_dong: string) {
+  const load = (forceRefresh = false) => {
+    setLoading(true)
+    const url = forceRefresh ? "/pages?all=true&force_refresh=true" : "/pages?all=true"
+    api(url).then(d => {
+      if (d.error === "FB_TOKEN_EXPIRED") setToast("Token FB hết hạn — liên hệ admin cập nhật FB_SYSTEM_TOKEN")
+      setPages(d.pages || [])
+    }).catch(() => {}).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const sync = async () => {
+    setSyncing(true)
+    await load(true)
+    setSyncing(false)
+    setToast("Đã đồng bộ danh sách trang từ Facebook")
+  }
+
+  const setStatus = async (page_id: string, hoat_dong: string) => {
     await api("/pages", { method: "PATCH", body: JSON.stringify({ page_id, hoat_dong }) })
     setPages(prev => prev.map(p => p.page_id === page_id ? { ...p, hoat_dong } : p))
   }
 
+  const filtered = pages.filter(p => !q || p.page_name.toLowerCase().includes(q.toLowerCase()))
+
+  const HOAT_DONG_LABEL: Record<string, { label: string; c: string; bg: string }> = {
+    active:  { label: "Đang hoạt động", c: "#059669", bg: "#DCFCE7" },
+    paused:  { label: "Tạm dừng",       c: "#D97706", bg: "#FEF3C7" },
+    stopped: { label: "Đã dừng",        c: "#DC2626", bg: "#FEE2E2" },
+  }
+
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-      <thead><tr><Th width={220}>Page</Th><Th width={100}>Followers</Th><Th width={150}>Trạng thái</Th></tr></thead>
-      <tbody>
-        {pages.map(p => (
-          <tr key={p.page_id}>
-            <Td width={220}>{p.page_name}</Td>
-            <Td width={100}>{p.fan_count}</Td>
-            <Td width={150}>
-              <select value={p.hoat_dong || "active"} onChange={e => setStatus(p.page_id, e.target.value)} style={miniInput}>
-                <option value="active">Hoạt động</option>
-                <option value="paused">Tạm dừng</option>
-                <option value="stopped">Đã dừng</option>
-              </select>
-            </Td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {toast && <FbToast msg={toast} onDone={() => setToast(null)} />}
+
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", background: T.card, border: `1px solid ${T.border}`, borderRadius: 8, flex: "1 1 200px" }}>
+          <span style={{ margin: "0 8px", color: T.text3 }}>⌕</span>
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm tên trang…" style={{ flex: 1, background: "none", border: "none", outline: "none", padding: "7px 8px 7px 0", fontSize: 12, color: "#111827" }} />
+        </div>
+        <button onClick={sync} disabled={syncing} style={{ ...btnPrimary, background: "#1877F2" }}>
+          {syncing ? "Đang đồng bộ…" : "🔄 Đồng bộ từ Facebook"}
+        </button>
+        <span style={{ color: T.text3, fontSize: 12, marginLeft: "auto" }}>{filtered.length} / {pages.length} trang</span>
+      </div>
+
+      {loading && <div style={{ padding: 40, textAlign: "center", color: T.text3 }}>Đang tải…</div>}
+      {!loading && (
+        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 40, textAlign: "center" }}>
+              <div style={{ color: T.text3, fontSize: 13, marginBottom: 12 }}>
+                {pages.length === 0 ? "Chưa có trang nào trong hệ thống" : "Không tìm thấy trang nào"}
+              </div>
+              {pages.length === 0 && (
+                <button onClick={sync} style={{ ...btnPrimary, background: "#1877F2" }}>🔄 Tải trang từ Facebook</button>
+              )}
+            </div>
+          ) : (
+            filtered.map((p, i) => {
+              const hd = HOAT_DONG_LABEL[p.hoat_dong || "active"] || HOAT_DONG_LABEL.active
+              return (
+                <div key={p.page_id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: i < filtered.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: pageColor(p.page_id), flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700 }}>
+                    {(p.page_name || "?")[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: "#111827", fontSize: 13, fontWeight: 600 }}>{p.page_name}</div>
+                    <div style={{ color: T.text3, fontSize: 11, marginTop: 2 }}>
+                      {p.category && <span>{p.category} · </span>}
+                      {(p.fan_count || 0).toLocaleString("vi-VN")} người theo dõi
+                    </div>
+                  </div>
+                  <span style={{ background: hd.bg, color: hd.c, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{hd.label}</span>
+                  <select
+                    value={p.hoat_dong || "active"}
+                    onChange={e => setStatus(p.page_id, e.target.value)}
+                    style={{ border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 8px", fontSize: 12, background: T.subtle, cursor: "pointer" }}
+                  >
+                    <option value="active">Hoạt động</option>
+                    <option value="paused">Tạm dừng</option>
+                    <option value="stopped">Đã dừng</option>
+                  </select>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
