@@ -41,8 +41,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     try {
       pages = await getPageTokens(pool, q.force_refresh === "true")
     } catch (e: any) {
+      console.error("[pages] fetchAllPageTokens error:", e?.message)
       if (isTokenError(e)) return res.status(200).json({ pages: [], error: "FB_TOKEN_EXPIRED" })
-      throw e
+      return res.status(200).json({ pages: [], error: e?.message || "FB error" })
     }
     const filtered = (q.all === "true" && auth.isAdmin) ? pages : filterByPerm(pages, auth)
     const visible = filtered.map(p => ({
