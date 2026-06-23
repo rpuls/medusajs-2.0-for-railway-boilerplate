@@ -38,8 +38,11 @@ export async function fetchAllPageTokens(): Promise<Array<{
 }>> {
   let url = `/me/accounts?fields=id,name,category,fan_count,access_token&limit=100`
   const all: any[] = []
+  let loopGuard = 0
   while (url) {
+    if (++loopGuard > 20) { console.error("[fb] loop guard hit"); break }
     const d = await callFb("GET", url)
+    console.error(`[fb] page ${loopGuard}: data.length=${(d.data || []).length}, has_paging_next=${!!d.paging?.next}`)
     for (const p of (d.data || [])) {
       all.push({
         page_id: p.id,
