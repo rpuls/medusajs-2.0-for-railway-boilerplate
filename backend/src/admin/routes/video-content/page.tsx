@@ -145,7 +145,7 @@ function VideoTableTab() {
   const [search, setSearch] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [aiModalRow, setAiModalRow] = useState<VideoRow | null>(null)
-  const [quickAdd, setQuickAdd] = useState({ nguoiLam: "", sp: "", loaiVideo: "Video AI", link: "", nguon: "Team" })
+  const [quickAdd, setQuickAdd] = useState({ nguoiLam: "", sp: "", loaiVideo: "Video AI", link: "", nguon: "Team", mediaType: "" })
 
   const { colWidths, onResizeMouseDown } = useResizableColumns("video-content-bang.col-widths.v1", BANG_TAB_COLS)
 
@@ -190,7 +190,7 @@ function VideoTableTab() {
   async function handleQuickAdd() {
     if (!quickAdd.nguoiLam.trim()) return
     await api("", { method: "POST", body: JSON.stringify(quickAdd) })
-    setQuickAdd({ nguoiLam: "", sp: "", loaiVideo: "Video AI", link: "", nguon: "Team" })
+    setQuickAdd({ nguoiLam: "", sp: "", loaiVideo: "Video AI", link: "", nguon: "Team", mediaType: "" })
     load()
   }
 
@@ -280,7 +280,13 @@ function VideoTableTab() {
               <Td width={colWidths.link}>
                 <input placeholder="Link" value={quickAdd.link} onChange={e => setQuickAdd(q => ({ ...q, link: e.target.value }))} style={miniInput} />
               </Td>
-              <Td width={colWidths.mediatype}></Td>
+              <Td width={colWidths.mediatype}>
+                <select value={quickAdd.mediaType} onChange={e => setQuickAdd(q => ({ ...q, mediaType: e.target.value }))} style={miniInput}>
+                  <option value="">—</option>
+                  <option value="image">🖼 Ảnh</option>
+                  <option value="video">🎬 Video</option>
+                </select>
+              </Td>
               <Td width={colWidths.trangthai}></Td>
               <Td width={colWidths.adname}></Td>
               <Td width={colWidths.ghichu}></Td>
