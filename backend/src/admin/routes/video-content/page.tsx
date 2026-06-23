@@ -26,6 +26,37 @@ type VideoRow = {
 
 type Page = { page_id: string; page_name: string; category?: string; fan_count?: number; hoat_dong?: string }
 
+function getDriveFileId(url: string): string | null {
+  if (!url) return null
+  // /file/d/{id}/view  hoặc  ?id={id}
+  const m = url.match(/\/file\/d\/([^/?#]+)/) || url.match(/[?&]id=([^&]+)/)
+  return m ? m[1] : null
+}
+
+function DrivePreview({ link, label = "Xem" }: { link: string; label?: string }) {
+  const [show, setShow] = useState(false)
+  const fileId = getDriveFileId(link)
+  if (!fileId) return <a href={link} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}>{label}</a>
+  const thumb = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <a href={link} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}>{label}</a>
+      {show && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
+          zIndex: 9999, background: "#fff", borderRadius: 8, padding: 4,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.25)", pointerEvents: "none",
+        }}>
+          <img src={thumb} alt="preview" style={{ width: 200, height: "auto", borderRadius: 6, display: "block" }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 const BANG_TAB_COLS: ColumnDef[] = [
   { id: "sel", width: 36, min: 36 },
   { id: "stt", width: 36, min: 36 },
@@ -270,7 +301,7 @@ function VideoTableTab() {
                 <Td width={colWidths.link}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                     <input defaultValue={r.link} onBlur={e => updateRow(r.id, { link: e.target.value })} style={{ ...miniInput, flex: 1 }} />
-                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 12, whiteSpace: "nowrap" }}>Xem</a>}
+                    {r.link && <DrivePreview link={r.link} />}
                   </div>
                 </Td>
                 <Td width={colWidths.trangthai}>
