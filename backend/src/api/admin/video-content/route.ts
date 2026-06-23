@@ -42,6 +42,7 @@ function toUiRow(r: any) {
     aiReview: r.ai_review || null,
     aiStatus: r.ai_status ?? null,
     starred: !!r.starred,
+    mediaType: r.media_type ?? null,
   }
 }
 
@@ -129,17 +130,18 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const spRaw: string = b.sp ?? b.product ?? ""
     const productCode: string = b.productCode ?? b.product_code ?? ""
     const videoType: string = b.loaiVideo ?? b.video_type ?? "Video AI"
+    const mediaType: string | null = b.mediaType ?? b.media_type ?? null
     const adName = computeAdName({ product_code: productCode, video_type: videoType, vd_code: vdCode }, mktCode)
 
     const { rows: [row] } = await pool.query(
       `INSERT INTO mkt_video
-        (vd_code, post_date, source, maker, product, product_code, video_type, link, status, note, ad_name, script, deadline, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        (vd_code, post_date, source, maker, product, product_code, video_type, link, status, note, ad_name, script, deadline, created_by, media_type)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING *`,
       [
         vdCode, postDate, source, maker, spRaw, productCode || null, videoType,
         b.link ?? "", status, b.ghiChu ?? b.note ?? "", adName, b.script ?? "",
-        (b.deadline || null), auth.email,
+        (b.deadline || null), auth.email, mediaType,
       ]
     )
 

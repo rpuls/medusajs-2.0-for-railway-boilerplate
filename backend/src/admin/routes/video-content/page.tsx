@@ -22,6 +22,7 @@ type VideoRow = {
   aiReview?: any
   aiStatus?: string | null
   starred?: boolean
+  mediaType?: string | null
 }
 
 type Page = { page_id: string; page_name: string; category?: string; fan_count?: number; hoat_dong?: string }
@@ -68,6 +69,7 @@ const BANG_TAB_COLS: ColumnDef[] = [
   { id: "sp", width: 170, min: 100 },
   { id: "loai", width: 84, min: 70 },
   { id: "link", width: 64, min: 56 },
+  { id: "mediatype", width: 60, min: 52 },
   { id: "trangthai", width: 100, min: 90 },
   { id: "adname", width: 180, min: 120 },
   { id: "ghichu", width: 160, min: 100 },
@@ -232,6 +234,7 @@ function VideoTableTab() {
               <Th width={colWidths.sp}>Sản phẩm<ResizeHandle onMouseDown={onResizeMouseDown("sp")} /></Th>
               <Th width={colWidths.loai}>Loại<ResizeHandle onMouseDown={onResizeMouseDown("loai")} /></Th>
               <Th width={colWidths.link}>Link<ResizeHandle onMouseDown={onResizeMouseDown("link")} /></Th>
+              <Th width={colWidths.mediatype}>File<ResizeHandle onMouseDown={onResizeMouseDown("mediatype")} /></Th>
               <Th width={colWidths.trangthai}>Trạng thái<ResizeHandle onMouseDown={onResizeMouseDown("trangthai")} /></Th>
               <Th width={colWidths.adname}>Ad name<ResizeHandle onMouseDown={onResizeMouseDown("adname")} /></Th>
               <Th width={colWidths.ghichu}>Ghi chú<ResizeHandle onMouseDown={onResizeMouseDown("ghichu")} /></Th>
@@ -262,6 +265,7 @@ function VideoTableTab() {
               <Td width={colWidths.link}>
                 <input placeholder="Link" value={quickAdd.link} onChange={e => setQuickAdd(q => ({ ...q, link: e.target.value }))} style={miniInput} />
               </Td>
+              <Td width={colWidths.mediatype}></Td>
               <Td width={colWidths.trangthai}></Td>
               <Td width={colWidths.adname}></Td>
               <Td width={colWidths.ghichu}></Td>
@@ -303,6 +307,17 @@ function VideoTableTab() {
                     <input defaultValue={r.link} onBlur={e => updateRow(r.id, { link: e.target.value })} style={{ ...miniInput, flex: 1 }} />
                     {r.link && <DrivePreview link={r.link} />}
                   </div>
+                </Td>
+                <Td width={colWidths.mediatype}>
+                  <select
+                    value={r.mediaType ?? ""}
+                    onChange={e => updateRow(r.id, { mediaType: e.target.value || null })}
+                    style={{ ...miniInput, color: r.mediaType === "image" ? "#0891B2" : r.mediaType === "video" ? "#7C3AED" : T.text3, fontWeight: 600 }}
+                  >
+                    <option value="">—</option>
+                    <option value="image">🖼 Ảnh</option>
+                    <option value="video">🎬 Video</option>
+                  </select>
                 </Td>
                 <Td width={colWidths.trangthai}>
                   <select value={r.trangThai} onChange={e => updateRow(r.id, { trangThai: e.target.value })} style={miniInput}>

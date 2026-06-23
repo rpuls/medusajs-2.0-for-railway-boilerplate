@@ -52,6 +52,7 @@ export async function PATCH(req: MedusaRequest, res: MedusaResponse) {
     if (b.fbPostLinks !== undefined) set("fb_post_links", JSON.stringify(b.fbPostLinks))
     if (b.deadline !== undefined) set("deadline", b.deadline || null)
     if (b.starred !== undefined) set("starred", !!b.starred)
+    if (b.mediaType !== undefined || b.media_type !== undefined) set("media_type", b.mediaType ?? b.media_type)
     if (b.ai_score !== undefined) set("ai_score", b.ai_score)
     if (b.ai_review !== undefined) set("ai_review", JSON.stringify(b.ai_review))
     if (b.ai_status !== undefined) set("ai_status", b.ai_status)
