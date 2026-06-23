@@ -10,59 +10,109 @@ export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
 
   return (
-    <div className="sticky top-0 inset-x-0 z-50 group">
-      <header className="relative h-16 mx-auto border-b duration-200 bg-white border-ui-border-base">
-        <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
-          <div className="flex-1 basis-0 h-full flex items-center">
-            <div className="h-full">
-              <SideMenu regions={regions} />
-            </div>
-          </div>
+    <div className="sticky top-0 inset-x-0 z-50">
+      {/* Top announcement bar */}
+      <div className="bg-kin-forest text-white py-2 text-center w-full">
+        <p className="font-hanken text-xs font-semibold uppercase tracking-widest">
+          Miễn phí đổi size lần đầu | Đóng gói kín đáo
+        </p>
+      </div>
 
-          <div className="flex items-center h-full">
+      {/* Main navigation */}
+      <header className="bg-kin-surface border-b border-kin-outline-variant">
+        <nav className="max-w-kin mx-auto px-5 md:px-12 h-16 md:h-20 flex items-center">
+
+          {/* Desktop: left links */}
+          <div className="hidden md:flex items-center gap-8">
             <LocalizedClientLink
-              href="/"
-              className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
-              data-testid="nav-store-link"
+              href="/collections/binder"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
             >
-              Medusa Store
+              Binder
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/collections/thoi-trang"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
+            >
+              Thời trang
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/collections/phu-kien"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
+            >
+              Phụ kiện
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/store"
+              className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
+            >
+              Tất cả
             </LocalizedClientLink>
           </div>
 
-          <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
-            <div className="hidden small:flex items-center gap-x-6 h-full">
-              {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
-                <LocalizedClientLink
-                  className="hover:text-ui-fg-base"
-                  href="/search"
-                  scroll={false}
-                  data-testid="nav-search-link"
-                >
-                  Search
-                </LocalizedClientLink>
-              )}
+          {/* Mobile: hamburger */}
+          <div className="md:hidden">
+            <SideMenu regions={regions} />
+          </div>
+
+          {/* Center logo — absolute on desktop, flex-1 centered on mobile */}
+          <div className="flex-1 flex justify-center md:absolute md:left-1/2 md:-translate-x-1/2">
+            <LocalizedClientLink
+              href="/"
+              className="font-hanken text-2xl md:text-3xl font-extrabold tracking-tighter text-kin-primary"
+              data-testid="nav-store-link"
+            >
+              KIN STORE
+            </LocalizedClientLink>
+          </div>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-3 md:gap-4 md:ml-auto">
+            <div className="hidden md:flex items-center gap-8 mr-4">
               <LocalizedClientLink
-                className="hover:text-ui-fg-base"
-                href="/account"
-                data-testid="nav-account-link"
+                href="/chon-size"
+                className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
               >
-                Account
+                Chọn size
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/blog"
+                className="font-hanken text-sm font-semibold text-kin-on-surface-variant hover:text-kin-primary transition-colors uppercase tracking-wider"
+              >
+                Nhật ký
               </LocalizedClientLink>
             </div>
+            <LocalizedClientLink
+              href="/search"
+              className="text-kin-primary hover:opacity-70 transition-opacity"
+              aria-label="Tìm kiếm"
+              data-testid="nav-search-link"
+            >
+              <span className="material-symbols-outlined text-[22px]">search</span>
+            </LocalizedClientLink>
+            <LocalizedClientLink
+              href="/account"
+              className="text-kin-primary hover:opacity-70 transition-opacity"
+              aria-label="Tài khoản"
+              data-testid="nav-account-link"
+            >
+              <span className="material-symbols-outlined text-[22px]">person</span>
+            </LocalizedClientLink>
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base flex gap-2"
                   href="/cart"
+                  className="text-kin-primary hover:opacity-70 transition-opacity"
                   data-testid="nav-cart-link"
                 >
-                  Cart (0)
+                  <span className="material-symbols-outlined text-[22px]">shopping_bag</span>
                 </LocalizedClientLink>
               }
             >
               <CartButton />
             </Suspense>
           </div>
+
         </nav>
       </header>
     </div>

@@ -14,11 +14,24 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2678400, // 31 days
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
+      },
+      { // Pancake CDN — product images
+        protocol: "https",
+        hostname: "content.pancake.vn",
+      },
+      { // Pancake CDN — statics variant
+        protocol: "https",
+        hostname: "statics.pancake.vn",
+      },
+      { // Stitch / Google-hosted editorial images (hero, banners)
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
       },
       ...(process.env.NEXT_PUBLIC_BASE_URL
         ? [{ // Note: needed to serve images from /public folder
@@ -52,6 +65,20 @@ const nextConfig = {
   },
   serverRuntimeConfig: {
     port: process.env.PORT || 3000
+  },
+  async redirects() {
+    return [
+      {
+        source: "/:countryCode/blog",
+        destination: "/:countryCode/cau-chuyen",
+        permanent: true,
+      },
+      {
+        source: "/:countryCode/blog/:slug",
+        destination: "/:countryCode/cau-chuyen/:slug",
+        permanent: true,
+      },
+    ]
   }
 }
 

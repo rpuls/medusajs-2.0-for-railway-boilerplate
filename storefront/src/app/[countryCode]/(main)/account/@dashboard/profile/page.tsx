@@ -5,6 +5,7 @@ import ProfileBillingAddress from "@modules/account/components/profile-billing-a
 import ProfileEmail from "@modules/account/components/profile-email"
 import ProfileName from "@modules/account/components/profile-name"
 import ProfilePassword from "@modules/account/components/profile-password"
+import ProfileBodyMeasurements from "@modules/account/components/profile-body-measurements"
 
 import { notFound } from "next/navigation"
 import { listRegions } from "@lib/data/regions"
@@ -43,6 +44,8 @@ export default async function Profile() {
         <ProfilePassword customer={customer} />
         <Divider />
         <ProfileBillingAddress customer={customer} regions={regions} />
+        <Divider />
+        <ProfileBodyMeasurements customer={customer} />
       </div>
     </div>
   )

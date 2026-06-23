@@ -11,6 +11,7 @@ type PaginatedProductsParams = {
   collection_id?: string[]
   category_id?: string[]
   id?: string[]
+  q?: string
   order?: string
 }
 
@@ -20,6 +21,7 @@ export default async function PaginatedProducts({
   collectionId,
   categoryId,
   productsIds,
+  query,
   countryCode,
 }: {
   sortBy?: SortOptions
@@ -27,6 +29,7 @@ export default async function PaginatedProducts({
   collectionId?: string
   categoryId?: string
   productsIds?: string[]
+  query?: string
   countryCode: string
 }) {
   const queryParams: PaginatedProductsParams = {
@@ -43,6 +46,10 @@ export default async function PaginatedProducts({
 
   if (productsIds) {
     queryParams["id"] = productsIds
+  }
+
+  if (query) {
+    queryParams["q"] = query
   }
 
   if (sortBy === "created_at") {
@@ -68,6 +75,11 @@ export default async function PaginatedProducts({
 
   return (
     <>
+      {products.length === 0 && (
+        <p className="font-vietnam text-kin-on-surface-variant text-base py-12">
+          Chưa có sản phẩm. Vui lòng quay lại sau.
+        </p>
+      )}
       <ul
         className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
         data-testid="products-list"

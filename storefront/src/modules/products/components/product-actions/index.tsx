@@ -1,23 +1,34 @@
 "use client"
 
-import { Button } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useIntersection } from "@lib/hooks/use-in-view"
-import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 
 import MobileActions from "./mobile-actions"
-import ProductPrice from "../product-price"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
+import WishlistButton from "@modules/common/components/wishlist-button"
+import NotifyBackInStock from "@modules/common/components/notify-back-in-stock"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   disabled?: boolean
+}
+
+// Pick which size chart applies to a product based on its collection / title.
+const getSizeChartType = (
+  product: HttpTypes.StoreProduct
+): "binder" | "quan" | "so-mi" => {
+  const coll = (product as any).collection?.handle
+  const title = (product.title || "").toLowerCase()
+  if (coll === "binder" || /binder|nịt|nit/.test(title)) return "binder"
+  if (/sơ mi|so mi|sơmi/.test(title)) return "so-mi"
+  if (/quần|quan|short/.test(title)) return "quan"
+  return "binder"
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
@@ -36,6 +47,7 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [quantity, setQuantity] = useState(1)
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
@@ -101,7 +113,7 @@ export default function ProductActions({
 
     await addToCart({
       variantId: selectedVariant.id,
-      quantity: 1,
+      quantity,
       countryCode,
     })
 
@@ -110,45 +122,90 @@ export default function ProductActions({
 
   return (
     <>
-      <div className="flex flex-col gap-y-2" ref={actionsRef}>
-        <div>
-          {(product.variants?.length ?? 0) > 1 && (
-            <div className="flex flex-col gap-y-4">
-              {(product.options || []).map((option) => {
-                return (
-                  <div key={option.id}>
-                    <OptionSelect
-                      option={option}
-                      current={options[option.title ?? ""]}
-                      updateOption={setOptionValue}
-                      title={option.title ?? ""}
-                      data-testid="product-options"
-                      disabled={!!disabled || isAdding}
-                    />
-                  </div>
-                )
-              })}
-              <Divider />
-            </div>
-          )}
+      <div className="flex flex-col gap-y-8" ref={actionsRef}>
+        {(product.variants?.length ?? 0) > 1 && (
+          <div className="flex flex-col gap-y-6">
+            {(product.options || []).map((option) => {
+              return (
+                <div key={option.id}>
+                  <OptionSelect
+                    option={option}
+                    current={options[option.title ?? ""]}
+                    updateOption={setOptionValue}
+                    title={option.title ?? ""}
+                    sizeChartType={getSizeChartType(product)}
+                    data-testid="product-options"
+                    disabled={!!disabled || isAdding}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Quantity & Add to Cart */}
+        <div className="flex gap-4">
+          <div className="flex items-center border border-kin-primary w-1/3">
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={!!disabled || isAdding}
+              className="px-4 py-3 text-kin-primary hover:bg-kin-surface-container transition-colors focus:outline-none disabled:opacity-50"
+              aria-label="Giảm số lượng"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                remove
+              </span>
+            </button>
+            <input
+              aria-label="Số lượng"
+              className="w-full text-center font-hanken text-sm font-semibold text-kin-primary bg-transparent border-none focus:ring-0 p-0"
+              readOnly
+              type="text"
+              value={quantity}
+            />
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => q + 1)}
+              disabled={!!disabled || isAdding}
+              className="px-4 py-3 text-kin-primary hover:bg-kin-surface-container transition-colors focus:outline-none disabled:opacity-50"
+              aria-label="Tăng số lượng"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+            </button>
+          </div>
+          <button
+            onClick={handleAddToCart}
+            disabled={!inStock || !selectedVariant || !!disabled || isAdding}
+            className="flex-1 bg-kin-primary text-kin-on-primary font-hanken text-sm font-semibold uppercase tracking-widest py-4 hover:bg-kin-on-surface-variant transition-colors focus:outline-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="add-product-button"
+          >
+            {isAdding
+              ? "Đang thêm..."
+              : !selectedVariant
+              ? "Chọn size"
+              : !inStock
+              ? "Hết hàng"
+              : "Thêm vào giỏ"}
+          </button>
+          <WishlistButton productId={product.id!} />
         </div>
 
-        <ProductPrice product={product} variant={selectedVariant} />
+        {/* Hết hàng — notify */}
+        {selectedVariant && !inStock && (
+          <NotifyBackInStock productId={product.id!} productTitle={product.title} />
+        )}
 
-        <Button
-          onClick={handleAddToCart}
-          disabled={!inStock || !selectedVariant || !!disabled || isAdding}
-          variant="primary"
-          className="w-full h-10"
-          isLoading={isAdding}
-          data-testid="add-product-button"
-        >
-          {!selectedVariant
-            ? "Select variant"
-            : !inStock
-            ? "Out of stock"
-            : "Add to cart"}
-        </Button>
+        {/* Trust Badge */}
+        <div className="flex items-center gap-2 py-3 px-4 bg-kin-surface border border-kin-warm-grey">
+          <span className="material-symbols-outlined text-kin-forest">
+            check_circle
+          </span>
+          <span className="font-hanken text-xs font-medium text-kin-primary">
+            Đổi size miễn phí lần đầu
+          </span>
+        </div>
+
         <MobileActions
           product={product}
           variant={selectedVariant}

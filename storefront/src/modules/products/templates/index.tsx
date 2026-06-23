@@ -2,11 +2,11 @@ import React, { Suspense } from "react"
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
-import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import { HttpTypes } from "@medusajs/types"
@@ -28,40 +28,70 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
 
   return (
     <>
-      <div
-        className="content-container flex flex-col small:flex-row small:items-start py-6 relative"
+      <main
+        className="w-full max-w-kin mx-auto px-kin-mobile md:px-kin-desktop py-8 md:py-12"
         data-testid="product-container"
       >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-          <ProductInfo product={product} />
-          <ProductTabs product={product} />
-        </div>
-        <div className="block w-full relative">
-          <ImageGallery images={product?.images || []} />
-        </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
-          <ProductOnboardingCta />
-          <Suspense
-            fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
-            }
+        {/* Breadcrumb */}
+        <div className="mb-8 font-hanken text-sm font-semibold text-kin-on-surface-variant uppercase tracking-wider">
+          <LocalizedClientLink
+            href="/"
+            className="hover:text-kin-primary transition-colors"
           >
-            <ProductActionsWrapper id={product.id} region={region} />
-          </Suspense>
+            Trang chủ
+          </LocalizedClientLink>
+          <span className="mx-2">/</span>
+          <LocalizedClientLink
+            href="/store"
+            className="hover:text-kin-primary transition-colors"
+          >
+            Cửa hàng
+          </LocalizedClientLink>
+          <span className="mx-2">/</span>
+          <span className="text-kin-primary">{product.title}</span>
         </div>
-      </div>
-      <div
-        className="content-container my-16 small:my-32"
+
+        {/* Product Hero */}
+        <div className="flex flex-col md:flex-row gap-8 md:gap-16 mb-12">
+          {/* Left: Images (60%) */}
+          <div className="w-full md:w-[60%]">
+            <ImageGallery images={product?.images || []} />
+          </div>
+
+          {/* Right: Details (40%) */}
+          <div className="w-full md:w-[40%] flex flex-col pt-2 md:pt-0">
+            <div className="mb-8">
+              <ProductInfo product={product} />
+            </div>
+
+            <Suspense
+              fallback={
+                <ProductActions
+                  disabled={true}
+                  product={product}
+                  region={region}
+                />
+              }
+            >
+              <ProductActionsWrapper id={product.id} region={region} />
+            </Suspense>
+
+            <div className="mt-12">
+              <ProductTabs product={product} />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Related Products */}
+      <section
+        className="w-full max-w-kin mx-auto px-kin-mobile md:px-kin-desktop py-24"
         data-testid="related-products-container"
       >
         <Suspense fallback={<SkeletonRelatedProducts />}>
           <RelatedProducts product={product} countryCode={countryCode} />
         </Suspense>
-      </div>
+      </section>
     </>
   )
 }

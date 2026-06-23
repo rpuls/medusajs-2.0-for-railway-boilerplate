@@ -1,5 +1,4 @@
 import { Heading, Text } from "@medusajs/ui"
-import Link from "next/link"
 
 import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -8,7 +7,6 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 type SearchResultsTemplateProps = {
   query: string
-  ids: string[]
   sortBy?: SortOptions
   page?: string
   countryCode: string
@@ -16,7 +14,6 @@ type SearchResultsTemplateProps = {
 
 const SearchResultsTemplate = ({
   query,
-  ids,
   sortBy,
   page,
   countryCode,
@@ -27,34 +24,26 @@ const SearchResultsTemplate = ({
     <>
       <div className="flex justify-between border-b w-full py-6 px-8 small:px-14 items-center">
         <div className="flex flex-col items-start">
-          <Text className="text-ui-fg-muted">Search Results for:</Text>
-          <Heading>
-            {decodeURI(query)} ({ids.length})
-          </Heading>
+          <Text className="text-ui-fg-muted">Kết quả tìm kiếm cho:</Text>
+          <Heading>{query}</Heading>
         </div>
         <LocalizedClientLink
           href="/store"
           className="txt-medium text-ui-fg-subtle hover:text-ui-fg-base"
         >
-          Clear
+          Xóa
         </LocalizedClientLink>
       </div>
       <div className="flex flex-col small:flex-row small:items-start p-6">
-        {ids.length > 0 ? (
-          <>
-            <RefinementList sortBy={sortBy || "created_at"} search />
-            <div className="content-container">
-              <PaginatedProducts
-                productsIds={ids}
-                sortBy={sortBy}
-                page={pageNumber}
-                countryCode={countryCode}
-              />
-            </div>
-          </>
-        ) : (
-          <Text className="ml-8 small:ml-14 mt-3">No results.</Text>
-        )}
+        <RefinementList sortBy={sortBy || "created_at"} search />
+        <div className="content-container">
+          <PaginatedProducts
+            query={query}
+            sortBy={sortBy}
+            page={pageNumber}
+            countryCode={countryCode}
+          />
+        </div>
       </div>
     </>
   )

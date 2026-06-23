@@ -1,14 +1,18 @@
 import { Metadata } from "next"
 
-import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero from "@modules/home/components/hero"
-import { getCollectionsWithProducts } from "@lib/data/collections"
+import BestSeller from "@modules/home/components/best-seller"
+import TrustBar from "@modules/home/components/trust-bar"
+import CampaignBanner from "@modules/home/components/campaign-banner"
+import SizeFinderBanner from "@modules/home/components/size-finder-banner"
+import CommunitySection from "@modules/home/components/community-section"
+import CategoryGrid from "@modules/home/components/category-grid"
 import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
+  title: "KIN STORE | Thời trang định hình cho cộng đồng Transmasculine",
   description:
-    "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
+    "Thương hiệu thời trang định hình dành cho cộng đồng Transmasculine tại Việt Nam. Binder chất lượng cao, an toàn, thoải mái.",
 }
 
 export default async function Home({
@@ -17,21 +21,27 @@ export default async function Home({
   params: Promise<{ countryCode: string }>
 }) {
   const { countryCode } = await params
-  const collections = await getCollectionsWithProducts(countryCode)
   const region = await getRegion(countryCode)
 
-  if (!collections || !region) {
+  if (!region) {
     return null
   }
 
   return (
     <>
       <Hero />
-      <div className="py-12">
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
-      </div>
+
+      <BestSeller region={region} countryCode={countryCode} />
+
+      <CampaignBanner />
+
+      <CategoryGrid />
+
+      <SizeFinderBanner />
+
+      <CommunitySection />
+
+      <TrustBar />
     </>
   )
 }

@@ -19,6 +19,9 @@ const ShippingAddress = ({
   onChange: () => void
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [discreetPackaging, setDiscreetPackaging] = useState(
+    cart?.metadata?.discreet_packaging === true
+  )
 
   const countriesInRegion = useMemo(
     () => cart?.region?.countries?.map((c) => c.iso_2),
@@ -86,7 +89,7 @@ const ShippingAddress = ({
       {customer && (addressesInRegion?.length || 0) > 0 && (
         <Container className="mb-6 flex flex-col gap-y-4 p-5">
           <p className="text-small-regular">
-            {`Hi ${customer.first_name}, do you want to use one of your saved addresses?`}
+            {`Xin chào ${customer.first_name}, bạn có muốn dùng một địa chỉ đã lưu không?`}
           </p>
           <AddressSelect
             addresses={customer.addresses}
@@ -101,7 +104,7 @@ const ShippingAddress = ({
       )}
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="First name"
+          label="Tên"
           name="shipping_address.first_name"
           autoComplete="given-name"
           value={formData["shipping_address.first_name"]}
@@ -110,7 +113,7 @@ const ShippingAddress = ({
           data-testid="shipping-first-name-input"
         />
         <Input
-          label="Last name"
+          label="Họ"
           name="shipping_address.last_name"
           autoComplete="family-name"
           value={formData["shipping_address.last_name"]}
@@ -119,7 +122,7 @@ const ShippingAddress = ({
           data-testid="shipping-last-name-input"
         />
         <Input
-          label="Address"
+          label="Địa chỉ"
           name="shipping_address.address_1"
           autoComplete="address-line1"
           value={formData["shipping_address.address_1"]}
@@ -128,7 +131,7 @@ const ShippingAddress = ({
           data-testid="shipping-address-input"
         />
         <Input
-          label="Company"
+          label="Công ty"
           name="shipping_address.company"
           value={formData["shipping_address.company"]}
           onChange={handleChange}
@@ -136,7 +139,7 @@ const ShippingAddress = ({
           data-testid="shipping-company-input"
         />
         <Input
-          label="Postal code"
+          label="Mã bưu điện"
           name="shipping_address.postal_code"
           autoComplete="postal-code"
           value={formData["shipping_address.postal_code"]}
@@ -145,7 +148,7 @@ const ShippingAddress = ({
           data-testid="shipping-postal-code-input"
         />
         <Input
-          label="City"
+          label="Thành phố"
           name="shipping_address.city"
           autoComplete="address-level2"
           value={formData["shipping_address.city"]}
@@ -163,7 +166,7 @@ const ShippingAddress = ({
           data-testid="shipping-country-select"
         />
         <Input
-          label="State / Province"
+          label="Tỉnh / Bang"
           name="shipping_address.province"
           autoComplete="address-level1"
           value={formData["shipping_address.province"]}
@@ -172,21 +175,45 @@ const ShippingAddress = ({
           data-testid="shipping-province-input"
         />
       </div>
-      <div className="my-8">
+      <div className="my-8 flex flex-col gap-y-3">
         <Checkbox
-          label="Billing address same as shipping address"
+          label="Địa chỉ thanh toán giống địa chỉ giao hàng"
           name="same_as_billing"
           checked={checked}
           onChange={onChange}
           data-testid="billing-address-checkbox"
         />
+        <div className="flex items-start gap-x-3 cursor-pointer group" onClick={() => setDiscreetPackaging(!discreetPackaging)}>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={discreetPackaging}
+            onClick={e => { e.stopPropagation(); setDiscreetPackaging(!discreetPackaging) }}
+            className={`w-5 h-5 mt-0.5 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${
+              discreetPackaging
+                ? "bg-kin-primary border-kin-primary"
+                : "bg-white border-gray-300 group-hover:border-kin-primary"
+            }`}
+          >
+            {discreetPackaging && (
+              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
+          <input type="hidden" name="discreet_packaging" value={discreetPackaging ? "on" : "off"} />
+          <div>
+            <p className="text-sm font-medium text-ui-fg-base">Đóng gói kín đáo</p>
+            <p className="text-xs text-ui-fg-subtle mt-0.5">Không in tên thương hiệu hoặc nội dung đơn hàng lên bao bì giao hàng.</p>
+          </div>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <Input
           label="Email"
           name="email"
           type="email"
-          title="Enter a valid email address."
+          title="Nhập một địa chỉ email hợp lệ."
           autoComplete="email"
           value={formData.email}
           onChange={handleChange}
@@ -194,7 +221,7 @@ const ShippingAddress = ({
           data-testid="shipping-email-input"
         />
         <Input
-          label="Phone"
+          label="Số điện thoại"
           name="shipping_address.phone"
           autoComplete="tel"
           value={formData["shipping_address.phone"]}
