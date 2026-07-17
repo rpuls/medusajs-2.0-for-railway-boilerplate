@@ -2,6 +2,13 @@ const checkEnvVariables = require("./check-env-variables")
 
 checkEnvVariables()
 
+// Host that product media is served from, e.g. an S3-compatible bucket
+// (Railway bucket, MinIO, R2, ...). Accepts a bare hostname or a full URL.
+// NEXT_PUBLIC_MINIO_ENDPOINT is the legacy name.
+const mediaHost = process.env.NEXT_PUBLIC_MEDIA_HOSTNAME || process.env.NEXT_PUBLIC_MINIO_ENDPOINT
+const mediaHostHasScheme = mediaHost ? /^https?:\/\//.test(mediaHost) : false
+const mediaUrl = mediaHost ? new URL(mediaHostHasScheme ? mediaHost : `https://${mediaHost}`) : null
+
 /**
  * @type {import('next').NextConfig}
  */
@@ -44,10 +51,13 @@ const nextConfig = {
         protocol: "https",
         hostname: "medusa-server-testing.s3.us-east-1.amazonaws.com",
       },
-      ...(process.env.NEXT_PUBLIC_MINIO_ENDPOINT ? [{ // Note: needed when using MinIO bucket storage for media
-        protocol: "https",
-        hostname: process.env.NEXT_PUBLIC_MINIO_ENDPOINT,
-      }] : []),
+      ...(mediaUrl // Note: needed when using S3-compatible bucket storage for media (Railway bucket, MinIO, R2, ...)
+        ? (mediaHostHasScheme ? [mediaUrl.protocol.replace(":", "")] : ["https", "http"]).map((protocol) => ({
+            protocol,
+            hostname: mediaUrl.hostname,
+            ...(mediaUrl.port ? { port: mediaUrl.port } : {}),
+          }))
+        : []),
     ],
   },
   serverRuntimeConfig: {

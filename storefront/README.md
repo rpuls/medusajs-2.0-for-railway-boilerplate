@@ -66,7 +66,7 @@ Features include:
   - Streaming
   - Static Pre-Rendering
 - File Storage:
-  - MinIO integration (optional)
+  - S3-compatible storage integration (optional) - Railway buckets, AWS S3, MinIO, R2, ...
   - Local file fallback
 
 
@@ -103,16 +103,17 @@ Your site is now running at http://localhost:8000!
 
 # File Storage Integration
 
-By default, this starter supports MinIO for file storage with a fallback to local storage. To enable MinIO:
+By default, this starter supports S3-compatible object storage (Railway buckets, AWS S3, MinIO, Cloudflare R2, ...) for product media, with a fallback to local storage. To enable it:
 
-1. Add your MinIO endpoint to `.env.local`:
+1. Add the hostname your media files are served from to `.env.local`:
 ```shell
-NEXT_PUBLIC_MINIO_ENDPOINT=your-minio-endpoint
+NEXT_PUBLIC_MEDIA_HOSTNAME=your-bucket-hostname
 ```
+(`NEXT_PUBLIC_MINIO_ENDPOINT` is still supported as a legacy alias.)
 
-2. The storefront will automatically use MinIO for serving images when the endpoint is configured.
+2. The storefront will automatically allow images from that hostname when the variable is configured.
 
-No additional configuration is needed - if MinIO is not configured, the storefront will use local file storage.
+No additional configuration is needed - if no media hostname is configured, the storefront will use local file storage.
 
 # Payment integrations
 

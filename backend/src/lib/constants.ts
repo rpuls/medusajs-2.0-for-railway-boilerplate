@@ -59,12 +59,49 @@ export const COOKIE_SECRET = assertValue(
 )
 
 /**
- * (optional) Minio configuration for file storage
+ * (optional) S3-compatible file storage configuration.
+ * Works with any S3-compatible provider: Railway buckets, AWS S3, Cloudflare R2, MinIO, ...
+ *
+ * When no S3_* variable is set, legacy MINIO_* variables (used by older
+ * versions of this template) are mapped to their S3 equivalents so existing
+ * deployments keep working. The two variable sets are never mixed: as soon as
+ * any S3_* variable is present, MINIO_* variables are ignored entirely.
  */
-export const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT;
-export const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY;
-export const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY;
-export const MINIO_BUCKET = process.env.MINIO_BUCKET; // Optional, if not set bucket will be called: medusa-media
+const HAS_S3_CONFIG = Boolean(
+  process.env.S3_FILE_URL ||
+  process.env.S3_ACCESS_KEY_ID ||
+  process.env.S3_SECRET_ACCESS_KEY ||
+  process.env.S3_BUCKET ||
+  process.env.S3_ENDPOINT
+);
+
+const normalizeLegacyMinioUrl = (endpoint?: string): string | undefined => {
+  if (!endpoint) return undefined;
+  const withScheme = /^https?:\/\//.test(endpoint) ? endpoint : `https://${endpoint}`;
+  return new URL(withScheme).toString().replace(/\/+$/, '');
+};
+
+const LEGACY_MINIO_URL = HAS_S3_CONFIG ? undefined : normalizeLegacyMinioUrl(process.env.MINIO_ENDPOINT);
+const LEGACY_MINIO_BUCKET = process.env.MINIO_BUCKET || 'medusa-media';
+
+const parseBoolean = (value: string | undefined, fallback: boolean): boolean =>
+  value === undefined ? fallback : ['true', '1', 'yes'].includes(value.toLowerCase());
+
+export const S3_ACCESS_KEY_ID = HAS_S3_CONFIG ? process.env.S3_ACCESS_KEY_ID : process.env.MINIO_ACCESS_KEY;
+export const S3_SECRET_ACCESS_KEY = HAS_S3_CONFIG ? process.env.S3_SECRET_ACCESS_KEY : process.env.MINIO_SECRET_KEY;
+export const S3_BUCKET = HAS_S3_CONFIG ? process.env.S3_BUCKET : (LEGACY_MINIO_URL ? LEGACY_MINIO_BUCKET : undefined);
+export const S3_ENDPOINT = HAS_S3_CONFIG ? process.env.S3_ENDPOINT : LEGACY_MINIO_URL;
+export const S3_REGION = process.env.S3_REGION || 'us-east-1';
+// Public base URL files are served from. For MinIO-style path access this is <endpoint>/<bucket>.
+export const S3_FILE_URL = HAS_S3_CONFIG
+  ? process.env.S3_FILE_URL
+  : (LEGACY_MINIO_URL ? `${LEGACY_MINIO_URL}/${LEGACY_MINIO_BUCKET}` : undefined);
+// Path-style addressing is required by MinIO and some other S3-compatible providers.
+export const S3_FORCE_PATH_STYLE = parseBoolean(process.env.S3_FORCE_PATH_STYLE, Boolean(LEGACY_MINIO_URL));
+// Per-object ACL applied to uploads (e.g. 'public-read'). Most modern providers
+// (Railway buckets, Cloudflare R2, new AWS buckets) reject ACLs - leave unset to omit
+// the ACL header entirely and manage public read access with a bucket policy instead.
+export const S3_ACL: string | false = process.env.S3_ACL || false;
 
 /**
  * (optional) Resend API Key and from Email - do not set if using SendGrid

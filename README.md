@@ -19,7 +19,7 @@
   Prebaked medusajs 2.0 monorepo
 </h2>
 <h4 align="center">
-  Backend + Storefront + postgres + redis + MinIO + MeiliSearch
+  Backend + Storefront + postgres + redis + S3 file storage + MeiliSearch
 </h4>
 <p align="center">
 Combine Medusa's modules for your commerce backend with the newest Next.js 14 features for a performant storefront.</p>
@@ -39,7 +39,7 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 ## About this boilerplate
 This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application. It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
-Updated: to `version 2.13.6` 🥳
+Updated: to `version 2.17.2` 🥳
 
 ## Deploy with no manual setup in minutes
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/gkU-27?referralCode=-Yg50p)
@@ -47,12 +47,20 @@ Updated: to `version 2.13.6` 🥳
 
 ## Preconfigured 3rd party integrations
 
-- MinIO file storage: Replaces local file storage with MinIO cloud storage, automatically creating a 'medusa-media' bucket for your media files. [README](backend/src/modules/minio-file/README.md)
+- S3-compatible file storage: Uses Medusa's stock S3 file provider, and works with any S3-compatible object storage - Railway buckets, AWS S3, Cloudflare R2, MinIO, etc. Configure with the `S3_*` environment variables (see `backend/.env.template`). Legacy `MINIO_*` variables from older deployments of this template are still supported as a fallback (ignored as soon as any `S3_*` variable is set). Note: the bucket must already exist and, for product images, allow public read (via a bucket policy) - the backend does not create buckets or set policies. Uploads are sent without ACL headers by default (compatible with Railway buckets, R2 and new AWS buckets); set `S3_ACL=public-read` only for legacy ACL-based buckets.
 - Resend email integration [Watch setup video](https://youtu.be/pbdZm26YDpE?si=LQTHWeZMLD4w3Ahw) - special thanks to [aleciavogel](https://github.com/aleciavogel) for Resend notification service, and react-email implementation! [README](backend/src/modules/email-notifications/README.md)
 - Stripe payment service: [Watch setup video](https://youtu.be/dcSOpIzc1Og)
 - Meilisearch integration by [Rokmohar](https://github.com/rokmohar/medusa-plugin-meilisearch): Adds powerful product search capabilities to your store. When deployed on Railway using the template, MeiliSearch is automatically configured. (For non-railway'ers: [Watch setup video](https://youtu.be/hrXcc5MjApI))
 
 # local setup
+
+## Local infrastructure with docker compose (optional, recommended)
+
+The repository root contains a `docker-compose.yml` that mirrors the services provisioned by the Railway template: **postgres**, **redis**, **meilisearch** and an S3-compatible object store (**MinIO**, standing in for a Railway bucket).
+
+- `docker compose up -d` starts everything. A one-shot init job creates a public `medusa-media` bucket automatically.
+- The commented `S3_*` and `MEILISEARCH_*` values in `backend/.env.template` match these services - uncomment them in your `backend/.env` to enable file storage and search locally.
+- MinIO console: http://localhost:9005 (login: `medusa` / `supersecret`), Meilisearch: http://localhost:7700.
 
 ## Backend
 Video instructions: https://youtu.be/PPxenu7IjGM
@@ -67,7 +75,7 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 ### requirements
 - **postgres database** (Automatic setup when using the Railway template)
 - **redis** (Automatic setup when using the Railway template) - fallback to simulated redis.
-- **MinIO storage** (Automatic setup when using the Railway template) - fallback to local storage.
+- **S3-compatible storage** (Automatic setup when using the Railway template) - fallback to local storage.
 - **Meilisearch** (Automatic setup when using the Railway template)
 
 ### commands
