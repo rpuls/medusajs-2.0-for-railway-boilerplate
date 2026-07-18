@@ -16,15 +16,26 @@ import {
   STRIPE_API_KEY,
   STRIPE_WEBHOOK_SECRET,
   WORKER_MODE,
-  MINIO_ENDPOINT,
-  MINIO_ACCESS_KEY,
-  MINIO_SECRET_KEY,
-  MINIO_BUCKET,
+  S3_FILE_URL,
+  S3_ACCESS_KEY_ID,
+  S3_SECRET_ACCESS_KEY,
+  S3_REGION,
+  S3_BUCKET,
+  S3_ENDPOINT,
+  S3_FORCE_PATH_STYLE,
+  S3_ACL,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
+
+const S3_REQUIRED_VARS = { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_FILE_URL };
+const S3_ENABLED = Object.values(S3_REQUIRED_VARS).every(Boolean);
+if (!S3_ENABLED && (S3_ENDPOINT || Object.values(S3_REQUIRED_VARS).some(Boolean))) {
+  const missing = Object.entries(S3_REQUIRED_VARS).filter(([, value]) => !value).map(([name]) => name);
+  console.warn(`S3 file storage is only partially configured - missing: ${missing.join(', ')}. Falling back to local file storage, which is ephemeral on Railway!`);
+}
 
 const medusaConfig = {
   projectConfig: {
@@ -55,14 +66,24 @@ const medusaConfig = {
       resolve: '@medusajs/file',
       options: {
         providers: [
-          ...(MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
-            resolve: './src/modules/minio-file',
-            id: 'minio',
+          ...(S3_ENABLED ? [{
+            resolve: '@medusajs/file-s3',
+            id: 's3',
             options: {
-              endPoint: MINIO_ENDPOINT,
-              accessKey: MINIO_ACCESS_KEY,
-              secretKey: MINIO_SECRET_KEY,
-              bucket: MINIO_BUCKET // Optional, default: medusa-media
+              file_url: S3_FILE_URL,
+              access_key_id: S3_ACCESS_KEY_ID,
+              secret_access_key: S3_SECRET_ACCESS_KEY,
+              region: S3_REGION,
+              bucket: S3_BUCKET,
+              endpoint: S3_ENDPOINT,
+              // false omits ACL headers - required by providers without ACL support
+              // (Railway buckets, Cloudflare R2, new AWS buckets); public read access
+              // is expected to come from a bucket policy in that case.
+              acl: S3_ACL,
+              download_file_duration: 24 * 60 * 60,
+              additional_client_config: {
+                forcePathStyle: S3_FORCE_PATH_STYLE
+              }
             }
           }] : [{
             resolve: '@medusajs/file-local',
@@ -87,7 +108,7 @@ const medusaConfig = {
       resolve: '@medusajs/workflow-engine-redis',
       options: {
         redis: {
-          url: REDIS_URL,
+          redisUrl: REDIS_URL,
         }
       }
     }] : []),
@@ -160,5 +181,4 @@ const medusaConfig = {
   ]
 };
 
-console.log(JSON.stringify(medusaConfig, null, 2));
 export default defineConfig(medusaConfig);
