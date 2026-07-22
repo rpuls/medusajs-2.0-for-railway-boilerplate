@@ -42,7 +42,9 @@ This boilerplate is a monorepo consisting of the officially released MedusaJS 2.
 Updated: to `version 2.17.2` 🥳
 
 ## Deploy with no manual setup in minutes
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2136-storefront-new)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2136-storefront-new?referralCode=-Yg50p)
+
+![Railway MeduaJS Service overview](https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/medusa-2-17-2-on-railway-service-overview-png.png?_a=BAMAPqiu0)
 
 
 ## Preconfigured 3rd party integrations
@@ -88,7 +90,7 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 ## Storefront
 Video instructions: https://youtu.be/PPxenu7IjGM
 
-- `cd storefront/
+- `cd storefront/`
 - Install dependencies `npm i` or `pnpm i`
 - Rename `.env.local.template` ->  `.env.local`
 
