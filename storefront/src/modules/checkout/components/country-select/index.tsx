@@ -23,10 +23,12 @@ const CountrySelect = forwardRef<
       return []
     }
 
-    return region.countries?.map((country) => ({
-      value: country.iso_2,
-      label: country.display_name,
-    }))
+    return region.countries
+      ?.map((country) => ({
+        value: country.iso_2,
+        label: country.display_name,
+      }))
+      .sort((a, b) => (a.label ?? "").localeCompare(b.label ?? ""))
   }, [region])
 
   return (
