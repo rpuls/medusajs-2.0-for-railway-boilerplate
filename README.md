@@ -1,28 +1,15 @@
+<h1 align="center">
+  Medusa 2.0 on Railway: One-Click Deploy Template
+</h1>
+<h3 align="center">
+  Backend + Next.js Storefront + Postgres + Redis + MeiliSearch + S3 file storage
+</h3>
 <p align="center">
-  <a href="https://www.medusajs.com">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
-      <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg" width=100>
-    </picture>
-  </a>
-  <a href="https://railway.com/deploy/medusajs-2136-storefront-new">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://railway.app/brand/logo-light.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://railway.app/brand/logo-dark.svg">
-      <img alt="Railway logo" src="https://railway.app/brand/logo-light.svg" width=100>
-    </picture>
-  </a>
+A community-maintained boilerplate that deploys the official open-source Medusa 2.0 release and its Next.js starter storefront to Railway, with every service wired, seeded, and health-checked automatically.</p>
+<p align="center">
+  <sub>An independent community project by <a href="https://funkyton.com/">FUNKYTON</a>. Not affiliated with, endorsed by, or supported by MedusaJS, Inc. or Railway.<br>
+  "Medusa" is a trademark of MedusaJS, Inc., used here only to describe what this template deploys.</sub>
 </p>
-
-<h2 align="center">
-  Prebaked medusajs 2.0 monorepo
-</h2>
-<h4 align="center">
-  Backend + Storefront + postgres + redis + S3 file storage + MeiliSearch
-</h4>
-<p align="center">
-Combine Medusa's modules for your commerce backend with the newest Next.js 14 features for a performant storefront.</p>
 
 <h2 align="center">
   Need help?<br>
@@ -37,14 +24,20 @@ Combine Medusa's modules for your commerce backend with the newest Next.js 14 fe
 
 
 ## About this boilerplate
-This boilerplate is a monorepo consisting of the officially released MedusaJS 2.0 backend and storefront application. It is a pre-configured, ready-to-deploy solution, modified for seamless deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
+This is a community-maintained monorepo combining the official open-source MedusaJS 2.0 backend with the Medusa team's Next.js starter storefront, pre-configured for one-click deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
+
+It is an independent project, not built, endorsed, or supported by MedusaJS, Inc. Medusa itself is used as published, with no fork and no patches to the core, so the [official Medusa documentation](https://docs.medusajs.com/) applies as normal. What this template adds on top is the Railway deployment setup and a set of preconfigured integrations (MeiliSearch search, Stripe payments, Resend email, S3-compatible file storage), all built with Medusa's own module and plugin APIs.
 
 Updated: to `version 2.17.2` 🥳
 
-## Deploy with no manual setup in minutes
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2136-storefront-new?referralCode=-Yg50p)
+> **Where to get help:** questions about this template, Railway deployment, or the services it provisions belong in [this repo's issues](https://github.com/rpuls/medusajs-2.0-for-railway-boilerplate/issues). Questions about Medusa itself belong in the [official docs](https://docs.medusajs.com/) and Medusa's own community channels.
 
-![Railway MeduaJS Service overview](https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/medusa-2-17-2-on-railway-service-overview-png.png?_a=BAMAPqiu0)
+## A complete, working store from the first deploy
+One click provisions and connects every service (Postgres, Redis, MeiliSearch, S3-compatible storage, backend and storefront), runs the migrations, seeds the database, creates your admin user with a strong random password, and shares API keys between the services automatically. When the health checks go green, the store is live. You handle products; the template handles plumbing.
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2-0-storefront?referralCode=-Yg50p)
+
+![The six Railway services provisioned by this template](https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/medusa-2-17-2-on-railway-service-overview-png.png?_a=BAMAPqiu0)
 
 
 ## Preconfigured 3rd party integrations
@@ -104,7 +97,15 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 ## Useful resources
 - How to setup credit card payment with Stripe payment module: https://youtu.be/dcSOpIzc1Og
 - https://funkyton.com/medusajs-2-0-is-finally-here/#succuessfully-deployed-whats-next
-  
+
+---
+
+## Also from the maintainer
+
+Interested in digital independence through self-hosted open source? Take a look at **[My Own Suite](https://myownsuite.org/)**, a private cloud you run yourself: passwords, photos, files, documents and calendars, all on hardware you control. Free and open source under AGPL-3.0.
+
+[Website](https://myownsuite.org/) &middot; [Getting started](https://myownsuite.org/docs/getting-started) &middot; [GitHub](https://github.com/rpuls/my-own-suite)
+
 <p align="center">
   <a href="https://funkyton.com/">
     <div style="text-align: center;">
