@@ -6,7 +6,6 @@ import InteractiveLink from "@modules/common/components/interactive-link"
 const ShowAll = () => {
   const { hits } = useHits()
   const { query } = useSearchBox()
-  const width = typeof window !== "undefined" ? window.innerWidth : 0
 
   if (query === "") return null
   if (hits.length > 0 && hits.length <= 6) return null
@@ -24,7 +23,16 @@ const ShowAll = () => {
 
   return (
     <Container className="flex sm:flex-col small:flex-row gap-2 justify-center items-center h-fit py-4 small:py-2">
-      <Text>Showing the first {width > 640 ? 6 : 3} results.</Text>
+      {/*
+        The count is driven by CSS at the same `sm` breakpoint the Hits grid
+        uses to hide results past index 2. Reading window.innerWidth during
+        render gave 0 on the server and the real width on the client, so this
+        text mismatched on hydration and never updated on resize.
+      */}
+      <Text>
+        Showing the first <span className="sm:hidden">3</span>
+        <span className="hidden sm:inline">6</span> results.
+      </Text>
       <InteractiveLink href={`/results/${query}`}>View all</InteractiveLink>
     </Container>
   )

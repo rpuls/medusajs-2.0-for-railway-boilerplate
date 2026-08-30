@@ -42,7 +42,11 @@ const SearchResultsTemplate = ({
       <div className="flex flex-col small:flex-row small:items-start p-6">
         {ids.length > 0 ? (
           <>
-            <RefinementList sortBy={sortBy || "created_at"} search />
+            <RefinementList
+              sortBy={sortBy || "created_at"}
+              search
+              data-testid="sort-by-container"
+            />
             <div className="content-container">
               <PaginatedProducts
                 productsIds={ids}

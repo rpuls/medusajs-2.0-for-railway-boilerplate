@@ -22,6 +22,9 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    // Thumbnails request quality 50. Next 16 requires every quality used to be
+    // declared here, and warns about it from 15 onwards.
+    qualities: [50, 75, 100],
     remotePatterns: [
       {
         protocol: "http",
@@ -39,6 +42,11 @@ const nextConfig = {
             hostname: process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL.replace(/^https?:\/\//, ""),
           }]
         : []),
+      { // Note: thumbnails for the setup-video cards in the example homepage
+        // section. Can be removed along with src/modules/home/components/hero.
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
       { // Note: can be removed after deleting demo products
         protocol: "https",
         hostname: "medusa-public-images.s3.eu-west-1.amazonaws.com",
@@ -60,9 +68,6 @@ const nextConfig = {
         : []),
     ],
   },
-  serverRuntimeConfig: {
-    port: process.env.PORT || 3000
-  }
 }
 
 module.exports = nextConfig

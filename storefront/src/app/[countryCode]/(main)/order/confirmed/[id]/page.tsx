@@ -7,7 +7,7 @@ import { retrieveOrder } from "@lib/data/orders"
 import { HttpTypes } from "@medusajs/types"
 
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 async function getOrder(id: string) {
@@ -31,7 +31,12 @@ export const metadata: Metadata = {
 }
 
 export default async function OrderConfirmedPage({ params }: Props) {
-  const order = await getOrder(params.id)
+  const { id } = await params
+  // retrieveOrder rethrows through medusaError, so without this catch an
+  // unknown id escaped to the error boundary and rendered a generic error
+  // with a 200 instead of a 404. The account order details page already
+  // guards the same call this way.
+  const order = await getOrder(id).catch(() => null)
   if (!order) {
     return notFound()
   }

@@ -1,74 +1,40 @@
 "use client"
 
-import React, { useEffect } from "react"
-
-import Input from "@modules/common/components/input"
+import React from "react"
 
 import AccountInfo from "../account-info"
-import { useFormState } from "react-dom"
 import { HttpTypes } from "@medusajs/types"
 
 type MyInformationProps = {
   customer: HttpTypes.StoreCustomer
 }
 
-const ProfileName: React.FC<MyInformationProps> = ({ customer }) => {
-  const [successState, setSuccessState] = React.useState(false)
-
-  // TODO: Add support for password updates
-  const [state, formAction] = useFormState((() => {}) as any, {
-    customer,
-    success: false,
-    error: null,
-  })
-
-  const clearState = () => {
-    setSuccessState(false)
-  }
-
-  useEffect(() => {
-    setSuccessState(state.success)
-  }, [state])
-
+/**
+ * Read-only until the password reset flow exists.
+ *
+ * Changing a password in Medusa v2 is not a single call: it needs
+ * `sdk.auth.resetPassword` to issue a token by email, then
+ * `sdk.auth.updateProvider` to set the new password with that token. The
+ * backend has no `auth.password_reset` subscriber and no reset email template,
+ * so neither half is in place yet.
+ *
+ * This section previously rendered old/new/confirm password inputs wired to
+ * `useActionState((() => {}) as any, ...)`, an action that did nothing at all.
+ */
+const ProfilePassword: React.FC<MyInformationProps> = ({ customer }) => {
   return (
-    <form action={formAction} onReset={() => clearState()} className="w-full">
+    <div className="w-full">
       <AccountInfo
         label="Password"
         currentInfo={
           <span>The password is not shown for security reasons</span>
         }
-        isSuccess={successState}
-        isError={!!state.error}
-        errorMessage={state.error ?? undefined}
-        clearState={clearState}
+        isEditable={false}
+        clearState={() => {}}
         data-testid="account-password-editor"
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Old password"
-            name="old_password"
-            required
-            type="password"
-            data-testid="old-password-input"
-          />
-          <Input
-            label="New password"
-            type="password"
-            name="new_password"
-            required
-            data-testid="new-password-input"
-          />
-          <Input
-            label="Confirm password"
-            type="password"
-            name="confirm_password"
-            required
-            data-testid="confirm-password-input"
-          />
-        </div>
-      </AccountInfo>
-    </form>
+      />
+    </div>
   )
 }
 
-export default ProfileName
+export default ProfilePassword

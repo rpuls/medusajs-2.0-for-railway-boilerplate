@@ -9,10 +9,11 @@ import ProfilePassword from "@modules/account/components/profile-password"
 import { notFound } from "next/navigation"
 import { listRegions } from "@lib/data/regions"
 import { getCustomer } from "@lib/data/customer"
+import { getStoreName } from "@lib/util/env"
 
 export const metadata: Metadata = {
   title: "Profile",
-  description: "View and edit your Medusa Store profile.",
+  description: `View and edit your ${getStoreName()} profile.`,
 }
 
 export default async function Profile() {

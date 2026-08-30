@@ -1,3 +1,5 @@
+"use client"
+
 import { HttpTypes } from "@medusajs/types"
 import { Container } from "@medusajs/ui"
 import Checkbox from "@modules/common/components/checkbox"
@@ -162,13 +164,15 @@ const ShippingAddress = ({
           required
           data-testid="shipping-country-select"
         />
+        {/* Optional, matching Medusa's address type and the account address
+            forms. Most of Europe has no state or province, so requiring it
+            blocked checkout outright for the countries the seed covers. */}
         <Input
           label="State / Province"
           name="shipping_address.province"
           autoComplete="address-level1"
           value={formData["shipping_address.province"]}
           onChange={handleChange}
-          required
           data-testid="shipping-province-input"
         />
       </div>

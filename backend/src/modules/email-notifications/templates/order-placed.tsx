@@ -7,17 +7,40 @@ export const ORDER_PLACED = 'order-placed'
 
 interface OrderPlacedPreviewProps {
   order: OrderDTO & { display_id: string; summary: { raw_current_order_total: { value: number } } }
-  shippingAddress: OrderAddressDTO
+  shippingAddress?: OrderAddressDTO | null
 }
 
 export interface OrderPlacedTemplateProps {
   order: OrderDTO & { display_id: string; summary: { raw_current_order_total: { value: number } } }
-  shippingAddress: OrderAddressDTO
+  /** Absent for digital orders, which have nothing to ship. */
+  shippingAddress?: OrderAddressDTO | null
   preview?: string
 }
 
+// Only the order is required. Digital orders carry no shipping address, and
+// requiring one here used to mean no confirmation email was sent at all.
 export const isOrderPlacedTemplateData = (data: any): data is OrderPlacedTemplateProps =>
-  typeof data.order === 'object' && typeof data.shippingAddress === 'object'
+  typeof data?.order === 'object' && data.order !== null
+
+/**
+ * Medusa v2 stores money as BigNumber-backed decimals, which arrive as strings.
+ * Printing them raw gave totals like "45 eur" instead of "€45.00".
+ */
+const formatAmount = (amount: unknown, currencyCode?: string): string => {
+  const value = Number(amount)
+  const code = (currencyCode ?? '').toUpperCase()
+
+  if (!Number.isFinite(value)) {
+    return [amount, code].filter(Boolean).join(' ')
+  }
+
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(value)
+  } catch {
+    // Unknown or missing currency code: still better than a bare BigNumber.
+    return [value.toFixed(2), code].filter(Boolean).join(' ')
+  }
+}
 
 export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
   PreviewProps: OrderPlacedPreviewProps
@@ -30,7 +53,9 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
         </Text>
 
         <Text style={{ margin: '0 0 15px' }}>
-          Dear {shippingAddress.first_name} {shippingAddress.last_name},
+          {shippingAddress?.first_name
+            ? `Dear ${[shippingAddress.first_name, shippingAddress.last_name].filter(Boolean).join(' ')},`
+            : 'Hello,'}
         </Text>
 
         <Text style={{ margin: '0 0 30px' }}>
@@ -47,25 +72,35 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
           Order Date: {new Date(order.created_at).toLocaleDateString()}
         </Text>
         <Text style={{ margin: '0 0 20px' }}>
-          Total: {order.summary.raw_current_order_total.value} {order.currency_code}
+          {/* summary is only present when the order was fetched with it, and
+              without this fallback the total rendered as a bare currency code. */}
+          Total:{' '}
+          {formatAmount(
+            order.summary?.raw_current_order_total?.value ?? order.total,
+            order.currency_code
+          )}
         </Text>
 
         <Hr style={{ margin: '20px 0' }} />
 
-        <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
-          Shipping Address
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          {shippingAddress.address_1}
-        </Text>
-        <Text style={{ margin: '0 0 5px' }}>
-          {shippingAddress.city}, {shippingAddress.province} {shippingAddress.postal_code}
-        </Text>
-        <Text style={{ margin: '0 0 20px' }}>
-          {shippingAddress.country_code}
-        </Text>
+        {shippingAddress && (
+          <>
+            <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
+              Shipping Address
+            </Text>
+            <Text style={{ margin: '0 0 5px' }}>
+              {shippingAddress.address_1}
+            </Text>
+            <Text style={{ margin: '0 0 5px' }}>
+              {shippingAddress.city}, {shippingAddress.province} {shippingAddress.postal_code}
+            </Text>
+            <Text style={{ margin: '0 0 20px' }}>
+              {shippingAddress.country_code}
+            </Text>
 
-        <Hr style={{ margin: '20px 0' }} />
+            <Hr style={{ margin: '20px 0' }} />
+          </>
+        )}
 
         <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 15px' }}>
           Order Items
@@ -88,7 +123,7 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
             <Text style={{ fontWeight: 'bold' }}>Quantity</Text>
             <Text style={{ fontWeight: 'bold' }}>Price</Text>
           </div>
-          {order.items.map((item) => (
+          {(order.items ?? []).map((item) => (
             <div key={item.id} style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -97,7 +132,7 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
             }}>
               <Text>{item.title} - {item.product_title}</Text>
               <Text>{item.quantity}</Text>
-              <Text>{item.unit_price} {order.currency_code}</Text>
+              <Text>{formatAmount(item.unit_price, order.currency_code)}</Text>
             </div>
           ))}
         </div>

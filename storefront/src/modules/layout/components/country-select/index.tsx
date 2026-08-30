@@ -21,33 +21,37 @@ type CountrySelectProps = {
 }
 
 const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
-  const [current, setCurrent] = useState<
-    | { country: string | undefined; region: string; label: string | undefined }
-    | undefined
-  >(undefined)
+  const [current, setCurrent] = useState<CountryOption | undefined>(undefined)
 
   const { countryCode } = useParams()
   const currentPath = usePathname().split(`/${countryCode}`)[1]
 
   const { state, close } = toggleState
 
-  const options = useMemo(() => {
-    return regions
-      ?.map((r) => {
-        return r.countries?.map((c) => ({
-          country: c.iso_2,
-          region: r.id,
-          label: c.display_name,
-        }))
-      })
-      .flat()
-      .sort((a, b) => (a?.label ?? "").localeCompare(b?.label ?? ""))
+  // A country without an iso_2 cannot be routed to, and handleChange would
+  // have passed undefined straight into updateRegion. Dropping those here
+  // keeps the list honestly typed as CountryOption[].
+  const options: CountryOption[] = useMemo(() => {
+    return (regions ?? [])
+      .flatMap((r) =>
+        (r.countries ?? []).flatMap((c) =>
+          c.iso_2
+            ? [
+                {
+                  country: c.iso_2,
+                  region: r.id,
+                  label: c.display_name ?? c.iso_2.toUpperCase(),
+                },
+              ]
+            : []
+        )
+      )
+      .sort((a, b) => a.label.localeCompare(b.label))
   }, [regions])
 
   useEffect(() => {
     if (countryCode) {
-      const option = options?.find((o) => o?.country === countryCode)
-      setCurrent(option)
+      setCurrent(options.find((o) => o.country === countryCode))
     }
   }, [options, countryCode])
 
@@ -63,11 +67,11 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
         onChange={handleChange}
         defaultValue={
           countryCode
-            ? options?.find((o) => o?.country === countryCode)
+            ? options.find((o) => o.country === countryCode)
             : undefined
         }
       >
-        <Listbox.Button className="py-1 w-full">
+        <Listbox.Button className="py-1 w-full" data-testid="shipping-to-button">
           <div className="txt-compact-small flex items-start gap-x-2">
             <span>Shipping to:</span>
             {current && (
@@ -96,13 +100,15 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
             <Listbox.Options
               className="absolute -bottom-[calc(100%-36px)] left-0 xsmall:left-auto xsmall:right-0 max-h-[442px] overflow-y-scroll z-[900] bg-white drop-shadow-md text-small-regular uppercase text-black no-scrollbar rounded-rounded w-full"
               static
+              data-testid="shipping-to-choices"
             >
-              {options?.map((o, index) => {
+              {options.map((o, index) => {
                 return (
                   <Listbox.Option
                     key={index}
                     value={o}
                     className="py-2 hover:bg-gray-200 px-3 cursor-pointer flex items-center gap-x-2"
+                    data-testid={`select-${o.country}-choice`}
                   >
                     <ReactCountryFlag
                       svg
@@ -110,9 +116,9 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
                         width: "16px",
                         height: "16px",
                       }}
-                      countryCode={o?.country ?? ""}
+                      countryCode={o.country}
                     />{" "}
-                    {o?.label}
+                    {o.label}
                   </Listbox.Option>
                 )
               })}

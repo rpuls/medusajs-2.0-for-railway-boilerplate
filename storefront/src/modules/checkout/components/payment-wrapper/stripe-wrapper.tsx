@@ -18,24 +18,31 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
   children,
 }) => {
   const options: StripeElementsOptions = {
-    clientSecret: paymentSession!.data?.client_secret as string | undefined,
+    clientSecret: paymentSession?.data?.client_secret as string | undefined,
   }
 
-  if (!stripeKey) {
-    throw new Error(
-      "Stripe key is missing. Set NEXT_PUBLIC_STRIPE_KEY environment variable."
-    )
-  }
+  // These used to throw during render. Since NEXT_PUBLIC_STRIPE_KEY is optional,
+  // an unconfigured store took down the whole checkout route rather than showing
+  // anything useful. Render the problem in place instead, so the rest of the
+  // page survives and the cause is visible.
+  const misconfiguration = !stripeKey
+    ? "Card payments are not configured for this store. Set NEXT_PUBLIC_STRIPE_KEY in the storefront environment."
+    : !stripePromise
+    ? "Card payments could not be initialised. Check that NEXT_PUBLIC_STRIPE_KEY holds a valid Stripe publishable key."
+    : !paymentSession?.data?.client_secret
+    ? "This payment session is missing its Stripe client secret, so card payments cannot start. Check that the Stripe provider is enabled on the backend."
+    : null
 
-  if (!stripePromise) {
-    throw new Error(
-      "Stripe promise is missing. Make sure you have provided a valid Stripe key."
-    )
-  }
+  if (misconfiguration) {
+    console.error("StripeWrapper:", misconfiguration)
 
-  if (!paymentSession?.data?.client_secret) {
-    throw new Error(
-      "Stripe client secret is missing. Cannot initialize Stripe."
+    return (
+      <div
+        className="txt-medium text-ui-fg-error border border-ui-border-error rounded-rounded p-4"
+        data-testid="stripe-unavailable-message"
+      >
+        {misconfiguration}
+      </div>
     )
   }
 

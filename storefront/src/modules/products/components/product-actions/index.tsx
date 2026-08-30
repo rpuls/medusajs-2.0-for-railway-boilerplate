@@ -2,13 +2,14 @@
 
 import { Button } from "@medusajs/ui"
 import { isEqual } from "lodash"
-import { useParams } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 import { useIntersection } from "@lib/hooks/use-in-view"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 
+import ErrorMessage from "@modules/checkout/components/error-message"
 import MobileActions from "./mobile-actions"
 import ProductPrice from "../product-price"
 import { addToCart } from "@lib/data/cart"
@@ -36,7 +37,10 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const countryCode = useParams().countryCode as string
+  const router = useRouter()
+  const [, startTransition] = useTransition()
 
   // If there is only 1 variant, preselect the options
   useEffect(() => {
@@ -98,14 +102,32 @@ export default function ProductActions({
     if (!selectedVariant?.id) return null
 
     setIsAdding(true)
+    setError(null)
 
-    await addToCart({
-      variantId: selectedVariant.id,
-      quantity: 1,
-      countryCode,
-    })
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
 
-    setIsAdding(false)
+      // Belt and braces on top of the scoped cache tag the action revalidates.
+      // This was added when the cart was uncached and revalidateTag had nothing
+      // to act on, which left the nav badge on the old count after roughly one
+      // add in fifteen. The tag now does the work, so this is a second-line
+      // guarantee rather than the mechanism.
+      startTransition(() => router.refresh())
+    } catch (e: any) {
+      // Nothing used to catch this. A rejected server action escaped the click
+      // handler, so setIsAdding(false) never ran: the button span forever, the
+      // cart badge never moved, and the shopper was told nothing at all. A
+      // failed add has to be visible.
+      setError(
+        e?.message ?? "Could not add this item to your cart. Please try again."
+      )
+    } finally {
+      setIsAdding(false)
+    }
   }
 
   return (
@@ -149,6 +171,7 @@ export default function ProductActions({
             ? "Out of stock"
             : "Add to cart"}
         </Button>
+        <ErrorMessage error={error} data-testid="add-product-error-message" />
         <MobileActions
           product={product}
           variant={selectedVariant}
@@ -157,6 +180,7 @@ export default function ProductActions({
           inStock={inStock}
           handleAddToCart={handleAddToCart}
           isAdding={isAdding}
+          error={error}
           show={!inView}
           optionsDisabled={!!disabled || isAdding}
         />

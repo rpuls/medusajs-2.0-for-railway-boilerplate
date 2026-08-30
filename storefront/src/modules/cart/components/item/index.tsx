@@ -13,7 +13,8 @@ import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useState, useTransition } from "react"
 
 type ItemProps = {
   item: HttpTypes.StoreCartLineItem
@@ -22,6 +23,8 @@ type ItemProps = {
 
 const Item = ({ item, type = "full" }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
+  const router = useRouter()
+  const [, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const { handle } = item.variant?.product ?? {}
@@ -30,10 +33,15 @@ const Item = ({ item, type = "full" }: ItemProps) => {
     setError(null)
     setUpdating(true)
 
-    const message = await updateLineItem({
+    await updateLineItem({
       lineId: item.id,
       quantity,
     })
+      .then(() => {
+        // Belt and braces on top of the scoped cache tag the action
+        // revalidates. See the note in product-actions.
+        startTransition(() => router.refresh())
+      })
       .catch((err) => {
         setError(err.message)
       })
@@ -95,10 +103,6 @@ const Item = ({ item, type = "full" }: ItemProps) => {
                   </option>
                 )
               )}
-
-              <option value={1} key={1}>
-                1
-              </option>
             </CartItemSelect>
             {updating && <Spinner />}
           </div>

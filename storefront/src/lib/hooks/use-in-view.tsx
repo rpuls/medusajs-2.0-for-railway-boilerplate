@@ -1,7 +1,11 @@
+"use client"
+
 import { RefObject, useEffect, useState } from "react"
 
 export const useIntersection = (
-  element: RefObject<HTMLDivElement>,
+  // React 19 types useRef<T>(null) as RefObject<T | null>, so the parameter
+  // has to admit null or every caller fails to typecheck.
+  element: RefObject<HTMLDivElement | null>,
   rootMargin: string
 ) => {
   const [isVisible, setState] = useState(false)

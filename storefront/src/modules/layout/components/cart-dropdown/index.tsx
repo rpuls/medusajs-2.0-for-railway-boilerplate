@@ -18,7 +18,11 @@ const CartDropdown = ({
 }: {
   cart?: HttpTypes.StoreCart | null
 }) => {
-  const [activeTimer, setActiveTimer] = useState<NodeJS.Timer | undefined>(
+  // NodeJS.Timer is the legacy interface and is not what setTimeout returns,
+  // so clearTimeout rejected it. This stays correct in both DOM and Node.
+  const [activeTimer, setActiveTimer] = useState<
+    ReturnType<typeof setTimeout> | undefined
+  >(
     undefined
   )
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)

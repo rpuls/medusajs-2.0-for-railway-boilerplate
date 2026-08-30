@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect } from "react"
 import Input from "@modules/common/components/input"
 import CountrySelect from "../country-select"
@@ -96,13 +98,13 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
           required
           data-testid="billing-country-select"
         />
+        {/* Optional, for the same reason as the shipping address form. */}
         <Input
           label="State / Province"
           name="billing_address.province"
           autoComplete="address-level1"
           value={formData["billing_address.province"]}
           onChange={handleChange}
-          required
           data-testid="billing-province-input"
         />
         <Input

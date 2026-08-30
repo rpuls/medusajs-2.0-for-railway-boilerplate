@@ -2,10 +2,16 @@ import { sdk } from "@lib/config"
 import { cache } from "react"
 import { getProductsList } from "./products"
 import { HttpTypes } from "@medusajs/types"
+import { getCacheDirectives } from "./cookies"
 
+// See the note in regions.ts for why these are client.fetch calls rather than
+// the sdk.store.* helpers.
 export const retrieveCollection = cache(async function (id: string) {
-  return sdk.store.collection
-    .retrieve(id, {}, { next: { tags: ["collections"] } })
+  return sdk.client
+    .fetch<HttpTypes.StoreCollectionResponse>(`/store/collections/${id}`, {
+      method: "GET",
+      ...(await getCacheDirectives("collections")),
+    })
     .then(({ collection }) => collection)
 })
 
@@ -13,16 +19,27 @@ export const getCollectionsList = cache(async function (
   offset: number = 0,
   limit: number = 100
 ): Promise<{ collections: HttpTypes.StoreCollection[]; count: number }> {
-  return sdk.store.collection
-    .list({ limit, offset: 0 }, { next: { tags: ["collections"] } })
+  return sdk.client
+    .fetch<HttpTypes.StoreCollectionListResponse>("/store/collections", {
+      method: "GET",
+      query: { limit, offset: 0 },
+      ...(await getCacheDirectives("collections")),
+    })
     .then(({ collections }) => ({ collections, count: collections.length }))
 })
 
+// Returns undefined for an unknown handle, so the type has to admit it. It
+// was declared as always returning a collection, which hid the null check
+// that both the page and its metadata depend on.
 export const getCollectionByHandle = cache(async function (
   handle: string
-): Promise<HttpTypes.StoreCollection> {
-  return sdk.store.collection
-    .list({ handle }, { next: { tags: ["collections"] } })
+): Promise<HttpTypes.StoreCollection | undefined> {
+  return sdk.client
+    .fetch<HttpTypes.StoreCollectionListResponse>("/store/collections", {
+      method: "GET",
+      query: { handle },
+      ...(await getCacheDirectives("collections")),
+    })
     .then(({ collections }) => collections[0])
 })
 
