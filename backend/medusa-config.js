@@ -37,6 +37,8 @@ if (!S3_ENABLED && (S3_ENDPOINT || Object.values(S3_REQUIRED_VARS).some(Boolean)
   console.warn(`S3 file storage is only partially configured - missing: ${missing.join(', ')}. Falling back to local file storage, which is ephemeral on Railway!`);
 }
 
+const MEILISEARCH_ENABLED = Boolean(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY);
+
 const medusaConfig = {
   projectConfig: {
     databaseUrl: DATABASE_URL,
@@ -153,30 +155,36 @@ const medusaConfig = {
           },
         ],
       },
+    }] : []),
+    // Medusa 2.19 introduced its own Search Module, and it owns the indexing:
+    // it creates and migrates the indexes, seeds them, and keeps them current
+    // from catalog events. The Meilisearch plugin is only the engine behind it.
+    // Nothing here declares what an index holds - that lives in src/search.
+    ...(MEILISEARCH_ENABLED ? [{
+      key: Modules.SEARCH,
+      resolve: '@medusajs/medusa/search',
+      options: {
+        providers: [
+          {
+            resolve: '@rokmohar/medusa-plugin-meilisearch/providers/meilisearch',
+            id: 'meilisearch',
+            options: {
+              config: {
+                host: MEILISEARCH_HOST,
+                apiKey: MEILISEARCH_ADMIN_KEY
+              }
+            }
+          }
+        ]
+      }
     }] : [])
   ],
   plugins: [
-  ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
+    // Registered for its API routes and admin settings page only. The search
+    // configuration itself belongs to the Search Module above.
+    ...(MEILISEARCH_ENABLED ? [{
       resolve: '@rokmohar/medusa-plugin-meilisearch',
-      options: {
-        config: {
-          host: MEILISEARCH_HOST,
-          apiKey: MEILISEARCH_ADMIN_KEY
-        },
-        settings: {
-          products: {
-            type: 'products',
-            enabled: true,
-            fields: ['id', 'title', 'description', 'handle', 'variant_sku', 'thumbnail'],
-            indexSettings: {
-              searchableAttributes: ['title', 'description', 'variant_sku'],
-              displayedAttributes: ['id', 'handle', 'title', 'description', 'variant_sku', 'thumbnail'],
-              filterableAttributes: ['id', 'handle'],
-            },
-            primaryKey: 'id',
-          }
-        }
-      }
+      options: {}
     }] : [])
   ]
 };
