@@ -1,34 +1,30 @@
-import { test, expect, Page } from "@playwright/test"
+import { test, expect, APIRequestContext, Page } from "@playwright/test"
 import { addProductToCart, qaEnv, url } from "./helpers"
 
 /**
  * Confirms the order confirmation email is actually sent.
  *
- * This cannot be observed from the storefront, which is precisely why it went
+ * This cannot be observed from the storefront, which is exactly why it went
  * unnoticed for so long: the order completes, the confirmation page renders,
- * and the subscriber swallows the send failure with a `console.error`. Placing
- * a real order and then asking Resend whether it received the send is the only
- * way to hold this honest, so the spec talks to the Resend API the same way
- * qa/13-payment.spec.ts talks to Stripe.
+ * and `subscribers/order-placed.ts` swallows the send failure with a
+ * `console.error`. Three separate defects made every order email fail on
+ * Railway, and the suite was green throughout.
  *
- * Three separate defects made every order email fail before this existed:
- * `react`/`react-dom` were devDependencies while postBuild installs the
- * production server with `pnpm i --prod`, so rendering a React email template
- * threw; the provider's catch block read axios-shaped fields off a fetch-based
- * SDK, so the real cause was reported as "undefined - unknown error"; and
- * `resend.emails.send()` resolves with `{ data, error }` rather than throwing,
- * so an API-level rejection was logged as a success.
+ * The evidence lives in Medusa's own notification records rather than in
+ * Resend's `GET /emails` listing. That listing is eventually consistent and was
+ * measured lagging several minutes behind a send that had already succeeded, so
+ * asserting on it produced confident false failures. `/admin/notifications`
+ * writes `status` and `external_id` (the Resend message id) the moment the
+ * provider returns, which is both immediate and authoritative. Resend is still
+ * consulted, but by id, which does not go through the lagging index.
  */
 
 /**
- * Resend's own test inbox. Using a real-looking address would send genuine mail
- * on every run, and using @example.com would generate a bounce each time and
- * erode the sending domain's reputation. This address is accepted, recorded and
- * discarded by Resend, which is all the spec needs.
+ * Resend's own test inbox. A real-looking address would send genuine mail on
+ * every run, and an @example.com address would bounce each time and erode the
+ * sending domain's reputation. This one is accepted, recorded and discarded.
  */
 const TEST_INBOX = "delivered@resend.dev"
-
-const RESEND_API = "https://api.resend.com"
 
 const placeOrder = async (page: Page, email: string) => {
   await page.goto(url("cart"))
@@ -58,90 +54,144 @@ const placeOrder = async (page: Page, email: string) => {
   })
 }
 
-type ResendEmail = {
-  id: string
-  to: string[]
-  subject?: string
-  created_at: string
-  last_event?: string
+/** Signs in to the Medusa admin API and returns a bearer token. */
+const adminToken = async (request: APIRequestContext): Promise<string> => {
+  const res = await request.post(`${qaEnv.backendURL}/auth/user/emailpass`, {
+    data: { email: qaEnv.adminEmail, password: qaEnv.adminPassword },
+  })
+  expect(res.ok(), "admin sign-in to read notifications").toBeTruthy()
+  return (await res.json()).token
 }
 
-const listRecentEmails = async (): Promise<ResendEmail[]> => {
-  const res = await fetch(`${RESEND_API}/emails?limit=100`, {
-    headers: { Authorization: `Bearer ${qaEnv.resendApiKey}` },
-  })
-  if (!res.ok) {
-    throw new Error(`Resend GET /emails failed: ${res.status} ${await res.text()}`)
-  }
-  const body = await res.json()
-  return body.data ?? []
+type Notification = {
+  id: string
+  to: string
+  template: string
+  status: string
+  external_id: string | null
+  created_at: string
+}
+
+const recentNotifications = async (
+  request: APIRequestContext,
+  token: string
+): Promise<Notification[]> => {
+  const res = await request.get(
+    `${qaEnv.backendURL}/admin/notifications` +
+      `?limit=30&fields=id,to,channel,template,status,external_id,created_at`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  expect(res.ok(), "reading /admin/notifications").toBeTruthy()
+  return (await res.json()).notifications ?? []
 }
 
 test.describe("Order confirmation email", () => {
-  test.skip(
-    !qaEnv.resendApiKey,
-    "RESEND_API_KEY is not set, so Resend cannot be asked whether the email was sent"
-  )
+  /**
+   * Headroom over the suite's 120s default, not an expected duration: a
+   * healthy run finishes in about ten seconds. `order.placed` goes onto the
+   * Redis-backed event bus, so the subscriber runs behind the HTTP response,
+   * and the margin is there for a queue that is briefly backed up rather than
+   * for a send that is normally slow.
+   */
+  test.describe.configure({ timeout: 240_000 })
 
-  test("placing an order sends the confirmation email through Resend", async ({
+  test("placing an order sends the confirmation email", async ({
     page,
+    request,
   }) => {
-    // Recorded before the order so a send from an earlier run cannot satisfy
-    // the assertion. Resend timestamps are UTC; a second of slack absorbs any
-    // clock skew between this machine and theirs.
-    const placedAfter = new Date(Date.now() - 1000)
+    const token = await adminToken(request)
+
+    /*
+     * Identify this run's notification by id rather than by timestamp.
+     *
+     * Comparing `created_at` against a locally captured `Date.now()` compares
+     * two different clocks. This machine measured 31 seconds ahead of the
+     * server, which is more than the gap between placing an order and the
+     * subscriber running, so a perfectly good send looked like it happened
+     * "before" the test started and was skipped. Snapshotting the ids first
+     * and looking for one that was not there is immune to that.
+     */
+    const before = new Set(
+      (await recentNotifications(request, token)).map((n) => n.id)
+    )
 
     await addProductToCart(page, "t-shirt")
     await placeOrder(page, TEST_INBOX)
 
-    /*
-     * The order is placed; the email is not sent yet. `order.placed` goes
-     * through the event bus, which is a Redis queue on a real deploy, so the
-     * subscriber runs after the HTTP response has already been returned.
-     * Poll rather than assume a delay.
-     */
+    let notification: Notification | undefined
+
     await expect
       .poll(
         async () => {
-          const emails = await listRecentEmails()
-          return emails.filter(
-            (e) =>
-              (e.to ?? []).includes(TEST_INBOX) &&
-              new Date(e.created_at) >= placedAfter
-          ).length
+          const all = await recentNotifications(request, token)
+          notification = all.find(
+            (n) =>
+              !before.has(n.id) &&
+              n.to === TEST_INBOX &&
+              n.template === "order-placed"
+          )
+          return (
+            notification?.status ??
+            `no new notification yet (${all.length} on record)`
+          )
         },
         {
-          timeout: 90_000,
+          timeout: 180_000,
           intervals: [2000],
           message:
-            `Resend recorded no email to ${TEST_INBOX} after the order was placed. ` +
-            `Check the backend logs for "Failed to send" or "Resend rejected".`,
+            `Medusa never recorded an order-placed notification for ${TEST_INBOX}. ` +
+            `Either the subscriber did not run or the event bus is not draining.`,
         }
       )
-      .toBeGreaterThan(0)
+      // "failure" fails here rather than timing out, and the message below
+      // carries the reason straight from the backend.
+      .toBe("success")
+
+    /*
+     * external_id is the id Resend returned for the accepted message. Its
+     * absence would mean the provider reported success without the API ever
+     * confirming one, which is precisely the bug where `emails.send()` resolves
+     * with `{ data, error }` and the error goes unchecked.
+     */
+    expect(
+      notification?.external_id,
+      "Medusa recorded success but stored no Resend message id"
+    ).toBeTruthy()
   })
 
-  test("the confirmation email is not silently reported as sent when it failed", async () => {
-    /*
-     * A guard on the failure mode rather than the happy path.
-     *
-     * `resend.emails.send()` resolves with `{ data, error }` instead of
-     * throwing, so the provider used to log "Successfully sent" for rejected
-     * sends. Anything Resend rejects is visible on the listing as an email
-     * whose last_event is a failure, so a run that leaves failures behind
-     * should not be called green.
-     */
-    const emails = await listRecentEmails()
-    const recent = emails.filter(
-      (e) => Date.now() - new Date(e.created_at).getTime() < 30 * 60 * 1000
+  test("the send is confirmed by Resend itself", async ({ request }) => {
+    test.skip(
+      !qaEnv.resendApiKey,
+      "RESEND_API_KEY is not set, so Resend cannot be asked to confirm"
     )
-    const failed = recent.filter((e) =>
-      ["bounced", "failed", "complained"].includes(e.last_event ?? "")
+
+    const token = await adminToken(request)
+    const all = await recentNotifications(request, token)
+    const sent = all.find(
+      (n) => n.to === TEST_INBOX && n.status === "success" && n.external_id
     )
 
     expect(
-      failed.map((e) => `${e.id} -> ${e.to?.join(", ")} (${e.last_event})`),
-      "Resend reports recent sends that did not arrive"
-    ).toEqual([])
+      sent,
+      "no successful order-placed notification to check against Resend"
+    ).toBeTruthy()
+
+    // Fetched by id on purpose. The list endpoint is eventually consistent and
+    // lagged several minutes behind this same message during development.
+    const res = await request.get(
+      `https://api.resend.com/emails/${sent!.external_id}`,
+      { headers: { Authorization: `Bearer ${qaEnv.resendApiKey}` } }
+    )
+    expect(
+      res.ok(),
+      `Resend does not know message ${sent!.external_id}, so Medusa recorded a send that never happened`
+    ).toBeTruthy()
+
+    const email = await res.json()
+    expect(email.to).toContain(TEST_INBOX)
+    expect(
+      ["bounced", "failed", "complained"],
+      `Resend reports this message as ${email.last_event}`
+    ).not.toContain(email.last_event)
   })
 })
