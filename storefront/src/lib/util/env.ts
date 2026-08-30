@@ -32,3 +32,24 @@ export const getBaseURL = () => {
 export const getStoreName = () => {
   return process.env.NEXT_PUBLIC_STORE_NAME || "Your Store"
 }
+
+/**
+ * Whether to show the search entry point in the nav.
+ *
+ * On by default, opt out with NEXT_PUBLIC_FEATURE_SEARCH_DISABLED=true.
+ *
+ * This used to be the other way round, an opt-in
+ * NEXT_PUBLIC_FEATURE_SEARCH_ENABLED, and that default cost real stores their
+ * search. The Railway template provisions Meilisearch, derives a search key and
+ * indexes the catalogue, but never set the opt-in flag, so every deploy ran a
+ * fully working and completely unreachable search: the nav link is the only
+ * route into it anywhere in the UI. Defaulting to on means the shipped
+ * infrastructure and the shipped UI agree, and local development matches a
+ * deploy without extra configuration.
+ *
+ * Compared against the string rather than read for truthiness. Env values are
+ * always strings, so the old truthy check treated "false" as enabled.
+ */
+export const isSearchEnabled = () => {
+  return process.env.NEXT_PUBLIC_FEATURE_SEARCH_DISABLED !== "true"
+}

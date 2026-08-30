@@ -54,6 +54,14 @@ export const qaEnv = {
   adminURL: `${read("NEXT_PUBLIC_MEDUSA_BACKEND_URL", "http://localhost:9000")}/app`,
   adminEmail: read("MEDUSA_ADMIN_EMAIL", "admin@yourmail.com"),
   adminPassword: read("MEDUSA_ADMIN_PASSWORD", "supersecret"),
-  searchEnabled: Boolean(read("NEXT_PUBLIC_FEATURE_SEARCH_ENABLED", "")),
+  /** Mirrors isSearchEnabled() in src/lib/util/env.ts: on unless opted out. */
+  searchEnabled: read("NEXT_PUBLIC_FEATURE_SEARCH_DISABLED", "") !== "true",
   stripeConfigured: Boolean(read("NEXT_PUBLIC_STRIPE_KEY", "")),
+  /**
+   * Optional. Only the payment spec uses it, to confirm with Stripe that a
+   * charge really happened rather than trusting the confirmation page. Without
+   * it that spec still runs and still completes a card payment; it just cannot
+   * make the second assertion.
+   */
+  stripeSecretKey: read("STRIPE_API_KEY", ""),
 }
