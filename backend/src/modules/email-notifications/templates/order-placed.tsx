@@ -42,6 +42,20 @@ const formatAmount = (amount: unknown, currencyCode?: string): string => {
   }
 }
 
+/**
+ * Quantities come back as BigNumber objects, not numbers.
+ *
+ * React refuses to render an object child, so printing one raw threw
+ * "Objects are not valid as a React child (found: 1)" from inside the Resend
+ * SDK, which failed the whole email rather than just that cell. Amounts were
+ * already coerced by formatAmount above; the quantity was the one value still
+ * being handed to React untouched.
+ */
+const formatQuantity = (quantity: unknown): string => {
+  const value = Number(quantity)
+  return Number.isFinite(value) ? String(value) : ''
+}
+
 export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
   PreviewProps: OrderPlacedPreviewProps
 } = ({ order, shippingAddress, preview = 'Your order has been placed!' }) => {
@@ -131,7 +145,7 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
               borderBottom: '1px solid #ddd'
             }}>
               <Text>{item.title} - {item.product_title}</Text>
-              <Text>{item.quantity}</Text>
+              <Text>{formatQuantity(item.quantity)}</Text>
               <Text>{formatAmount(item.unit_price, order.currency_code)}</Text>
             </div>
           ))}
