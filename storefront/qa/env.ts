@@ -64,4 +64,11 @@ export const qaEnv = {
    * make the second assertion.
    */
   stripeSecretKey: read("STRIPE_API_KEY", ""),
+  /**
+   * Optional. Only the email spec uses it, to confirm with Resend that the
+   * order confirmation was actually sent. Without it that spec skips, because
+   * there is no way to observe an email from the storefront alone, which is
+   * exactly how a year-old "no order emails ever send" bug stayed invisible.
+   */
+  resendApiKey: read("RESEND_API_KEY", ""),
 }

@@ -34,6 +34,8 @@
     "@react-email/components": "^1.0.1",
     "@rokmohar/medusa-plugin-meilisearch": "2.0.0",
     "medusajs-launch-utils": "0.0.19",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "resend": "6.25.0"
   },
   "devDependencies": {
@@ -43,8 +45,6 @@
     "@types/node": "^22.19.1",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "react-email": "^5.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

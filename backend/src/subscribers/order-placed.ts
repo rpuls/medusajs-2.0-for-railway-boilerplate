@@ -2,6 +2,7 @@ import { Modules } from '@medusajs/framework/utils'
 import { INotificationModuleService, IOrderModuleService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
+import { RESEND_FROM_EMAIL } from '../lib/constants'
 
 export default async function orderPlacedHandler({
   event: { data },
@@ -34,7 +35,11 @@ export default async function orderPlacedHandler({
       template: EmailTemplates.ORDER_PLACED,
       data: {
         emailOptions: {
-          replyTo: process.env.ORDER_REPLY_TO_EMAIL || process.env.RESEND_FROM_EMAIL,
+          // RESEND_FROM_EMAIL comes from lib/constants, which falls back to
+          // RESEND_FROM. Reading process.env directly here missed that
+          // fallback, so the reply-to was empty on every deploy configured
+          // with RESEND_FROM, which is what the Railway template sets.
+          replyTo: process.env.ORDER_REPLY_TO_EMAIL || RESEND_FROM_EMAIL,
           subject: 'Your order has been placed'
         },
         order,

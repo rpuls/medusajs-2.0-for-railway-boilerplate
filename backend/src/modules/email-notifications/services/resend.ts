@@ -93,20 +93,48 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       scheduledAt: emailOptions.scheduledAt
     }
 
-    // Send the email via Resend
+    /*
+     * Send the email via Resend.
+     *
+     * The SDK does NOT throw when the API rejects a send. It resolves with
+     * `{ data, error }` and leaves the checking to the caller. This code used
+     * to await it, ignore `error` and log success unconditionally, so a
+     * rejected send (unverified domain, revoked key, rate limit, suppressed
+     * recipient) was reported as delivered and silently dropped.
+     */
+    let result: Awaited<ReturnType<typeof this.resend.emails.send>>
+
     try {
-      await this.resend.emails.send(message)
-      this.logger_.log(
-        `Successfully sent "${notification.template}" email to ${notification.to} via Resend`
-      )
-      return {} // Return an empty object on success
+      result = await this.resend.emails.send(message)
     } catch (error) {
-      const errorCode = error.code
-      const responseError = error.response?.body?.errors?.[0]
+      /*
+       * Only non-API failures reach here, chiefly a failure to render the
+       * React template.
+       *
+       * The previous handler read `error.code` and
+       * `error.response.body.errors[0]`, which are axios shapes. The Resend
+       * SDK is fetch-based and throws plain Errors, so both were always
+       * undefined and every failure was reported as the useless
+       * "undefined - unknown error". Report what actually went wrong.
+       */
+      const detail = error instanceof Error ? error.message : String(error)
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Failed to send "${notification.template}" email to ${notification.to} via Resend: ${errorCode} - ${responseError?.message ?? 'unknown error'}`
+        `Failed to send "${notification.template}" email to ${notification.to} via Resend: ${detail}`
       )
     }
+
+    if (result.error) {
+      const { name, message: reason } = result.error
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        `Resend rejected the "${notification.template}" email to ${notification.to}: ${name ?? 'error'} - ${reason ?? 'no message given'}`
+      )
+    }
+
+    this.logger_.log(
+      `Successfully sent "${notification.template}" email to ${notification.to} via Resend`
+    )
+    return { id: result.data?.id }
   }
 }
