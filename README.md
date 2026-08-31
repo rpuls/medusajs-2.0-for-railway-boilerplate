@@ -1,3 +1,6 @@
+<p align="center">
+  <a href="https://funkyton.com/"><img src="docs/brand/funkyton-mark-round-256.png" width="76" alt="FUNKYTON"></a>
+</p>
 <h1 align="center">
   Medusa 2.0 on Railway: One-Click Deploy Template
 </h1>
@@ -40,18 +43,30 @@ Deployed more than 3,800 times since 2023, and over 1,100 of those stores are st
 
 ## What gets deployed
 
-Six services in one Railway project, plus whichever third-party integrations you
+Seven services in one Railway project, plus whichever third-party integrations you
 configure.
 
-![Architecture diagram. Shoppers reach the Next.js storefront and the store owner reaches the Medusa backend directly. The storefront calls the backend for the Store API and MeiliSearch for product search. The backend owns Postgres, Redis, MeiliSearch and an S3 bucket, all inside one Railway project, and calls Stripe and Resend outside it.](docs/diagrams/railway-stack.png)
+![Architecture diagram. Shoppers reach the Next.js storefront and the store owner reaches the Medusa backend directly. The storefront calls the backend for the Store API and MeiliSearch for product search. The backend owns Postgres, Redis, MeiliSearch and a bucket, and a read-only proxy serves product images out of that bucket to shoppers. All seven run inside one Railway project, and the backend calls Stripe and Resend outside it.](docs/diagrams/railway-stack.png)
 
-![The six Railway services provisioned by this template](https://res-5.cloudinary.com/hczpmiapo/image/upload/q_auto/v1/ghost-blog-images/medusa-2-17-2-on-railway-service-overview-png.png?_a=BAMAPqiu0)
+The seventh, **Bucket-proxy**, is the one that needs explaining. Railway buckets
+serve nothing publicly, so a product image saved to one cannot be loaded by a
+browser. The proxy is a small Railway Function that answers public `GET` and
+`HEAD` requests by reading from the bucket, and `S3_FILE_URL` points at it so
+image URLs resolve. It is deliberately read-only: it never exposes `PUT`,
+`POST`, `PATCH` or `DELETE`.
+
+![MedusaJS 2.0 backend, Next.js storefront, Postgres, Redis, MeiliSearch and bucket storage running as connected services in one Railway project](https://res.cloudinary.com/hczpmiapo/image/upload/q_auto,f_auto/v1788184544/ghost-blog-images/medusajs-2-on-railway-services-overview-png.png)
 
 ## About this boilerplate
 
 A monorepo combining the official open-source MedusaJS 2.0 backend with the Medusa team's Next.js starter storefront, pre-configured for one-click deployment on [railway.app](https://railway.app?referralCode=-Yg50p).
 
 Medusa is used as published, with no fork and no patches to the core, so the [official Medusa documentation](https://docs.medusajs.com/) applies as normal. What this template adds on top is the Railway deployment setup and a set of preconfigured integrations (MeiliSearch search, Stripe payments, Resend email, S3-compatible file storage), all built with Medusa's own module and plugin APIs.
+
+> **Looking for official Medusa hosting?** [Medusa Cloud](https://medusajs.com/cloud) is
+> the hosted platform built by the Medusa team, and it is what funds the open source
+> project this template deploys. If you would rather someone else ran the
+> infrastructure, start there.
 
 > **Where to get help**
 >
@@ -64,7 +79,7 @@ Medusa is used as published, with no fork and no patches to the core, so the [of
 | | This template | Doing it by hand |
 | --- | --- | --- |
 | Time to a running store | Minutes | Half a day, and longer the first time |
-| Six services provisioned and networked | One click | Six services to create, and the connection strings to copy between them |
+| Seven services provisioned and networked | One click | Seven services to create, and the connection strings to copy between them |
 | Migrations and seed data | Run automatically on first boot | `medusa db:migrate`, then write or adapt a seed script |
 | Admin user | Created for you with a random password | Create it over the CLI after the database is up |
 | Publishable API key | Generated and handed to the storefront automatically | Create it in the admin, then paste it into the storefront's environment |
@@ -96,6 +111,12 @@ maintained here alongside this one.
 
 This template is the plain one: a single seller, a single storefront. Start here
 unless you recognised yourself above.
+
+There is also a [trial version](https://railway.com/deploy/medusajs-20-storefront-trial--Fb6KUX?referralCode=-Yg50p)
+of this same template, cut down to four services so it fits inside Railway's
+free tier. It leaves out search and object storage, so treat it as a way to see
+what you get for free rather than as somewhere to build a shop. Move to the full
+template above when you want to sell something.
 
 ## Local development
 
