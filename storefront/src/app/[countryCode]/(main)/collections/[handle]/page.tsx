@@ -1,65 +1,51 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import {
-  getCollectionByHandle,
-  getCollectionsList,
-} from "@lib/data/collections"
-import { listRegions } from "@lib/data/regions"
-import { StoreCollection, StoreRegion } from "@medusajs/types"
+import { getCollectionByHandle } from "@lib/data/collections"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { getStoreName } from "@lib/util/env"
 
 type Props = {
-  params: { handle: string; countryCode: string }
-  searchParams: {
+  params: Promise<{ handle: string; countryCode: string }>
+  searchParams: Promise<{
     page?: string
     sortBy?: SortOptions
-  }
+  }>
 }
 
 export const PRODUCT_LIMIT = 12
 
-export async function generateStaticParams() {
-  const { collections } = await getCollectionsList()
-
-  if (!collections) {
-    return []
-  }
-
-  const countryCodes = await listRegions().then(
-    (regions: StoreRegion[]) =>
-      regions
-        ?.map((r) => r.countries?.map((c) => c.iso_2))
-        .flat()
-        .filter(Boolean) as string[]
-  )
-
-  const collectionHandles = collections.map(
-    (collection: StoreCollection) => collection.handle
-  )
-
-  const staticParams = countryCodes
-    ?.map((countryCode: string) =>
-      collectionHandles.map((handle: string | undefined) => ({
-        countryCode,
-        handle,
-      }))
-    )
-    .flat()
-
-  return staticParams
-}
+/**
+ * Rendered per request rather than statically.
+ *
+ * The seed creates categories but no collections, so on a fresh deploy
+ * generateStaticParams below returns an empty array. Next still treats the
+ * route as static, and rendering one on demand then trips over the cookie
+ * access in the shared layout, failing with DYNAMIC_SERVER_USAGE. The result
+ * was a 500 on every /collections/* URL, including collections the shop owner
+ * later created in the admin, until the storefront was rebuilt.
+ *
+ * Products and categories are unaffected because the seed gives them
+ * non-empty static params.
+ *
+ * generateStaticParams was removed along with this: `dynamic` is ignored while
+ * it is present, and prerendering a list that is empty on a fresh deploy buys
+ * nothing anyway. Collections created in the admin now work immediately,
+ * without redeploying the storefront.
+ */
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const collection = await getCollectionByHandle(params.handle)
+  const { handle } = await params
+  const collection = await getCollectionByHandle(handle)
 
   if (!collection) {
     notFound()
   }
 
   const metadata = {
-    title: `${collection.title} | Medusa Store`,
+    title: `${collection.title} | ${getStoreName()}`,
     description: `${collection.title} collection`,
   } as Metadata
 
@@ -67,11 +53,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {
-  const { sortBy, page } = searchParams
+  const { handle, countryCode } = await params
+  const { sortBy, page } = await searchParams
 
-  const collection = await getCollectionByHandle(params.handle).then(
-    (collection: StoreCollection) => collection
-  )
+  const collection = await getCollectionByHandle(handle)
 
   if (!collection) {
     notFound()
@@ -82,7 +67,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
       collection={collection}
       page={page}
       sortBy={sortBy}
-      countryCode={params.countryCode}
+      countryCode={countryCode}
     />
   )
 }

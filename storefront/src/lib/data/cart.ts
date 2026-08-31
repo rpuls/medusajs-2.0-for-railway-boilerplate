@@ -4,12 +4,39 @@ import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
 import { omit } from "lodash"
-import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
-import { getAuthHeaders, getCartId, removeCartId, setCartId } from "./cookies"
+import {
+  getAuthHeaders,
+  getCacheDirectives,
+  getCartId,
+  removeCartId,
+  revalidateCacheTag,
+  setCartId,
+} from "./cookies"
 import { getProductsById } from "./products"
 import { getRegion } from "./regions"
 
+/**
+ * The cart is cached under a tag scoped to this visitor, and every mutation
+ * below invalidates it.
+ *
+ * This went through two wrong designs first, so the reasoning is worth
+ * keeping. Originally the cart was cached under the bare global tag "cart".
+ * That was wrong twice over: one shopper's write purged every shopper's cart,
+ * and the tag never reached Next at all, because it was passed in the SDK's
+ * headers slot (see regions.ts). With nothing registered under the tag,
+ * revalidateTag had nothing to invalidate.
+ *
+ * The reaction was to stop caching the cart entirely. That fixed the stale
+ * reads but removed the very thing revalidation acts on, so after a write the
+ * App Router was not reliably told to re-render. The visible symptom was the
+ * nav badge keeping its old count after roughly one add in fifteen, recovered
+ * only by a reload.
+ *
+ * Caching it under a per-visitor tag is what makes both halves work: the read
+ * is a real cache entry, so revalidateTag has something to purge and the
+ * router re-renders, and the tag is scoped, so it purges one person's cart.
+ */
 export async function retrieveCart() {
   const cartId = await getCartId()
 
@@ -17,8 +44,12 @@ export async function retrieveCart() {
     return null
   }
 
-  return await sdk.store.cart
-    .retrieve(cartId, {}, { next: { tags: ["cart"] }, ...(await getAuthHeaders()) })
+  return await sdk.client
+    .fetch<{ cart: HttpTypes.StoreCart }>(`/store/carts/${cartId}`, {
+      method: "GET",
+      headers: { ...(await getAuthHeaders()) },
+      ...(await getCacheDirectives("carts")),
+    })
     .then(({ cart }) => cart)
     .catch(() => {
       return null
@@ -37,7 +68,7 @@ export async function getOrSetCart(countryCode: string) {
     const cartResp = await sdk.store.cart.create({ region_id: region.id })
     cart = cartResp.cart
     await setCartId(cart.id)
-    revalidateTag("cart")
+    await revalidateCacheTag("carts")
   }
 
   if (cart && cart?.region_id !== region.id) {
@@ -47,7 +78,7 @@ export async function getOrSetCart(countryCode: string) {
       {},
       await getAuthHeaders()
     )
-    revalidateTag("cart")
+    await revalidateCacheTag("carts")
   }
 
   return cart
@@ -61,8 +92,8 @@ export async function updateCart(data: HttpTypes.StoreUpdateCart) {
 
   return sdk.store.cart
     .update(cartId, data, {}, await getAuthHeaders())
-    .then(({ cart }) => {
-      revalidateTag("cart")
+    .then(async ({ cart }) => {
+      await revalidateCacheTag("carts")
       return cart
     })
     .catch(medusaError)
@@ -96,8 +127,8 @@ export async function addToCart({
       {},
       await getAuthHeaders()
     )
-    .then(() => {
-      revalidateTag("cart")
+    .then(async () => {
+      await revalidateCacheTag("carts")
     })
     .catch(medusaError)
 }
@@ -120,8 +151,8 @@ export async function updateLineItem({
 
   await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, await getAuthHeaders())
-    .then(() => {
-      revalidateTag("cart")
+    .then(async () => {
+      await revalidateCacheTag("carts")
     })
     .catch(medusaError)
 }
@@ -137,12 +168,11 @@ export async function deleteLineItem(lineId: string) {
   }
 
   await sdk.store.cart
-    .deleteLineItem(cartId, lineId, await getAuthHeaders())
-    .then(() => {
-      revalidateTag("cart")
+    .deleteLineItem(cartId, lineId, {}, await getAuthHeaders())
+    .then(async () => {
+      await revalidateCacheTag("carts")
     })
     .catch(medusaError)
-  revalidateTag("cart")
 }
 
 export async function enrichLineItems(
@@ -206,8 +236,8 @@ export async function setShippingMethod({
       {},
       await getAuthHeaders()
     )
-    .then(() => {
-      revalidateTag("cart")
+    .then(async () => {
+      await revalidateCacheTag("carts")
     })
     .catch(medusaError)
 }
@@ -221,8 +251,8 @@ export async function initiatePaymentSession(
 ) {
   return sdk.store.payment
     .initiatePaymentSession(cart, data, {}, await getAuthHeaders())
-    .then((resp) => {
-      revalidateTag("cart")
+    .then(async (resp) => {
+      await revalidateCacheTag("carts")
       return resp
     })
     .catch(medusaError)
@@ -234,11 +264,13 @@ export async function applyPromotions(codes: string[]) {
     throw new Error("No existing cart found")
   }
 
-  await updateCart({ promo_codes: codes })
-    .then(() => {
-      revalidateTag("cart")
-    })
-    .catch(medusaError)
+  await updateCart({ promo_codes: codes }).catch(medusaError)
+
+  // A discount moves the cart total, and shipping options can be priced
+  // against it, so the options have to be refetched too. Upstream does the
+  // same thing here under its "fulfillment" tag; this repo calls that tag
+  // "shipping". See lib/data/fulfillment.ts.
+  await revalidateCacheTag("shipping")
 }
 
 export async function applyGiftCard(code: string) {
@@ -288,9 +320,26 @@ export async function submitPromotionForm(
   currentState: unknown,
   formData: FormData
 ) {
-  const code = formData.get("code") as string
+  const code = formData.get("code")?.toString().trim()
+
+  if (!code) {
+    return "Enter a promotion code."
+  }
+
   try {
-    await applyPromotions([code])
+    // promo_codes replaces the whole set, so the codes already on the cart
+    // have to be sent along with the new one. Reading them here rather than
+    // from the client keeps this correct even if the rendered cart is stale.
+    const cart = await retrieveCart()
+    const existing = (cart?.promotions ?? [])
+      .map((promotion) => promotion.code)
+      .filter((promotionCode): promotionCode is string => Boolean(promotionCode))
+
+    if (existing.includes(code)) {
+      return "That promotion code is already applied."
+    }
+
+    await applyPromotions([...existing, code])
   } catch (e: any) {
     return e.message
   }
@@ -357,8 +406,12 @@ export async function placeOrder() {
 
   const cartRes = await sdk.store.cart
     .complete(cartId, {}, await getAuthHeaders())
-    .then((cartRes) => {
-      revalidateTag("cart")
+    .then(async (cartRes) => {
+      await revalidateCacheTag("carts")
+      // The order list is cached now, so a new order has to purge it or the
+      // shopper lands on an account page that does not list what they just
+      // bought.
+      await revalidateCacheTag("orders")
       return cartRes
     })
     .catch(medusaError)
@@ -388,11 +441,12 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
   if (cartId) {
     await updateCart({ region_id: region.id })
-    revalidateTag("cart")
   }
 
-  revalidateTag("regions")
-  revalidateTag("products")
+  // Prices, availability and the cart total are all region-dependent, so
+  // switching region invalidates the product and region reads too.
+  await revalidateCacheTag("regions")
+  await revalidateCacheTag("products")
 
   redirect(`/${countryCode}${currentPath}`)
 }

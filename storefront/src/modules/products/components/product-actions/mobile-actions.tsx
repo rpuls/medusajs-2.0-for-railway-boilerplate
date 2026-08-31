@@ -1,8 +1,11 @@
+"use client"
+
 import { Dialog, Transition } from "@headlessui/react"
 import { Button, clx } from "@medusajs/ui"
 import React, { Fragment, useMemo } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
+import ErrorMessage from "@modules/checkout/components/error-message"
 import ChevronDown from "@modules/common/icons/chevron-down"
 import X from "@modules/common/icons/x"
 
@@ -18,6 +21,7 @@ type MobileActionsProps = {
   inStock?: boolean
   handleAddToCart: () => void
   isAdding?: boolean
+  error?: string | null
   show: boolean
   optionsDisabled: boolean
 }
@@ -30,6 +34,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   inStock,
   handleAddToCart,
   isAdding,
+  error,
   show,
   optionsDisabled,
 }) => {
@@ -52,7 +57,10 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   return (
     <>
       <div
-        className={clx("lg:hidden inset-x-0 bottom-0 fixed", {
+        // No z-index meant this sticky add-to-cart bar sat in normal stacking
+        // order, so positioned page content (the related-products thumbnails)
+        // painted over it and swallowed taps. Below the nav, above content.
+        className={clx("lg:hidden inset-x-0 bottom-0 fixed z-40", {
           "pointer-events-none": !show,
         })}
       >
@@ -125,6 +133,12 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   : "Add to cart"}
               </Button>
             </div>
+            {/* A phone shopper taps the bar, not the block further up the page,
+                so a failed add has to report itself here too. */}
+            <ErrorMessage
+              error={error}
+              data-testid="mobile-add-product-error-message"
+            />
           </div>
         </Transition>
       </div>
@@ -178,6 +192,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                                 updateOption={updateOptions}
                                 title={option.title ?? ""}
                                 disabled={optionsDisabled}
+                                data-testid="product-options"
                               />
                             </div>
                           )

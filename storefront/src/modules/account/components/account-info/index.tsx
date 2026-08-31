@@ -1,3 +1,5 @@
+"use client"
+
 import { Disclosure } from "@headlessui/react"
 import { Badge, Button, clx } from "@medusajs/ui"
 import { useEffect } from "react"
@@ -13,6 +15,11 @@ type AccountInfoProps = {
   errorMessage?: string
   clearState: () => void
   children?: React.ReactNode
+  /**
+   * Set to false for information the store API cannot change, so the section
+   * renders read-only instead of offering an Edit button that leads nowhere.
+   */
+  isEditable?: boolean
   'data-testid'?: string
 }
 
@@ -24,6 +31,7 @@ const AccountInfo = ({
   clearState,
   errorMessage = "An error occurred, please try again",
   children,
+  isEditable = true,
   'data-testid': dataTestid
 }: AccountInfoProps) => {
   const { state, close, toggle } = useToggleState()
@@ -54,18 +62,20 @@ const AccountInfo = ({
             )}
           </div>
         </div>
-        <div>
-          <Button
-            variant="secondary"
-            className="w-[100px] min-h-[25px] py-1"
-            onClick={handleToggle}
-            type={state ? "reset" : "button"}
-            data-testid="edit-button"
-            data-active={state}
-          >
-            {state ? "Cancel" : "Edit"}
-          </Button>
-        </div>
+        {isEditable && (
+          <div>
+            <Button
+              variant="secondary"
+              className="w-[100px] min-h-[25px] py-1"
+              onClick={handleToggle}
+              type={state ? "reset" : "button"}
+              data-testid="edit-button"
+              data-active={state}
+            >
+              {state ? "Cancel" : "Edit"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Success state */}
@@ -106,32 +116,39 @@ const AccountInfo = ({
         </Disclosure.Panel>
       </Disclosure>
 
-      <Disclosure>
-        <Disclosure.Panel
-          static
-          className={clx(
-            "transition-[max-height,opacity] duration-300 ease-in-out overflow-visible",
-            {
-              "max-h-[1000px] opacity-100": state,
-              "max-h-0 opacity-0": !state,
-            }
-          )}
-        >
-          <div className="flex flex-col gap-y-2 py-4">
-            <div>{children}</div>
-            <div className="flex items-center justify-end mt-2">
-              <Button
-                isLoading={pending}
-                className="w-full small:max-w-[140px]"
-                type="submit"
-                data-testid="save-button"
-              >
-                Save changes
-              </Button>
+      {isEditable && (
+        <Disclosure>
+          {/* The collapsed panel used to be overflow-visible, so its inputs
+              kept a real bounding box: they stayed in the tab order, were
+              announced by screen readers and could still be clicked despite
+              being invisible. overflow-visible is only needed while the panel
+              is open, so that dropdowns inside the form can escape the box. */}
+          <Disclosure.Panel
+            static
+            className={clx(
+              "transition-[max-height,opacity] duration-300 ease-in-out",
+              {
+                "max-h-[1000px] opacity-100 overflow-visible": state,
+                "max-h-0 opacity-0 invisible overflow-hidden": !state,
+              }
+            )}
+          >
+            <div className="flex flex-col gap-y-2 py-4">
+              <div>{children}</div>
+              <div className="flex items-center justify-end mt-2">
+                <Button
+                  isLoading={pending}
+                  className="w-full small:max-w-[140px]"
+                  type="submit"
+                  data-testid="save-button"
+                >
+                  Save changes
+                </Button>
+              </div>
             </div>
-          </div>
-        </Disclosure.Panel>
-      </Disclosure>
+          </Disclosure.Panel>
+        </Disclosure>
+      )}
     </div>
   )
 }

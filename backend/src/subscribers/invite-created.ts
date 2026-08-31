@@ -1,7 +1,7 @@
 import { INotificationModuleService, IUserModuleService } from '@medusajs/framework/types'
 import { Modules } from '@medusajs/framework/utils'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/framework'
-import { BACKEND_URL } from '../lib/constants'
+import { BACKEND_URL, RESEND_FROM_EMAIL } from '../lib/constants'
 import { EmailTemplates } from '../modules/email-notifications/templates'
 
 export default async function userInviteHandler({
@@ -22,8 +22,12 @@ export default async function userInviteHandler({
       template: EmailTemplates.INVITE_USER,
       data: {
         emailOptions: {
-          replyTo: 'info@example.com',
-          subject: "You've been invited to Medusa!"
+          // RESEND_FROM_EMAIL comes from lib/constants, which falls back to
+          // RESEND_FROM. Reading process.env directly here missed that
+          // fallback, so the reply-to was empty on every deploy configured
+          // with RESEND_FROM, which is what the Railway template sets.
+          replyTo: process.env.ORDER_REPLY_TO_EMAIL || RESEND_FROM_EMAIL,
+          subject: `You've been invited to ${process.env.STORE_NAME || 'your store'}!`
         },
         inviteLink: `${BACKEND_URL}/app/invite?token=${invite.token}`,
         preview: 'The administration dashboard awaits...'

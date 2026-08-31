@@ -10,6 +10,37 @@ pnpm email:dev
 
 This will start a react-email server at `http://localhost:3002` where you can preview the email templates.
 
+## What this template sends
+
+| Template | Sent by | When |
+| -------- | ------- | ---- |
+| `order-placed` | `src/subscribers/order-placed.ts` | A shopper completes an order. |
+| `invite-user` | `src/subscribers/invite-created.ts` | An administrator is invited, or the invite is resent. |
+| `reset-password` | `src/subscribers/password-reset.ts` | Someone asks to reset a password, whether a shopper or an administrator. |
+
+All three need a configured provider: `RESEND_API_KEY` **and** `RESEND_FROM_EMAIL`
+together (or the SendGrid pair). With only one of a pair set, the notification
+module is not registered at all and nothing sends, silently.
+
+### A note on the reset-password link
+
+The email links to different places depending on who asked:
+
+- **Administrator** (`actor_type: "user"`): `BACKEND_URL/app/reset-password?token=...`.
+  That page is served by this backend, so nothing needs configuring.
+- **Shopper** (anything else): `STOREFRONT_URL/reset-password?token=...&email=...`,
+  where `STOREFRONT_URL` falls back to the first plain origin in `STORE_CORS`.
+  No region prefix, because the storefront's middleware adds one and keeps the
+  query string.
+
+The destination is taken from server configuration only, never from the request.
+The reset-password API route accepts a caller-supplied `metadata` bag, and
+letting a callback URL through it would let anyone mail a real customer a real
+reset token pointing at a site they control.
+
+In development (`NODE_ENV=development`) the subscriber also prints the link to
+the console, so the flow can be exercised without a mail provider.
+
 ## Base Template
 
 All email templates use a shared base template (`base.tsx`) that provides consistent styling across all emails. The base template includes:

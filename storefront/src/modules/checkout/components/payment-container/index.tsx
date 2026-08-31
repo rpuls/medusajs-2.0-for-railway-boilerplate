@@ -36,6 +36,8 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
               selectedPaymentOptionId === paymentProviderId,
           }
         )}
+        data-testid="payment-option-radio"
+        data-value={paymentProviderId}
       >
         <div className="flex items-center justify-between ">
           <div className="flex items-center gap-x-4">

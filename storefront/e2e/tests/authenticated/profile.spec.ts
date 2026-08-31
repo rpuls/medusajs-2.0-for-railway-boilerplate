@@ -162,7 +162,15 @@ test.describe("Account profile tests", () => {
     })
   })
 
-  test("Verifies password changes work correctly", async ({
+  // Changing a password needs `sdk.auth.resetPassword` to mail a token, then
+  // `sdk.auth.updateProvider` to consume it. The backend has no
+  // `auth.password_reset` subscriber and no reset email template, so neither
+  // half exists yet and the profile section is deliberately read-only.
+  //
+  // This spec never passed: the form's action was `(() => {}) as any`, so the
+  // success message it waits for could never appear. Keeping it as the
+  // acceptance criteria for when the flow is built.
+  test.fixme("Verifies password changes work correctly", async ({
     loginPage,
     accountProfilePage: profilePage,
     accountOverviewPage: overviewPage,
@@ -191,53 +199,37 @@ test.describe("Account profile tests", () => {
     })
   })
 
-  test("Check if changing email address updates user correctly", async ({
-    loginPage,
+  test("Password cannot be edited from the profile page", async ({
+    accountProfilePage: profilePage,
+    accountOverviewPage: overviewPage,
+  }) => {
+    await overviewPage.goto()
+    await profilePage.profileLink.click()
+    await profilePage.profileWrapper.waitFor({ state: "visible" })
+
+    await expect(profilePage.accountPasswordEditor).toBeVisible()
+    await expect(profilePage.passwordEditButton).toHaveCount(0)
+  })
+
+  // Replaces "Check if changing email address updates user correctly".
+  //
+  // A customer's email cannot be changed from the storefront at all: Medusa
+  // declares `StoreUpdateCustomer extends Omit<BaseUpdateCustomer, "email">`,
+  // because the email is tied to the auth identity. The old spec could not
+  // pass either: it expected a failed login with the previous email, but the
+  // form's save call was commented out, so the email never changed and that
+  // login succeeded. The form nonetheless reported success, which is what made
+  // this worth locking down.
+  test("Email is shown read-only and cannot be edited", async ({
     accountProfilePage: profilePage,
     accountOverviewPage: accountPage,
   }) => {
-    await test.step("Update the user email", async () => {
-      await accountPage.goto()
-      await accountPage.welcomeMessage.waitFor({ state: "visible" })
-      await accountPage.profileLink.click()
-      await profilePage.profileWrapper.waitFor({ state: "visible" })
-      await profilePage.emailEditButton.click()
-      await profilePage.emailInput.fill("test-111@example.com")
-      await profilePage.emailSaveButton.click()
-      await profilePage.emailSuccessMessage.waitFor({ state: "visible" })
-    })
+    await accountPage.goto()
+    await accountPage.welcomeMessage.waitFor({ state: "visible" })
+    await accountPage.profileLink.click()
+    await profilePage.profileWrapper.waitFor({ state: "visible" })
 
-    await test.step("Try logging in again with the old email", async () => {
-      await profilePage.logoutLink.click()
-      await loginPage.container.waitFor({ state: "visible" })
-      await loginPage.emailInput.fill("test@example.com")
-      await loginPage.passwordInput.fill("password")
-      await loginPage.signInButton.click()
-      await loginPage.errorMessage.waitFor({ state: "visible" })
-    })
-
-    await test.step("Login with the new email", async () => {
-      await loginPage.emailInput.fill("test-111@example.com")
-      await loginPage.signInButton.click()
-      await accountPage.welcomeMessage.waitFor({ state: "visible" })
-    })
-
-    await test.step("Set the email back to test@example.com", async () => {
-      await accountPage.profileLink.click()
-      await profilePage.profileWrapper.waitFor({ state: "visible" })
-      await profilePage.emailEditButton.click()
-      await profilePage.emailInput.fill("test@example.com")
-      await profilePage.emailSaveButton.click()
-      await profilePage.emailSuccessMessage.waitFor({ state: "visible" })
-    })
-
-    await test.step("Try logging out and logging in with the first email", async () => {
-      await profilePage.logoutLink.click()
-      await loginPage.container.waitFor({ state: "visible" })
-      await loginPage.emailInput.fill("test@example.com")
-      await loginPage.passwordInput.fill("password")
-      await loginPage.signInButton.click()
-      await accountPage.welcomeMessage.waitFor({ state: "visible" })
-    })
+    await expect(profilePage.savedEmail).toHaveText("test@example.com")
+    await expect(profilePage.emailEditButton).toHaveCount(0)
   })
 })

@@ -1,4 +1,4 @@
-import { Button, Link, Section, Text, Img, Hr } from '@react-email/components'
+import { Button, Link, Section, Text, Hr } from '@react-email/components'
 import { Base } from './base'
 
 /**
@@ -19,6 +19,11 @@ export interface InviteUserEmailProps {
    * in mail providers like Gmail
    */
   preview?: string
+  /**
+   * The name of the store the user is being invited to. Defaults to the
+   * STORE_NAME environment variable, or "your store" when unset.
+   */
+  storeName?: string
 }
 
 /**
@@ -33,20 +38,15 @@ export const isInviteUserData = (data: any): data is InviteUserEmailProps =>
  */
 export const InviteUserEmail = ({
   inviteLink,
-  preview = `You've been invited to Medusa!`,
+  storeName = process.env.STORE_NAME || 'your store',
+  preview = `You've been invited to join ${process.env.STORE_NAME || 'your store'} as an administrator`,
 }: InviteUserEmailProps) => {
   return (
     <Base preview={preview}>
-      <Section className="mt-[32px]">
-        <Img
-          src="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg"
-          alt="Medusa"
-          className="mx-auto w-28"
-        />
-      </Section>
-      <Section className="text-center">
+      {/* Add your own store logo here, e.g. <Img src="https://yourstore.com/logo.png" alt="Your store" className="mx-auto w-28" /> */}
+      <Section className="text-center mt-[32px]">
         <Text className="text-black text-[14px] leading-[24px]">
-          You&apos;ve been invited to be an administrator on <strong>Medusa</strong>.
+          You&apos;ve been invited to be an administrator on <strong>{storeName}</strong>.
         </Text>
         <Section className="mt-4 mb-[32px]">
           <Button

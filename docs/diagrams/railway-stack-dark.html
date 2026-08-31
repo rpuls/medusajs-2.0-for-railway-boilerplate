@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What one click deploys · Architecture (dark)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #2d3142;
+      --color-ink:     #f5f5f5;
+      --color-muted:   #bfc0c0;
+      --color-accent:  #f08a59;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1200px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Medusa 2.0 on Railway</p>
+    <h1>What one click deploys</h1>
+
+    <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="railway-stack-dark-title railway-stack-dark-desc">
+      <title id="railway-stack-dark-title">What one click deploys on Railway</title>
+      <desc id="railway-stack-dark-desc">Architecture diagram. Shoppers reach a Next.js storefront and the store owner reaches the Medusa backend directly. The storefront calls the backend for the Store API and MeiliSearch for product search. The backend owns Postgres, Redis, MeiliSearch and a bucket, and a read-only proxy serves product images out of that bucket to shoppers. All seven run inside one Railway project, and the backend calls Stripe and Resend outside it.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f08a59"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6a95d8"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#2d3142"/>
+
+      <!-- Zone: the Railway project (drawn before arrows and nodes) -->
+      <rect x="192" y="144" width="728" height="320" rx="8"
+            fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+      <rect x="216" y="148" width="136" height="12" rx="2" fill="#2d3142"/>
+      <text x="284" y="157" fill="rgba(245,245,245,0.35)" font-size="7" font-family="'Geist Mono', monospace"
+            text-anchor="middle" letter-spacing="0.14em">ONE RAILWAY PROJECT</text>
+
+      <!-- Arrows first, so z-order puts them behind the nodes -->
+
+      <!-- Shopper into the storefront -->
+      <line x1="152" y1="212" x2="216" y2="212" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+      <!-- Store owner over the top, into the backend's admin dashboard -->
+      <path d="M 152,68 H 528 Q 536,68 536,76 V 176"
+            fill="none" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+      <!-- Primary flow: storefront to backend -->
+      <line x1="376" y1="212" x2="456" y2="212" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+      <!-- Storefront queries the search index directly -->
+      <line x1="260" y1="248" x2="260" y2="344" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Backend to its four managed services -->
+      <path d="M 468,248 V 288 Q 468,296 460,296 H 314 Q 306,296 306,304 V 344"
+            fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 496,248 V 304 Q 496,312 488,312 H 426 Q 418,312 418,320 V 344"
+            fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="560" y1="248" x2="560" y2="344" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="628" y1="248" x2="628" y2="344" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- The proxy reads out of the bucket. Railway buckets have no public
+           read, so this is the only way a product image reaches a browser. -->
+      <line x1="776" y1="372" x2="740" y2="372" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Shopper's browser loads product images from the proxy, not the
+           bucket. Routed under the data row, which is open canvas. -->
+      <path d="M 96,240 V 416 Q 96,424 104,424 H 828 Q 836,424 836,416 V 400"
+            fill="none" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+      <!-- Backend out to the third parties. Inner destination takes the higher
+           channel so the outer run never crosses the inner riser. -->
+      <path d="M 568,176 V 128 Q 568,120 576,120 H 696 Q 704,120 704,112 V 96"
+            fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 608,176 V 144 Q 608,136 616,136 H 848 Q 856,136 856,128 V 96"
+            fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Arrow labels: opaque mask, 8px clear of the stroke -->
+      <rect x="164" y="192" width="40" height="12" rx="2" fill="#2d3142"/>
+      <text x="184" y="201" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTPS</text>
+
+      <rect x="256" y="48" width="48" height="12" rx="2" fill="#2d3142"/>
+      <text x="280" y="57" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ADMIN</text>
+
+      <rect x="384" y="192" width="64" height="12" rx="2" fill="#2d3142"/>
+      <text x="416" y="201" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STORE API</text>
+
+      <rect x="200" y="288" width="52" height="12" rx="2" fill="#2d3142"/>
+      <text x="226" y="297" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SEARCH</text>
+
+      <rect x="362" y="276" width="48" height="12" rx="2" fill="#2d3142"/>
+      <text x="386" y="285" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">INDEX</text>
+
+      <rect x="504" y="268" width="36" height="12" rx="2" fill="#2d3142"/>
+      <text x="522" y="277" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SQL</text>
+
+      <rect x="500" y="300" width="48" height="12" rx="2" fill="#2d3142"/>
+      <text x="524" y="309" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EVENTS</text>
+
+      <rect x="636" y="300" width="48" height="12" rx="2" fill="#2d3142"/>
+      <text x="660" y="309" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MEDIA</text>
+
+      <rect x="744" y="352" width="28" height="12" rx="2" fill="#2d3142"/>
+      <text x="758" y="361" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">READ</text>
+
+      <rect x="400" y="432" width="52" height="12" rx="2" fill="#2d3142"/>
+      <text x="426" y="441" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">IMAGES</text>
+
+      <rect x="584" y="100" width="44" height="12" rx="2" fill="#2d3142"/>
+      <text x="606" y="109" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EMAIL</text>
+
+      <rect x="784" y="104" width="64" height="12" rx="2" fill="#2d3142"/>
+      <text x="816" y="113" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PAYMENTS</text>
+
+      <!-- Node: Store owner -->
+      <rect x="40" y="40" width="112" height="56" rx="6" fill="#2d3142"/>
+      <rect x="40" y="40" width="112" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+      <rect x="48" y="48" width="32" height="12" rx="2" fill="transparent" stroke="rgba(142,140,131,0.40)" stroke-width="0.8"/>
+      <text x="64" y="57" fill="#8e98ac" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USER</text>
+      <text x="96" y="78" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Store owner</text>
+
+      <!-- Node: Shopper -->
+      <rect x="40" y="184" width="112" height="56" rx="6" fill="#2d3142"/>
+      <rect x="40" y="184" width="112" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+      <rect x="48" y="192" width="32" height="12" rx="2" fill="transparent" stroke="rgba(142,140,131,0.40)" stroke-width="0.8"/>
+      <text x="64" y="201" fill="#8e98ac" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">USER</text>
+      <text x="96" y="222" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Shopper</text>
+
+      <!-- Node: Resend -->
+      <rect x="640" y="40" width="128" height="56" rx="6" fill="#2d3142"/>
+      <rect x="640" y="40" width="128" height="56" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+      <rect x="648" y="48" width="28" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.22)" stroke-width="0.8"/>
+      <text x="662" y="57" fill="#8e98ac" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+      <text x="704" y="78" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Resend</text>
+
+      <!-- Node: Stripe -->
+      <rect x="792" y="40" width="128" height="56" rx="6" fill="#2d3142"/>
+      <rect x="792" y="40" width="128" height="56" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+      <rect x="800" y="48" width="28" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.22)" stroke-width="0.8"/>
+      <text x="814" y="57" fill="#8e98ac" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+      <text x="856" y="78" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Stripe</text>
+
+      <!-- Node: Storefront -->
+      <rect x="216" y="176" width="160" height="72" rx="6" fill="#2d3142"/>
+      <rect x="216" y="176" width="160" height="72" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+      <rect x="224" y="184" width="28" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.40)" stroke-width="0.8"/>
+      <text x="238" y="193" fill="#f5f5f5" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
+      <text x="296" y="220" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Storefront</text>
+      <text x="296" y="236" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Next.js 15 · React 19</text>
+
+      <!-- Node: Backend (focal) -->
+      <rect x="456" y="176" width="176" height="72" rx="6" fill="#2d3142"/>
+      <rect x="456" y="176" width="176" height="72" rx="6" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+      <rect x="464" y="184" width="28" height="12" rx="2" fill="transparent" stroke="rgba(240,138,89,0.50)" stroke-width="0.8"/>
+      <text x="478" y="193" fill="#f08a59" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
+      <text x="544" y="220" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Backend</text>
+      <text x="544" y="236" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Medusa 2.19 · admin /app</text>
+
+      <!-- Node: MeiliSearch -->
+      <rect x="216" y="344" width="116" height="56" rx="6" fill="#2d3142"/>
+      <rect x="216" y="344" width="116" height="56" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+      <rect x="224" y="352" width="28" height="12" rx="2" fill="transparent" stroke="rgba(191,192,192,0.50)" stroke-width="0.8"/>
+      <text x="238" y="361" fill="#bfc0c0" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">IDX</text>
+      <text x="274" y="382" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">MeiliSearch</text>
+
+      <!-- Node: Postgres -->
+      <rect x="352" y="344" width="116" height="56" rx="6" fill="#2d3142"/>
+      <rect x="352" y="344" width="116" height="56" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+      <rect x="360" y="352" width="28" height="12" rx="2" fill="transparent" stroke="rgba(191,192,192,0.50)" stroke-width="0.8"/>
+      <text x="374" y="361" fill="#bfc0c0" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
+      <text x="410" y="382" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Postgres</text>
+
+      <!-- Node: Redis -->
+      <rect x="488" y="344" width="116" height="56" rx="6" fill="#2d3142"/>
+      <rect x="488" y="344" width="116" height="56" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+      <rect x="496" y="352" width="28" height="12" rx="2" fill="transparent" stroke="rgba(191,192,192,0.50)" stroke-width="0.8"/>
+      <text x="510" y="361" fill="#bfc0c0" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BUS</text>
+      <text x="546" y="382" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Redis</text>
+
+      <!-- Node: Bucket -->
+      <rect x="624" y="344" width="116" height="56" rx="6" fill="#2d3142"/>
+      <rect x="624" y="344" width="116" height="56" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+      <rect x="632" y="352" width="28" height="12" rx="2" fill="transparent" stroke="rgba(191,192,192,0.50)" stroke-width="0.8"/>
+      <text x="646" y="361" fill="#bfc0c0" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OBJ</text>
+      <text x="682" y="382" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bucket</text>
+
+      <!-- Node: Bucket-proxy -->
+      <rect x="776" y="344" width="120" height="56" rx="6" fill="#2d3142"/>
+      <rect x="776" y="344" width="120" height="56" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+      <rect x="784" y="352" width="28" height="12" rx="2" fill="transparent" stroke="rgba(245,245,245,0.22)" stroke-width="0.8"/>
+      <text x="798" y="361" fill="#8e98ac" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FN</text>
+      <text x="836" y="382" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Bucket-proxy</text>
+
+      <!-- Legend strip -->
+      <line x1="40" y1="504" x2="920" y2="504" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+      <text x="40" y="520" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+
+      <rect x="40" y="536" width="14" height="10" rx="2" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+      <text x="60" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+
+      <rect x="148" y="536" width="14" height="10" rx="2" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+      <text x="168" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">App</text>
+
+      <rect x="240" y="536" width="14" height="10" rx="2" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+      <text x="260" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Data</text>
+
+      <rect x="332" y="536" width="14" height="10" rx="2" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+      <text x="352" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Function / third party</text>
+
+      <rect x="468" y="536" width="14" height="10" rx="2" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+      <text x="488" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Person</text>
+
+      <line x1="568" y1="542" x2="596" y2="542" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="604" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">HTTP request</text>
+
+      <line x1="736" y1="542" x2="764" y2="542" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <text x="772" y="544" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Primary flow</text>
+    </svg>
+  </div>
+</body>
+</html>

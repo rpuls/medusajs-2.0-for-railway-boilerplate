@@ -1,0 +1,87 @@
+name: CI
+
+# Type checking and linting on every pull request.
+#
+# This exists because `storefront/next.config.js` deliberately ships with
+# `typescript.ignoreBuildErrors` and `eslint.ignoreDuringBuilds` turned on:
+# thousands of people deploy this repo, and their own customizations should not
+# brick a Railway deploy over a type error. The cost of that decision is that
+# nothing stops a type error reaching master, which is exactly how the storefront
+# accumulated 17 of them unnoticed. This workflow is the replacement gate.
+#
+# Deliberately no build step. `next build` needs a reachable backend for
+# generateStaticParams, and `medusa build` needs a DATABASE_URL, so neither
+# runs honestly in CI without standing up Postgres and a seeded store. That is
+# what storefront/qa/ does against a real deploy, and it is a different job from
+# this one.
+
+on:
+  pull_request:
+  push:
+    branches: [master, staging]
+
+# A new push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          # Read from backend/.nvmrc so the floor lives in one place. It is
+          # 22.12 because @medusajs/medusa@2.19 declares
+          # "^20.19.0 || >=22.12.0" and the MeiliSearch plugin declares ">=22".
+          node-version-file: backend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: backend
+        run: pnpm exec tsc --noEmit
+
+  storefront:
+    name: Storefront typecheck and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: storefront/.nvmrc
+          cache: pnpm
+          cache-dependency-path: storefront/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: storefront
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: storefront
+        run: pnpm typecheck
+
+      - name: Lint
+        working-directory: storefront
+        # `next lint` loads next.config.js, which calls checkEnvVariables() and
+        # exits 1 on a missing publishable key. The value is never used for
+        # anything here, only its presence is checked.
+        env:
+          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: pk_ci_placeholder
+        run: pnpm lint

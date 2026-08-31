@@ -4,7 +4,10 @@ import { cache } from "react"
 import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
+import { getCacheDirectives } from "./cookies"
 
+// See the note in regions.ts for why these are client.fetch calls rather than
+// the sdk.store.* helpers.
 export const getProductsById = cache(async function ({
   ids,
   regionId,
@@ -12,15 +15,16 @@ export const getProductsById = cache(async function ({
   ids: string[]
   regionId: string
 }) {
-  return sdk.store.product
-    .list(
-      {
+  return sdk.client
+    .fetch<HttpTypes.StoreProductListResponse>("/store/products", {
+      method: "GET",
+      query: {
         id: ids,
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      { next: { tags: ["products"] } }
-    )
+      ...(await getCacheDirectives("products")),
+    })
     .then(({ products }) => products)
 })
 
@@ -28,15 +32,16 @@ export const getProductByHandle = cache(async function (
   handle: string,
   regionId: string
 ) {
-  return sdk.store.product
-    .list(
-      {
+  return sdk.client
+    .fetch<HttpTypes.StoreProductListResponse>("/store/products", {
+      method: "GET",
+      query: {
         handle,
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      { next: { tags: ["products"] } }
-    )
+      ...(await getCacheDirectives("products")),
+    })
     .then(({ products }) => products[0])
 })
 
@@ -46,12 +51,12 @@ export const getProductsList = cache(async function ({
   countryCode,
 }: {
   pageParam?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: HttpTypes.StoreProductListParams
   countryCode: string
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: HttpTypes.StoreProductListParams
 }> {
   const limit = queryParams?.limit || 12
   const validPageParam = Math.max(pageParam, 1);
@@ -64,17 +69,18 @@ export const getProductsList = cache(async function ({
       nextPage: null,
     }
   }
-  return sdk.store.product
-    .list(
-      {
+  return sdk.client
+    .fetch<HttpTypes.StoreProductListResponse>("/store/products", {
+      method: "GET",
+      query: {
         limit,
         offset,
         region_id: region.id,
         fields: "*variants.calculated_price",
         ...queryParams,
       },
-      { next: { tags: ["products"] } }
-    )
+      ...(await getCacheDirectives("products")),
+    })
     .then(({ products, count }) => {
       const nextPage = count > offset + limit ? pageParam + 1 : null
 
@@ -100,13 +106,13 @@ export const getProductsListWithSort = cache(async function ({
   countryCode,
 }: {
   page?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: HttpTypes.StoreProductListParams
   sortBy?: SortOptions
   countryCode: string
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: HttpTypes.StoreProductListParams
 }> {
   const limit = queryParams?.limit || 12
 

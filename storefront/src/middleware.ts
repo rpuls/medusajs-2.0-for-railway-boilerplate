@@ -4,12 +4,27 @@ import { NextRequest, NextResponse } from "next/server"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
-const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us"
+// Must be a country the backend actually has a region for. The seed script
+// creates a single "Europe" region covering gb, de, dk, se, fr, es and it, so
+// "gb" is the default that matches a freshly seeded store. Change this together
+// with the regions in backend/src/scripts/seed.ts.
+const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "gb"
 
 const regionMapCache = {
   regionMap: new Map<string, HttpTypes.StoreRegion>(),
   regionMapUpdated: Date.now(),
 }
+
+// httpOnly because nothing on the client ever reads this. lib/data/cookies.ts
+// is "server-only", so the id is consumed exclusively during server rendering.
+// sameSite is left at the default rather than "strict" on purpose: a visitor
+// arriving from an external link would otherwise not send it, be issued a new
+// one, and lose their warm cache on every inbound visit.
+const CACHE_ID_COOKIE_OPTIONS = {
+  maxAge: 60 * 60 * 24,
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+} as const
 
 async function getRegionMap() {
   const { regionMap, regionMapUpdated } = regionMapCache
@@ -72,6 +87,12 @@ async function getCountryCode(
       countryCode = DEFAULT_REGION
     } else if (regionMap.keys().next().value) {
       countryCode = regionMap.keys().next().value
+      // Falling back here means NEXT_PUBLIC_DEFAULT_REGION names a country no
+      // region covers, so shoppers land somewhere arbitrary with that region's
+      // currency. Say so rather than failing over silently.
+      console.warn(
+        `Middleware.ts: no region covers NEXT_PUBLIC_DEFAULT_REGION "${DEFAULT_REGION}". Falling back to "${countryCode}". Add that country to a region in Medusa Admin, or set NEXT_PUBLIC_DEFAULT_REGION to one you already serve.`
+      )
     }
 
     return countryCode
@@ -85,15 +106,19 @@ async function getCountryCode(
 }
 
 /**
- * Middleware to handle region selection and onboarding status.
+ * Middleware to handle region selection.
  */
 export async function middleware(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const isOnboarding = searchParams.get("onboarding") === "true"
   const cartId = searchParams.get("cart_id")
   const checkoutStep = searchParams.get("step")
-  const onboardingCookie = request.cookies.get("_medusa_onboarding")
   const cartIdCookie = request.cookies.get("_medusa_cart_id")
+  const cacheIdCookie = request.cookies.get("_medusa_cache_id")
+
+  // Every visitor gets an id that scopes their Next cache tags. Without it a
+  // single shopper's revalidateTag("carts") would purge every shopper's
+  // cached cart. See getCacheTag in lib/data/cookies.ts.
+  const cacheId = cacheIdCookie?.value || crypto.randomUUID()
 
   const regionMap = await getRegionMap()
 
@@ -102,13 +127,32 @@ export async function middleware(request: NextRequest) {
   const urlHasCountryCode =
     countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
 
+  // Put the id on the request as well as the response, so the render that is
+  // about to happen can already read it.
+  //
+  // Upstream's starter instead issues an extra 307 to the same URL on a
+  // visitor's first request purely to plant this cookie. That costs a redirect
+  // on every cold visit and loops forever for a client that refuses cookies.
+  // Forwarding it on the request avoids both. If the forward ever stopped
+  // working the only consequence would be that the first render goes uncached,
+  // which is what happens today anyway.
+  request.cookies.set("_medusa_cache_id", cacheId)
+
   // check if one of the country codes is in the url
-  if (
-    urlHasCountryCode &&
-    (!isOnboarding || onboardingCookie) &&
-    (!cartId || cartIdCookie)
-  ) {
-    return NextResponse.next()
+  if (urlHasCountryCode && (!cartId || cartIdCookie)) {
+    const response = NextResponse.next({
+      request: { headers: request.headers },
+    })
+
+    if (!cacheIdCookie) {
+      response.cookies.set(
+        "_medusa_cache_id",
+        cacheId,
+        CACHE_ID_COOKIE_OPTIONS
+      )
+    }
+
+    return response
   }
 
   const redirectPath =
@@ -133,14 +177,30 @@ export async function middleware(request: NextRequest) {
     response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
   }
 
-  // Set a cookie to indicate that we're onboarding. This is used to show the onboarding flow.
-  if (isOnboarding) {
-    response.cookies.set("_medusa_onboarding", "true", { maxAge: 60 * 60 * 24 })
+  // Set last, because the branches above replace `response` wholesale and a
+  // cookie set on a discarded response is silently lost.
+  if (!cacheIdCookie) {
+    response.cookies.set("_medusa_cache_id", cacheId, CACHE_ID_COOKIE_OPTIONS)
   }
 
   return response
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|favicon.ico|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)"], // prevents redirecting on static files
+  // Prevents redirecting on static files.
+  //
+  // sitemap.xml, robots.txt and opengraph-image are excluded because they are
+  // NOT region-prefixed: they are metadata routes at the app root, and without
+  // this the middleware 307s a crawler from /sitemap.xml to /gb/sitemap.xml,
+  // which does not exist. Generated by src/app/sitemap.ts, src/app/robots.ts
+  // and src/app/opengraph-image.tsx.
+  //
+  // opengraph-image carries no file extension, so the image rules further down
+  // this pattern do not cover it, and Next appends a cache-busting query string
+  // to the URL it puts in the og:image tag. Matching the path prefix handles
+  // both. Verified by fetching it: without this entry the route answers 307 to
+  // /gb/opengraph-image and every shared link loses its preview card.
+  matcher: [
+    "/((?!api|_next/static|favicon.ico|sitemap.xml|robots.txt|opengraph-image|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)",
+  ],
 }

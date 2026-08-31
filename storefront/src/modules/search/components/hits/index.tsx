@@ -33,21 +33,27 @@ const Hits = ({
         }
       )}
     >
-      <div
+      {/* These were <li> elements inside a <div>, which is invalid, and were
+          keyed by index even though the list reorders on every keystroke. */}
+      <ul
         className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"
         data-testid="search-results"
       >
-        {hits.slice(0, 6).map((hit, index) => (
-          <li
-            key={index}
-            className={clx("list-none", {
-              "hidden sm:block": index > 2,
-            })}
-          >
-            <Hit hit={hit as unknown as ProductHit} />
-          </li>
-        ))}
-      </div>
+        {hits.slice(0, 6).map((hit, index) => {
+          const product = hit as unknown as ProductHit
+
+          return (
+            <li
+              key={product.id ?? hit.objectID}
+              className={clx("list-none", {
+                "hidden sm:block": index > 2,
+              })}
+            >
+              <Hit hit={product} />
+            </li>
+          )
+        })}
+      </ul>
       <ShowAll />
     </div>
   )

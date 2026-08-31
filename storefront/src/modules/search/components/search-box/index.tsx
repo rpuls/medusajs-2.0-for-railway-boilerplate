@@ -1,3 +1,5 @@
+"use client"
+
 import { XMarkMini } from "@medusajs/icons"
 import { FormEvent } from "react"
 import { useRouter } from "next/navigation"
