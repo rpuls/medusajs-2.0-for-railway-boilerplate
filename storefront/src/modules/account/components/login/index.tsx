@@ -49,6 +49,13 @@ const Login = ({ setCurrentView }: Props) => {
           Sign in
         </SubmitButton>
       </form>
+      <button
+        onClick={() => setCurrentView(LOGIN_VIEW.FORGOT_PASSWORD)}
+        className="underline text-small-regular mt-4"
+        data-testid="forgot-password-button"
+      >
+        Forgot your password?
+      </button>
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
         Not a member?{" "}
         <button

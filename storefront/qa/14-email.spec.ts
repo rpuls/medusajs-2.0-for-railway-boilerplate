@@ -99,6 +99,25 @@ test.describe("Order confirmation email", () => {
     page,
     request,
   }) => {
+    /*
+     * Skipped when no Resend key is configured, matching the second test below.
+     *
+     * Without a notification provider the backend logs "Could not find a
+     * notification provider for channel: email" and writes no notification
+     * record at all, so this poll can only run its full 180 seconds and then
+     * fail. That is the normal state of a local stack, and a four minute red
+     * result on every local run trains you to ignore this file.
+     *
+     * Coverage on a real deploy is unchanged: local-tools/qa-remote.mjs reads
+     * RESEND_API_KEY off the Backend service, and prints "no Resend key, email
+     * spec will skip" in its header when it is absent, so a deploy that lost
+     * its key is still visible.
+     */
+    test.skip(
+      !qaEnv.resendApiKey,
+      "No Resend key configured, so no email can be sent to observe"
+    )
+
     const token = await adminToken(request)
 
     /*

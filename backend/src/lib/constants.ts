@@ -1,6 +1,6 @@
 import { loadEnv } from '@medusajs/framework/utils'
 
-import { assertValue } from 'utils/assert-value'
+import { assertValue, warnIfWeakSecret } from 'utils/assert-value'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -43,6 +43,37 @@ export const AUTH_CORS = process.env.AUTH_CORS;
 export const STORE_CORS = process.env.STORE_CORS;
 
 /**
+ * Public URL of the storefront.
+ *
+ * Only needed for links this backend puts in customer-facing emails, which
+ * today means the password reset link. The admin equivalent needs nothing,
+ * because the dashboard is served by this same service at BACKEND_URL/app.
+ *
+ * Falls back to the first plain origin in STORE_CORS rather than requiring a
+ * new environment variable, so no existing deploy has to change a dashboard
+ * setting to get working password resets. STORE_CORS is the storefront's own
+ * origin by definition, and any deploy where a browser talks to this API has
+ * it set correctly already. Entries that are not plain http(s) origins are
+ * skipped: Medusa also accepts regex patterns here, and a regex is not a URL.
+ *
+ * Deliberately NOT taken from the request. The reset-password route accepts a
+ * `metadata` bag from the caller, and threading a callback URL through it would
+ * let anyone send a real customer a real reset token pointing at a site they
+ * control. The destination has to come from server configuration only.
+ */
+const firstCorsOrigin = (value?: string): string | undefined =>
+  value
+    ?.split(',')
+    .map((entry) => entry.trim())
+    .find((entry) => /^https?:\/\/[^\s/]+$/.test(entry))
+
+export const STOREFRONT_URL = (
+  process.env.STOREFRONT_URL ||
+  firstCorsOrigin(process.env.STORE_CORS) ||
+  'http://localhost:8000'
+).replace(/\/+$/, '')
+
+/**
  * JWT Secret used for signing JWT tokens
  */
 export const JWT_SECRET = assertValue(
@@ -57,6 +88,15 @@ export const COOKIE_SECRET = assertValue(
   process.env.COOKIE_SECRET,
   'Environment variable for COOKIE_SECRET is not set',
 )
+
+// Fires at boot, from medusa-config.js, and only in production. See
+// warnIfWeakSecret for why this warns rather than refusing to start.
+// MEDUSA_ADMIN_PASSWORD is checked here too even though this backend never
+// reads it: medusajs-launch-utils uses it to create the first admin user, so
+// leaving it on the placeholder is a dashboard takeover on a public URL.
+warnIfWeakSecret('JWT_SECRET', JWT_SECRET)
+warnIfWeakSecret('COOKIE_SECRET', COOKIE_SECRET)
+warnIfWeakSecret('MEDUSA_ADMIN_PASSWORD', process.env.MEDUSA_ADMIN_PASSWORD)
 
 /**
  * (optional) S3-compatible file storage configuration.

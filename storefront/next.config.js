@@ -10,6 +10,33 @@ const mediaHostHasScheme = mediaHost ? /^https?:\/\//.test(mediaHost) : false
 const mediaUrl = mediaHost ? new URL(mediaHostHasScheme ? mediaHost : `https://${mediaHost}`) : null
 
 /**
+ * Turns a configured URL into a remotePattern.
+ *
+ * Stripping the scheme with a regex, which is what this file used to do, leaves
+ * the port attached to the hostname. `http://localhost:9000` became
+ * `hostname: "localhost:9000"`, which matches nothing: Next compares the
+ * hostname alone and carries the port in its own field. Local development and
+ * any self-hosted backend on a non-default port were silently unmatched.
+ *
+ * Returns an empty array rather than throwing, so a malformed env var cannot
+ * take down a boot. This module is loaded by `next start` too, not just builds.
+ */
+const remotePattern = (value) => {
+  if (!value) return []
+  try {
+    const url = new URL(/^https?:\/\//.test(value) ? value : `https://${value}`)
+    return [{
+      protocol: url.protocol.replace(":", ""),
+      hostname: url.hostname,
+      ...(url.port ? { port: url.port } : {}),
+    }]
+  } catch {
+    console.warn(`next.config.js: ignoring unparseable image host "${value}"`)
+    return []
+  }
+}
+
+/**
  * @type {import('next').NextConfig}
  */
 const nextConfig = {
@@ -30,18 +57,10 @@ const nextConfig = {
         protocol: "http",
         hostname: "localhost",
       },
-      ...(process.env.NEXT_PUBLIC_BASE_URL
-        ? [{ // Note: needed to serve images from /public folder
-            protocol: process.env.NEXT_PUBLIC_BASE_URL.startsWith("https") ? "https" : "http",
-            hostname: process.env.NEXT_PUBLIC_BASE_URL.replace(/^https?:\/\//, ""),
-          }]
-        : []),
-      ...(process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
-        ? [{ // Note: only needed when using local-file for product media
-            protocol: process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL.startsWith("https") ? "https" : "http",
-            hostname: process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL.replace(/^https?:\/\//, ""),
-          }]
-        : []),
+      // Needed to serve images from the /public folder
+      ...remotePattern(process.env.NEXT_PUBLIC_BASE_URL),
+      // Only needed when the backend uses local-file storage for product media
+      ...remotePattern(process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL),
       { // Note: thumbnails for the setup-video cards in the example homepage
         // section. Can be removed along with src/modules/home/components/hero.
         protocol: "https",

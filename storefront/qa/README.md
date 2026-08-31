@@ -57,6 +57,12 @@ so CI can override without editing files.
 | `NEXT_PUBLIC_STORE_NAME` | Asserted in the nav, footer and titles. |
 | `NEXT_PUBLIC_DEFAULT_REGION` | Country prefix every route is tested under. |
 | `MEDUSA_ADMIN_EMAIL` / `MEDUSA_ADMIN_PASSWORD` | Admin dashboard sign-in. |
+| `NEXT_PUBLIC_STRIPE_KEY` | Presence alone decides whether checkout is expected to show a card form. |
+| `STRIPE_API_KEY` | Optional. Lets `13-payment` confirm the charge with Stripe instead of trusting the confirmation page. |
+| `RESEND_API_KEY` | Optional. Lets `14-email` and `15-password-reset` read the sent message back from Resend. Both skip without it. |
+
+`node local-tools/qa-remote.mjs` fills all of these in from a deployed Railway
+project, so a run against a real deploy needs no copying by hand.
 
 ## Test data
 
@@ -85,6 +91,15 @@ Mostly the stock seed. Two extras:
   customers and real orders. Emails are namespaced per run
   (`qa-<runid>-<n>@example.com`) so repeated runs stay independent. Nothing is
   cleaned up afterwards, because the storefront cannot delete either.
+
+- **One shared, real inbox.** `14-email` and `15-password-reset` both use
+  `delivered@resend.dev`, Resend's own test address. They have to send a genuine
+  message to read it back, and a fresh `@example.com` address would hard bounce
+  on every run and erode the sending domain's reputation.
+  `15-password-reset` reuses that one customer account rather than creating a
+  new one each run: resetting a password needs neither the old password nor a
+  session, so the first run registers it and later runs tolerate the conflict
+  and reset it again. Its password therefore changes every run by design.
 
 ## Run it against a production build too
 
@@ -125,3 +140,19 @@ pnpm build:next && npx next start -p 8000
 | `10-admin` | admin sign-in, products, orders, customers, regions, keys |
 | `11-interactive-ui` | Headless UI: menus, modals, dropdowns, radios |
 | `12-mobile` | sticky action bar, variant sheet, mobile checkout |
+| `13-payment` | a real Stripe card charge, cross-checked against the Stripe API |
+| `14-email` | order confirmation email, checked in Medusa and then at Resend |
+| `15-password-reset` | the reset flow end to end, token read out of the sent email |
+| `16-file-upload` | product media storage: upload, public readability, delete |
+
+The last four reach outside the storefront on purpose. An email, a charge or an
+object in a bucket cannot be observed from the browser, and that blind spot is
+exactly how "order confirmations have never sent on Railway" survived the entire
+2.x line with a green suite. The ones needing a key skip themselves when it is
+absent rather than passing quietly.
+
+`16-file-upload` has one assertion worth knowing about in advance: it fetches
+the uploaded file **with no credentials**, because that is the condition a
+product image has to meet. If your bucket is private, that test goes red and it
+is telling the truth. Railway's own buckets were private-only as of July 2026,
+so a deploy using one needs a public proxy in front of it.
