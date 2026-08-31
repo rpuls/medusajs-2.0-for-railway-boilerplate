@@ -241,7 +241,7 @@ If this template saved you a day, [sponsoring](https://github.com/sponsors/rpuls
 ## Useful resources
 
 - How to set up credit card payment with the Stripe payment module: https://youtu.be/dcSOpIzc1Og
-- https://funkyton.com/medusajs-2-0-is-finally-here/#succuessfully-deployed-whats-next
+- https://funkyton.com/medusajs-2-0-is-finally-here/#successfully-deployed-whats-next
 
 ---
 
