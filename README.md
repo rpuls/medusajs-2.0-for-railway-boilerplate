@@ -63,10 +63,22 @@ A monorepo combining the official open-source MedusaJS 2.0 backend with the Medu
 
 Medusa is used as published, with no fork and no patches to the core, so the [official Medusa documentation](https://docs.medusajs.com/) applies as normal. What this template adds on top is the Railway deployment setup and a set of preconfigured integrations (MeiliSearch search, Stripe payments, Resend email, S3-compatible file storage), all built with Medusa's own module and plugin APIs.
 
-> **Looking for official Medusa hosting?** [Medusa Cloud](https://medusajs.com/cloud) is
-> the hosted platform built by the Medusa team, and it is what funds the open source
-> project this template deploys. If you would rather someone else ran the
-> infrastructure, start there.
+### Who this template is for
+
+Individuals and small operations. Someone trying e-commerce for the first time,
+a personal web shop, a merch store, a side project, an agency putting up a small
+client store, a developer evaluating Medusa. Plenty of real shops run on exactly
+this and never need anything more.
+
+It is self-hosting, so upgrades, backups and uptime are yours.
+
+**Look at Medusa Cloud if there is a serious business behind the store.** Running
+this template makes you two things at once: the person minding products, orders
+and customers, and the person minding the servers underneath them. If you would
+rather be less hands-on with the servers, or uptime is mission critical, look at
+[Medusa Cloud](https://medusajs.com/cloud), the official platform from the Medusa
+core team. Choosing it also supports the continued development of the open source
+Medusa that everything here is built on.
 
 > **Where to get help**
 >
