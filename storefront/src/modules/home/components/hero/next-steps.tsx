@@ -10,8 +10,9 @@ import { Text, clx } from "@medusajs/ui"
  * points at them in the order a shop owner needs them rather than making them
  * go hunting through the README.
  *
- * Only genuinely outstanding work belongs here. Search is not listed because a
- * Railway deploy configures MeiliSearch automatically.
+ * Only genuinely outstanding work belongs here. Search is not listed because it
+ * works on every deploy: on MeiliSearch in the full template, and on Medusa's
+ * Postgres search where there is no MeiliSearch.
  *
  * Covers are the videos' own YouTube thumbnails. hqdefault.jpg exists for every
  * video (maxresdefault does not), and object-cover crops its 4:3 letterboxing
@@ -39,9 +40,9 @@ const GUIDES: Guide[] = [
     description:
       "Set up Resend so order confirmations and admin invites actually reach an inbox.",
   },
-  // Deliberately no MeiliSearch card. A Railway deploy wires search up on its
-  // own, so pointing people at a setup video would send them off to do work
-  // that is already done.
+  // Deliberately no search card. Search works out of the box, so pointing
+  // people at a setup video would send them off to do work that is already
+  // done.
 ]
 
 const NextSteps = () => {

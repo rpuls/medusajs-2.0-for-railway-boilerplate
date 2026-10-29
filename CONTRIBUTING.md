@@ -26,16 +26,18 @@ place puts load on a project that has nothing to do with this repository.
 
 ## Setup
 
+Working with a coding agent? Point it at [AGENTS.md](AGENTS.md), which covers
+the same ground in the form agents read.
+
 **This project is pnpm-only.** The build scripts call pnpm directly
 (`backend/src/scripts/postBuild.js` runs `pnpm i --frozen-lockfile` inside the
 compiled server), so an npm or yarn install will get you a tree that works
 locally and a deploy that fails. Both packages ship a `pnpm-lock.yaml` and
 nothing else.
 
-Node 22.12 or later. Both packages carry a `.nvmrc`, so `nvm use` in either
+Node 22.22 or later. Both packages carry a `.nvmrc`, so `nvm use` in either
 directory picks the right one. The floor is real rather than cautious:
-`@medusajs/medusa@2.19` declares `^20.19.0 || >=22.12.0` and the MeiliSearch
-plugin declares `>=22`.
+`@medusajs/medusa@2.22` declares `>=22.22.0`.
 
 ```bash
 # from the repo root: postgres, redis, meilisearch and a MinIO bucket
@@ -44,7 +46,7 @@ docker compose up -d
 cd backend
 cp .env.template .env      # then read it, the top of the file matters
 pnpm install
-pnpm ib                    # migrate and seed
+pnpm ib                    # migrate, and seed an empty database
 pnpm dev                   # backend on :9000, admin on :9000/app
 
 cd ../storefront

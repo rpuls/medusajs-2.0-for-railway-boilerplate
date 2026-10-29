@@ -14,8 +14,9 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
  * `collection.handle`) and typed `variants` as full `StoreProductVariant`
  * objects when only four scalar fields per variant are indexed.
  *
- * `objectID` is not from Medusa. `@meilisearch/instant-meilisearch` synthesizes
- * it from the document's primary key because InstantSearch requires the field.
+ * `objectID` is not from the index. `@medusajs/instantsearch-adapter`
+ * synthesizes it from the hit's id because InstantSearch requires the field.
+ * The /results page gets the plain document, without it.
  */
 export type ProductHit = {
   id: string

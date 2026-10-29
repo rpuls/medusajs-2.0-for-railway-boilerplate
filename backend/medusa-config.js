@@ -160,6 +160,8 @@ const medusaConfig = {
     // it creates and migrates the indexes, seeds them, and keeps them current
     // from catalog events. The Meilisearch plugin is only the engine behind it.
     // Nothing here declares what an index holds - that lives in src/search.
+    // Without MeiliSearch, Medusa still loads the Search Module, on its own
+    // Postgres provider, with the same declarations.
     ...(MEILISEARCH_ENABLED ? [{
       key: Modules.SEARCH,
       resolve: '@medusajs/medusa/search',

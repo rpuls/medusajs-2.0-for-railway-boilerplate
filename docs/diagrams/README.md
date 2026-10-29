@@ -44,7 +44,7 @@ dark variant and re-export both. Drawn with the
 architecture type, `doc-inline` preset, default editorial palette.
 
 Two labels carry version numbers (`Next.js 15 · React 19` on the storefront,
-`Medusa 2.19 · admin /app` on the backend), so a major upgrade means editing the
+`Medusa 2.22 · admin /app` on the backend), so a major upgrade means editing the
 diagram alongside the version badge at the top of the root README.
 
 The layout obeys a set of connector rules that are easy to break by hand: every

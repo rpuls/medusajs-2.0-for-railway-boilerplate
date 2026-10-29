@@ -1,5 +1,12 @@
 import { test, expect, Page } from "@playwright/test"
-import { addProductToCart, newCustomer, qaEnv, register, url } from "./helpers"
+import {
+  addProductToCart,
+  login,
+  newCustomer,
+  qaEnv,
+  register,
+  url,
+} from "./helpers"
 
 const placeOrder = async (page: Page, email: string) => {
   await page.goto(url("cart"))
@@ -78,6 +85,26 @@ test.describe("Order confirmation", () => {
     await page.getByTestId("order-details-link").first().click()
     await expect(page).toHaveURL(/\/account\/orders\/details\//)
     await expect(page.getByTestId("order-details-container")).toBeVisible()
+  })
+
+  test("a cart filled before signing in still lands in the account's history", async ({
+    page,
+  }) => {
+    // Medusa 2.22.1 stopped attaching a cart to a registered customer by its
+    // email. Unless the storefront transfers the cart on sign-in, this order
+    // is placed by a guest customer with the same email, and the account's
+    // history stays empty even though checkout looked fine.
+    const customer = newCustomer("carttransfer")
+    await register(page, customer)
+    await page.getByTestId("account-nav").getByTestId("logout-button").click()
+    await expect(page.getByTestId("login-page")).toBeVisible()
+
+    await addProductToCart(page, "shorts")
+    await login(page, customer)
+    await placeOrder(page, customer.email)
+
+    await page.goto(url("account/orders"))
+    await expect(page.getByTestId("order-card").first()).toBeVisible()
   })
 
   test("an unknown order id shows the not-found page", async ({ page }) => {

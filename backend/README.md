@@ -21,7 +21,7 @@ in `src/` is this template's own configuration and additions.
 cd backend
 cp .env.template .env       # then read it, the top of the file matters
 pnpm install
-pnpm ib                     # migrate and seed
+pnpm ib                     # migrate, and seed an empty database
 pnpm dev                    # API on :9000, admin dashboard on :9000/app
 ```
 
@@ -29,19 +29,18 @@ pnpm dev                    # API on :9000, admin dashboard on :9000/app
 directly when assembling the compiled server, so an npm or yarn install gets you
 a tree that works locally and a deploy that fails.
 
-Node 22.12 or later, per `.nvmrc`. The floor is real rather than cautious:
-`@medusajs/medusa@2.19` declares `^20.19.0 || >=22.12.0` and the MeiliSearch
-plugin declares `>=22`.
+Node 22.22 or later, per `.nvmrc`. The floor is real rather than cautious:
+`@medusajs/medusa@2.22` declares `>=22.22.0`.
 
 To point a local backend at a deployed database, copy `DATABASE_URL` out of
-Railway into your `.env`. Run `pnpm ib` only against a database you are willing
-to seed.
+Railway into your `.env`. `pnpm ib` migrates that database to your local
+Medusa version, so run it only against a database you are willing to change.
 
 ### Commands
 
 | Command | What it does |
 | ------- | ------------ |
-| `pnpm ib` | Initialize: run migrations and seed the system data, region, sales channel, publishable key and demo catalogue. |
+| `pnpm ib` | Initialize: run the migrations without prompting, then, on an empty database only, seed the system data, region, sales channel, publishable key and demo catalogue. Run it again after pulling an update. `pnpm start` runs it on every boot. |
 | `pnpm dev` | Development server with the admin dashboard at `/app`. |
 | `pnpm build && pnpm start` | Compile and run from the built output in `.medusa/server`. This is what Railway does, so it is how to reproduce a deploy-only problem. |
 | `pnpm seed` | Re-run just the seed script. |
@@ -59,10 +58,15 @@ All four are provisioned automatically by the Railway template.
   ephemeral on Railway: uploaded product images vanish on the next deploy.
   Works with Railway buckets, AWS S3, Cloudflare R2 and MinIO. See the `S3_*`
   block in `.env.template`.
-- **MeiliSearch.** Optional. Needs server 1.20 or later, because
+- **MeiliSearch.** Optional. Without it, Medusa runs the Search Module on its
+  built-in Postgres provider, so search still works with plainer matching. Needs
+  server 1.20 or later, because
   `@rokmohar/medusa-plugin-meilisearch@2` uses the `rename` field on
   `POST /swap-indexes`. On an older server the catalogue silently never indexes
-  and search returns nothing, with no error anywhere.
+  and search returns nothing, with no error anywhere. Only this backend talks
+  to it: the storefront searches through `POST /store/search`, because the
+  Search Module keeps each index under a versioned name (`products_v1`, ...)
+  that changes whenever it rebuilds.
 
 The local `docker-compose.yml` in the repository root provides all four.
 
@@ -73,10 +77,12 @@ The local `docker-compose.yml` in the repository root provides all four.
 | `medusa-config.js` | Registers every optional integration behind a presence check on its environment variables, so an unconfigured store starts rather than crashing. |
 | `src/modules/email-notifications/` | Resend provider with react-email templates for order confirmation and admin invites. [Its own README](src/modules/email-notifications/README.md). |
 | `src/subscribers/` | `order-placed` and `invite-created`, which send those emails. |
-| `src/search/products.ts` | The product search index definition consumed by Medusa 2.19's Search Module. |
+| `src/search/products.ts` | The product search index definition consumed by Medusa's Search Module. |
 | `src/api/key-exchange/` | Hands the storefront its publishable API key at boot, since the two services deploy independently. |
 | `src/scripts/seed.ts` | The demo store: one Europe region covering gb, de, dk, se, fr, es and it, a sales channel, a publishable key and four products. |
 | `src/scripts/postBuild.js` | Assembles the production server after `medusa build`. |
+| `src/scripts/prepare-migrations.js` | Runs before `init-backend` migrates. Clears the search sync rows a Medusa 2.19 database carries, which otherwise abort Medusa's 2.20 search migration. A no-op on any other database. Delete it once Medusa fixes that migration. |
+| `src/api/middlewares.ts` | Opens the `products` search index to `POST /store/search`, which is how the storefront searches. |
 | `src/lib/constants.ts` | Every environment variable this backend reads, in one file, with the fallbacks documented. |
 
 ## Configuration

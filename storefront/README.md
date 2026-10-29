@@ -84,9 +84,6 @@ pnpm typecheck && pnpm lint
 Run it against `pnpm build && pnpm start` as well as `pnpm dev`. Dev mode barely
 caches and renders everything dynamically, which hides a whole class of defect.
 
-The `e2e/` directory is inherited from the upstream starter, targets Medusa v1
-endpoints and does not run. Ignore it.
-
 ## Structure
 
 ```
@@ -139,13 +136,14 @@ revalidating their cart does not purge everyone else's. `getCacheTag` and
 This is a snapshot of [medusajs/nextjs-starter-medusa](https://github.com/medusajs/nextjs-starter-medusa)
 with fixes and additions on top. Worth knowing before you port something across:
 
-- **Search is kept.** Upstream removed it. MeiliSearch is wired through
-  `@meilisearch/instant-meilisearch` and `react-instantsearch`.
+- **Search is kept.** Upstream removed it. The modal uses `react-instantsearch`
+  with Medusa's `@medusajs/instantsearch-adapter`, so every query goes through
+  the backend's `POST /store/search` and the browser never talks to
+  MeiliSearch.
 - **The v1 onboarding flow is deleted.** Upstream still ships it; it linked to
   `http://localhost:7001`, the standalone Medusa v1 admin, which does not exist
   in 2.x.
-- **A launcher wraps every script**, to fetch the publishable key and the
-  MeiliSearch search key at boot.
+- **A launcher wraps every script**, to fetch the publishable key at boot.
 - **Not adopted from upstream:** order transfer, localization, the cart
   mismatch banner and the free-shipping nudge.
 

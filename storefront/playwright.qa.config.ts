@@ -9,12 +9,8 @@ import { qaEnv } from "./qa/env"
  *   cd storefront && pnpm dev
  *   cd storefront && pnpm test:qa
  *
- * This is deliberately separate from playwright.config.ts. That suite is
- * inherited from the Medusa starter and drives a dedicated test_medusa_db
- * through a template-database reset between runs, which needs its own
- * postgres role, its own backend pointed at that database and an e2e/.env.
- * This one touches no database directly, so it works on a stock
- * docker-compose setup and on a deployed store.
+ * It touches no database directly, so it works on a stock docker-compose
+ * setup and on a deployed store.
  *
  * It writes as little as it can, and namespaces what it must write (accounts
  * use a per-run email) so repeated runs stay independent.

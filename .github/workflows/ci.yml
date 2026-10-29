@@ -39,8 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # Read from backend/.nvmrc so the floor lives in one place. It is
-          # 22.12 because @medusajs/medusa@2.19 declares
-          # "^20.19.0 || >=22.12.0" and the MeiliSearch plugin declares ">=22".
+          # 22.22 because @medusajs/medusa@2.22 declares ">=22.22.0".
           node-version-file: backend/.nvmrc
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml

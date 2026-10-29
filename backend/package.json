@@ -15,31 +15,31 @@
   "scripts": {
     "build": "medusa build && node src/scripts/postBuild.js",
     "seed": "medusa exec ./src/scripts/seed.ts",
-    "ib": "init-backend",
-    "start": "init-backend && cd .medusa/server && medusa start --verbose",
+    "ib": "node src/scripts/prepare-migrations.js && init-backend",
+    "start": "node src/scripts/prepare-migrations.js && init-backend && cd .medusa/server && medusa start --verbose",
     "dev": "medusa develop",
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
   },
   "dependencies": {
-    "@medusajs/admin-sdk": "2.19.0",
-    "@medusajs/admin-shared": "2.19.0",
-    "@medusajs/cli": "2.19.0",
-    "@medusajs/dashboard": "2.19.0",
-    "@medusajs/draft-order": "2.19.0",
-    "@medusajs/framework": "2.19.0",
-    "@medusajs/medusa": "2.19.0",
-    "@medusajs/notification-sendgrid": "2.19.0",
-    "@medusajs/payment-stripe": "2.19.0",
-    "@medusajs/workflow-engine-redis": "2.19.0",
+    "@medusajs/admin-sdk": "2.22.1",
+    "@medusajs/admin-shared": "2.22.1",
+    "@medusajs/cli": "2.22.1",
+    "@medusajs/dashboard": "2.22.1",
+    "@medusajs/draft-order": "2.22.1",
+    "@medusajs/framework": "2.22.1",
+    "@medusajs/medusa": "2.22.1",
+    "@medusajs/notification-sendgrid": "2.22.1",
+    "@medusajs/payment-stripe": "2.22.1",
+    "@medusajs/workflow-engine-redis": "2.22.1",
     "@react-email/components": "^1.0.1",
-    "@rokmohar/medusa-plugin-meilisearch": "2.0.0",
-    "medusajs-launch-utils": "0.1.0",
+    "@rokmohar/medusa-plugin-meilisearch": "2.4.0",
+    "medusajs-launch-utils": "0.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "resend": "6.25.0"
   },
   "devDependencies": {
-    "@medusajs/test-utils": "2.19.0",
+    "@medusajs/test-utils": "2.22.1",
     "@react-email/preview-server": "^5.1.0",
     "@swc/core": "1.16.1",
     "@types/node": "^22.19.1",
@@ -57,7 +57,7 @@
   },
   "packageManager": "pnpm@9.10.0",
   "engines": {
-    "node": ">=22.12",
+    "node": ">=22.22",
     "pnpm": ">=9"
   }
 }

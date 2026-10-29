@@ -14,7 +14,7 @@ Deploys the official open-source Medusa 2.0 release and its Next.js starter stor
 </p>
 
 <p align="center">
-  <img alt="Medusa 2.19.0" src="https://img.shields.io/badge/Medusa-2.19.0-1a1a1a">
+  <img alt="Medusa 2.22.1" src="https://img.shields.io/badge/Medusa-2.22.1-1a1a1a">
   <img alt="Next.js 15" src="https://img.shields.io/badge/Next.js-15-1a1a1a">
   <img alt="3,800+ deploys" src="https://img.shields.io/badge/Railway%20deploys-3%2C800%2B-6c5ce7">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/rpuls/medusajs-2.0-for-railway-boilerplate"></a>
@@ -37,7 +37,7 @@ One click provisions and connects every service (Postgres, Redis, MeiliSearch, S
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2-0-storefront?referralCode=-Yg50p)
 
-**Updated to Medusa 2.19.0 on 31 August 2026.**
+**Updated to Medusa 2.22.1 on 29 October 2026.**
 
 Deployed more than 3,800 times since 2023, and over 1,100 of those stores are still serving customers today.
 
@@ -46,7 +46,7 @@ Deployed more than 3,800 times since 2023, and over 1,100 of those stores are st
 Seven services in one Railway project, plus whichever third-party integrations you
 configure.
 
-![Architecture diagram. Shoppers reach the Next.js storefront and the store owner reaches the Medusa backend directly. The storefront calls the backend for the Store API and MeiliSearch for product search. The backend owns Postgres, Redis, MeiliSearch and a bucket, and a read-only proxy serves product images out of that bucket to shoppers. All seven run inside one Railway project, and the backend calls Stripe and Resend outside it.](docs/diagrams/railway-stack.png)
+![Architecture diagram. Shoppers reach the Next.js storefront and the store owner reaches the Medusa backend directly. The storefront calls the backend for the Store API, product search included. The backend owns Postgres, Redis, MeiliSearch and a bucket, and a read-only proxy serves product images out of that bucket to shoppers. All seven run inside one Railway project, and the backend calls Stripe and Resend outside it.](docs/diagrams/railway-stack.png)
 
 The seventh, **Bucket-proxy**, is the one that needs explaining. Railway buckets
 serve nothing publicly, so a product image saved to one cannot be loaded by a
@@ -55,7 +55,7 @@ browser. The proxy is a small Railway Function that answers public `GET` and
 image URLs resolve. It is deliberately read-only: it never exposes `PUT`,
 `POST`, `PATCH` or `DELETE`.
 
-![MedusaJS 2.0 backend, Next.js storefront, Postgres, Redis, MeiliSearch and bucket storage running as connected services in one Railway project](https://res.cloudinary.com/hczpmiapo/image/upload/q_auto,f_auto/v1788184544/ghost-blog-images/medusajs-2-on-railway-services-overview-png.png)
+![MedusaJS 2.0 backend, Next.js storefront, Postgres, Redis, MeiliSearch, a bucket and its read-only proxy running as seven connected services in one Railway project](https://res.cloudinary.com/hczpmiapo/image/upload/q_auto,f_auto/v1788184544/ghost-blog-images/medusajs-2-on-railway-services-overview-png.png)
 
 ## About this boilerplate
 
@@ -92,7 +92,7 @@ Medusa that everything here is built on.
 | --- | --- | --- |
 | Time to a running store | Minutes | Half a day, and longer the first time |
 | Seven services provisioned and networked | One click | Seven services to create, and the connection strings to copy between them |
-| Migrations and seed data | Run automatically on first boot | `medusa db:migrate`, then write or adapt a seed script |
+| Migrations and seed data | Migrations run on every boot, the seed on the first | `medusa db:migrate`, then write or adapt a seed script |
 | Admin user | Created for you with a random password | Create it over the CLI after the database is up |
 | Publishable API key | Generated and handed to the storefront automatically | Create it in the admin, then paste it into the storefront's environment |
 | MeiliSearch | Provisioned, keyed, and the catalogue indexed | Install and configure the plugin, mint a search-only key, wire the storefront |
@@ -126,8 +126,9 @@ unless you recognised yourself above.
 
 There is also a [trial version](https://railway.com/deploy/medusajs-20-storefront-trial--Fb6KUX?referralCode=-Yg50p)
 of this same template, cut down to four services so it fits inside Railway's
-free tier. It leaves out search and object storage, so treat it as a way to see
-what you get for free rather than as somewhere to build a shop. Move to the full
+free tier. It leaves out Redis, MeiliSearch and object storage (search still
+works, on Postgres), so treat it as a way to see what you get for free rather
+than as somewhere to build a shop. Move to the full
 template above when you want to sell something.
 
 ## Local development
@@ -156,11 +157,11 @@ Video instructions: https://youtu.be/PPxenu7IjGM
 cd backend
 cp .env.template .env       # then read it, the top of the file matters
 pnpm install
-pnpm ib                     # migrate and seed
+pnpm ib                     # migrate, and seed an empty database
 pnpm dev                    # API on :9000, admin dashboard on :9000/app
 ```
 
-To connect to your deployed database from your local machine, copy the `DATABASE_URL` value from Railway into your `.env`. Run `pnpm ib` only against a database you are willing to seed.
+To connect to your deployed database from your local machine, copy the `DATABASE_URL` value from Railway into your `.env`. `pnpm ib` migrates that database to your local Medusa version, so run it only against a database you are willing to change.
 
 `pnpm build && pnpm start` compiles the project and runs from the compiled source, which is what Railway does. Use it to reproduce a deploy-only problem.
 
@@ -193,14 +194,34 @@ More detail in [storefront/README.md](storefront/README.md).
 
 <br>
 
-- **Node 22.12 or later.** Both packages carry a `.nvmrc`.
+- **Node 22.22 or later.** Both packages carry a `.nvmrc`.
 - **pnpm.** This project is pnpm-only: the build scripts call pnpm directly, so an npm or yarn install gets you a tree that works locally and a deploy that fails.
 - **Postgres.** Required. Set up automatically by the Railway template.
 - **Redis.** Optional, falls back to a simulated in-memory bus. Set up automatically by the Railway template.
 - **S3-compatible storage.** Optional, falls back to local disk, which is ephemeral on Railway. Set up automatically by the Railway template.
-- **MeiliSearch.** Optional, and needs server 1.20 or later. Set up automatically by the Railway template.
+- **MeiliSearch.** Optional, and needs server 1.20 or later. Without it, search falls back to Medusa's Postgres provider. Set up automatically by the Railway template.
 
 </details>
+
+## Building on it with a coding agent
+
+The repository carries an [AGENTS.md](AGENTS.md) for Codex, Claude Code, Cursor
+and other coding agents: how the repo is laid out, how to run it and its QA
+suite, and the Railway details an agent would otherwise get wrong.
+
+For Medusa itself, point your agent at Medusa's own material rather than what
+it remembers, because the APIs change between minor releases:
+
+- **Agent Skills**, free and with no account:
+  `npx skills add medusajs/medusa-agent-skills`, or in Claude Code
+  `/plugin marketplace add medusajs/medusa-agent-skills` followed by
+  `/plugin install medusa-dev@medusa`.
+- **[llms.txt](https://docs.medusajs.com/llms.txt)**, the documentation index
+  in plain text, readable by any agent.
+- **The docs MCP server** at `https://docs.medusajs.com/mcp`, optional. It asks
+  you to sign in with a Medusa Cloud account, so this repository does not set
+  it up for you. The Claude Code plugin above registers it; the skills work
+  without it.
 
 ## FAQ
 
@@ -233,6 +254,12 @@ Yes. R2 is S3-compatible, so it uses the same `S3_*` variables as everything els
 ### Do I need Stripe and Resend to deploy?
 
 No. Every integration is optional and each one switches on only when its environment variables are present. Without Stripe the checkout offers manual payment; without Resend or SendGrid, no order confirmations are sent. You can add either later without redeploying from scratch.
+
+### Can I run it without MeiliSearch?
+
+Yes. Search is Medusa's own Search Module, and MeiliSearch is only the engine behind it. To drop it, remove the `MEILISEARCH_*` variables from the Backend service and the `NEXT_PUBLIC_SEARCH_*` ones from the Storefront, redeploy, then delete the MeiliSearch service. On its next boot the backend rebuilds the product index on Medusa's built-in Postgres search, and the storefront needs no change. That is how the trial template runs.
+
+The Postgres engine is simpler: it matches whole words, plurals included, but not partial words or typos, so "sweat" no longer finds the sweatshirt. Add MeiliSearch back and the index is rebuilt on it the same way.
 
 ### Can I use npm or yarn?
 

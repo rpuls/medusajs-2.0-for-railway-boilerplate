@@ -5,10 +5,8 @@ import path from "path"
  * Minimal .env.local reader.
  *
  * The storefront reads its configuration from .env.local, which Next.js loads
- * itself but Playwright does not. The inherited playwright.config.ts leans on
- * `import "dotenv/config.js"` even though dotenv is not a declared dependency
- * of this package - it only resolves because Playwright bundles a copy. Rather
- * than depend on that, this parses the handful of KEY=value lines we need.
+ * itself but Playwright does not. Rather than add dotenv for it, this parses
+ * the handful of KEY=value lines we need.
  */
 const parseEnvFile = (file: string): Record<string, string> => {
   const out: Record<string, string> = {}

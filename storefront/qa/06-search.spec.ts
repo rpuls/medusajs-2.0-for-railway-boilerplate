@@ -1,8 +1,40 @@
 import { test, expect } from "@playwright/test"
 import { qaEnv, url } from "./helpers"
 
+/**
+ * Asks the backend whether it has a Search Module at all. Every store this
+ * template deploys has one (MeiliSearch when configured, Medusa's Postgres
+ * provider otherwise), but a store can switch the module off, and then
+ * `POST /store/search` answers 400 with exactly this message. That is a store
+ * without search, not a broken one, so the specs skip and say so instead of
+ * failing on every search box.
+ */
+const backendHasSearch = async (): Promise<boolean> => {
+  const { publishableApiKey } = await fetch(
+    `${qaEnv.backendURL}/key-exchange`
+  ).then((res) => res.json())
+  const res = await fetch(`${qaEnv.backendURL}/store/search`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-publishable-api-key": publishableApiKey,
+    },
+    body: JSON.stringify({ entity: "products", filters: { q: "shirt" } }),
+  })
+  const body = await res.text()
+  return !(res.status === 400 && /Search Module is not installed/.test(body))
+}
+
 test.describe("Search", () => {
   test.skip(!qaEnv.searchEnabled, "search feature flag is off")
+
+  let hasSearch = true
+  test.beforeAll(async () => {
+    hasSearch = await backendHasSearch()
+  })
+  test.beforeEach(() => {
+    test.skip(!hasSearch, "the backend has no Search Module")
+  })
 
   test("searching from the nav returns matching products", async ({ page }) => {
     await page.goto(url())

@@ -8,7 +8,9 @@ import { cache } from "react"
 import {
   getAuthHeaders,
   getCacheDirectives,
+  getCartId,
   removeAuthToken,
+  removeCartId,
   revalidateCacheTag,
   setAuthToken,
 } from "./cookies"
@@ -78,6 +80,9 @@ export async function signup(_currentState: unknown, formData: FormData) {
     await setAuthToken(loginToken)
 
     await revalidateCacheTag("customers")
+
+    await transferCart()
+
     return createdCustomer
   } catch (error: any) {
     return error.toString()
@@ -104,6 +109,32 @@ export async function login(_currentState: unknown, formData: FormData) {
   } catch (error: any) {
     return error.toString()
   }
+
+  try {
+    await transferCart()
+  } catch (error: any) {
+    return error.toString()
+  }
+}
+
+/**
+ * Hands the visitor's current cart to the customer who just signed in.
+ *
+ * Taken from upstream. Since Medusa 2.22.1 a cart is attached to a registered
+ * customer only by an authenticated request or by this transfer: an email on
+ * the cart resolves to a guest customer instead. Without it, a shopper who
+ * fills a cart and then signs in checks out as a guest with their own email,
+ * and the order never shows up in their account.
+ */
+export async function transferCart() {
+  const cartId = await getCartId()
+
+  if (!cartId) {
+    return
+  }
+
+  await sdk.store.cart.transferCart(cartId, {}, await getAuthHeaders())
+  await revalidateCacheTag("carts")
 }
 
 /**
@@ -190,6 +221,10 @@ export async function signout(countryCode: string) {
   await removeAuthToken()
   await revalidateCacheTag("auth")
   await revalidateCacheTag("customers")
+  // As upstream: the cart now belongs to the account that just signed out, so
+  // the next visitor on this browser starts a fresh one.
+  await removeCartId()
+  await revalidateCacheTag("carts")
   redirect(`/${countryCode}/account`)
 }
 

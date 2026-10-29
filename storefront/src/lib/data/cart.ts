@@ -65,7 +65,14 @@ export async function getOrSetCart(countryCode: string) {
   }
 
   if (!cart) {
-    const cartResp = await sdk.store.cart.create({ region_id: region.id })
+    // Sent with the shopper's auth headers, as upstream does. Since Medusa
+    // 2.22.1 that is the only way a new cart belongs to a signed-in customer;
+    // see transferCart in customer.ts for carts started before signing in.
+    const cartResp = await sdk.store.cart.create(
+      { region_id: region.id },
+      {},
+      await getAuthHeaders()
+    )
     cart = cartResp.cart
     await setCartId(cart.id)
     await revalidateCacheTag("carts")

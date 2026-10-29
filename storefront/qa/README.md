@@ -32,18 +32,13 @@ pnpm test:qa:watch qa/05-checkout.spec.ts     # a full guest order
 
 The HTML report lands in `storefront/qa-report/` (gitignored).
 
-## Why this is separate from `playwright.config.ts`
+## It talks to no database
 
-That suite is inherited from the Medusa starter. It drives a dedicated
-`test_medusa_db`, creating and dropping a template database between runs, so it
-needs its own postgres role, its own backend pointed at that database, and an
-`e2e/.env`. Its `e2e/.env.example` also disagrees with `docker-compose.yml`
-(`PGPASSWORD=password` vs `postgres`, `medusa_db` vs `medusa`) and its
-`webServer.command` is `yarn start`. It has never been adapted to this
-template.
-
-This suite talks to no database directly, so it works on a stock
-docker-compose setup and against a deployed store.
+This suite reaches the store only through the storefront, the admin and the
+public APIs, so it works on a stock docker-compose setup and against a deployed
+store. (The Medusa starter's own `e2e/` suite, which reset a dedicated database
+between runs and targeted Medusa v1 endpoints, was removed in October 2026. It
+had never run against this template.)
 
 ## Configuration
 
