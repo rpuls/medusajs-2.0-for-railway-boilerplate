@@ -191,6 +191,18 @@ test.describe.serial("Store MCP server", () => {
     refreshToken = tokens.refresh_token
   })
 
+  test("the admin's AI assistants page shows the server URL and the connected app", async ({ page }) => {
+    await page.goto(`${qaEnv.adminURL}/login`)
+    await page.locator('input[name="email"]').fill(qaEnv.adminEmail)
+    await page.locator('input[name="password"]').fill(qaEnv.adminPassword)
+    await page.getByRole("button", { name: /continue with email/i }).click()
+    await expect(page).toHaveURL(/\/app(\/|$)(?!login)/, { timeout: 60_000 })
+
+    await page.goto(`${qaEnv.adminURL}/ai-assistants`)
+    await expect(page.getByTestId("store-mcp-url")).toHaveText(`${backend}/mcp`, { timeout: 60_000 })
+    await expect(page.getByRole("cell", { name: /QA Assistant/ }).first()).toBeVisible()
+  })
+
   test("lists read tools and draft tools, and nothing that publishes, deletes or refunds", async ({ request }) => {
     const init = await mcp(request, accessToken, "initialize", {
       protocolVersion: "2025-06-18",
