@@ -107,12 +107,23 @@ export const getCartId = async () => {
   return cookiesStore.get("_medusa_cart_id")?.value
 }
 
+/**
+ * `sameSite: "lax"`, not `"strict"`, so a cart handed over from another site
+ * opens. An AI assistant builds a cart through the UCP endpoints and gives the
+ * shopper a link to /{country}/cart/resume/{id}, which sets this cookie and
+ * redirects to the checkout. The shopper clicks that link on chatgpt.com, and
+ * the browser treats the whole redirect chain as cross-site, so a strict
+ * cookie is withheld from the checkout request and the shopper lands on a 404
+ * with an empty cart. Lax is still sent on top-level GET navigations only, so
+ * cross-site form posts and subrequests never carry it. Upstream's dtc-starter
+ * made the same change.
+ */
 export const setCartId = async (cartId: string) => {
   const cookiesStore = await cookies()
   cookiesStore.set("_medusa_cart_id", cartId, {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   })
 }

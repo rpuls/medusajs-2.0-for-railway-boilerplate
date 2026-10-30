@@ -41,6 +41,38 @@ const remotePattern = (value) => {
  */
 const nextConfig = {
   reactStrictMode: true,
+  async headers() {
+    return [
+      // Tells an AI agent that lands on any page where the store's UCP profile
+      // is, so it can shop through the API instead of driving the pages.
+      // src/app/layout.tsx says the same in the HTML head.
+      {
+        source: "/:path*",
+        headers: [{ key: "Link", value: '</.well-known/ucp>; rel="ucp"' }],
+      },
+      // Upstream also sets `Vary: Accept` on product pages here, because the
+      // same URL answers HTML or Markdown (see the rewrites below). Next 15
+      // replaces the Vary header of a page response with its own, so it never
+      // arrived; the Markdown route sends it on its side.
+    ]
+  },
+  async rewrites() {
+    return {
+      // beforeFiles, so they win over the product page itself. Both land on
+      // src/app/[countryCode]/(main)/products/[handle]/markdown/route.ts.
+      beforeFiles: [
+        {
+          source: "/:countryCode/products/:handle([^/.]+).md",
+          destination: "/:countryCode/products/:handle/markdown",
+        },
+        {
+          source: "/:countryCode/products/:handle([^/.]+)",
+          has: [{ type: "header", key: "accept", value: ".*text/markdown.*" }],
+          destination: "/:countryCode/products/:handle/markdown",
+        },
+      ],
+    }
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

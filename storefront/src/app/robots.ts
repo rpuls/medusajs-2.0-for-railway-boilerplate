@@ -15,6 +15,10 @@ import { getBaseURL } from "@lib/util/env"
  * and worthless in an index. The patterns carry a leading `/*` because every
  * route in this storefront is region-prefixed, so the paths are `/gb/cart`,
  * `/de/cart` and so on.
+ *
+ * `/buy/` is the exception to "nothing to protect": a GET there creates a cart
+ * (see src/app/buy), so a crawler following one would fill the admin with
+ * abandoned carts. `/ucp/` is for agents that call it, not for indexes.
  */
 export default function robots(): MetadataRoute.Robots {
   const base = getBaseURL().replace(/\/+$/, "")
@@ -26,6 +30,8 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/api/",
+          "/buy/",
+          "/ucp/",
           "/*/account",
           "/*/cart",
           "/*/checkout",

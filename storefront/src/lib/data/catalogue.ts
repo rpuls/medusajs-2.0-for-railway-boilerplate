@@ -29,8 +29,16 @@ const PRODUCTS_PER_PAGE = 100
  * middleware.ts chooses: the configured default when a region covers it, and
  * otherwise the first country served.
  */
-export const listingCountryCode = async (): Promise<string | null> => {
-  const regions = await listRegions()
+export const listingCountryCode = async (): Promise<string | null> =>
+  defaultCountryCode(await listRegions())
+
+/**
+ * The same choice from regions already fetched. The UCP endpoints use it for
+ * an agent that names no country (src/lib/util/server-cart.ts).
+ */
+export const defaultCountryCode = (
+  regions: HttpTypes.StoreRegion[] | null | undefined
+): string | null => {
   const served = (regions ?? [])
     .flatMap((region) => region.countries?.map((country) => country.iso_2) ?? [])
     .filter((code): code is string => Boolean(code))

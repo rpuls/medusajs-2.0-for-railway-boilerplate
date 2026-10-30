@@ -141,6 +141,7 @@ pnpm build:next && npx next start -p 8000
 | `16-file-upload` | product media storage: upload, public readability, delete |
 | `17-store-mcp` | the store MCP server: OAuth sign-in, PKCE, tool limits, drafts with stock, suggestions, proposals for regions, shipping profiles, stock and warehouses, token rotation and revocation; creates a draft product, a "QA Iceland" region, tax rate and shipping zone, a "QA Bulky" profile and a "QA Warehouse", and removes them |
 | `18-shipping-profiles` | a store with a second shipping profile: Medusa's per-profile rule, a mixed cart checked out with one delivery choice per profile; creates a profile, an option and a product, and removes them |
+| `19-ucp` | the shopper side of AI commerce: the `/.well-known/ucp` profile, the `/ucp/mcp` server's tools, a checkout built through it whose `continue_url` opens the cart (also when clicked on another site, which is what the cart cookie's `SameSite=lax` is for), a guest order paid on the store and then reported to the agent, `/buy` permalinks, product JSON-LD and Markdown, the placeholder policy pages |
 
 The last four reach outside the storefront on purpose. An email, a charge or an
 object in a bucket cannot be observed from the browser, and that blind spot is

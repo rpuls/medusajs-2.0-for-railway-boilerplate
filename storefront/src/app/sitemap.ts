@@ -53,6 +53,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: Entry[] = [
     { url: root, changeFrequency: "daily", priority: 1 },
     { url: `${root}/store`, changeFrequency: "daily", priority: 0.9 },
+    // The policy pages (src/modules/policies), which the footer and the UCP
+    // checkout link to.
+    ...["shipping", "returns", "terms", "privacy"].map(
+      (page): Entry => ({
+        url: `${root}/${page}`,
+        changeFrequency: "monthly",
+        priority: 0.3,
+      })
+    ),
   ]
 
   /*

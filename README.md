@@ -245,6 +245,23 @@ work. An agent asked to find or compare products reads the store in one
 request instead of crawling it. It lists only what any visitor can already see,
 and a product you publish appears in it straight away.
 
+They can buy, too. The storefront speaks the
+[Universal Commerce Protocol](https://ucp.dev/) and serves a shopper MCP server
+at `https://<your-storefront>/ucp/mcp`. A shopper adds that URL to ChatGPT,
+Claude or another assistant as a custom connector and asks for something: the
+assistant searches your catalogue, builds a cart with their email and address,
+and hands back a link. The link opens that cart in your own checkout, where
+they choose delivery and pay as usual, so no payment ever passes through the
+assistant. It needs no sign-in, because it can do nothing an anonymous visitor
+can't: read the published catalogue and build guest carts. Agents that look for
+it find it through `/.well-known/ucp`, and every product page also carries
+schema.org data and a Markdown version (add `.md` to its address).
+
+The checkout tells the assistant where your shipping, returns, terms and
+privacy pages are. The storefront ships those four as placeholders, marked on
+the page as example text, at `/<country>/shipping` and so on. Replace them with
+your own before you sell; they live in `storefront/src/app/[countryCode]/(main)/`.
+
 ## Building on it with a coding agent
 
 The repository carries an [AGENTS.md](AGENTS.md) for Codex, Claude Code, Cursor

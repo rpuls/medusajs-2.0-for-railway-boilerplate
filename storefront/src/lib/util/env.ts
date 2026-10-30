@@ -24,6 +24,36 @@ export const getBaseURL = () => {
 }
 
 /**
+ * Origin for the absolute URLs a route handler answers with, such as the
+ * product links and the checkout `continue_url` the UCP endpoints give an AI
+ * agent. Those must name the site the agent called, or the shopper is handed a
+ * link to somewhere else.
+ *
+ * NEXT_PUBLIC_BASE_URL wins when it is set. Otherwise the host the proxy saw:
+ * on Railway the app listens on an internal port behind Railway's edge, so
+ * request.url names that internal address, and only x-forwarded-host and
+ * x-forwarded-proto carry the public domain. Preferred over
+ * RAILWAY_PUBLIC_DOMAIN because a custom domain arrives here too.
+ */
+export const getRequestOrigin = (request: Request): string => {
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "")
+  }
+
+  const first = (name: string) =>
+    request.headers.get(name)?.split(",")[0].trim() || undefined
+  const url = new URL(request.url)
+  const host = first("x-forwarded-host") ?? first("host")
+
+  if (!host) {
+    return url.origin
+  }
+
+  const proto = first("x-forwarded-proto") ?? url.protocol.replace(":", "")
+  return `${proto}://${host}`
+}
+
+/**
  * Your shop's own name, shown in the nav, footer, checkout header, page titles
  * and legal copy. Set NEXT_PUBLIC_STORE_NAME to your store's name. The fallback
  * is a placeholder on purpose, so an unconfigured deploy prompts you to set it

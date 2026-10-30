@@ -186,6 +186,13 @@ export async function GET() {
     lines.push(`- To search, open ${root}/results/ followed by the search words.`)
   }
 
+  // The same store through the Universal Commerce Protocol, for an agent that
+  // can call tools rather than read pages. See src/lib/ucp.
+  lines.push(
+    `- AI agents can also shop through the Universal Commerce Protocol: ${base}/.well-known/ucp describes it, and ${base}/ucp/mcp is an MCP server, with no sign-in, that searches the catalogue, builds a cart and starts a checkout. The shopper always pays on this site, at the link the checkout returns.`,
+    `- Each product page is also available as Markdown, with variant IDs, prices and stock: add .md to its address.`
+  )
+
   const categoryList = categoryLines(categories ?? [], root)
   if (categoryList.length) {
     lines.push("", "## Categories", "", ...categoryList)
@@ -213,7 +220,8 @@ export async function GET() {
     "",
     "## Optional",
     "",
-    `- [Sitemap](${base}/sitemap.xml): every page on this site`
+    `- [Sitemap](${base}/sitemap.xml): every page on this site`,
+    `- [Shipping](${root}/shipping), [returns](${root}/returns), [terms of service](${root}/terms) and [privacy policy](${root}/privacy)`
   )
 
   return new Response(`${lines.join("\n")}\n`, {

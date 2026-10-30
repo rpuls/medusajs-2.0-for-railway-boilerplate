@@ -6,6 +6,15 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import MedusaCTA from "@modules/layout/components/medusa-cta"
 import { getStoreName } from "@lib/util/env"
 
+// Placeholder pages until the store owner writes their own, see
+// src/modules/policies. The UCP checkout links an AI agent to the same four.
+const POLICY_LINKS = [
+  { href: "/shipping", label: "Shipping" },
+  { href: "/returns", label: "Returns" },
+  { href: "/terms", label: "Terms of service" },
+  { href: "/privacy", label: "Privacy policy" },
+]
+
 export default async function Footer() {
   const { collections } = await getCollectionsList(0, 6)
   const { product_categories } = await getCategoriesList(0, 6)
@@ -22,7 +31,7 @@ export default async function Footer() {
               {getStoreName()}
             </LocalizedClientLink>
           </div>
-          <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
+          <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-4">
             {product_categories && product_categories?.length > 0 && (
               <div className="flex flex-col gap-y-2">
                 <span className="txt-small-plus txt-ui-fg-base">
@@ -107,6 +116,24 @@ export default async function Footer() {
                 </ul>
               </div>
             )}
+            <div className="flex flex-col gap-y-2">
+              <span className="txt-small-plus txt-ui-fg-base">Policies</span>
+              <ul
+                className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle txt-small"
+                data-testid="footer-policies"
+              >
+                {POLICY_LINKS.map(({ href, label }) => (
+                  <li key={href}>
+                    <LocalizedClientLink
+                      className="hover:text-ui-fg-base"
+                      href={href}
+                    >
+                      {label}
+                    </LocalizedClientLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
             <div className="flex flex-col gap-y-2">
               <span className="txt-small-plus txt-ui-fg-base">Medusa</span>
               <ul className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle txt-small">

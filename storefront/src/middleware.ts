@@ -200,7 +200,14 @@ export const config = {
   // to the URL it puts in the og:image tag. Matching the path prefix handles
   // both. Verified by fetching it: without this entry the route answers 307 to
   // /gb/opengraph-image and every shared link loses its preview card.
+  //
+  // The UCP routes are root-level for the same reason: /.well-known/ucp (the
+  // profile), /ucp/ (the MCP and REST endpoints an AI agent calls) and /buy/
+  // (cart permalinks). An agent following a 307 to /gb/ucp/mcp gets a 404 page
+  // in place of JSON-RPC. They carry a trailing slash so a future /buyers-guide
+  // page is still region-prefixed. The checkout link an agent hands over,
+  // /{country}/cart/resume/{id}, is region-prefixed and stays matched.
   matcher: [
-    "/((?!api|_next/static|favicon.ico|sitemap.xml|robots.txt|llms.txt|opengraph-image|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)",
+    "/((?!api|_next/static|favicon.ico|sitemap.xml|robots.txt|llms.txt|opengraph-image|\\.well-known/|ucp/|buy/|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)",
   ],
 }

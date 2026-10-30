@@ -29,6 +29,7 @@ docs").
 | `backend/src/store-mcp/` | The store MCP server: OAuth authorization server, MCP tools, consent page. Its tables are `backend/src/modules/store-mcp/`, its admin page and widget `backend/src/admin/`. See [docs/store-mcp.md](docs/store-mcp.md). |
 | `storefront/` | Next.js 15 App Router storefront. Its own pnpm package. |
 | `storefront/src/lib/data/` | Every Store API call. Read the comment in `regions.ts` before adding one. |
+| `storefront/src/lib/ucp/` | The shopper side of AI commerce (UCP): `/.well-known/ucp`, the MCP server at `/ucp/mcp`, REST at `/ucp/v1`. Ported from upstream's dtc-starter; no auth, guest carts only. Not the backend's admin `/mcp`. |
 | `storefront/qa/` | The Playwright QA suite. The real test suite of this repo. |
 | `docker-compose.yml` | Local Postgres, Redis, MeiliSearch and MinIO, mirroring the Railway services. |
 | `docs/` | Brand assets and the architecture diagram source. |
@@ -173,6 +174,18 @@ Things that have bitten this template before:
 - After changing payment providers, redeploy the backend first and the
   storefront last. The storefront caches each region's provider list until it
   is redeployed.
+- Every storefront route that is not region-prefixed (`/llms.txt`,
+  `/.well-known/ucp`, `/ucp/`, `/buy/`) must be excluded in the matcher in
+  `src/middleware.ts`, or it is 307'd to `/gb/...` and a 404. Next 15 does
+  serve an `app/.well-known/` folder.
+- The cart cookie is `SameSite=lax` for the UCP `continue_url`: the shopper
+  clicks it on the assistant's site, the browser treats the whole redirect
+  chain as cross-site, and a strict cookie leaves the checkout empty.
+  `19-ucp` clicks the link from a fake cross-site page because `page.goto`
+  counts as same-site and would not catch it. The auth cookie is still
+  strict, so that click arrives signed out and the order is a guest order.
+- The UCP tools never set a shipping method. Delivery, with its one choice
+  per shipping profile, stays in the storefront checkout the link opens.
 
 ## Store MCP server
 
