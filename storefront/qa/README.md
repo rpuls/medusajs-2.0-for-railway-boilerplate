@@ -139,6 +139,7 @@ pnpm build:next && npx next start -p 8000
 | `14-email` | order confirmation email, checked in Medusa and then at Resend |
 | `15-password-reset` | the reset flow end to end, token read out of the sent email |
 | `16-file-upload` | product media storage: upload, public readability, delete |
+| `17-store-mcp` | the store MCP server: OAuth sign-in, PKCE, tool limits, drafts, suggestions, token rotation and revocation; creates one draft product and deletes it |
 
 The last four reach outside the storefront on purpose. An email, a charge or an
 object in a bucket cannot be observed from the browser, and that blind spot is

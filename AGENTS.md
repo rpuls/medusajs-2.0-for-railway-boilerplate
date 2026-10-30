@@ -26,6 +26,7 @@ docs").
 | `backend/src/search/` | Search index declarations for Medusa's Search Module. |
 | `backend/src/scripts/` | `seed.ts`, `postBuild.js`, `prepare-migrations.js`. |
 | `backend/src/modules/email-notifications/` | Resend provider and react-email templates. |
+| `backend/src/store-mcp/` | The store MCP server: OAuth authorization server, MCP tools, consent page. Its tables are `backend/src/modules/store-mcp/`, its admin page and widget `backend/src/admin/`. See [docs/store-mcp.md](docs/store-mcp.md). |
 | `storefront/` | Next.js 15 App Router storefront. Its own pnpm package. |
 | `storefront/src/lib/data/` | Every Store API call. Read the comment in `regions.ts` before adding one. |
 | `storefront/qa/` | The Playwright QA suite. The real test suite of this repo. |
@@ -166,6 +167,29 @@ Things that have bitten this template before:
 - After changing payment providers, redeploy the backend first and the
   storefront last. The storefront caches each region's provider list until it
   is redeployed.
+
+## Store MCP server
+
+`/mcp` lets AI assistants work on the store as an admin who approved them on
+the consent page. Its whole safety model is in what the tools may write, so
+keep these when changing it:
+
+- Writes go to drafts only. A published product is never written by a tool;
+  changes to it are saved as suggestions that an admin applies in the
+  dashboard. No tool publishes, deletes, refunds, cancels, or changes stock or
+  live prices.
+- Customer data stops at name, email, country and order history, and no tool
+  returns more than 50 rows.
+- The capability lists on the consent page, the admin page and
+  [docs/store-mcp.md](docs/store-mcp.md) must say the same thing. The first two
+  share `CAN` and `CANNOT` in `src/store-mcp/oauth/consent-page.ts`.
+- Never log a token, code, password or client secret. Codes and tokens are
+  stored as SHA-256 hashes only.
+- `storefront/qa/17-store-mcp.spec.ts` covers the OAuth flow, the tool limits
+  and revocation. Run it after any change here.
+- Do not pass `variants` to `updateProductsWorkflow` to change prices: it
+  replaces the whole variant list and deletes the variants you left out. Use
+  `updateProductVariantsWorkflow` per variant.
 
 ## Medusa knowledge
 

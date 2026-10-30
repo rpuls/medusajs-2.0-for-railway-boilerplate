@@ -63,6 +63,11 @@ const medusaConfig = {
     disable: SHOULD_DISABLE_ADMIN,
   },
   modules: [
+    // Tables for the store MCP server (src/store-mcp). Always registered, so
+    // turning the server off with STORE_MCP_ENABLED=false keeps its grants.
+    {
+      resolve: './src/modules/store-mcp',
+    },
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',

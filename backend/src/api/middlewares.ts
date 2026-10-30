@@ -1,4 +1,5 @@
 import { configureStoreSearch, defineMiddlewares } from '@medusajs/framework/http';
+import { serveWellKnown, WELL_KNOWN_MATCHER } from '../store-mcp/well-known';
 
 /**
  * Opens the `products` index (declared in src/search/products.ts) to
@@ -28,6 +29,11 @@ export default defineMiddlewares({
           },
         }),
       ],
+    },
+    // OAuth discovery for the store MCP server. See src/store-mcp/well-known.ts.
+    {
+      matcher: WELL_KNOWN_MATCHER,
+      middlewares: [serveWellKnown],
     },
   ],
 });

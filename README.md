@@ -97,6 +97,7 @@ Medusa that everything here is built on.
 | Publishable API key | Generated and handed to the storefront automatically | Create it in the admin, then paste it into the storefront's environment |
 | MeiliSearch | Provisioned, keyed, and the catalogue indexed | Install and configure the plugin, mint a search-only key, wire the storefront |
 | Stripe, Resend, S3 | Configuration slots already wired, add your keys | Install and register each provider yourself |
+| AI assistants | A store MCP server with OAuth sign-in, ready on the first deploy | Write an MCP server and an OAuth authorization server |
 | Health checks | Configured per service | Yours to add |
 | Staying current | Pull the repo and redeploy | Yours to track |
 
@@ -202,6 +203,31 @@ More detail in [storefront/README.md](storefront/README.md).
 - **MeiliSearch.** Optional, and needs server 1.20 or later. Without it, search falls back to Medusa's Postgres provider. Set up automatically by the Railway template.
 
 </details>
+
+## Run the store from an AI assistant
+
+Every store comes with its own MCP server, so ChatGPT, Claude and other MCP
+clients can work on it. Open **AI assistants** in the admin, copy the server URL
+(`https://<your-backend>/mcp`), and add it to the assistant as a custom
+connector. The assistant opens a page on your backend where you sign in with
+your admin account and click Allow. From then on you can ask it things like
+"what sold best this month?", "which variants are about to run out?" or "draft a
+product for the new linen shirt in three sizes".
+
+What it may do is deliberately narrow, and the consent page says so before you
+allow anything:
+
+- **It can** read products, stock, orders, customers (name, email, country and
+  order history only) and sales, create new products as drafts, edit those
+  drafts, and suggest changes to published products.
+- **It cannot** publish, delete, change stock or live prices, refund, cancel,
+  export customers or touch settings. A suggestion waits on the product page
+  until you apply or discard it.
+
+Access lives in Postgres, survives restarts and redeploys, works without Redis
+(so the trial template has it too), and is revoked from the same admin page.
+Set `STORE_MCP_ENABLED=false` on the backend to switch it off. The details,
+including every tool, are in [docs/store-mcp.md](docs/store-mcp.md).
 
 ## Building on it with a coding agent
 
