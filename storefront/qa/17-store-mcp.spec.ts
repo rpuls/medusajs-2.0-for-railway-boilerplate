@@ -206,6 +206,11 @@ test.describe.serial("Store MCP server", () => {
       expect.arrayContaining(["get_store_overview", "search_products", "get_product", "list_orders", "get_sales_summary", "create_product_draft", "suggest_product_changes"])
     )
     expect(names.filter((name) => /publish|delete|refund|cancel|export|stock_update|setting/.test(name))).toEqual([])
+
+    const prompts = await mcp(request, accessToken, "prompts/list")
+    expect((prompts.body as any).result.prompts.map((p: any) => p.name)).toEqual(
+      expect.arrayContaining(["store_report", "restock_check", "improve_product", "draft_product"])
+    )
   })
 
   test("reads the store, its products and its orders", async ({ request }) => {

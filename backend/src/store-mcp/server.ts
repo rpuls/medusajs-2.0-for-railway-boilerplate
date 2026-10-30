@@ -9,6 +9,7 @@ import { RATE_LIMITS } from './oauth/constants'
 import { checkRateLimit, publicCORSHeaders } from './oauth/http'
 import { authenticateAccessToken } from './oauth/tokens'
 import { buildBearerChallenge } from './oauth/urls'
+import { registerPrompts } from './tools/prompts'
 import { registerReadTools } from './tools/read'
 import { registerWriteTools } from './tools/write'
 
@@ -56,6 +57,7 @@ export const handleMcpRequest = async (req: MedusaRequest, res: MedusaResponse):
   const ctx = { scope: req.scope, auth }
   registerReadTools(server, ctx)
   registerWriteTools(server, ctx)
+  registerPrompts(server)
 
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
   res.on('close', () => {

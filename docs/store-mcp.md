@@ -64,6 +64,19 @@ returns more than 50 rows, so none of them works as a bulk export.
 Prices and totals are in major currency units: `19.99` means 19.99 euros, not
 cents. Stock on a drafted product is left for you to set before you publish it.
 
+### Prompts
+
+Ready-made tasks, which clients that support MCP prompts offer as a menu or
+slash commands. They are only prompts: they use the tools above with the same
+limits.
+
+| Prompt | What it asks for |
+| --- | --- |
+| `store_report` | Sales against the period before, best sellers, low stock, three suggestions |
+| `restock_check` | Low-stock variants ranked by how fast they sell |
+| `improve_product` | A better title, subtitle and description for one product, saved as a suggestion |
+| `draft_product` | A complete product draft from a rough description |
+
 ## How the sign-in works
 
 The backend is its own OAuth 2.1 authorization server, following the MCP
