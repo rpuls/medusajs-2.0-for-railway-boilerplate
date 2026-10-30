@@ -8,9 +8,9 @@ import React from "react"
 type CartTotalsProps = {
   totals: {
     total?: number | null
-    subtotal?: number | null
+    item_subtotal?: number | null
     tax_total?: number | null
-    shipping_total?: number | null
+    shipping_subtotal?: number | null
     discount_total?: number | null
     gift_card_total?: number | null
     currency_code: string
@@ -21,13 +21,16 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   const {
     currency_code,
     total,
-    subtotal,
+    item_subtotal,
     tax_total,
-    shipping_total,
+    shipping_subtotal,
     discount_total,
     gift_card_total,
   } = totals
 
+  // item_subtotal and shipping_subtotal, as upstream has them. Medusa's
+  // `subtotal` includes shipping, so an order for a 10 euro shirt with 10 euro
+  // delivery said "Subtotal (excl. shipping and taxes)" 20 euro.
   return (
     <div>
       <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle ">
@@ -35,8 +38,8 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           <span className="flex gap-x-1 items-center">
             Subtotal (excl. shipping and taxes)
           </span>
-          <span data-testid="cart-subtotal" data-value={subtotal || 0}>
-            {convertToLocale({ amount: subtotal ?? 0, currency_code })}
+          <span data-testid="cart-subtotal" data-value={item_subtotal || 0}>
+            {convertToLocale({ amount: item_subtotal ?? 0, currency_code })}
           </span>
         </div>
         {!!discount_total && (
@@ -54,8 +57,8 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         )}
         <div className="flex items-center justify-between">
           <span>Shipping</span>
-          <span data-testid="cart-shipping" data-value={shipping_total || 0}>
-            {convertToLocale({ amount: shipping_total ?? 0, currency_code })}
+          <span data-testid="cart-shipping" data-value={shipping_subtotal || 0}>
+            {convertToLocale({ amount: shipping_subtotal ?? 0, currency_code })}
           </span>
         </div>
         <div className="flex justify-between">

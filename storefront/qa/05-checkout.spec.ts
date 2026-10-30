@@ -1,5 +1,5 @@
 import { test, expect, Page } from "@playwright/test"
-import { addProductToCart, qaEnv, url } from "./helpers"
+import { addProductToCart, parseMoney, qaEnv, url } from "./helpers"
 
 const fillShippingAddress = async (page: Page, email: string) => {
   await page.getByTestId("shipping-first-name-input").fill("Quinn")
@@ -44,6 +44,16 @@ test.describe("Checkout", () => {
       timeout: 60_000,
     })
     await expect(page).toHaveURL(/\/order\/confirmed\//)
+
+    // "Subtotal (excl. shipping and taxes)" is the items alone. It used to be
+    // Medusa's order subtotal, which counts the shipping too.
+    const value = async (id: string) =>
+      parseMoney(await page.getByTestId(id).first().getAttribute("data-value"))
+    const shipping = await value("cart-shipping")
+    expect(shipping).toBeGreaterThan(0)
+    expect(await value("cart-subtotal") + shipping + (await value("cart-taxes"))).toBe(
+      await value("cart-total")
+    )
   })
 
   test("the checkout header carries the store name and returns to the cart", async ({
