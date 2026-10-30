@@ -41,7 +41,15 @@ does it in the dashboard. A draft is invisible to shoppers until you publish it,
 and publishing is not a tool. A change to a published product is saved as a
 suggestion, shown on that product's page in the admin with the current and the
 suggested text side by side, and applied only when you click **Apply**. No tool
-returns more than 50 rows, so none of them works as a bulk export.
+returns more than 50 rows, paging through orders and customers stops after 250,
+and requests that bundle several calls are refused, so none of them works as a
+bulk export.
+
+Images on a draft must already be in the store's own file storage, for example
+an image another product uses. An assistant cannot point a product at an image
+elsewhere: a URL it chose would be loaded by the dashboard, and that is a way to
+smuggle data out if someone has planted instructions in, say, a customer name.
+Add other images yourself in the dashboard.
 
 ### Tools
 
@@ -105,10 +113,17 @@ migrations, so connections survive restarts and redeploys and no Redis is
 needed. The MCP endpoint is stateless: each request carries its token and gets
 a fresh server.
 
-Limits are kept in memory: 10 registrations per 10 minutes and 60 token
-requests a minute per IP address, 5 failed sign-ins per email and 20 per IP
-address per 15 minutes, and 120 MCP calls a minute per connection. Running
-several backend replicas multiplies them.
+Limits are kept in memory: 10 app registrations per 10 minutes per IP address
+and 200 an hour overall, 60 consent page views and 60 token requests a minute
+per IP address, 5 failed sign-ins per email and 20 per IP address per 15
+minutes, and 120 MCP calls a minute per connection. Apps that registered but
+were never approved are deleted after a day. Running several backend replicas
+multiplies the limits.
+
+A sign-in link that is malformed shows an error page rather than sending the
+visitor back to the app, because anyone can register an app with any redirect
+address, and an automatic redirect would let a link on the store's own domain
+bounce visitors to a site of someone else's choosing.
 
 The deploy log records connections, approvals and revocations by admin id and
 app name. It never records a token, a code, a password or a client secret.

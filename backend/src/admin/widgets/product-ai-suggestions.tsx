@@ -3,7 +3,7 @@ import type { AdminProduct, DetailWidgetProps } from '@medusajs/framework/types'
 import { SparklesMini } from '@medusajs/icons'
 import { Badge, Button, Container, Heading, Text, toast } from '@medusajs/ui'
 import { useCallback, useEffect, useState } from 'react'
-import { formatDate, type Suggestion, type SuggestionChanges, storeMcp } from '../lib/store-mcp'
+import { categoryNames, formatDate, type Suggestion, type SuggestionChanges, storeMcp } from '../lib/store-mcp'
 
 const LABELS: Record<keyof SuggestionChanges, string> = {
   title: 'Title',
@@ -17,9 +17,9 @@ const current = (product: AdminProduct, field: keyof SuggestionChanges): string 
   return (product[field] as string | null) || 'Empty'
 }
 
-const suggested = (changes: SuggestionChanges, field: keyof SuggestionChanges): string => {
+const suggested = (changes: SuggestionChanges, field: keyof SuggestionChanges, names: Map<string, string>): string => {
   const value = changes[field]
-  if (Array.isArray(value)) return `${value.length} categor${value.length === 1 ? 'y' : 'ies'}`
+  if (Array.isArray(value)) return value.map((id) => names.get(id) ?? `Unknown category (${id})`).join(', ') || 'None'
   return value ?? ''
 }
 
@@ -30,12 +30,16 @@ const suggested = (changes: SuggestionChanges, field: keyof SuggestionChanges): 
  */
 const ProductAiSuggestions = ({ data: product }: DetailWidgetProps<AdminProduct>) => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [names, setNames] = useState<Map<string, string>>(new Map())
   const [busy, setBusy] = useState<string | null>(null)
 
   const load = useCallback(() => {
     storeMcp
       .suggestions(product.id)
-      .then(({ suggestions }) => setSuggestions(suggestions))
+      .then(async ({ suggestions }) => {
+        setSuggestions(suggestions)
+        setNames(await categoryNames([...new Set(suggestions.flatMap((s) => s.changes.category_ids ?? []))]))
+      })
       .catch(() => setSuggestions([]))
   }, [product.id])
 
@@ -87,7 +91,7 @@ const ProductAiSuggestions = ({ data: product }: DetailWidgetProps<AdminProduct>
                   {current(product, field)}
                 </Text>
                 <Text size="small" className="whitespace-pre-wrap">
-                  {suggested(suggestion.changes, field)}
+                  {suggested(suggestion.changes, field, names)}
                 </Text>
               </div>
             </div>

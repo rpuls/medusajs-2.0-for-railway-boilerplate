@@ -26,9 +26,18 @@ export const CLEANUP_INTERVAL = 10 * 60 * 1000
 /** `last_used_at` on a grant is refreshed at most this often, so MCP calls stay cheap */
 export const LAST_USED_WRITE_INTERVAL = 5 * 60 * 1000
 
+/** Apps that registered, or whose metadata document was fetched, but were never approved, are deleted after this */
+export const UNUSED_CLIENT_LIFETIME = 24 * 60 * 60 * 1000
+
 export const RATE_LIMITS = {
   // ChatGPT registers once per connection; the MCP Inspector registers on every connect
   register: { limit: 10, windowMs: 10 * 60 * 1000 },
+  // Across all callers, so spreading over many addresses cannot fill the clients table either
+  registerGlobal: { limit: 200, windowMs: 60 * 60 * 1000 },
+  authorizePage: { limit: 60, windowMs: 60 * 1000 },
+  // Each one is an outbound request to a host the caller chose, and a row
+  metadataFetch: { limit: 10, windowMs: 10 * 60 * 1000 },
+  metadataFetchGlobal: { limit: 200, windowMs: 60 * 60 * 1000 },
   token: { limit: 60, windowMs: 60 * 1000 },
   revoke: { limit: 60, windowMs: 60 * 1000 },
   // The consent page takes an admin password, so it gets a login form's limits

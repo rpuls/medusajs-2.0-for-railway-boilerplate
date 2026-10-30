@@ -1,4 +1,5 @@
 import { lookup as dnsLookup } from 'node:dns/promises'
+import { request as httpsRequest } from 'node:https'
 import { isIP, isIPv4 } from 'node:net'
 
 import {
@@ -106,7 +107,6 @@ export const isPublicAddress = (address: string): boolean => {
 }
 
 export type MetadataDocumentDeps = {
-  fetch?: typeof fetch
   lookup?: (hostname: string) => Promise<string[]>
   now?: () => number
 }
@@ -118,27 +118,51 @@ export type MetadataDocumentResult =
 const defaultLookup = async (hostname: string): Promise<string[]> =>
   (await dnsLookup(hostname, { all: true })).map((entry) => entry.address)
 
-/** Reads the body up to `maxBytes`; returns null when the document is larger */
-const readLimited = async (response: Response, maxBytes: number): Promise<null | string> => {
-  const declared = Number(response.headers.get('content-length'))
-  if (Number.isFinite(declared) && declared > maxBytes) return null
-  if (!response.body) return ''
+type PinnedResponse = { status: number; cacheControl: string | null; body: string | null }
 
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let total = 0
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    total += value.byteLength
-    if (total > maxBytes) {
-      await reader.cancel()
-      return null
-    }
-    chunks.push(value)
-  }
-  return Buffer.concat(chunks).toString('utf8')
-}
+/**
+ * GET over https to an address that was already checked. fetch() would resolve the host name a
+ * second time, and a DNS answer that changed in between (DNS rebinding) could then point the
+ * request at an internal address. Here the connection goes to `address`, while the host name
+ * still drives TLS and its certificate check. No redirects are followed. `body` is null when the
+ * document is larger than `maxBytes`.
+ */
+const getPinned = (url: URL, address: string, maxBytes: number, timeoutMs: number): Promise<PinnedResponse> =>
+  new Promise((resolve, reject) => {
+    const family = isIPv4(address) ? 4 : 6
+    const req = httpsRequest(
+      url,
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json', 'User-Agent': 'store-mcp-oauth-server' },
+        lookup: ((_hostname: string, options: { all?: boolean }, callback: (...args: unknown[]) => void) =>
+          options?.all ? callback(null, [{ address, family }]) : callback(null, address, family)) as never,
+      },
+      (res) => {
+        const status = res.statusCode ?? 0
+        const cacheControl = (res.headers['cache-control'] as string | undefined) ?? null
+        const declared = Number(res.headers['content-length'])
+        if (Number.isFinite(declared) && declared > maxBytes) {
+          res.destroy()
+          return resolve({ status, cacheControl, body: null })
+        }
+        const chunks: Buffer[] = []
+        let total = 0
+        res.on('data', (chunk: Buffer) => {
+          total += chunk.length
+          if (total > maxBytes) {
+            res.destroy()
+            resolve({ status, cacheControl, body: null })
+          } else chunks.push(chunk)
+        })
+        res.on('end', () => resolve({ status, cacheControl, body: Buffer.concat(chunks).toString('utf8') }))
+        res.on('error', reject)
+      }
+    )
+    req.setTimeout(timeoutMs, () => req.destroy(new Error('timeout')))
+    req.on('error', reject)
+    req.end()
+  })
 
 /** How long to reuse a fetched document: the response's max-age, clamped to sane bounds */
 export const metadataCacheTTL = (cacheControl: null | string): number => {
@@ -165,24 +189,20 @@ export const fetchClientMetadataDocument = async (
     return { ok: false, description: 'The client_id host must resolve to a public address' }
   }
 
-  let response: Response
+  let response: PinnedResponse
   try {
-    response = await (deps.fetch ?? fetch)(check.url, {
-      headers: { Accept: 'application/json', 'User-Agent': 'store-mcp-oauth-server' },
-      redirect: 'error',
-      signal: AbortSignal.timeout(CLIENT_METADATA_FETCH_TIMEOUT),
-    })
+    response = await getPinned(check.url, addresses[0]!, CLIENT_METADATA_MAX_BYTES, CLIENT_METADATA_FETCH_TIMEOUT)
   } catch {
     return { ok: false, description: 'The client ID metadata document could not be fetched' }
   }
-  if (response.ok === false) {
+  if (response.status < 200 || response.status >= 300) {
     return {
       ok: false,
       description: `The client ID metadata document responded with HTTP ${response.status}`,
     }
   }
 
-  const text = await readLimited(response, CLIENT_METADATA_MAX_BYTES)
+  const text = response.body
   if (text === null) return { ok: false, description: 'The client ID metadata document is too large' }
 
   let raw: unknown
@@ -202,7 +222,7 @@ export const fetchClientMetadataDocument = async (
   const validated = validateClientMetadata(doc, 'metadata_document')
   if (validated.ok === false) return { ok: false, description: validated.description }
 
-  const ttl = metadataCacheTTL(response.headers.get('cache-control'))
+  const ttl = metadataCacheTTL(response.cacheControl)
   return {
     ok: true,
     expiresAt: new Date((deps.now?.() ?? Date.now()) + ttl),

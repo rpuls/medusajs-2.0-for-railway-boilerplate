@@ -7,7 +7,9 @@ import { daysAgo, fail, fullName, isSale, MAX_ROWS, ok, queryOf, round, safely, 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const
 
 const limitArg = z.number().int().min(1).max(MAX_ROWS).optional().describe(`At most ${MAX_ROWS}, default 20`)
-const offsetArg = z.number().int().min(0).optional().describe('Rows to skip, for paging')
+// Paging stops here for people data, so a connected app can browse orders and customers but
+// cannot walk the whole table. Products are not personal data and get a longer reach.
+const offsetArg = (max: number) => z.number().int().min(0).max(max).optional().describe(`Rows to skip, for paging, at most ${max}`)
 const dateArg = (what: string) => z.string().datetime({ offset: true }).optional().describe(`${what}, ISO 8601`)
 
 type Price = { amount: number; currency_code: string }
@@ -115,7 +117,7 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
         status: z.enum(['published', 'draft', 'proposed', 'rejected']).optional(),
         category_id: z.string().optional(),
         limit: limitArg,
-        offset: offsetArg,
+        offset: offsetArg(1000),
       },
       annotations: READ_ONLY,
     },
@@ -267,7 +269,7 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
         status: z.enum(['pending', 'completed', 'archived', 'canceled', 'requires_action']).optional(),
         customer_email: z.string().email().optional(),
         limit: limitArg,
-        offset: offsetArg,
+        offset: offsetArg(200),
       },
       annotations: READ_ONLY,
     },
@@ -411,7 +413,7 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
       inputSchema: {
         query: z.string().max(200).optional().describe('Text to match in name or email'),
         limit: limitArg,
-        offset: offsetArg,
+        offset: offsetArg(200),
       },
       annotations: READ_ONLY,
     },

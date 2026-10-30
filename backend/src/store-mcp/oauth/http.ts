@@ -1,4 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
+import { createHash } from 'node:crypto'
 import { ISSUER } from '../config'
 
 /**
@@ -107,12 +108,13 @@ const prune = (now: number) => {
   for (const [key, bucket] of buckets) {
     if (bucket.resetAt <= now) buckets.delete(key)
   }
-  // A flood of distinct keys must not grow memory without bound
-  if (buckets.size > MAX_BUCKETS) buckets.clear()
 }
 
+/** Keys are hashed, so a caller-chosen value such as an email cannot make one bucket large */
+const bucketKey = (key: string) => createHash('sha256').update(key).digest('base64url')
+
 export const checkRateLimit = (
-  key: string,
+  rawKey: string,
   { limit, windowMs }: Limit,
   now = Date.now()
 ): { allowed: boolean; retryAfterSeconds: number } => {
@@ -121,8 +123,18 @@ export const checkRateLimit = (
     lastPrune = now
   }
 
+  const key = bucketKey(rawKey)
   const bucket = buckets.get(key)
   if (!bucket || bucket.resetAt <= now) {
+    // A flood of distinct keys must not grow memory without bound. Dropping the oldest buckets
+    // (a Map iterates in insertion order) rather than all of them means a flood cannot be used
+    // to wipe the counters of an attack in progress.
+    if (!bucket && buckets.size >= MAX_BUCKETS) {
+      for (const oldest of buckets.keys()) {
+        buckets.delete(oldest)
+        if (buckets.size < MAX_BUCKETS * 0.9) break
+      }
+    }
     buckets.set(key, { count: 1, resetAt: now + windowMs })
     return { allowed: true, retryAfterSeconds: 0 }
   }
@@ -134,14 +146,18 @@ export const checkRateLimit = (
   return { allowed: true, retryAfterSeconds: 0 }
 }
 
-/** Whether a key is over its limit, without counting this call. For limits that only count failures. */
-export const isRateLimited = (key: string, { limit }: Limit, now = Date.now()): boolean => {
-  const bucket = buckets.get(key)
-  return Boolean(bucket && bucket.resetAt > now && bucket.count >= limit)
+/**
+ * Takes back one counted attempt, for limits that only count failures: the attempt is counted
+ * before the slow check runs, so parallel attempts cannot all slip under the limit, and handed
+ * back when it succeeds.
+ */
+export const refundRateLimit = (rawKey: string): void => {
+  const bucket = buckets.get(bucketKey(rawKey))
+  if (bucket && bucket.count > 0) bucket.count -= 1
 }
 
-/** The caller's address as seen through Railway's proxy, or "unknown" */
-export const getClientIP = (req: MedusaRequest): string => {
-  const forwarded = req.get('x-forwarded-for')?.split(',')[0]?.trim()
-  return forwarded || req.get('x-real-ip')?.trim() || req.socket?.remoteAddress || 'unknown'
-}
+/**
+ * The caller's address. Medusa sets `trust proxy` to one hop, so `req.ip` is the address
+ * Railway's proxy saw. The leftmost X-Forwarded-For entry would be whatever the caller wrote.
+ */
+export const getClientIP = (req: MedusaRequest): string => req.ip || req.socket?.remoteAddress || 'unknown'

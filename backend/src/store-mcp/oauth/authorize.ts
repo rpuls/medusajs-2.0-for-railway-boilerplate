@@ -25,10 +25,8 @@ export type AuthorizationRequest = {
 export type SearchParams = Record<string, string | string[] | undefined>
 
 export type ParsedAuthorizationRequest =
-  /** The client or redirect URI is bad: show an error, never redirect (OAuth 2.1 §4.1.2.1) */
+  /** Shown as an error page. Never redirected: see failWithoutRedirect below. */
   | { description: string; error: string; kind: 'invalid' }
-  /** Something else is wrong: tell the client through its registered redirect URI */
-  | { kind: 'redirect'; url: string }
   | { client: OAuthClient; kind: 'ok'; request: AuthorizationRequest }
 
 /**
@@ -52,10 +50,12 @@ const cleanScope = (value: string): string =>
     .trim()
 
 export const parseAuthorizationRequest = async ({
+  callerIP,
   logger,
   params,
   store,
 }: {
+  callerIP?: string
   logger?: { warn: (message: string) => void }
   params: SearchParams
   store: StoreMcpModuleService
@@ -74,7 +74,7 @@ export const parseAuthorizationRequest = async ({
   if (!clientId) {
     return { kind: 'invalid', description: 'The request has no client_id.', error: 'invalid_request' }
   }
-  const resolved = await resolveClient({ allowFetch: true, clientId, logger, store })
+  const resolved = await resolveClient({ allowFetch: true, callerIP, clientId, logger, store })
   if (resolved.ok === false) return { kind: 'invalid', description: resolved.description, error: 'invalid_client' }
   const { client } = resolved
   const registered = getClientRedirectUris(client)
@@ -94,15 +94,19 @@ export const parseAuthorizationRequest = async ({
     }
   }
 
-  // From here on the redirect URI is trusted, so errors can be delivered to the client
+  // OAuth would deliver the remaining errors to the redirect URI. It is not done here: anyone
+  // can register an app with any https redirect URI, so a malformed link to this page would
+  // bounce visitors straight from the store's domain to a site of the attacker's choosing
+  // (RFC 9700 §4.11.2). Real MCP clients never send a malformed request, so nothing is lost.
   const rawState = read('state')
   const state = rawState !== undefined && rawState.length <= MAX_STATE_LENGTH ? rawState : undefined
-  const failWithRedirect = (error: string, description: string): ParsedAuthorizationRequest => ({
-    kind: 'redirect',
-    url: buildRedirectURL(redirectUri!, { error, error_description: description, state }),
+  const failWithoutRedirect = (error: string, description: string): ParsedAuthorizationRequest => ({
+    kind: 'invalid',
+    error,
+    description,
   })
   if (rawState !== undefined && state === undefined) {
-    return failWithRedirect('invalid_request', 'state is too long')
+    return failWithoutRedirect('invalid_request', 'state is too long')
   }
 
   const responseType = read('response_type')
@@ -113,30 +117,30 @@ export const parseAuthorizationRequest = async ({
   const rawResource = read('resource')
 
   if (duplicates.length > 0) {
-    return failWithRedirect('invalid_request', `Duplicate parameter: ${duplicates[0]}`)
+    return failWithoutRedirect('invalid_request', `Duplicate parameter: ${duplicates[0]}`)
   }
   if (responseType !== 'code') {
-    return failWithRedirect('unsupported_response_type', 'Only response_type=code is supported')
+    return failWithoutRedirect('unsupported_response_type', 'Only response_type=code is supported')
   }
   if (responseMode !== undefined && responseMode !== 'query') {
-    return failWithRedirect('invalid_request', 'Only response_mode=query is supported')
+    return failWithoutRedirect('invalid_request', 'Only response_mode=query is supported')
   }
-  if (!codeChallenge) return failWithRedirect('invalid_request', 'code_challenge is required (PKCE)')
+  if (!codeChallenge) return failWithoutRedirect('invalid_request', 'code_challenge is required (PKCE)')
   if (codeChallengeMethod !== 'S256') {
-    return failWithRedirect('invalid_request', 'code_challenge_method must be S256')
+    return failWithoutRedirect('invalid_request', 'code_challenge_method must be S256')
   }
   if (!isValidCodeChallenge(codeChallenge)) {
-    return failWithRedirect('invalid_request', 'code_challenge is not a valid S256 challenge')
+    return failWithoutRedirect('invalid_request', 'code_challenge is not a valid S256 challenge')
   }
 
   const scope = rawScope === undefined ? undefined : cleanScope(rawScope)
   if (scope !== undefined && scope.length > MAX_SCOPE_LENGTH) {
-    return failWithRedirect('invalid_scope', 'scope is too long')
+    return failWithoutRedirect('invalid_scope', 'scope is too long')
   }
 
   // RFC 8707: tokens are only ever issued for this store's MCP server
   if (rawResource !== undefined && !isThisMCPResource(rawResource)) {
-    return failWithRedirect('invalid_target', `This authorization server only issues tokens for ${MCP_RESOURCE_URL}`)
+    return failWithoutRedirect('invalid_target', `This authorization server only issues tokens for ${MCP_RESOURCE_URL}`)
   }
 
   return {

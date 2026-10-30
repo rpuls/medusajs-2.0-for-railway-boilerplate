@@ -47,6 +47,17 @@ export const handleMcpRequest = async (req: MedusaRequest, res: MedusaResponse):
   })
   if (auth.ok === false) return unauthorized(res, { error: 'invalid_token', errorDescription: auth.reason })
 
+  // One message per request. The SDK would accept a JSON-RPC batch of up to 100, which would
+  // turn the per-request limit below into a hundred tool calls each. MCP dropped batching in
+  // its 2025-06-18 revision, so no current client sends one.
+  if (Array.isArray(req.body)) {
+    res
+      .set(publicCORSHeaders)
+      .status(400)
+      .json({ jsonrpc: '2.0', error: { code: -32600, message: 'Batch requests are not supported' }, id: null })
+    return
+  }
+
   const limit = checkRateLimit(`mcp:${auth.grantId}`, RATE_LIMITS.mcp)
   if (!limit.allowed) {
     res.set({ ...publicCORSHeaders, 'Retry-After': String(limit.retryAfterSeconds) }).status(429).json({ error: 'too_many_requests' })

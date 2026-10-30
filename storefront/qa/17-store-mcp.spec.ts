@@ -250,10 +250,26 @@ test.describe.serial("Store MCP server", () => {
     expect(sales.isError).toBe(false)
   })
 
-  test("refuses more than 50 rows, so no tool works as an export", async ({ request }) => {
-    const { body } = await mcp(request, accessToken, "tools/call", { name: "search_customers", arguments: { limit: 500 } })
-    const result = (body as any).result ?? (body as any).error
-    expect(JSON.stringify(result)).toMatch(/50|too_big|Too big|less than or equal/i)
+  test("refuses more than 50 rows, deep paging and batches, so no tool works as an export", async ({ request }) => {
+    const tooMany = await mcp(request, accessToken, "tools/call", { name: "search_customers", arguments: { limit: 500 } })
+    expect(JSON.stringify((tooMany.body as any).result ?? (tooMany.body as any).error)).toMatch(/50|too_big|Too big|less than or equal/i)
+
+    const tooDeep = await mcp(request, accessToken, "tools/call", { name: "search_customers", arguments: { offset: 5000 } })
+    expect(JSON.stringify((tooDeep.body as any).result ?? (tooDeep.body as any).error)).toMatch(/200|too_big|Too big|less than or equal/i)
+
+    const batch = await request.post(`${backend}/mcp`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json, text/event-stream" },
+      data: Array.from({ length: 5 }, (_, i) => ({ jsonrpc: "2.0", id: 1000 + i, method: "tools/list" })),
+    })
+    expect(batch.status()).toBe(400)
+  })
+
+  test("a malformed sign-in link shows an error instead of redirecting anywhere", async ({ request }) => {
+    const res = await request.get(`${backend}/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`, {
+      maxRedirects: 0,
+    })
+    expect(res.status()).toBe(400)
+    expect(res.headers()["location"]).toBeUndefined()
   })
 
   test("drafts a product, edits the draft, and is refused on a published one", async ({ request }) => {
@@ -285,6 +301,13 @@ test.describe.serial("Store MCP server", () => {
     expect(draft.data.subtitle).toBe("Edited while a draft")
     expect(draft.data.variants).toHaveLength(2)
     expect(draft.data.variants.find((v: any) => v.title === "Small").prices[0].amount).toBe(13)
+
+    // Images must already be in the store's storage, so a thumbnail cannot carry data elsewhere
+    const outside = await mcp(request, accessToken, "tools/call", {
+      name: "update_product_draft",
+      arguments: { id: draftId, thumbnail: "https://example.com/pixel.png?d=leak" },
+    })
+    expect(JSON.stringify((outside.body as any).result ?? (outside.body as any).error)).toMatch(/already be uploaded to the store/)
 
     const published = await callTool(request, accessToken, "search_products", { status: "published", limit: 1 })
     const refused = await callTool(request, accessToken, "update_product_draft", {

@@ -7,6 +7,7 @@ import {
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { STORE_MCP_MODULE } from '../../modules/store-mcp'
 import type StoreMcpModuleService from '../../modules/store-mcp/service'
+import { BACKEND_URL, S3_FILE_URL } from '../../lib/constants'
 import { fail, ok, queryOf, safely, type ToolContext } from './helpers'
 
 /**
@@ -27,7 +28,23 @@ const price = z.object({
 })
 
 const text = (max: number, what: string) => z.string().trim().min(1).max(max).describe(what)
-const imageUrl = z.string().url().refine((value) => value.startsWith('https://'), 'Image URLs must use https')
+
+/**
+ * Images must already be in the store's own file storage. An arbitrary URL would be a way out
+ * for data: a customer can put instructions in their name, an assistant that reads it may
+ * follow them and set a thumbnail like https://elsewhere/?d=<emails>, and the dashboard then
+ * loads that URL the moment an admin opens the product list.
+ */
+const STORE_FILE_PREFIXES = [S3_FILE_URL, `${BACKEND_URL}/static`]
+  .filter((prefix): prefix is string => Boolean(prefix))
+  .map((prefix) => `${prefix.replace(/\/+$/, '')}/`)
+const imageUrl = z
+  .string()
+  .url()
+  .refine(
+    (value) => STORE_FILE_PREFIXES.some((prefix) => value.startsWith(prefix)),
+    `Images must already be uploaded to the store, under ${STORE_FILE_PREFIXES.join(' or ')}. The admin adds other images in the dashboard.`
+  )
 
 /** Fields an admin can apply from a suggestion. Deliberately texts and categories only. */
 const suggestionChanges = z
@@ -85,8 +102,8 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
         material: text(100, 'Material').optional(),
         category_ids: z.array(z.string()).max(20).optional().describe('Ids from get_store_overview'),
         collection_id: z.string().optional(),
-        thumbnail: imageUrl.optional().describe('https URL of the main image'),
-        image_urls: z.array(imageUrl).max(10).optional(),
+        thumbnail: imageUrl.optional().describe('Main image, a URL of a file already in the store, e.g. one used by another product'),
+        image_urls: z.array(imageUrl).max(10).optional().describe('URLs of files already in the store'),
         options: z
           .array(z.object({ title: text(60, 'Option name, e.g. Size'), values: z.array(text(60, 'Value')).min(1).max(30) }))
           .max(3)
@@ -192,7 +209,8 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
       const update = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined))
       if (image_urls) Object.assign(update, { images: image_urls.map((url) => ({ url })) })
       if (Object.keys(update).length) {
-        await updateProductsWorkflow(ctx.scope).run({ input: { selector: { id }, update } })
+        // The status is in the selector too, so an admin publishing it a moment ago wins
+        await updateProductsWorkflow(ctx.scope).run({ input: { selector: { id, status: 'draft' }, update } })
       }
 
       if (variant_prices?.length) {
@@ -204,6 +222,10 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
         if (bad) return fail(`The store does not sell in "${bad}". Store currencies: ${[...currencies].join(', ')}`)
         // One variant at a time: passing variants to updateProductsWorkflow replaces the whole list
         for (const entry of variant_prices) {
+          // Checked again before every write, so a product published halfway through stops here
+          if ((await loadProduct(ctx, id))?.status !== 'draft') {
+            return fail('The product was published while its prices were being updated. The remaining prices were not changed.')
+          }
           await updateProductVariantsWorkflow(ctx.scope).run({
             input: {
               selector: { id: entry.variant_id, product_id: id },

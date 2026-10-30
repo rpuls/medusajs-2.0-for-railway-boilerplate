@@ -21,7 +21,6 @@ import { verifyPKCE } from './crypto'
 import {
   checkRateLimit,
   getClientIP,
-  isRateLimited,
   isSameOriginRequest,
   oauthError,
   oauthJSON,
@@ -29,6 +28,7 @@ import {
   rateLimited,
   readParams,
   readQuery,
+  refundRateLimit,
   seeOther,
 } from './http'
 import { redirectUriMatches } from './redirect-uris'
@@ -69,12 +69,15 @@ export const whenEnabled =
 export const register: Handler = async (req, res) => {
   const limit = checkRateLimit(`register:${getClientIP(req)}`, RATE_LIMITS.register)
   if (!limit.allowed) return rateLimited(res, limit.retryAfterSeconds)
+  const overall = checkRateLimit('register:all', RATE_LIMITS.registerGlobal)
+  if (!overall.allowed) return rateLimited(res, overall.retryAfterSeconds)
 
   const validated = validateClientMetadata(req.body, 'dynamic')
   if (validated.ok === false) return oauthError(res, validated.error, validated.description)
 
   const { client, clientSecret } = await registerDynamicClient({ metadata: validated.metadata, store: storeOf(req) })
   loggerOf(req).info(`Store MCP: app registered: ${client.client_name} (${client.client_id})`)
+  void cleanupExpired(storeOf(req), (message) => loggerOf(req).warn(message))
 
   oauthJSON(
     res,
@@ -106,6 +109,14 @@ const exchangeAuthorizationCode = async (
   const record = await findAuthorizationCode(store, code)
   if (!record) return oauthError(res, 'invalid_grant', 'Unknown authorization code')
 
+  // Client and PKCE first: only the party that started this sign-in may trigger the replay
+  // revocation below, not anyone who saw a spent code in a browser history or a log
+  if (record.client_id !== client.id) {
+    return oauthError(res, 'invalid_grant', 'Authorization code was issued to another client')
+  }
+  if (!verifyPKCE(codeVerifier, record.code_challenge)) {
+    return oauthError(res, 'invalid_grant', 'code_verifier does not match code_challenge')
+  }
   if (record.used_at) {
     // OAuth 2.1 §4.1.3: a replayed code revokes what the first exchange produced
     if (record.grant_id) await revokeGrant(store, record.grant_id)
@@ -115,14 +126,8 @@ const exchangeAuthorizationCode = async (
   if (new Date(record.expires_at).getTime() <= Date.now()) {
     return oauthError(res, 'invalid_grant', 'Authorization code has expired')
   }
-  if (record.client_id !== client.id) {
-    return oauthError(res, 'invalid_grant', 'Authorization code was issued to another client')
-  }
   if (redirectUri !== null && redirectUri !== record.redirect_uri) {
     return oauthError(res, 'invalid_grant', 'redirect_uri does not match the authorization request')
-  }
-  if (!verifyPKCE(codeVerifier, record.code_challenge)) {
-    return oauthError(res, 'invalid_grant', 'code_verifier does not match code_challenge')
   }
   if (resource !== null && !isThisMCPResource(resource)) {
     return oauthError(res, 'invalid_target', 'The token can only be issued for this MCP server')
@@ -265,11 +270,22 @@ export const authorizePage: Handler = async (req, res) => {
     return renderRequestError(res, { reason: params.reason })
   }
 
-  const parsed = await parseAuthorizationRequest({ logger: loggerOf(req), params, store: storeOf(req) })
+  const limit = checkRateLimit(`authorize:${getClientIP(req)}`, RATE_LIMITS.authorizePage)
+  if (!limit.allowed) {
+    return renderRequestError(res, { description: 'Too many requests. Wait a minute and try again.' }, 429)
+  }
+
+  const parsed = await parseAuthorizationRequest({
+    callerIP: getClientIP(req),
+    logger: loggerOf(req),
+    params,
+    store: storeOf(req),
+  })
   if (parsed.kind === 'invalid') {
     return renderRequestError(res, { description: parsed.description, error: parsed.error })
   }
-  if (parsed.kind === 'redirect') return seeOther(res, parsed.url)
+  // Apps known only from a fetched metadata document are created here, so clean up here too
+  void cleanupExpired(storeOf(req), (message) => loggerOf(req).warn(message))
 
   const sessionAdmin = await getSessionAdmin(req)
   const showPasswordForm = !sessionAdmin || params.account === 'other'
@@ -335,19 +351,23 @@ export const authorizeDecision: Handler = async (req, res) => {
     else return seeOther(res, buildAuthorizeURL(consent.req))
   } else {
     const password = form.get('password') ?? ''
-    // Only failed attempts count, so an admin who signs in correctly is never locked out
+    // Counted before the password check, so parallel attempts cannot all slip under the limit,
+    // and handed back on success, so an admin who signs in correctly is never locked out
     const ipKey = `password-ip:${getClientIP(req)}`
     const emailKey = `password-email:${email}`
-    if (isRateLimited(ipKey, RATE_LIMITS.passwordPerIP) || isRateLimited(emailKey, RATE_LIMITS.passwordPerEmail)) {
+    const perIP = checkRateLimit(ipKey, RATE_LIMITS.passwordPerIP)
+    const perEmail = checkRateLimit(emailKey, RATE_LIMITS.passwordPerEmail)
+    if (!perIP.allowed || !perEmail.allowed) {
       failure = 'Too many failed sign-in attempts. Wait 15 minutes and try again.'
-    } else if (!email || !password) {
+    } else if (!email || !password || email.length > 254 || password.length > 1024) {
       failure = 'Enter your admin email and password.'
     } else {
       const checked = await checkAdminPassword(req, email, password)
-      if (checked.ok === true) admin = checked.admin
-      else {
-        checkRateLimit(ipKey, RATE_LIMITS.passwordPerIP)
-        checkRateLimit(emailKey, RATE_LIMITS.passwordPerEmail)
+      if (checked.ok === true) {
+        admin = checked.admin
+        refundRateLimit(ipKey)
+        refundRateLimit(emailKey)
+      } else {
         failure =
           checked.ok === false && checked.reason === 'mfa'
             ? 'This account uses two-step verification. Sign in to the admin dashboard in this browser first, then reload this page.'

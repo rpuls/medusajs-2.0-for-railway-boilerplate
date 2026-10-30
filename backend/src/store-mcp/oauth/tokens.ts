@@ -8,6 +8,7 @@ import {
   CLEANUP_INTERVAL,
   LAST_USED_WRITE_INTERVAL,
   REFRESH_TOKEN_LIFETIME,
+  UNUSED_CLIENT_LIFETIME,
 } from './constants'
 import { randomToken, sha256 } from './crypto'
 import { isThisMCPResource } from './urls'
@@ -219,6 +220,18 @@ export const cleanupExpired = async (
       { select: ['id'], take: 500 }
     )
     if (tokens.length) await store.deleteMcpTokens(tokens.map((token) => token.id))
+
+    // Registering is open to anyone, so apps no admin ever approved must not pile up
+    const stale = await store.listMcpClients(
+      { created_at: { $lt: new Date(now - UNUSED_CLIENT_LIFETIME) } },
+      { select: ['id'], take: 500, order: { created_at: 'ASC' } }
+    )
+    if (stale.length) {
+      const approved = await store.listMcpGrants({ client_id: stale.map((client) => client.id) }, { select: ['client_id'] })
+      const keep = new Set(approved.map((grant) => grant.client_id))
+      const unused = stale.filter((client) => !keep.has(client.id)).map((client) => client.id)
+      if (unused.length) await store.deleteMcpClients(unused)
+    }
   } catch {
     warn('Store MCP: cleanup of expired codes and tokens failed')
   }

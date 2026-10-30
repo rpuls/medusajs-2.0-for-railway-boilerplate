@@ -64,5 +64,16 @@ export const storeMcp = {
     call<{ suggestion: Suggestion }>(`/suggestions/${id}`, { method: 'POST', body: JSON.stringify({ action }) }),
 }
 
+/** Category names for ids, so a suggested category change is reviewed by name and not by count */
+export const categoryNames = async (ids: string[]): Promise<Map<string, string>> => {
+  if (!ids.length) return new Map()
+  const query = new URLSearchParams({ fields: 'id,name', limit: String(ids.length) })
+  ids.forEach((id) => query.append('id[]', id))
+  const res = await fetch(`/admin/product-categories?${query}`, { credentials: 'include' })
+  if (!res.ok) return new Map()
+  const { product_categories } = (await res.json()) as { product_categories: Array<{ id: string; name: string }> }
+  return new Map(product_categories.map((category) => [category.id, category.name]))
+}
+
 export const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Never'

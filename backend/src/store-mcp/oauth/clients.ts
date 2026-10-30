@@ -3,6 +3,8 @@ import type { InferTypeOf } from '@medusajs/framework/types'
 import type { McpClient } from '../../modules/store-mcp/models/client'
 import type StoreMcpModuleService from '../../modules/store-mcp/service'
 import { fetchClientMetadataDocument } from './cimd'
+import { RATE_LIMITS } from './constants'
+import { checkRateLimit } from './http'
 import type { ClientMetadata } from './client-metadata'
 import { randomToken, safeEqual, sha256 } from './crypto'
 
@@ -34,11 +36,14 @@ export type ResolvedClient = { client: OAuthClient; ok: true } | { description: 
  */
 export const resolveClient = async ({
   allowFetch,
+  callerIP,
   clientId,
   logger,
   store,
 }: {
   allowFetch: boolean
+  /** Who is asking, for the limit on outbound metadata fetches */
+  callerIP?: string
   clientId: unknown
   logger?: { warn: (message: string) => void }
   store: StoreMcpModuleService
@@ -48,15 +53,25 @@ export const resolveClient = async ({
   }
 
   const existing = await findClientByClientId(store, clientId)
+  const unknown: ResolvedClient = { ok: false, description: 'Unknown client_id' }
 
-  if (!isMetadataDocumentClientId(clientId)) {
-    return existing ? { ok: true, client: existing } : { ok: false, description: 'Unknown client_id' }
+  if (!isMetadataDocumentClientId(clientId) || !allowFetch) {
+    return existing ? { ok: true, client: existing } : unknown
   }
 
   const stillFresh = existing?.metadata_expires_at
     ? new Date(existing.metadata_expires_at).getTime() > Date.now()
     : false
-  if (existing && (stillFresh || !allowFetch)) return { ok: true, client: existing }
+  if (existing && stillFresh) return { ok: true, client: existing }
+
+  // Every fetch is a request to a host the caller picked, and a new client is a new row
+  const perCaller = checkRateLimit(`metadata-fetch:${callerIP ?? 'unknown'}`, RATE_LIMITS.metadataFetch)
+  const overall = checkRateLimit('metadata-fetch:all', RATE_LIMITS.metadataFetchGlobal)
+  if (!perCaller.allowed || !overall.allowed) {
+    return existing
+      ? { ok: true, client: existing }
+      : { ok: false, description: 'Too many new apps are signing in right now. Try again later.' }
+  }
 
   const fetched = await fetchClientMetadataDocument(clientId)
   if (fetched.ok === false) {
@@ -74,7 +89,8 @@ export const resolveClient = async ({
     client_name: fetched.metadata.clientName,
     client_uri: fetched.metadata.clientUri ?? null,
     logo_uri: fetched.metadata.logoUri ?? null,
-    metadata: fetched.raw,
+    // Only the validated, bounded fields: the raw document can be padded to 64 KB
+    metadata: fetched.metadata.registered,
     metadata_expires_at: fetched.expiresAt,
     redirect_uris: fetched.metadata.redirectUris as unknown as Record<string, unknown>,
     registration_type: 'metadata_document' as const,
