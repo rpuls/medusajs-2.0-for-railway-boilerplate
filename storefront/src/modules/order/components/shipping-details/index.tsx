@@ -55,16 +55,19 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
           data-testid="shipping-method-summary"
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">Method</Text>
-          <Text className="txt-medium text-ui-fg-subtle">
-            {(order as any).shipping_methods[0]?.name} (
-            {convertToLocale({
-              amount: order.shipping_methods?.[0].total ?? 0,
-              currency_code: order.currency_code,
-            })
-              .replace(/,/g, "")
-              .replace(/\./g, ",")}
-            )
-          </Text>
+          {/* One per shipping profile in the order, so usually just one */}
+          {order.shipping_methods?.map((method) => (
+            <Text key={method.id} className="txt-medium text-ui-fg-subtle">
+              {method.name} (
+              {convertToLocale({
+                amount: method.total ?? 0,
+                currency_code: order.currency_code,
+              })
+                .replace(/,/g, "")
+                .replace(/\./g, ",")}
+              )
+            </Text>
+          ))}
         </div>
       </div>
       <Divider className="mt-8" />

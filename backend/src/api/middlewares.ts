@@ -1,4 +1,4 @@
-import { configureStoreSearch, defineMiddlewares } from '@medusajs/framework/http';
+import { allowFields, configureStoreSearch, defineMiddlewares } from '@medusajs/framework/http';
 import { serveWellKnown, WELL_KNOWN_MATCHER } from '../store-mcp/well-known';
 
 /**
@@ -29,6 +29,17 @@ export default defineMiddlewares({
           },
         }),
       ],
+    },
+    // The shipping profile of each item in a cart. Completing a cart needs one
+    // shipping method per profile in it, and the shipping options Medusa lists
+    // for a cart are not filtered by profile, so the checkout groups them by
+    // this to ask for one choice per profile. Without it, a store with a second
+    // profile (heavy goods, say) cannot sell those products: the shopper picks
+    // one option and the order fails at the last step. Registered without a
+    // method so it also covers the carts returned by POST routes.
+    {
+      matcher: '/store/carts/:id',
+      middlewares: [allowFields('items.product.shipping_profile.id')],
     },
     // OAuth discovery for the store MCP server. See src/store-mcp/well-known.ts.
     {

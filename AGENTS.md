@@ -164,6 +164,12 @@ Things that have bitten this template before:
   index exists, and startup then fills the whole index.
 - During a Railway redeploy the old container keeps answering `/health`, so a
   200 right after a redeploy proves nothing about the new code.
+- A cart completes only with one shipping method per shipping profile among
+  its items, and Medusa lists every option for the address whatever its
+  profile. So the checkout delivery step asks once per profile, using
+  `items.product.shipping_profile.id`, which `src/api/middlewares.ts` allows on
+  the cart (`items.variant.product...` is one relation too deep and is
+  refused). Upstream asks once; keep this when taking their version.
 - After changing payment providers, redeploy the backend first and the
   storefront last. The storefront caches each region's provider list until it
   is redeployed.
@@ -176,8 +182,19 @@ keep these when changing it:
 
 - Writes go to drafts only. A published product is never written by a tool;
   changes to it are saved as suggestions that an admin applies in the
-  dashboard. No tool publishes, deletes, refunds, cancels, or changes stock or
-  live prices.
+  dashboard. No tool publishes, deletes, refunds, cancels, or changes live
+  prices. Stock is written directly only on drafts.
+- Stock on published products, warehouses, regions, shipping and tax have no
+  draft state, so tools only propose them.
+  `src/store-mcp/setup.ts` plans a proposal into the sentences the admin reads,
+  and Apply plans it again against the current store and runs exactly that. A
+  proposal never deletes, never removes a country, and never changes an
+  existing shipping price; it may change stock levels and a tax rate, and move
+  up to 50 products into a shipping profile.
+- A variant is buyable only with stock at a location linked to the cart's sales
+  channel, and a shipping option is flagged insufficient unless its own
+  location holds the stock. A new variant has an inventory item but no stock
+  level anywhere; `src/store-mcp/stock.ts` creates the level as it sets stock.
 - Customer data stops at name, email, country and order history, and no tool
   returns more than 50 rows.
 - The capability lists on the consent page, the admin page and
@@ -189,7 +206,9 @@ keep these when changing it:
   and revocation. Run it after any change here.
 - Do not pass `variants` to `updateProductsWorkflow` to change prices: it
   replaces the whole variant list and deletes the variants you left out. Use
-  `updateProductVariantsWorkflow` per variant.
+  `updateProductVariantsWorkflow` per variant. `countries` on
+  `updateRegionsWorkflow` and `geo_zones` on `updateServiceZonesWorkflow`
+  replace the whole list the same way: send the existing ones along.
 
 ## Medusa knowledge
 

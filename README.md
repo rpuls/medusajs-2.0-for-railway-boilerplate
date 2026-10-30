@@ -35,6 +35,8 @@ Deploys the official open-source Medusa 2.0 release and its Next.js starter stor
 
 One click provisions and connects every service (Postgres, Redis, MeiliSearch, S3-compatible storage, backend and storefront), runs the migrations, seeds the database, creates your admin user with a strong random password, and shares API keys between the services automatically. When the health checks go green, the store is live. You handle products; the template handles plumbing.
 
+**And you can run it from ChatGPT or Claude.** Every store also gets its own MCP server, which this template adds on top of Medusa's open-source release. Connect an AI assistant from the admin and ask it for a sales report, a restock list, a new product, or the regions, shipping and tax rates for a country you want to start selling to. Anything shoppers would see waits for your click. [How it works](#run-the-store-from-an-ai-assistant).
+
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/medusajs-2-0-storefront?referralCode=-Yg50p)
 
 **Updated to Medusa 2.22.1 on 29 October 2026.**
@@ -211,23 +213,37 @@ clients can work on it. Open **AI assistants** in the admin, copy the server URL
 (`https://<your-backend>/mcp`), and add it to the assistant as a custom
 connector. The assistant opens a page on your backend where you sign in with
 your admin account and click Allow. From then on you can ask it things like
-"what sold best this month?", "which variants are about to run out?" or "draft a
-product for the new linen shirt in three sizes".
+"what sold best this month?", "which variants are about to run out?", "draft a
+product for the new linen shirt in three sizes" or "set me up to sell to the
+Netherlands".
+
+Medusa's open-source release has no MCP server for store data; this template
+builds one with Medusa's own modules, workflows and admin extensions, so it
+runs inside your backend and needs no other service.
 
 What it may do is deliberately narrow, and the consent page says so before you
 allow anything:
 
 - **It can** read products, stock, orders, customers (name, email, country and
-  order history only) and sales, create new products as drafts, edit those
-  drafts, and suggest changes to published products.
-- **It cannot** publish, delete, change stock or live prices, refund, cancel,
-  export customers or touch settings. A suggestion waits on the product page
-  until you apply or discard it.
+  order history only) and sales, create new products as drafts with their
+  stock, edit those drafts, suggest changes to published products, and propose
+  stock, warehouses, regions, shipping and tax rates.
+- **It cannot** publish, delete, change live prices, refund, cancel, export
+  customers, or change stock or settings itself. A suggestion waits on the
+  product page, and a proposal on the AI assistants page, until you apply or
+  discard it.
 
 Access lives in Postgres, survives restarts and redeploys, works without Redis
 (so the trial template has it too), and is revoked from the same admin page.
 Set `STORE_MCP_ENABLED=false` on the backend to switch it off. The details,
 including every tool, are in [docs/store-mcp.md](docs/store-mcp.md).
+
+Shoppers' assistants are covered too. The storefront serves
+[`/llms.txt`](https://llmstxt.org/), the whole catalogue as one Markdown file
+with prices, options and links, plus how the region-prefixed URLs and checkout
+work. An agent asked to find or compare products reads the store in one
+request instead of crawling it. It lists only what any visitor can already see,
+and a product you publish appears in it straight away.
 
 ## Building on it with a coding agent
 

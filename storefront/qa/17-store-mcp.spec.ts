@@ -106,6 +106,61 @@ const adminToken = async (request: APIRequestContext) => {
   return (await res.json()).token as string
 }
 
+const signInToAdmin = async (page: Page) => {
+  await page.goto(`${qaEnv.adminURL}/login`)
+  await page.locator('input[name="email"]').fill(qaEnv.adminEmail)
+  await page.locator('input[name="password"]').fill(qaEnv.adminPassword)
+  await page.getByRole("button", { name: /continue with email/i }).click()
+  await expect(page).toHaveURL(/\/app(\/|$)(?!login)/, { timeout: 60_000 })
+}
+
+// The store setup test sells to Iceland, a country the seed leaves out, under names that
+// mark everything it creates as QA data.
+const QA_COUNTRY = "is"
+const QA_REGION = "QA Iceland"
+const QA_ZONE = "QA Iceland zone"
+const QA_SHIPPING = "QA Iceland post"
+const QA_PROFILE = "QA Bulky"
+const QA_FREIGHT = "QA Bulky freight"
+const QA_WAREHOUSE = "QA Warehouse"
+
+/** Removes what the store setup tests apply, so the next run starts from the seed's setup */
+const removeQaSetup = async (request: APIRequestContext, token: string) => {
+  const headers = { Authorization: `Bearer ${token}` }
+  const { shipping_options } = await (
+    await request.get(`${backend}/admin/shipping-options?limit=500&fields=id,name`, { headers })
+  ).json()
+  for (const option of shipping_options.filter((o: any) => o.name === QA_FREIGHT)) {
+    await request.delete(`${backend}/admin/shipping-options/${option.id}`, { headers })
+  }
+  const { shipping_profiles } = await (await request.get(`${backend}/admin/shipping-profiles?limit=200`, { headers })).json()
+  for (const profile of shipping_profiles.filter((p: any) => p.name === QA_PROFILE)) {
+    await request.delete(`${backend}/admin/shipping-profiles/${profile.id}`, { headers })
+  }
+  const { regions } = await (await request.get(`${backend}/admin/regions?limit=200`, { headers })).json()
+  for (const region of regions.filter((r: any) => r.name === QA_REGION)) {
+    await request.delete(`${backend}/admin/regions/${region.id}`, { headers })
+  }
+  const { tax_regions } = await (await request.get(`${backend}/admin/tax-regions?limit=500`, { headers })).json()
+  for (const tax of tax_regions.filter((t: any) => t.country_code === QA_COUNTRY && !t.province_code)) {
+    await request.delete(`${backend}/admin/tax-regions/${tax.id}`, { headers })
+  }
+  const { stock_locations } = await (
+    await request.get(`${backend}/admin/stock-locations?limit=50&fields=id,name,*fulfillment_sets,*fulfillment_sets.service_zones`, { headers })
+  ).json()
+  for (const set of stock_locations.flatMap((l: any) => l.fulfillment_sets ?? [])) {
+    for (const zone of (set.service_zones ?? []).filter((z: any) => z.name === QA_ZONE)) {
+      await request.delete(`${backend}/admin/fulfillment-sets/${set.id}/service-zones/${zone.id}`, { headers })
+    }
+  }
+  for (const location of stock_locations.filter((l: any) => l.name === QA_WAREHOUSE)) {
+    for (const set of location.fulfillment_sets ?? []) {
+      await request.delete(`${backend}/admin/fulfillment-sets/${set.id}`, { headers })
+    }
+    await request.delete(`${backend}/admin/stock-locations/${location.id}`, { headers })
+  }
+}
+
 test.describe.serial("Store MCP server", () => {
   let clientId: string
   let accessToken: string
@@ -114,9 +169,12 @@ test.describe.serial("Store MCP server", () => {
   let admin: string
 
   test.afterAll(async ({ request }) => {
-    if (!draftId) return
     const token = admin ?? (await adminToken(request))
-    await request.delete(`${backend}/admin/products/${draftId}`, { headers: { Authorization: `Bearer ${token}` } })
+    // The draft first: a shipping profile that still holds a product cannot be deleted
+    if (draftId) {
+      await request.delete(`${backend}/admin/products/${draftId}`, { headers: { Authorization: `Bearer ${token}` } })
+    }
+    await removeQaSetup(request, token)
   })
 
   test("advertises itself to MCP clients through OAuth discovery", async ({ request }) => {
@@ -192,12 +250,7 @@ test.describe.serial("Store MCP server", () => {
   })
 
   test("the admin's AI assistants page shows the server URL and the connected app", async ({ page }) => {
-    await page.goto(`${qaEnv.adminURL}/login`)
-    await page.locator('input[name="email"]').fill(qaEnv.adminEmail)
-    await page.locator('input[name="password"]').fill(qaEnv.adminPassword)
-    await page.getByRole("button", { name: /continue with email/i }).click()
-    await expect(page).toHaveURL(/\/app(\/|$)(?!login)/, { timeout: 60_000 })
-
+    await signInToAdmin(page)
     await page.goto(`${qaEnv.adminURL}/ai-assistants`)
     await expect(page.getByTestId("store-mcp-url")).toHaveText(`${backend}/mcp`, { timeout: 60_000 })
     await expect(page.getByRole("cell", { name: /QA Assistant/ }).first()).toBeVisible()
@@ -215,13 +268,24 @@ test.describe.serial("Store MCP server", () => {
     const { body } = await mcp(request, accessToken, "tools/list")
     const names: string[] = (body as any).result.tools.map((tool: any) => tool.name)
     expect(names).toEqual(
-      expect.arrayContaining(["get_store_overview", "search_products", "get_product", "list_orders", "get_sales_summary", "create_product_draft", "suggest_product_changes"])
+      expect.arrayContaining([
+        "get_store_overview",
+        "search_products",
+        "get_product",
+        "list_orders",
+        "get_sales_summary",
+        "create_product_draft",
+        "suggest_product_changes",
+        "get_store_setup",
+        "propose_store_setup",
+        "propose_stock_changes",
+      ])
     )
     expect(names.filter((name) => /publish|delete|refund|cancel|export|stock_update|setting/.test(name))).toEqual([])
 
     const prompts = await mcp(request, accessToken, "prompts/list")
     expect((prompts.body as any).result.prompts.map((p: any) => p.name)).toEqual(
-      expect.arrayContaining(["store_report", "restock_check", "improve_product", "draft_product"])
+      expect.arrayContaining(["store_report", "restock_check", "improve_product", "draft_product", "sell_to_country", "ship_separately"])
     )
   })
 
@@ -282,11 +346,14 @@ test.describe.serial("Store MCP server", () => {
       options: [{ title: "Size", values: ["Small", "Large"] }],
       variants: [
         { title: "Small", options: { Size: "Small" }, prices: [{ currency_code: currency, amount: 12 }] },
-        { title: "Large", options: { Size: "Large" }, prices: [{ currency_code: currency, amount: 15 }] },
+        { title: "Large", options: { Size: "Large" }, prices: [{ currency_code: currency, amount: 15 }], stock: 20 },
       ],
     })
     expect(created.isError, created.text).toBe(false)
     expect(created.data.status).toBe("draft")
+    // Stocked at the default warehouse in the same call, so it can be bought once published
+    expect(created.data.stock.set).toEqual([{ variant: "QA MCP Draft Mug / Large", units: 20 }])
+    expect(created.data.stock.note).toBeNull()
     draftId = created.data.id
 
     const small = created.data.variants.find((v: any) => v.title === "Small")
@@ -341,6 +408,235 @@ test.describe.serial("Store MCP server", () => {
     expect(applied.ok()).toBeTruthy()
     const product = await callTool(request, accessToken, "get_product", { id: draftId })
     expect(product.data.title).toBe("QA MCP Draft Mug, renamed")
+  })
+
+  test("store setup is only proposed, and changes the store when an admin applies it", async ({ page, request }) => {
+    admin = await adminToken(request)
+    const headers = { Authorization: `Bearer ${admin}` }
+    await removeQaSetup(request, admin)
+
+    const setup = await callTool(request, accessToken, "get_store_setup")
+    expect(setup.isError, setup.text).toBe(false)
+    expect(setup.data.regions.length).toBeGreaterThan(0)
+    const fulfillmentSetId = setup.data.ships_from[0].fulfillment_set_id
+
+    // Checked against the store before anything is saved
+    const taken = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: a country that is already sold to",
+      new_regions: [{ name: "QA Taken", currency_code: "eur", countries: [qaEnv.region] }],
+    })
+    expect(taken.isError).toBe(true)
+    expect(taken.text).toMatch(/already in region/)
+    const foreign = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: a currency the store does not sell in",
+      new_regions: [{ name: "QA Yen", currency_code: "jpy", countries: ["jp"] }],
+    })
+    expect(foreign.isError).toBe(true)
+    expect(foreign.text).toMatch(/does not sell in JPY/)
+
+    const proposed = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: start selling to Iceland",
+      new_regions: [{ name: QA_REGION, currency_code: "eur", countries: [QA_COUNTRY] }],
+      tax_rates: [{ country_code: QA_COUNTRY, rate: 24, name: "VAT" }],
+      new_shipping_zones: [
+        {
+          name: QA_ZONE,
+          countries: [QA_COUNTRY],
+          fulfillment_set_id: fulfillmentSetId,
+          shipping_options: [{ name: QA_SHIPPING, prices: [{ currency_code: "eur", amount: 15 }] }],
+        },
+      ],
+    })
+    expect(proposed.isError, proposed.text).toBe(false)
+    expect(proposed.data.status).toBe("pending")
+    expect(proposed.data.will_do).toHaveLength(3)
+    // Priced, taxed and shippable, so there is nothing to warn about
+    expect(proposed.data.warnings).toEqual([])
+
+    // Nothing has changed yet
+    const before = await (await request.get(`${backend}/admin/regions?limit=200`, { headers })).json()
+    expect(before.regions.map((r: any) => r.name)).not.toContain(QA_REGION)
+
+    await signInToAdmin(page)
+    await page.goto(`${qaEnv.adminURL}/ai-assistants`)
+    const card = page.getByTestId("setup-proposal").filter({ hasText: "QA: start selling to Iceland" })
+    await expect(card).toContainText(`Create region "${QA_REGION}" for Iceland, in EUR`, { timeout: 60_000 })
+    await expect(card).toContainText("Set the tax rate for Iceland to 24% (VAT)")
+    await expect(card).toContainText(`${QA_SHIPPING} (€15.00)`)
+    await card.getByRole("button", { name: "Apply" }).click()
+    await page.getByRole("alertdialog").getByRole("button", { name: "Apply" }).click()
+    await expect(page.getByText("Changes applied")).toBeVisible()
+
+    const { regions } = await (await request.get(`${backend}/admin/regions?limit=200&fields=id,name,currency_code,*countries`, { headers })).json()
+    const region = regions.find((r: any) => r.name === QA_REGION)
+    expect(region?.currency_code).toBe("eur")
+    expect(region.countries.map((c: any) => c.iso_2)).toEqual([QA_COUNTRY])
+
+    const { tax_regions } = await (await request.get(`${backend}/admin/tax-regions?limit=500&fields=id,country_code,province_code,*tax_rates`, { headers })).json()
+    const tax = tax_regions.find((t: any) => t.country_code === QA_COUNTRY && !t.province_code)
+    expect(tax.tax_rates.find((r: any) => r.is_default)?.rate).toBe(24)
+
+    const { shipping_options } = await (await request.get(`${backend}/admin/shipping-options?limit=200&fields=id,name,*prices`, { headers })).json()
+    const shipping = shipping_options.find((o: any) => o.name === QA_SHIPPING)
+    expect(shipping.prices.find((p: any) => p.currency_code === "eur")?.amount).toBe(15)
+
+    const after = await callTool(request, accessToken, "get_store_setup")
+    const mine = after.data.your_proposals.find((p: any) => p.summary === "QA: start selling to Iceland")
+    expect(mine.status).toBe("applied")
+    const again = await request.post(`${backend}/admin/store-mcp/setup-proposals/${mine.id}`, { headers, data: { action: "apply" } })
+    expect(again.ok()).toBe(false)
+  })
+
+  test("a shipping profile comes with its options and its products, in one proposal", async ({ request }) => {
+    const headers = { Authorization: `Bearer ${admin}` }
+    const setup = await callTool(request, accessToken, "get_store_setup")
+    const zone = setup.data.ships_from
+      .flatMap((set: any) => set.zones)
+      .find((z: any) => z.countries.includes(qaEnv.region))
+    expect(zone, "a shipping zone must cover the default region").toBeTruthy()
+
+    const unknown = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: an option for a profile nobody creates",
+      new_shipping_options: [
+        { service_zone_id: zone.id, name: QA_FREIGHT, shipping_profile_name: "No such profile", prices: [{ currency_code: "eur", amount: 49 }] },
+      ],
+    })
+    expect(unknown.isError).toBe(true)
+    expect(unknown.text).toMatch(/no shipping profile called "No such profile"/)
+
+    const proposed = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: bulky items ship by freight",
+      new_shipping_profiles: [{ name: QA_PROFILE }],
+      new_shipping_options: [
+        {
+          service_zone_id: zone.id,
+          name: QA_FREIGHT,
+          shipping_profile_name: QA_PROFILE,
+          prices: [
+            { currency_code: "eur", amount: 49 },
+            { currency_code: "usd", amount: 49 },
+          ],
+        },
+      ],
+      assign_products_to_profiles: [{ shipping_profile_name: QA_PROFILE, product_ids: [draftId] }],
+    })
+    expect(proposed.isError, proposed.text).toBe(false)
+    const steps: string[] = proposed.data.will_do
+    expect(steps).toHaveLength(3)
+    expect(steps[0]).toBe(`Create shipping profile "${QA_PROFILE}".`)
+    expect(steps[1]).toContain(`for shipping profile "${QA_PROFILE}"`)
+    expect(steps[2]).toMatch(new RegExp(`^Move ".+" to shipping profile "${QA_PROFILE}"\\.$`))
+    expect(proposed.data.warnings.join(" ")).not.toMatch(/has no shipping options/)
+
+    const { proposals } = await (await request.get(`${backend}/admin/store-mcp/setup-proposals`, { headers })).json()
+    const pending = proposals.find((p: any) => p.summary === "QA: bulky items ship by freight")
+    const applied = await request.post(`${backend}/admin/store-mcp/setup-proposals/${pending.id}`, { headers, data: { action: "apply" } })
+    expect(applied.ok()).toBeTruthy()
+    expect((await applied.json()).proposal.status).toBe("applied")
+
+    const { product } = await (await request.get(`${backend}/admin/products/${draftId}?fields=id,*shipping_profile`, { headers })).json()
+    expect(product.shipping_profile?.name).toBe(QA_PROFILE)
+    const { shipping_options } = await (
+      await request.get(`${backend}/admin/shipping-options?limit=500&fields=id,name,shipping_profile_id`, { headers })
+    ).json()
+    expect(shipping_options.find((o: any) => o.name === QA_FREIGHT)?.shipping_profile_id).toBe(product.shipping_profile.id)
+  })
+
+  test("a draft gets its stock directly; a published product's stock waits for an admin", async ({ request }) => {
+    const headers = { Authorization: `Bearer ${admin}` }
+    const apply = async (summary: string) => {
+      const { proposals } = await (await request.get(`${backend}/admin/store-mcp/setup-proposals`, { headers })).json()
+      const proposal = proposals.find((p: any) => p.summary === summary)
+      const res = await request.post(`${backend}/admin/store-mcp/setup-proposals/${proposal.id}`, { headers, data: { action: "apply" } })
+      expect(res.ok(), await res.text()).toBeTruthy()
+      expect((await res.json()).proposal.status).toBe("applied")
+    }
+    const stockOf = async (productId: string, variantId: string) =>
+      (await callTool(request, accessToken, "get_product", { id: productId })).data.variants.find((v: any) => v.id === variantId)
+
+    // A draft: set at once, at the default warehouse, with no stock level there beforehand
+    const draft = await callTool(request, accessToken, "get_product", { id: draftId })
+    const draftVariant = draft.data.variants.find((v: any) => v.title === "Small").id
+    const stocked = await callTool(request, accessToken, "update_product_draft", {
+      id: draftId,
+      variant_stock: [{ variant_id: draftVariant, units: 12 }],
+    })
+    expect(stocked.isError, stocked.text).toBe(false)
+    const afterDraft = await stockOf(draftId!, draftVariant)
+    expect(afterDraft.stock).toBe(12)
+    expect(afterDraft.stock_by_location).toHaveLength(1)
+
+    // A published product: refused directly, and a delivery is proposed with add
+    const shirt = await callTool(request, accessToken, "get_product", { handle: "t-shirt" })
+    const shirtVariant = shirt.data.variants[0]
+    const refused = await callTool(request, accessToken, "update_product_draft", {
+      id: shirt.data.id,
+      variant_stock: [{ variant_id: shirtVariant.id, units: 1 }],
+    })
+    expect(refused.isError).toBe(true)
+    const ambiguous = await callTool(request, accessToken, "propose_stock_changes", {
+      summary: "QA: both set_to and add",
+      stock_levels: [{ variant_id: shirtVariant.id, set_to: 5, add: 5 }],
+    })
+    expect(ambiguous.isError).toBe(true)
+    expect(ambiguous.text).toMatch(/either set_to or add/)
+
+    const delivery = await callTool(request, accessToken, "propose_stock_changes", {
+      summary: "QA: a delivery of 5",
+      stock_levels: [{ variant_id: shirtVariant.id, add: 5 }],
+    })
+    expect(delivery.isError, delivery.text).toBe(false)
+    expect(delivery.data.will_do[0]).toMatch(/^Add 5 of "Medusa T-Shirt \/ .+" at .+: from \d+ to \d+\.$/)
+    expect((await stockOf(shirt.data.id, shirtVariant.id)).stock).toBe(shirtVariant.stock)
+    await apply("QA: a delivery of 5")
+    expect((await stockOf(shirt.data.id, shirtVariant.id)).stock).toBe(shirtVariant.stock + 5)
+
+    // And back, so repeated runs do not pile stock up
+    await callTool(request, accessToken, "propose_stock_changes", {
+      summary: "QA: return the 5",
+      stock_levels: [{ variant_id: shirtVariant.id, add: -5 }],
+    })
+    await apply("QA: return the 5")
+    expect((await stockOf(shirt.data.id, shirtVariant.id)).stock).toBe(shirtVariant.stock)
+  })
+
+  test("a new warehouse comes with its shipping and its stock, in one proposal", async ({ request }) => {
+    const headers = { Authorization: `Bearer ${admin}` }
+    const draft = await callTool(request, accessToken, "get_product", { id: draftId })
+    const variantId = draft.data.variants[0].id
+
+    const proposed = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: a second warehouse",
+      new_stock_locations: [{ name: QA_WAREHOUSE, country_code: "dk", city: "Aarhus" }],
+      new_shipping_zones: [
+        {
+          name: `${QA_WAREHOUSE} zone`,
+          countries: [qaEnv.region],
+          ships_from_location_name: QA_WAREHOUSE,
+          shipping_options: [{ name: `${QA_WAREHOUSE} post`, prices: [{ currency_code: "eur", amount: 7 }, { currency_code: "usd", amount: 7 }] }],
+        },
+      ],
+      stock_levels: [{ variant_id: variantId, set_to: 3, stock_location_name: QA_WAREHOUSE }],
+    })
+    expect(proposed.isError, proposed.text).toBe(false)
+    expect(proposed.data.will_do).toEqual([
+      `Create warehouse "${QA_WAREHOUSE}" in Aarhus, Denmark, selling through the default sales channel.`,
+      expect.stringContaining(`shipping from ${QA_WAREHOUSE}`),
+      expect.stringMatching(new RegExp(`^Stock 3 of ".+" at ${QA_WAREHOUSE}, which had none there\\.$`)),
+    ])
+    expect(proposed.data.warnings.join(" ")).not.toMatch(/Nothing ships from/)
+
+    const { proposals } = await (await request.get(`${backend}/admin/store-mcp/setup-proposals`, { headers })).json()
+    const pending = proposals.find((p: any) => p.summary === "QA: a second warehouse")
+    const applied = await request.post(`${backend}/admin/store-mcp/setup-proposals/${pending.id}`, { headers, data: { action: "apply" } })
+    expect(applied.ok(), await applied.text()).toBeTruthy()
+    expect((await applied.json()).proposal.status, "every step applied").toBe("applied")
+
+    const setup = await callTool(request, accessToken, "get_store_setup")
+    const warehouse = setup.data.stock_locations.find((l: any) => l.name === QA_WAREHOUSE)
+    expect(warehouse).toMatchObject({ city: "Aarhus", country: "dk", sells_through_default_channel: true, ships: true })
+    const levels = (await callTool(request, accessToken, "get_product", { id: draftId })).data.variants[0].stock_by_location
+    expect(levels.find((l: any) => l.location === QA_WAREHOUSE)?.stocked).toBe(3)
   })
 
   test("a refreshed token works, and the spent refresh token is refused", async ({ request }) => {

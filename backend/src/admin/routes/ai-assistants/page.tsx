@@ -2,6 +2,7 @@ import { defineRouteConfig } from '@medusajs/admin-sdk'
 import { Robot } from '@medusajs/icons'
 import { Badge, Button, Container, Copy, Heading, StatusBadge, Table, Text, toast, usePrompt } from '@medusajs/ui'
 import { useCallback, useEffect, useState } from 'react'
+import { SetupProposals } from '../../components/setup-proposals'
 import { formatDate, type StoreMcpOverview, type Suggestion, storeMcp } from '../../lib/store-mcp'
 
 /**
@@ -186,6 +187,8 @@ const AiAssistantsPage = () => {
           </Table>
         )}
       </Container>
+
+      <SetupProposals />
 
       <Container className="divide-y p-0">
         <div className="flex items-center gap-x-2 px-6 py-4">

@@ -32,7 +32,7 @@ export const registerPrompts = (server: McpServer) => {
     },
     ({ threshold }) =>
       ask(
-        `Find every variant with ${Number(threshold || 10)} or fewer in stock. For each, check how many sold in the last 30 days and estimate how many days of stock are left. Rank them by urgency and tell me what to reorder first. You cannot change stock; I will do that in the dashboard.`
+        `Find every variant with ${Number(threshold || 10)} or fewer in stock. For each, check how many sold in the last 30 days and estimate how many days of stock are left. Rank them by urgency and tell me what to reorder first. When I tell you a delivery has arrived, propose it with propose_stock_changes, using add.`
       )
   )
 
@@ -58,7 +58,36 @@ export const registerPrompts = (server: McpServer) => {
     },
     ({ idea }) =>
       ask(
-        `Draft a new product from this: ${idea}\nCheck the store overview first for currencies and categories. Write a title, subtitle and description, pick a category, and set up options and variants with prices in every store currency. Create it with create_product_draft, then tell me what to check before I publish it.`
+        `Draft a new product from this: ${idea}\nCheck the store overview first for currencies and categories. Write a title, subtitle and description, pick a category, and set up options and variants with prices in every store currency and the stock I gave you (ask me if I did not). Create it with create_product_draft, then tell me what to check before I publish it.`
+      )
+  )
+
+  server.registerPrompt(
+    'sell_to_country',
+    {
+      title: 'Start selling to a country',
+      description: 'Region, shipping and tax for a new country, as one proposal for review',
+      argsSchema: { country: z.string().min(1).describe('The country, by name or code') },
+    },
+    ({ country }) =>
+      ask(
+        `I want to start selling to ${country}. Read get_store_setup first. If a region already uses that country's currency, add the country to it; otherwise propose a new region, but only in a currency the store already sells in. Make sure it can ship there, priced like the existing shipping options and in the region's currency, and set its standard tax rate. Send it all as one propose_store_setup. Then tell me what it will do, the tax rate you used and where it comes from, any warnings, and that I apply it on the AI assistants page.`
+      )
+  )
+
+  server.registerPrompt(
+    'ship_separately',
+    {
+      title: 'Ship some products separately',
+      description: 'A shipping profile with its own shipping options, for products that ship differently, as one proposal',
+      argsSchema: {
+        products: z.string().min(1).describe('Which products, e.g. "the sofas" or "everything in Furniture"'),
+        shipping: z.string().min(1).describe('How they ship and what it costs, e.g. "freight, 49 EUR, 5 to 10 days"'),
+      },
+    },
+    ({ products, shipping }) =>
+      ask(
+        `These products ship differently from the rest: ${products}. How they ship: ${shipping}. Find the products, then read get_store_setup. In one propose_store_setup, propose a new shipping profile for them, its shipping options in every shipping zone the store ships to, priced in the currencies of the regions those zones serve, and the products moved into it. Then tell me what it will do, any warnings, and that I apply it on the AI assistants page. Shoppers will choose delivery for these products separately at checkout.`
       )
   )
 }

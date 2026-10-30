@@ -8,6 +8,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { STORE_MCP_MODULE } from '../../modules/store-mcp'
 import type StoreMcpModuleService from '../../modules/store-mcp/service'
 import { BACKEND_URL, S3_FILE_URL } from '../../lib/constants'
+import { loadStockLocations, loadVariantStock, sharedInventoryItems, stockProblem, writeStock } from '../stock'
 import { fail, ok, queryOf, safely, type ToolContext } from './helpers'
 
 /**
@@ -17,7 +18,8 @@ import { fail, ok, queryOf, safely, type ToolContext } from './helpers'
  *   admin publishes it, and publishing is not a tool.
  * - A published product is never written. A change to one is saved as a suggestion, which an
  *   admin applies or discards on the product page in the dashboard.
- * - Prices change only on drafts, stock never, and nothing is deleted.
+ * - Prices and stock change only on drafts, and nothing is deleted. Stock on a published product
+ *   is proposed with propose_stock_changes and applied by an admin; see ../setup.ts.
  */
 
 const WRITES = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const
@@ -28,6 +30,32 @@ const price = z.object({
 })
 
 const text = (max: number, what: string) => z.string().trim().min(1).max(max).describe(what)
+
+const units = z.number().int().min(0).max(10_000_000)
+const stockLocationArg = z
+  .string()
+  .optional()
+  .describe("Where the stock is, from get_store_setup. Default: the store's default stock location.")
+
+/** The stock location a draft's stock goes to, or why there is none */
+const stockLocationFor = async (ctx: ToolContext, requested?: string) => {
+  const { locations, defaultLocationId } = await loadStockLocations(ctx.scope)
+  const location = locations.find((l) => l.id === (requested ?? defaultLocationId))
+  if (location) return { location }
+  return {
+    error: requested
+      ? `No stock location with id ${requested}. get_store_setup lists them.`
+      : 'The store has no default stock location. Pass stock_location_id from get_store_setup.',
+  }
+}
+
+/** What a shopper would not see about stock at this location, if anything */
+const stockLocationNote = (location: { name: string; sales_channel_ids: string[]; ships: boolean }, salesChannelId?: string) =>
+  salesChannelId && !location.sales_channel_ids.includes(salesChannelId)
+    ? `${location.name} does not sell through the product's sales channel, so shoppers do not see this stock.`
+    : !location.ships
+      ? `Nothing ships from ${location.name} yet, so this stock cannot be sold until a shipping zone does.`
+      : null
 
 /**
  * Images must already be in the store's own file storage. An arbitrary URL would be a way out
@@ -93,7 +121,7 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
     {
       title: 'Create product draft',
       description:
-        'Creates a new product as a DRAFT. Drafts are not visible in the store; an admin reviews and publishes them in the dashboard. Give options (e.g. Size: S, M, L) and one variant per combination, each with prices in the store currencies. Stock is set by the admin.',
+        'Creates a new product as a DRAFT. Drafts are not visible in the store; an admin reviews and publishes them in the dashboard. Give options (e.g. Size: S, M, L) and one variant per combination, each with prices in the store currencies and its stock, so the product can be bought as soon as it is published.',
       inputSchema: {
         title: text(200, 'Product title'),
         subtitle: text(200, 'Short subtitle').optional(),
@@ -104,6 +132,7 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
         collection_id: z.string().optional(),
         thumbnail: imageUrl.optional().describe('Main image, a URL of a file already in the store, e.g. one used by another product'),
         image_urls: z.array(imageUrl).max(10).optional().describe('URLs of files already in the store'),
+        stock_location_id: stockLocationArg,
         options: z
           .array(z.object({ title: text(60, 'Option name, e.g. Size'), values: z.array(text(60, 'Value')).min(1).max(30) }))
           .max(3)
@@ -116,7 +145,8 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
               sku: z.string().trim().max(100).optional(),
               options: z.record(z.string(), z.string()).optional().describe('Option name to value, e.g. {"Size": "L"}'),
               prices: z.array(price).min(1).max(20),
-              manage_inventory: z.boolean().optional().describe('Track stock for this variant. Default true; the admin then sets stock before publishing.'),
+              manage_inventory: z.boolean().optional().describe('Track stock for this variant. Default true. Off means it can always be bought, however many sell.'),
+              stock: units.optional().describe('Units in stock. Left out, the variant starts sold out.'),
             })
           )
           .min(1)
@@ -128,6 +158,10 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
       const defaults = await storeDefaults(ctx)
       const bad = unsupportedCurrency(input.variants.flatMap((v) => v.prices), defaults.currencies)
       if (bad) return fail(`The store does not sell in "${bad}". Store currencies: ${[...defaults.currencies].join(', ')}`)
+
+      const wantsStock = input.variants.some((v) => v.stock !== undefined && (v.manage_inventory ?? true))
+      const target = wantsStock ? await stockLocationFor(ctx, input.stock_location_id) : null
+      if (target?.error) return fail(target.error)
 
       const options = input.options?.length ? input.options : [{ title: 'Default option', values: ['Default option value'] }]
       if (!input.options?.length && input.variants.length > 1) {
@@ -164,12 +198,33 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
         },
       })
       const product = result[0]
+
+      // A new variant has an inventory item but no stock level anywhere; writeStock adds both
+      const stocked: Array<{ variant: string; units: number }> = []
+      const location = target?.location
+      if (location) {
+        const created: any[] = product.variants ?? []
+        const wanted = input.variants
+          .map((v, i) => ({ id: created.find((c) => c.title === v.title)?.id ?? created[i]?.id, units: v.stock, managed: v.manage_inventory ?? true }))
+          .filter((w): w is { id: string; units: number; managed: true } => Boolean(w.id) && w.units !== undefined && w.managed)
+        const stock = await loadVariantStock(ctx.scope, wanted.map((w) => w.id))
+        for (const w of wanted) {
+          const variant = stock.get(w.id)
+          if (!variant?.inventory_item_id) continue
+          await writeStock(ctx.scope, variant.inventory_item_id, location.id, w.units, variant.levels.some((l) => l.location_id === location.id))
+          stocked.push({ variant: variant.label, units: w.units })
+        }
+      }
+
       return ok({
         id: product.id,
         handle: product.handle,
         status: product.status,
         variants: (product.variants ?? []).map((v: any) => ({ id: v.id, title: v.title, sku: v.sku })),
-        next_step: 'Tell the admin to review and publish it in the dashboard under Products. Stock is set there too.',
+        stock: location ? { location: location.name, set: stocked, note: stockLocationNote(location, defaults.salesChannelId) } : 'none set',
+        next_step: `Tell the admin to review and publish it in the dashboard under Products.${
+          location ? '' : ' It has no stock yet, so it shows as sold out: set stock with update_product_draft first.'
+        }`,
       })
     })
   )
@@ -179,7 +234,7 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
     {
       title: 'Update product draft',
       description:
-        'Edits a product that is still a DRAFT: texts, images, categories, collection, and variant prices. Refused for published products; use suggest_product_changes for those.',
+        'Edits a product that is still a DRAFT: texts, images, categories, collection, variant prices and variant stock. Refused for published products; use suggest_product_changes for their texts and propose_stock_changes for their stock.',
       inputSchema: {
         id: z.string().describe('Product id (prod_...)'),
         title: text(200, 'Product title').optional(),
@@ -196,10 +251,16 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
           .max(100)
           .optional()
           .describe('Replaces the prices of the listed variants'),
+        variant_stock: z
+          .array(z.object({ variant_id: z.string(), units: units.describe('Units in stock') }))
+          .max(100)
+          .optional()
+          .describe('Sets how many units of the listed variants are in stock'),
+        stock_location_id: stockLocationArg,
       },
       annotations: WRITES,
     },
-    safely(ctx, async ({ id, variant_prices, image_urls, ...fields }) => {
+    safely(ctx, async ({ id, variant_prices, variant_stock, stock_location_id, image_urls, ...fields }) => {
       const product = await loadProduct(ctx, id)
       if (!product) return fail('No product with that id.')
       if (product.status !== 'draft') {
@@ -235,7 +296,40 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
         }
       }
 
-      return ok({ id, status: 'draft', updated: [...Object.keys(update), ...(variant_prices?.length ? ['variant_prices'] : [])] })
+      let stockNote: string | null = null
+      if (variant_stock?.length) {
+        const known = new Set((product.variants ?? []).map((v) => v.id))
+        const stranger = variant_stock.find((entry) => !known.has(entry.variant_id))
+        if (stranger) return fail(`Variant ${stranger.variant_id} does not belong to this product.`)
+        const target = await stockLocationFor(ctx, stock_location_id)
+        if (target.error) return fail(target.error)
+        const location = target.location!
+        const stock = await loadVariantStock(ctx.scope, variant_stock.map((entry) => entry.variant_id))
+        for (const entry of variant_stock) {
+          const problem = stockProblem(stock.get(entry.variant_id)!)
+          if (problem) return fail(problem)
+        }
+        const items = variant_stock.map((entry) => stock.get(entry.variant_id)!.inventory_item_id!)
+        if ((await sharedInventoryItems(ctx.scope, items, id)).size) {
+          return fail('A variant shares its inventory with another product, so its stock is set in the dashboard under Inventory.')
+        }
+        for (const entry of variant_stock) {
+          // As with prices, a product published halfway through stops here
+          if ((await loadProduct(ctx, id))?.status !== 'draft') {
+            return fail('The product was published while its stock was being set. The remaining stock was not changed.')
+          }
+          const variant = stock.get(entry.variant_id)!
+          await writeStock(ctx.scope, variant.inventory_item_id!, location.id, entry.units, variant.levels.some((l) => l.location_id === location.id))
+        }
+        stockNote = stockLocationNote(location, (await storeDefaults(ctx)).salesChannelId)
+      }
+
+      return ok({
+        id,
+        status: 'draft',
+        updated: [...Object.keys(update), ...(variant_prices?.length ? ['variant_prices'] : []), ...(variant_stock?.length ? ['variant_stock'] : [])],
+        ...(stockNote ? { stock_note: stockNote } : {}),
+      })
     })
   )
 

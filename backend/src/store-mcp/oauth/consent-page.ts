@@ -21,16 +21,17 @@ export const CAN = [
   'Read products, variants, prices, stock levels, categories and collections',
   'Read orders, and customers limited to name, email, country and order history',
   'Read sales summaries',
-  'Create new products as drafts, and edit products while they are drafts',
+  'Create new products as drafts, with their stock, and edit products while they are drafts',
   'Suggest changes to published products, which wait for you to apply them',
+  'Propose stock, warehouses, regions, shipping and tax rates, which wait for you to apply them',
 ]
 
 export const CANNOT = [
   'Publish, unpublish or delete anything',
-  'Change prices or stock on published products',
+  'Change prices on published products',
   'Refund, cancel or edit orders',
   'See addresses, phone numbers or payment details, or export customers',
-  'Change store settings, users or API keys',
+  'Change stock, warehouses, regions, shipping, taxes or other settings itself, or users and API keys',
 ]
 
 const page = (title: string, body: string): string => `<!doctype html>

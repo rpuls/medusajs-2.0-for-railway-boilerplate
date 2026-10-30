@@ -2,6 +2,7 @@ import { z } from '@medusajs/framework/zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { STORE_MCP_MODULE } from '../../modules/store-mcp'
 import type StoreMcpModuleService from '../../modules/store-mcp/service'
+import { loadStockLocations } from '../stock'
 import { daysAgo, fail, fullName, isSale, MAX_ROWS, ok, queryOf, round, safely, type ToolContext } from './helpers'
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const
@@ -152,7 +153,7 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
     {
       title: 'Get product',
       description:
-        'One product in full: texts, images, categories, options, and every variant with its SKU, prices and available stock. Also says whether AI suggestions are waiting for review on it.',
+        'One product in full: texts, images, categories, options, and every variant with its SKU, prices and stock, in total and per warehouse. Also says whether AI suggestions are waiting for review on it.',
       inputSchema: {
         id: z.string().optional().describe('Product id (prod_...)'),
         handle: z.string().optional().describe('Product handle, as in the store URL'),
@@ -172,11 +173,13 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
           'variants.inventory_items.inventory.location_levels.stocked_quantity',
           'variants.inventory_items.inventory.location_levels.reserved_quantity',
           'variants.inventory_items.inventory.location_levels.available_quantity',
+          'variants.inventory_items.inventory.location_levels.location_id',
         ],
         filters: id ? { id } : { handle },
       })
       const product = data[0] as any
       if (!product) return fail('No product with that id or handle.')
+      const locationName = new Map((await loadStockLocations(ctx.scope)).locations.map((l) => [l.id, l.name]))
       const pending = await ctx.scope
         .resolve<StoreMcpModuleService>(STORE_MCP_MODULE)
         .listMcpSuggestions({ product_id: product.id, status: 'pending' }, { select: ['id'] })
@@ -203,6 +206,17 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
           stock: v.manage_inventory
             ? available((v.inventory_items ?? []).flatMap((link: any) => link.inventory?.location_levels ?? []))
             : 'not tracked',
+          stock_by_location: v.manage_inventory
+            ? (v.inventory_items ?? []).flatMap((link: any) =>
+                (link.inventory?.location_levels ?? []).map((level: any) => ({
+                  location_id: level.location_id,
+                  location: locationName.get(level.location_id) ?? null,
+                  stocked: level.stocked_quantity,
+                  reserved: level.reserved_quantity,
+                  available: available([level]),
+                }))
+              )
+            : [],
           allow_backorder: v.allow_backorder,
         })),
         created_by_app: product.metadata?.store_mcp_app ?? null,

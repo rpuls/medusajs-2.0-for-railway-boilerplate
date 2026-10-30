@@ -124,7 +124,7 @@ pnpm build:next && npx next start -p 8000
 | File | Covers |
 |---|---|
 | `01-storefront` | region redirect, store name, hero, nav, footer |
-| `02-catalogue` | store listing, sorting, product page, related products, 404s |
+| `02-catalogue` | store listing, sorting, product page, related products, 404s, llms.txt |
 | `03-account` | register, session persistence, sign in and out, profile |
 | `04-cart` | add, update quantity, remove, persistence, totals |
 | `05-checkout` | full guest order, address validation, missing Stripe key |
@@ -139,7 +139,8 @@ pnpm build:next && npx next start -p 8000
 | `14-email` | order confirmation email, checked in Medusa and then at Resend |
 | `15-password-reset` | the reset flow end to end, token read out of the sent email |
 | `16-file-upload` | product media storage: upload, public readability, delete |
-| `17-store-mcp` | the store MCP server: OAuth sign-in, PKCE, tool limits, drafts, suggestions, token rotation and revocation; creates one draft product and deletes it |
+| `17-store-mcp` | the store MCP server: OAuth sign-in, PKCE, tool limits, drafts with stock, suggestions, proposals for regions, shipping profiles, stock and warehouses, token rotation and revocation; creates a draft product, a "QA Iceland" region, tax rate and shipping zone, a "QA Bulky" profile and a "QA Warehouse", and removes them |
+| `18-shipping-profiles` | a store with a second shipping profile: Medusa's per-profile rule, a mixed cart checked out with one delivery choice per profile; creates a profile, an option and a product, and removes them |
 
 The last four reach outside the storefront on purpose. An email, a charge or an
 object in a bucket cannot be observed from the browser, and that blind spot is

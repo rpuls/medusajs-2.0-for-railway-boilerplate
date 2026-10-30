@@ -47,6 +47,10 @@ export async function retrieveCart() {
   return await sdk.client
     .fetch<{ cart: HttpTypes.StoreCart }>(`/store/carts/${cartId}`, {
       method: "GET",
+      // Each item's shipping profile, which the delivery step groups options
+      // by. Allowed by backend/src/api/middlewares.ts; an older backend drops
+      // it silently and the delivery step falls back to a single list.
+      query: { fields: "+items.product.shipping_profile.id" },
       headers: { ...(await getAuthHeaders()) },
       ...(await getCacheDirectives("carts")),
     })

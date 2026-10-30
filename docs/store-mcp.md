@@ -31,16 +31,19 @@ ends it on the assistant's next call.
 | It can | It cannot |
 | --- | --- |
 | Read products, variants, prices, stock levels, categories and collections | Publish, unpublish or delete anything |
-| Read orders, and customers limited to name, email, country and order history | Change prices or stock on published products |
+| Read orders, and customers limited to name, email, country and order history | Change prices on published products |
 | Read sales summaries | Refund, cancel or edit orders |
-| Create new products as drafts, and edit products while they are drafts | See addresses, phone numbers or payment details, or export customers |
-| Suggest changes to published products, which wait for you to apply them | Change store settings, users or API keys |
+| Create new products as drafts, with their stock, and edit products while they are drafts | See addresses, phone numbers or payment details, or export customers |
+| Suggest changes to published products, which wait for you to apply them | Change stock, warehouses, regions, shipping, taxes or other settings itself, or users and API keys |
+| Propose stock, warehouses, regions, shipping and tax rates, which wait for you to apply them | |
 
 The rule underneath: anything a shopper could see changes only when an admin
 does it in the dashboard. A draft is invisible to shoppers until you publish it,
 and publishing is not a tool. A change to a published product is saved as a
 suggestion, shown on that product's page in the admin with the current and the
-suggested text side by side, and applied only when you click **Apply**. No tool
+suggested text side by side, and applied only when you click **Apply**. Stock on
+a published product, warehouses, regions, shipping and tax rates work the same
+way, as a [proposal](#proposals-stock-warehouses-regions-shipping-and-tax). No tool
 returns more than 50 rows, paging through orders and customers stops after 250,
 and requests that bundle several calls are refused, so none of them works as a
 bulk export.
@@ -57,17 +60,20 @@ Add other images yourself in the dashboard.
 | --- | --- |
 | `get_store_overview` | Store name, currencies, regions, sales channels, categories, collections, product counts, orders in the last 30 days |
 | `search_products` | Products by text, status or category, with price ranges |
-| `get_product` | One product in full, every variant with prices and available stock |
+| `get_product` | One product in full, every variant with prices and its stock in total and per warehouse |
 | `list_low_stock` | Variants at or below a stock threshold |
 | `list_orders` | Orders by date, status or customer email |
 | `get_order` | One order with line items and totals; the address is reduced to its country |
 | `get_sales_summary` | Revenue, orders and average order value per currency, best sellers, orders per day |
 | `search_customers` | Customers by name or email, with country and order count |
 | `get_customer` | One customer with total spent and their latest orders |
-| `create_product_draft` | A new product with options, variants and prices, always as a draft |
-| `update_product_draft` | Texts, images, categories and variant prices of a draft; refused for anything else |
+| `create_product_draft` | A new product with options, variants, prices and stock, always as a draft |
+| `update_product_draft` | Texts, images, categories, variant prices and variant stock of a draft; refused for anything else |
 | `suggest_product_changes` | A new title, subtitle, description or categories for any product, for an admin to review |
 | `list_product_suggestions` | The suggestions made through this connection and what became of them |
+| `get_store_setup` | Currencies, regions with their countries and payment methods, shipping zones and options, tax rates, and this connection's setup proposals |
+| `propose_store_setup` | New regions, countries added to regions, tax rates, warehouses, shipping zones, shipping options and shipping profiles, products moved into a profile, and stock, as one proposal for an admin to apply |
+| `propose_stock_changes` | A stock count or a delivery for any product, per variant and warehouse, as a proposal for an admin to apply |
 
 Prices and totals are in major currency units: `19.99` means 19.99 euros, not
 cents. Stock on a drafted product is left for you to set before you publish it.
@@ -84,6 +90,66 @@ limits.
 | `restock_check` | Low-stock variants ranked by how fast they sell |
 | `improve_product` | A better title, subtitle and description for one product, saved as a suggestion |
 | `draft_product` | A complete product draft from a rough description |
+| `sell_to_country` | The region, shipping and tax rate for a new country, as one setup proposal |
+| `ship_separately` | A shipping profile with its own shipping options for products that ship differently, as one setup proposal |
+
+### Stock
+
+Medusa tracks stock per variant and per warehouse (a stock location). A variant
+can be bought when it has stock at a warehouse that sells through the store's
+sales channel and ships to the shopper. A new variant has none anywhere, which
+is why a new product shows as sold out until someone adds a warehouse to each
+variant in the dashboard and only then a number.
+
+An assistant sets stock on a draft directly, in `create_product_draft` or
+`update_product_draft`, at the store's default warehouse unless told
+otherwise, because a draft is not live: "draft a linen shirt in S, M and L, 20
+of each" gives you a product that can be bought the moment you publish it. On a
+published product it proposes stock with `propose_stock_changes`, either as a
+count ("set to 40") or as a delivery ("add 20"). A delivery is counted from the
+stock at the moment you apply it, so units sold in between are not lost.
+
+### Proposals: stock, warehouses, regions, shipping and tax
+
+Setting up a new country means a region, a way to ship there and a tax rate,
+spread over three settings pages. An assistant can do the tedious part: ask it
+to "start selling to the Netherlands" (or use the `sell_to_country` prompt) and
+it reads the current setup and sends one proposal, which can:
+
+- create warehouses, which sell through the default sales channel and ship
+  with the same providers as the default one, and give them shipping zones;
+- set stock, per variant and warehouse;
+- create regions, or add countries to an existing region;
+- set the standard tax rate of a country;
+- create shipping zones with their shipping options, add countries to an
+  existing zone, or add shipping options to one;
+- create shipping profiles, for products that ship differently (bulky items
+  by freight, say), give them their own shipping options, and move up to 50
+  products into them.
+
+None of this has a draft state, because a region or a shipping option is live
+at checkout the moment it exists. So nothing changes when the assistant
+proposes. The backend checks the proposal against the store and turns it into
+plain sentences ("Add Netherlands to region "Europe" (EUR)."), with warnings for
+what would still be missing: a country no shipping zone covers, a shipping
+option without a price in the region's currency, products without a price in a
+new region's currency, a country with no tax rate, a shipping profile whose
+products cannot reach every country the store sells to, stock at a warehouse
+that does not sell through the product's sales channel or ships nowhere. A
+proposal that cannot work,
+such as a country that is already in another region, is refused before it is
+saved.
+
+The proposal waits on the **AI assistants** page, and on the **Regions** list in
+Settings. **Apply** plans it again against the store as it is at that moment,
+so what you read is what runs, and an outdated proposal says why it can no
+longer be applied. A new region gets the payment methods your existing regions
+have. A proposal never deletes anything, never takes a country out of a region
+or a shipping zone, and never changes an existing shipping price. The existing
+values it can change are stock levels, a country's standard tax rate and the
+shipping profile of the products it moves. Check the tax
+rates it proposes: the assistant knows the standard rates, not your tax
+obligations.
 
 ## How the sign-in works
 
@@ -108,7 +174,7 @@ authorization spec:
   password alone. Sign in to the dashboard first, completing MFA there, and the
   consent page then accepts that session.
 
-Everything lives in five Postgres tables (`store_mcp_*`) created by the normal
+Everything lives in six Postgres tables (`store_mcp_*`) created by the normal
 migrations, so connections survive restarts and redeploys and no Redis is
 needed. The MCP endpoint is stateless: each request carries its token and gets
 a fresh server.
@@ -144,7 +210,9 @@ pages that are open at that moment.
 1. Delete `backend/src/store-mcp`, `backend/src/modules/store-mcp`,
    `backend/src/api/mcp`, `backend/src/api/oauth`,
    `backend/src/api/admin/store-mcp`, `backend/src/admin/routes/ai-assistants`,
-   `backend/src/admin/widgets/product-ai-suggestions.tsx` and
+   `backend/src/admin/widgets/product-ai-suggestions.tsx`,
+   `backend/src/admin/widgets/region-setup-proposals.tsx`,
+   `backend/src/admin/components/setup-proposals.tsx` and
    `backend/src/admin/lib/store-mcp.ts`.
 2. Remove the `./src/modules/store-mcp` entry from `backend/medusa-config.js`
    and the `.well-known` entry from `backend/src/api/middlewares.ts`.

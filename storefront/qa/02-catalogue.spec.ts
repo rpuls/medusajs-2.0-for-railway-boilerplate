@@ -124,4 +124,38 @@ test.describe("Browsing the catalogue", () => {
     expect(response?.status()).toBe(404)
     await expect(page.locator("body")).toContainText(/not found/i)
   })
+
+  /**
+   * /llms.txt is how an AI agent reads the store in one request. Like
+   * sitemap.xml it sits at the root, so it is checked for the middleware
+   * redirect that would otherwise send it to /gb/llms.txt and a 404, and its
+   * links are followed, because an agent acts on them.
+   */
+  test("llms.txt lists the catalogue with prices and working links", async ({
+    page,
+    request,
+  }) => {
+    const response = await request.get("/llms.txt", { maxRedirects: 0 })
+    expect(response.status()).toBe(200)
+    expect(response.headers()["content-type"]).toContain("text/plain")
+
+    const body = await response.text()
+    expect(body.startsWith(`# ${qaEnv.storeName}\n\n> `)).toBe(true)
+    expect(body).toContain("## Products")
+
+    // The seed's T-shirt, listed for the default region with a price.
+    const line = body
+      .split("\n")
+      .find((l) => l.includes(`/${qaEnv.region}/products/t-shirt)`))
+    expect(line, "the seeded T-shirt must be listed").toBeTruthy()
+    expect(line).toMatch(/\]\([^)]+\): (from )?\D?\d/)
+
+    // Followed by path, so the check holds when QA_BASE_URL and the store's
+    // own NEXT_PUBLIC_BASE_URL name the same site differently.
+    const link = line!.match(/\]\(([^)]+)\)/)![1]
+    await page.goto(new URL(link).pathname)
+    await expect(
+      page.getByTestId("product-container").getByTestId("product-title")
+    ).toHaveText(/t-shirt/i)
+  })
 })

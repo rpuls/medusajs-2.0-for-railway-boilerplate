@@ -20,6 +20,7 @@ export type StoreMcpOverview = {
   can: string[]
   cannot: string[]
   pending_suggestions: number
+  pending_setup_proposals: number
   connected_apps: ConnectedApp[]
 }
 
@@ -42,6 +43,20 @@ export type Suggestion = {
   created_at: string
 }
 
+export type SetupProposal = {
+  id: string
+  app_name: string
+  summary: string
+  status: 'pending' | 'applying' | 'applied' | 'discarded' | 'failed'
+  result: { ok: boolean; done: string[]; failed?: string; error?: string } | null
+  created_at: string
+  /** What Apply would do, planned against the store as it is now. Empty unless pending. */
+  steps: string[]
+  warnings: string[]
+  /** Why it can no longer be applied, if the store has moved on since it was proposed */
+  errors: string[]
+}
+
 const call = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const res = await fetch(`/admin/store-mcp${path}`, {
     credentials: 'include',
@@ -62,6 +77,9 @@ export const storeMcp = {
     call<{ suggestions: Suggestion[] }>(`/suggestions${productId ? `?product_id=${encodeURIComponent(productId)}` : ''}`),
   resolve: (id: string, action: 'apply' | 'discard') =>
     call<{ suggestion: Suggestion }>(`/suggestions/${id}`, { method: 'POST', body: JSON.stringify({ action }) }),
+  setupProposals: () => call<{ proposals: SetupProposal[] }>('/setup-proposals'),
+  resolveSetup: (id: string, action: 'apply' | 'discard') =>
+    call<{ proposal: SetupProposal }>(`/setup-proposals/${id}`, { method: 'POST', body: JSON.stringify({ action }) }),
 }
 
 /** Category names for ids, so a suggested category change is reviewed by name and not by count */

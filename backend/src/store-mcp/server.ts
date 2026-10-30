@@ -11,13 +11,15 @@ import { authenticateAccessToken } from './oauth/tokens'
 import { buildBearerChallenge } from './oauth/urls'
 import { registerPrompts } from './tools/prompts'
 import { registerReadTools } from './tools/read'
+import { registerSetupTools } from './tools/setup'
 import { registerWriteTools } from './tools/write'
 
 const INSTRUCTIONS = `You are connected to an online store's backend as one of its admins.
 Call get_store_overview first: it has the currencies, regions, categories and ids the other tools need.
 All prices and totals are in major currency units: 19.99 means 19.99, not cents.
-You can read the catalogue, stock, orders, customers and sales. You can create products only as drafts and edit them only while they are drafts. A published product cannot be changed directly: use suggest_product_changes and tell the admin it is waiting on the product page.
-You cannot publish, delete, change stock, change prices on published products, refund or cancel orders, or change settings. Say so plainly when asked, and point the admin to the dashboard.
+You can read the catalogue, stock, orders, customers and sales. You can create products only as drafts, with their stock, and edit them only while they are drafts. A published product cannot be changed directly: use suggest_product_changes for its texts, propose_stock_changes for its stock, and tell the admin where it is waiting.
+Regions, warehouses, shipping and tax rates cannot be changed directly either: read them with get_store_setup and send the whole change as one propose_store_setup, which an admin applies on the AI assistants page. Tax rates you propose are shown to the admin to confirm, so say where a rate comes from.
+You cannot publish, delete, change prices on published products, refund or cancel orders, or change other settings. Say so plainly when asked, and point the admin to the dashboard.
 Customer data is limited to name, email, country and order history. Do not ask for more.`
 
 const unauthorized = (res: MedusaResponse, challenge?: { error?: string; errorDescription?: string }) => {
@@ -68,6 +70,7 @@ export const handleMcpRequest = async (req: MedusaRequest, res: MedusaResponse):
   const ctx = { scope: req.scope, auth }
   registerReadTools(server, ctx)
   registerWriteTools(server, ctx)
+  registerSetupTools(server, ctx)
   registerPrompts(server)
 
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
