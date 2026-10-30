@@ -19,6 +19,10 @@ const PROFILE = `QA Freight profile ${runId}`
 const FREIGHT = `QA Freight ${runId}`
 const SOFA = `QA Sofa ${runId}`
 const SOFA_HANDLE = `qa-sofa-${runId}`
+// A second warehouse shipping only to a country outside the test region, with
+// a USD price alone. Without an address Medusa lists its option too, priced
+// at nothing in EUR; the checkout must not keep that list once the address is in.
+const OVERSEAS = `QA Overseas ${runId}`
 
 const adminHeaders = async (request: APIRequestContext) => {
   const res = await request.post(`${backend}/auth/user/emailpass`, {
@@ -29,7 +33,14 @@ const adminHeaders = async (request: APIRequestContext) => {
 }
 
 test.describe.serial("Products in a second shipping profile", () => {
-  const created: { profile?: string; option?: string; product?: string } = {}
+  const created: {
+    profile?: string
+    option?: string
+    product?: string
+    location?: string
+    fulfillmentSet?: string
+    overseasOption?: string
+  } = {}
 
   test.beforeAll(async ({ request }) => {
     const headers = await adminHeaders(request)
@@ -104,6 +115,47 @@ test.describe.serial("Products in a second shipping profile", () => {
     })
     expect(product.ok(), await product.text()).toBeTruthy()
     created.product = (await product.json()).product.id
+
+    const location = await request.post(`${backend}/admin/stock-locations`, { headers, data: { name: OVERSEAS } })
+    expect(location.ok(), await location.text()).toBeTruthy()
+    created.location = (await location.json()).stock_location.id
+    for (const [path, add] of [
+      ["sales-channels", [salesChannelId]],
+      ["fulfillment-providers", ["manual_manual"]],
+    ] as const) {
+      const linked = await request.post(`${backend}/admin/stock-locations/${created.location}/${path}`, { headers, data: { add } })
+      expect(linked.ok(), await linked.text()).toBeTruthy()
+    }
+    const set = await request.post(`${backend}/admin/stock-locations/${created.location}/fulfillment-sets?fields=*fulfillment_sets`, {
+      headers,
+      data: { name: OVERSEAS, type: "shipping" },
+    })
+    expect(set.ok(), await set.text()).toBeTruthy()
+    created.fulfillmentSet = (await set.json()).stock_location.fulfillment_sets[0].id
+    const overseasZone = await request.post(`${backend}/admin/fulfillment-sets/${created.fulfillmentSet}/service-zones?fields=*service_zones`, {
+      headers,
+      data: { name: OVERSEAS, geo_zones: [{ type: "country", country_code: "us" }] },
+    })
+    expect(overseasZone.ok(), await overseasZone.text()).toBeTruthy()
+    const { shipping_profiles } = await (await request.get(`${backend}/admin/shipping-profiles?type=default`, { headers })).json()
+    const overseasOption = await request.post(`${backend}/admin/shipping-options`, {
+      headers,
+      data: {
+        name: OVERSEAS,
+        service_zone_id: (await overseasZone.json()).fulfillment_set.service_zones[0].id,
+        shipping_profile_id: shipping_profiles[0].id,
+        provider_id: "manual_manual",
+        price_type: "flat",
+        type: { label: "Overseas", description: "QA overseas", code: "overseas" },
+        prices: [{ currency_code: "usd", amount: 5 }],
+        rules: [
+          { attribute: "enabled_in_store", value: "true", operator: "eq" },
+          { attribute: "is_return", value: "false", operator: "eq" },
+        ],
+      },
+    })
+    expect(overseasOption.ok(), await overseasOption.text()).toBeTruthy()
+    created.overseasOption = (await overseasOption.json()).shipping_option.id
   })
 
   test.afterAll(async ({ request }) => {
@@ -111,6 +163,9 @@ test.describe.serial("Products in a second shipping profile", () => {
     if (created.product) await request.delete(`${backend}/admin/products/${created.product}`, { headers })
     if (created.option) await request.delete(`${backend}/admin/shipping-options/${created.option}`, { headers })
     if (created.profile) await request.delete(`${backend}/admin/shipping-profiles/${created.profile}`, { headers })
+    if (created.overseasOption) await request.delete(`${backend}/admin/shipping-options/${created.overseasOption}`, { headers })
+    if (created.fulfillmentSet) await request.delete(`${backend}/admin/fulfillment-sets/${created.fulfillmentSet}`, { headers })
+    if (created.location) await request.delete(`${backend}/admin/stock-locations/${created.location}`, { headers })
   })
 
   /**
@@ -218,5 +273,9 @@ test.describe.serial("Products in a second shipping profile", () => {
     await expect(page.getByTestId("delivery-group")).toHaveCount(0)
     // The freight option belongs to the other profile, so it is not offered here
     await expect(page.getByTestId("delivery-options-container")).not.toContainText(FREIGHT)
+    // The checkout opened before the address was in, when every zone's options
+    // were listed; the list for the address replaced it
+    await expect(page.getByTestId("delivery-options-container")).not.toContainText(OVERSEAS)
+    await expect(page.getByTestId("delivery-options-container")).not.toContainText("NaN")
   })
 })

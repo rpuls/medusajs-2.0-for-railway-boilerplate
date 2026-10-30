@@ -105,6 +105,12 @@ export async function updateCart(data: HttpTypes.StoreUpdateCart) {
     .update(cartId, data, {}, await getAuthHeaders())
     .then(async ({ cart }) => {
       await revalidateCacheTag("carts")
+      // The shipping options depend on the address: without one, Medusa
+      // offers every zone's options, including zones with no price in the
+      // cart's currency, which showed as "€NaN" once a store shipped from two
+      // warehouses. A list fetched before the address was set must not
+      // survive it. Upstream revalidates its "fulfillment" tag here too.
+      await revalidateCacheTag("shipping")
       return cart
     })
     .catch(medusaError)
