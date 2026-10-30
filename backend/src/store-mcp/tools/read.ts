@@ -323,7 +323,7 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
         entity: 'order',
         fields: [
           ...ORDER_LIST_FIELDS,
-          'subtotal', 'shipping_total', 'tax_total', 'discount_total', 'region.name', 'sales_channel.name',
+          'item_subtotal', 'shipping_total', 'tax_total', 'discount_total', 'region.name', 'sales_channel.name',
           'shipping_methods.name', 'shipping_methods.amount',
           'items.title', 'items.variant_title', 'items.variant_sku', 'items.product_id', 'items.unit_price', 'items.total',
         ],
@@ -345,8 +345,10 @@ export const registerReadTools = (server: McpServer, ctx: ToolContext) => {
           total: item.total,
         })),
         shipping: (order.shipping_methods ?? []).map((m: any) => ({ name: m.name, amount: m.amount })),
+        // item_subtotal: Medusa's subtotal includes shipping, and next to a shipping line an assistant
+        // reported it as an inconsistency in the order
         totals: {
-          subtotal: order.subtotal,
+          items: order.item_subtotal,
           shipping: order.shipping_total,
           tax: order.tax_total,
           discount: order.discount_total,

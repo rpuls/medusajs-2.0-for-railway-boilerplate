@@ -309,6 +309,12 @@ test.describe.serial("Store MCP server", () => {
       expect(Object.keys(order.customer).sort()).toEqual(["email", "name"])
       expect(order).not.toHaveProperty("shipping_address")
     }
+    // The totals add up: items, shipping, tax, minus discount (Medusa's own subtotal counts shipping)
+    const paid = orders.data.orders.find((o: any) => o.total > 0)
+    if (paid) {
+      const { totals } = (await callTool(request, accessToken, "get_order", { id: paid.id })).data
+      expect(totals.items + totals.shipping + totals.tax - totals.discount).toBeCloseTo(totals.total, 2)
+    }
 
     const sales = await callTool(request, accessToken, "get_sales_summary")
     expect(sales.isError).toBe(false)
