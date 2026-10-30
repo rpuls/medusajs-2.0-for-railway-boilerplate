@@ -385,6 +385,19 @@ test.describe.serial("Store MCP server", () => {
     expect(refused.text).toMatch(/not a draft/)
   })
 
+  test("the product page says which assistant drafted it, with Publish at hand", async ({ page }) => {
+    await signInToAdmin(page)
+    await page.goto(`${qaEnv.adminURL}/products/${draftId}`)
+    const banner = page.getByTestId("ai-draft")
+    await expect(banner).toContainText("Drafted by")
+    await expect(banner.getByRole("button", { name: "Publish" })).toBeVisible()
+    // Publishing stays the admin's click; cancel here, later tests need the draft
+    await banner.getByRole("button", { name: "Publish" }).click()
+    await expect(page.getByRole("alertdialog")).toContainText("Shoppers can see and buy it right away.")
+    await page.getByRole("alertdialog").getByRole("button", { name: "Cancel" }).click()
+    await expect(banner).toBeVisible()
+  })
+
   test("a suggestion waits for an admin, who applies it", async ({ request }) => {
     admin = await adminToken(request)
     const suggested = await callTool(request, accessToken, "suggest_product_changes", {
@@ -602,29 +615,45 @@ test.describe.serial("Store MCP server", () => {
 
   test("a new warehouse comes with its shipping and its stock, in one proposal", async ({ request }) => {
     const headers = { Authorization: `Bearer ${admin}` }
+    const pendingSummaries = async () =>
+      ((await (await request.get(`${backend}/admin/store-mcp/setup-proposals`, { headers })).json()).proposals as any[]).map((p) => p.summary)
     const draft = await callTool(request, accessToken, "get_product", { id: draftId })
-    const variantId = draft.data.variants[0].id
+    const [small, large] = ["Small", "Large"].map((title) => draft.data.variants.find((v: any) => v.title === title).id)
+    const warehouse = { name: QA_WAREHOUSE, country_code: "dk", city: "Aarhus" }
+    const zone = {
+      name: `${QA_WAREHOUSE} zone`,
+      countries: [qaEnv.region],
+      ships_from_location_name: QA_WAREHOUSE,
+      shipping_options: [{ name: `${QA_WAREHOUSE} post`, prices: [{ currency_code: "eur", amount: 7 }, { currency_code: "usd", amount: 7 }] }],
+    }
 
+    // Asked to add the stock afterwards, the assistant replaces its pending proposal instead of adding a second one
+    const first = await callTool(request, accessToken, "propose_store_setup", {
+      summary: "QA: a second warehouse, no stock yet",
+      new_stock_locations: [warehouse],
+      new_shipping_zones: [zone],
+    })
+    expect(first.isError, first.text).toBe(false)
     const proposed = await callTool(request, accessToken, "propose_store_setup", {
       summary: "QA: a second warehouse",
-      new_stock_locations: [{ name: QA_WAREHOUSE, country_code: "dk", city: "Aarhus" }],
-      new_shipping_zones: [
-        {
-          name: `${QA_WAREHOUSE} zone`,
-          countries: [qaEnv.region],
-          ships_from_location_name: QA_WAREHOUSE,
-          shipping_options: [{ name: `${QA_WAREHOUSE} post`, prices: [{ currency_code: "eur", amount: 7 }, { currency_code: "usd", amount: 7 }] }],
-        },
-      ],
-      stock_levels: [{ variant_id: variantId, set_to: 3, stock_location_name: QA_WAREHOUSE }],
+      replaces_proposal_id: first.data.proposal_id,
+      new_stock_locations: [warehouse],
+      new_shipping_zones: [zone],
+      stock_levels: [small, large].map((variant_id) => ({ variant_id, set_to: 3, stock_location_name: QA_WAREHOUSE })),
     })
     expect(proposed.isError, proposed.text).toBe(false)
+    expect(proposed.data.replaced).toBe(first.data.proposal_id)
+    // Every variant of the product with the same new quantity is one line, not one per variant
     expect(proposed.data.will_do).toEqual([
       `Create warehouse "${QA_WAREHOUSE}" in Aarhus, Denmark, selling through the default sales channel.`,
       expect.stringContaining(`shipping from ${QA_WAREHOUSE}`),
-      expect.stringMatching(new RegExp(`^Stock 3 of ".+" at ${QA_WAREHOUSE}, which had none there\\.$`)),
+      // The suggestion test above renamed the product
+      expect.stringMatching(new RegExp(`^Stock 3 of each of the 2 variants of "QA MCP Draft Mug.*" at ${QA_WAREHOUSE}, which had none there\\.$`)),
     ])
     expect(proposed.data.warnings.join(" ")).not.toMatch(/Nothing ships from/)
+    const summaries = await pendingSummaries()
+    expect(summaries).toContain("QA: a second warehouse")
+    expect(summaries).not.toContain("QA: a second warehouse, no stock yet")
 
     const { proposals } = await (await request.get(`${backend}/admin/store-mcp/setup-proposals`, { headers })).json()
     const pending = proposals.find((p: any) => p.summary === "QA: a second warehouse")
@@ -632,11 +661,50 @@ test.describe.serial("Store MCP server", () => {
     expect(applied.ok(), await applied.text()).toBeTruthy()
     expect((await applied.json()).proposal.status, "every step applied").toBe("applied")
 
+    // An applied proposal cannot be replaced any more
+    const late = await callTool(request, accessToken, "propose_stock_changes", {
+      summary: "QA: too late to replace",
+      replaces_proposal_id: pending.id,
+      stock_levels: [{ variant_id: small, set_to: 1, stock_location_name: QA_WAREHOUSE }],
+    })
+    expect(late.isError).toBe(true)
+    expect(late.text).toMatch(/is applied/)
+
     const setup = await callTool(request, accessToken, "get_store_setup")
-    const warehouse = setup.data.stock_locations.find((l: any) => l.name === QA_WAREHOUSE)
-    expect(warehouse).toMatchObject({ city: "Aarhus", country: "dk", sells_through_default_channel: true, ships: true })
+    const created = setup.data.stock_locations.find((l: any) => l.name === QA_WAREHOUSE)
+    expect(created).toMatchObject({ city: "Aarhus", country: "dk", sells_through_default_channel: true, ships: true })
     const levels = (await callTool(request, accessToken, "get_product", { id: draftId })).data.variants[0].stock_by_location
     expect(levels.find((l: any) => l.location === QA_WAREHOUSE)?.stocked).toBe(3)
+
+    // A draft takes stock for several warehouses in one call
+    const both = await callTool(request, accessToken, "update_product_draft", {
+      id: draftId,
+      variant_stock: [
+        { variant_id: small, units: 4 },
+        { variant_id: small, units: 6, stock_location_id: created.id },
+      ],
+    })
+    expect(both.isError, both.text).toBe(false)
+    const smallLevels = (await callTool(request, accessToken, "get_product", { id: draftId })).data.variants.find((v: any) => v.id === small)
+      .stock_by_location
+    expect(smallLevels.find((l: any) => l.location === QA_WAREHOUSE)?.stocked).toBe(6)
+    expect(smallLevels.find((l: any) => l.location !== QA_WAREHOUSE)?.stocked).toBe(4)
+
+    const overview = await callTool(request, accessToken, "get_store_overview")
+    const currency = overview.data.currencies.find((c: any) => c.default)?.code ?? overview.data.currencies[0].code
+    const cap = await callTool(request, accessToken, "create_product_draft", {
+      title: "QA MCP Two Warehouse Cap",
+      variants: [{ title: "One size", prices: [{ currency_code: currency, amount: 9 }], stock: [{ units: 2 }, { stock_location_id: created.id, units: 5 }] }],
+    })
+    try {
+      expect(cap.isError, cap.text).toBe(false)
+      expect(cap.data.stock.set).toEqual([
+        { variant: "QA MCP Two Warehouse Cap / One size", location: expect.any(String), units: 2 },
+        { variant: "QA MCP Two Warehouse Cap / One size", location: QA_WAREHOUSE, units: 5 },
+      ])
+    } finally {
+      if (cap.data?.id) await request.delete(`${backend}/admin/products/${cap.data.id}`, { headers })
+    }
   })
 
   test("a refreshed token works, and the spent refresh token is refused", async ({ request }) => {

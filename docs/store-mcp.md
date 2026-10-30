@@ -13,8 +13,9 @@ public module, workflow and API route features, and the code is in
 
 1. In the admin, open **AI assistants** and copy the server URL.
 2. Add it to the assistant:
-   - **ChatGPT:** turn on developer mode in the settings, then create an app or
-     connector with the URL and OAuth as the authentication.
+   - **ChatGPT:** open **Plugins**, click **Add**, then **Add custom MCP
+     server**, paste the URL and keep OAuth as the authentication. No developer
+     mode is needed (checked October 2026 on a Plus account).
    - **Claude:** add a custom connector with the URL.
    - **Any other MCP client** that supports remote servers over Streamable HTTP
      with OAuth: add the URL as a remote server.
@@ -104,7 +105,10 @@ variant in the dashboard and only then a number.
 An assistant sets stock on a draft directly, in `create_product_draft` or
 `update_product_draft`, at the store's default warehouse unless told
 otherwise, because a draft is not live: "draft a linen shirt in S, M and L, 20
-of each" gives you a product that can be bought the moment you publish it. On a
+of each" gives you a product that can be bought the moment you publish it. With
+several warehouses it sets the stock of each in the same call ("40 of each in
+both warehouses"). The product page of such a draft says which assistant made
+it and has a **Publish** button. On a
 published product it proposes stock with `propose_stock_changes`, either as a
 count ("set to 40") or as a delivery ("add 20"). A delivery is counted from the
 stock at the moment you apply it, so units sold in between are not lost.
@@ -141,7 +145,9 @@ such as a country that is already in another region, is refused before it is
 saved.
 
 The proposal waits on the **AI assistants** page, and on the **Regions** list in
-Settings. **Apply** plans it again against the store as it is at that moment,
+Settings. Asked to add something while it waits ("also stock 50 of everything
+there"), the assistant sends a complete new proposal that replaces its pending
+one, so you only see the latest. **Apply** plans it again against the store as it is at that moment,
 so what you read is what runs, and an outdated proposal says why it can no
 longer be applied. A new region gets the payment methods your existing regions
 have. A proposal never deletes anything, never takes a country out of a region

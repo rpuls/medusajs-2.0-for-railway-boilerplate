@@ -838,6 +838,16 @@ export const planSetup = (state: SetupState, changes: SetupChanges): SetupPlan =
     return null
   }
   const stockTargets = new Set<string>()
+  // Stocking a new warehouse or product touches every variant, and twenty near-identical lines
+  // bury the rest of the proposal. Levels created with the same quantity are told per product,
+  // and the warnings per warehouse.
+  type NewStock = { target: number; product: string; count: number; location: string; variants: VariantStock[]; locationId: () => string }
+  const stockLines: Array<Step | NewStock> = []
+  const newStock = new Map<string, NewStock>()
+  const unseen = new Map<string, Set<string>>()
+  const shipsNothing = new Map<string, Set<string>>()
+  const note = (into: Map<string, Set<string>>, location: string, product: string) =>
+    into.set(location, (into.get(location) ?? new Set()).add(`"${product}"`))
   for (const entry of changes.stock_levels ?? []) {
     const variant = state.variants.get(entry.variant_id)
     if (!variant) {
@@ -873,19 +883,62 @@ export const planSetup = (state: SetupState, changes: SetupChanges): SetupPlan =
       warnings.push(`${level.reserved} units of "${variant.label}" are reserved by orders at ${location.label}, more than the ${target} it will have.`)
     }
     if (!variant.sales_channel_ids.some((id) => location.salesChannelIds.includes(id))) {
-      warnings.push(`${location.label} does not sell through the sales channels of "${variant.label}", so shoppers do not see that stock.`)
+      note(unseen, location.label, variant.product_title)
     } else if (!location.ships) {
-      warnings.push(`Nothing ships from ${location.label} yet, so its stock of "${variant.label}" cannot be sold.`)
+      note(shipsNothing, location.label, variant.product_title)
+    }
+    if (!level) {
+      const key = `${location.key}|${variant.product_id}|${target}`
+      const group = newStock.get(key)
+      if (group) {
+        group.variants.push(variant)
+      } else {
+        const created: NewStock = {
+          target,
+          product: variant.product_title,
+          count: variant.product_variant_count,
+          location: location.label,
+          variants: [variant],
+          locationId: location.id,
+        }
+        newStock.set(key, created)
+        stockLines.push(created)
+      }
+      continue
     }
     const inventoryItemId = variant.inventory_item_id!
-    steps.push({
-      line: !level
-        ? `Stock ${target} of "${variant.label}" at ${location.label}, which had none there.`
-        : entry.add !== undefined
+    stockLines.push({
+      line:
+        entry.add !== undefined
           ? `${entry.add >= 0 ? 'Add' : 'Remove'} ${Math.abs(entry.add)} of "${variant.label}" at ${location.label}: from ${current} to ${target}.`
           : `Set the stock of "${variant.label}" at ${location.label} from ${current} to ${target}.`,
-      run: (scope) => writeStock(scope, inventoryItemId, location.id(), target, Boolean(level)),
+      run: (scope) => writeStock(scope, inventoryItemId, location.id(), target, true),
     })
+  }
+  for (const item of stockLines) {
+    if ('run' in item) {
+      steps.push(item)
+      continue
+    }
+    const { target, product, count, location, variants, locationId } = item
+    const which =
+      variants.length === 1
+        ? `${target} of "${variants[0].label}"`
+        : variants.length === count
+          ? `${target} of each of the ${count} variants of "${product}"`
+          : `${target} each of "${product}" ${listOf(variants.map((v) => v.variant_title))}`
+    steps.push({
+      line: `Stock ${which} at ${location}, which had none there.`,
+      run: async (scope) => {
+        for (const variant of variants) await writeStock(scope, variant.inventory_item_id!, locationId(), target, false)
+      },
+    })
+  }
+  for (const [location, products] of unseen) {
+    warnings.push(`${location} does not sell through the sales channels of ${listOf([...products])}, so shoppers do not see that stock.`)
+  }
+  for (const [location, products] of shipsNothing) {
+    warnings.push(`Nothing ships from ${location} yet, so its stock of ${listOf([...products])} cannot be sold.`)
   }
 
   // What the store will look like for the countries this proposal touches

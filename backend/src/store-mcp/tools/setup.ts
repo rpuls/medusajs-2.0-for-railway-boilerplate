@@ -84,20 +84,29 @@ export const registerSetupTools = (server: McpServer, ctx: ToolContext) => {
     })
   )
 
+  // Asked to add something to a proposal it just made, an assistant sends a complete new one and
+  // tells the admin to discard the old one. Two near-identical proposals on the page invite
+  // applying both, so it can withdraw its own pending proposal instead.
+  const replaces = z
+    .string()
+    .optional()
+    .describe('The id of a pending proposal from this connection that this one replaces. It is discarded when this one is saved, so the admin only sees the new one.')
+
   server.registerTool(
     'propose_store_setup',
     {
       title: 'Propose store setup',
       description:
-        'Proposes changes to regions, shipping, tax and warehouses: new regions, countries added to regions, the standard tax rate of a country, new warehouses, new shipping zones with their options, countries added to shipping zones, new shipping options, new shipping profiles, products moved into a profile, and stock levels. Nothing changes in the store. The proposal is checked against the current setup and saved, and an admin applies or discards it on the AI assistants page in the dashboard. Put everything for one goal, such as "start selling to the Netherlands", in one proposal. Call get_store_setup first for the ids.',
+        'Proposes changes to regions, shipping, tax and warehouses: new regions, countries added to regions, the standard tax rate of a country, new warehouses, new shipping zones with their options, countries added to shipping zones, new shipping options, new shipping profiles, products moved into a profile, and stock levels. Nothing changes in the store. The proposal is checked against the current setup and saved, and an admin applies or discards it on the AI assistants page in the dashboard. Put everything for one goal, such as "start selling to the Netherlands", in one proposal; a new warehouse sells nothing until it has stock, so include stock_levels for it. To add to a proposal that is still pending, send the complete proposal again with replaces_proposal_id. Call get_store_setup first for the ids.',
       inputSchema: {
         summary: z.string().trim().min(1).max(500).describe('One or two sentences for the admin: what this sets up and why'),
+        replaces_proposal_id: replaces,
         ...setupShape,
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    safely(ctx, async ({ summary, ...changes }) => {
-      return propose(summary, changes as SetupChanges)
+    safely(ctx, async ({ summary, replaces_proposal_id, ...changes }) => {
+      return propose(summary, changes as SetupChanges, replaces_proposal_id)
     })
   )
 
@@ -109,15 +118,23 @@ export const registerSetupTools = (server: McpServer, ctx: ToolContext) => {
         "Proposes stock for products, published or not: a stock count (set_to) or a delivery (add), per variant and warehouse. Nothing changes until an admin applies it on the AI assistants page. Use add for deliveries, so units sold before it is applied are not counted twice. get_product shows each variant's stock per warehouse; for drafts, update_product_draft sets stock directly.",
       inputSchema: {
         summary: z.string().trim().min(1).max(500).describe('One or two sentences for the admin, e.g. "Delivery from the supplier on 30 October"'),
+        replaces_proposal_id: replaces,
         stock_levels: setupShape.stock_levels.unwrap().min(1),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    safely(ctx, async ({ summary, stock_levels }) => propose(summary, { stock_levels }))
+    safely(ctx, async ({ summary, replaces_proposal_id, stock_levels }) => propose(summary, { stock_levels }, replaces_proposal_id))
   )
 
   /** Checks a proposal against the store, saves it for an admin, and says what it will do */
-  async function propose(summary: string, changes: SetupChanges) {
+  async function propose(summary: string, changes: SetupChanges, replacesId?: string) {
+    if (replacesId) {
+      const [old] = await store.listMcpSetupProposals({ id: replacesId, grant_id: ctx.auth.grantId }, { take: 1 })
+      if (!old) return fail('Nothing was saved. replaces_proposal_id is not a proposal made through this connection.')
+      if (old.status !== 'pending') {
+        return fail(`Nothing was saved. Proposal ${replacesId} is ${old.status}, so it can no longer be replaced. Call get_store_setup and propose only what is still missing.`)
+      }
+    }
     const plan = planSetup(await loadSetupState(ctx.scope, stockedVariantIds(changes)), changes)
     if (plan.errors.length) {
       return fail(`Nothing was saved. Fix these and propose again:\n- ${plan.errors.join('\n- ')}`)
@@ -129,11 +146,19 @@ export const registerSetupTools = (server: McpServer, ctx: ToolContext) => {
       summary,
       changes: changes as Record<string, unknown>,
     })
+    // An admin may have applied the old one since the check above; then both stay, and we say so
+    const replaced = replacesId ? await store.withdrawSetupProposal(replacesId, ctx.auth.grantId, proposal.id) : null
     return ok({
       proposal_id: proposal.id,
       status: 'pending',
+      ...(replacesId ? { replaced: replaced ? replacesId : null } : {}),
       will_do: plan.steps.map((step) => step.line),
-      warnings: plan.warnings,
+      warnings: [
+        ...(replaced === false
+          ? [`Proposal ${replacesId} was applied or discarded while this one was saved, so it was not replaced. Check get_store_setup before the admin applies this one.`]
+          : []),
+        ...plan.warnings,
+      ],
       review_url: REVIEW_URL,
       next_step:
         'Nothing has changed yet. Tell the admin what it will do and any warnings, and that they apply it on the AI assistants page in the dashboard (review_url).',

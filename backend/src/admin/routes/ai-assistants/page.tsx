@@ -95,8 +95,8 @@ const AiAssistantsPage = () => {
                   ChatGPT
                 </Text>
                 <Text size="small" className="text-ui-fg-subtle">
-                  Turn on developer mode in the settings, create an app or connector, paste the URL and choose
-                  OAuth. ChatGPT then opens a page here where you sign in and click Allow.
+                  Open Plugins, click Add, then Add custom MCP server. Paste the URL and keep OAuth. ChatGPT
+                  then opens a page here where you sign in and click Allow.
                 </Text>
               </div>
               <div>

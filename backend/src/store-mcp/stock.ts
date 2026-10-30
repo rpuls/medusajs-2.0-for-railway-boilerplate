@@ -71,6 +71,10 @@ export type VariantStock = {
   /** "Medusa T-Shirt / L / Black", for the sentences an admin reads */
   label: string
   product_id: string
+  product_title: string
+  variant_title: string
+  /** How many variants the product has, so a proposal can say "every variant of" */
+  product_variant_count: number
   product_status: string
   sales_channel_ids: string[]
   manage_inventory: boolean
@@ -99,6 +103,12 @@ export const loadVariantStock = async (scope: MedusaContainer, ids: string[]): P
     ],
     filters: { id: [...new Set(ids)] },
   })
+  // Counted from the product side: product.variants read through a variant came back empty (QA spec 17)
+  const productIds = [...new Set((data as any[]).map((variant) => variant.product?.id).filter(Boolean))]
+  const { data: products } = productIds.length
+    ? await queryOf(scope).graph({ entity: 'product', fields: ['id', 'variants.id'], filters: { id: productIds } })
+    : { data: [] }
+  const variantCount = new Map((products as any[]).map((product) => [product.id, (product.variants ?? []).length]))
   return new Map(
     (data as any[]).map((variant) => {
       const links: any[] = variant.inventory_items ?? []
@@ -109,6 +119,9 @@ export const loadVariantStock = async (scope: MedusaContainer, ids: string[]): P
           id: variant.id,
           label: `${variant.product?.title ?? 'Product'} / ${variant.title}`,
           product_id: variant.product?.id,
+          product_title: variant.product?.title ?? 'Product',
+          variant_title: variant.title,
+          product_variant_count: variantCount.get(variant.product?.id) ?? 0,
           product_status: variant.product?.status,
           sales_channel_ids: (variant.product?.sales_channels ?? []).map((c: any) => c.id),
           manage_inventory: Boolean(variant.manage_inventory),

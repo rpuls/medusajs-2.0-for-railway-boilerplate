@@ -93,5 +93,19 @@ export const categoryNames = async (ids: string[]): Promise<Map<string, string>>
   return new Map(product_categories.map((category) => [category.id, category.name]))
 }
 
+/** Publishes a product through Medusa's own admin route, as the signed-in admin */
+export const publishProduct = async (id: string): Promise<void> => {
+  const res = await fetch(`/admin/products/${encodeURIComponent(id)}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'published' }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message ?? `Request failed with ${res.status}`)
+  }
+}
+
 export const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Never'

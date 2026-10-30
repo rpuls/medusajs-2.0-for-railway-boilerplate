@@ -8,7 +8,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { STORE_MCP_MODULE } from '../../modules/store-mcp'
 import type StoreMcpModuleService from '../../modules/store-mcp/service'
 import { BACKEND_URL, S3_FILE_URL } from '../../lib/constants'
-import { loadStockLocations, loadVariantStock, sharedInventoryItems, stockProblem, writeStock } from '../stock'
+import { loadStockLocations, loadVariantStock, sharedInventoryItems, stockProblem, writeStock, type StockLocation } from '../stock'
 import { fail, ok, queryOf, safely, type ToolContext } from './helpers'
 
 /**
@@ -37,17 +37,29 @@ const stockLocationArg = z
   .optional()
   .describe("Where the stock is, from get_store_setup. Default: the store's default stock location.")
 
-/** The stock location a draft's stock goes to, or why there is none */
-const stockLocationFor = async (ctx: ToolContext, requested?: string) => {
+/** The stock locations a draft's stock goes to, by requested id (undefined: the default), or why one is missing */
+const stockLocationsFor = async (ctx: ToolContext, requested: Array<string | undefined>) => {
   const { locations, defaultLocationId } = await loadStockLocations(ctx.scope)
-  const location = locations.find((l) => l.id === (requested ?? defaultLocationId))
-  if (location) return { location }
-  return {
-    error: requested
-      ? `No stock location with id ${requested}. get_store_setup lists them.`
-      : 'The store has no default stock location. Pass stock_location_id from get_store_setup.',
+  const found = new Map<string | undefined, StockLocation>()
+  for (const id of new Set(requested)) {
+    const location = locations.find((l) => l.id === (id ?? defaultLocationId))
+    if (!location) {
+      return {
+        error: id
+          ? `No stock location with id ${id}. get_store_setup lists them.`
+          : 'The store has no default stock location. Pass stock_location_id from get_store_setup.',
+      }
+    }
+    found.set(id, location)
   }
+  return { found }
 }
+
+/** Stock at one warehouse. A store that sells in two countries usually stocks both warehouses at once. */
+const stockAt = z.object({
+  stock_location_id: z.string().optional().describe('From get_store_setup. Default: the stock_location_id of the call, or else the default warehouse.'),
+  units: units.describe('Units in stock there'),
+})
 
 /** What a shopper would not see about stock at this location, if anything */
 const stockLocationNote = (location: { name: string; sales_channel_ids: string[]; ships: boolean }, salesChannelId?: string) =>
@@ -121,7 +133,7 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
     {
       title: 'Create product draft',
       description:
-        'Creates a new product as a DRAFT. Drafts are not visible in the store; an admin reviews and publishes them in the dashboard. Give options (e.g. Size: S, M, L) and one variant per combination, each with prices in the store currencies and its stock, so the product can be bought as soon as it is published.',
+        'Creates a new product as a DRAFT. Drafts are not visible in the store; an admin reviews and publishes them in the dashboard. Give options (e.g. Size: S, M, L) and one variant per combination, each with prices in the store currencies and its stock, so the product can be bought as soon as it is published. When the store has several warehouses (get_store_setup), give the stock per warehouse: shoppers are served from the warehouse that ships to them.',
       inputSchema: {
         title: text(200, 'Product title'),
         subtitle: text(200, 'Short subtitle').optional(),
@@ -146,7 +158,10 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
               options: z.record(z.string(), z.string()).optional().describe('Option name to value, e.g. {"Size": "L"}'),
               prices: z.array(price).min(1).max(20),
               manage_inventory: z.boolean().optional().describe('Track stock for this variant. Default true. Off means it can always be bought, however many sell.'),
-              stock: units.optional().describe('Units in stock. Left out, the variant starts sold out.'),
+              stock: z
+                .union([units, z.array(stockAt).min(1).max(10)])
+                .optional()
+                .describe('Units in stock at stock_location_id, or a list with the units per warehouse. Left out, the variant starts sold out.'),
             })
           )
           .min(1)
@@ -159,9 +174,20 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
       const bad = unsupportedCurrency(input.variants.flatMap((v) => v.prices), defaults.currencies)
       if (bad) return fail(`The store does not sell in "${bad}". Store currencies: ${[...defaults.currencies].join(', ')}`)
 
-      const wantsStock = input.variants.some((v) => v.stock !== undefined && (v.manage_inventory ?? true))
-      const target = wantsStock ? await stockLocationFor(ctx, input.stock_location_id) : null
+      const stockOf = (variant: (typeof input.variants)[number]) =>
+        variant.stock === undefined || !(variant.manage_inventory ?? true)
+          ? []
+          : typeof variant.stock === 'number'
+            ? [{ stock_location_id: input.stock_location_id, units: variant.stock }]
+            : variant.stock.map((entry) => ({ ...entry, stock_location_id: entry.stock_location_id ?? input.stock_location_id }))
+      const wanted = input.variants.flatMap((variant) => stockOf(variant))
+      const target = wanted.length ? await stockLocationsFor(ctx, wanted.map((entry) => entry.stock_location_id)) : null
       if (target?.error) return fail(target.error)
+      const twice = input.variants.find((variant) => {
+        const ids = stockOf(variant).map((entry) => target!.found!.get(entry.stock_location_id)!.id)
+        return new Set(ids).size !== ids.length
+      })
+      if (twice) return fail(`The stock of "${twice.title}" lists the same warehouse twice.`)
 
       const options = input.options?.length ? input.options : [{ title: 'Default option', values: ['Default option value'] }]
       if (!input.options?.length && input.variants.length > 1) {
@@ -200,30 +226,38 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
       const product = result[0]
 
       // A new variant has an inventory item but no stock level anywhere; writeStock adds both
-      const stocked: Array<{ variant: string; units: number }> = []
-      const location = target?.location
-      if (location) {
+      const stocked: Array<{ variant: string; location: StockLocation; units: number }> = []
+      if (target?.found) {
         const created: any[] = product.variants ?? []
-        const wanted = input.variants
-          .map((v, i) => ({ id: created.find((c) => c.title === v.title)?.id ?? created[i]?.id, units: v.stock, managed: v.manage_inventory ?? true }))
-          .filter((w): w is { id: string; units: number; managed: true } => Boolean(w.id) && w.units !== undefined && w.managed)
-        const stock = await loadVariantStock(ctx.scope, wanted.map((w) => w.id))
-        for (const w of wanted) {
-          const variant = stock.get(w.id)
+        const ids: string[] = input.variants.map((v, i) => created.find((c) => c.title === v.title)?.id ?? created[i]?.id)
+        const stock = await loadVariantStock(ctx.scope, ids.filter(Boolean))
+        for (const [i, requested] of input.variants.entries()) {
+          const variant = stock.get(ids[i])
           if (!variant?.inventory_item_id) continue
-          await writeStock(ctx.scope, variant.inventory_item_id, location.id, w.units, variant.levels.some((l) => l.location_id === location.id))
-          stocked.push({ variant: variant.label, units: w.units })
+          for (const entry of stockOf(requested)) {
+            const location = target.found.get(entry.stock_location_id)!
+            await writeStock(ctx.scope, variant.inventory_item_id, location.id, entry.units, false)
+            stocked.push({ variant: variant.label, location, units: entry.units })
+          }
         }
       }
+      const used = [...new Map(stocked.map((entry) => [entry.location.id, entry.location])).values()]
+      const notes = used.map((location) => stockLocationNote(location, defaults.salesChannelId)).filter(Boolean)
 
       return ok({
         id: product.id,
         handle: product.handle,
         status: product.status,
         variants: (product.variants ?? []).map((v: any) => ({ id: v.id, title: v.title, sku: v.sku })),
-        stock: location ? { location: location.name, set: stocked, note: stockLocationNote(location, defaults.salesChannelId) } : 'none set',
+        stock: used.length
+          ? {
+              location: used.map((l) => l.name).join(', '),
+              set: stocked.map(({ variant, location, units }) => (used.length > 1 ? { variant, location: location.name, units } : { variant, units })),
+              note: notes.join(' ') || null,
+            }
+          : 'none set',
         next_step: `Tell the admin to review and publish it in the dashboard under Products.${
-          location ? '' : ' It has no stock yet, so it shows as sold out: set stock with update_product_draft first.'
+          used.length ? '' : ' It has no stock yet, so it shows as sold out: set stock with update_product_draft first.'
         }`,
       })
     })
@@ -252,10 +286,10 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
           .optional()
           .describe('Replaces the prices of the listed variants'),
         variant_stock: z
-          .array(z.object({ variant_id: z.string(), units: units.describe('Units in stock') }))
+          .array(stockAt.extend({ variant_id: z.string() }))
           .max(100)
           .optional()
-          .describe('Sets how many units of the listed variants are in stock'),
+          .describe('Sets how many units of the listed variants are in stock, per warehouse. List a variant once for each warehouse.'),
         stock_location_id: stockLocationArg,
       },
       annotations: WRITES,
@@ -301,9 +335,11 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
         const known = new Set((product.variants ?? []).map((v) => v.id))
         const stranger = variant_stock.find((entry) => !known.has(entry.variant_id))
         if (stranger) return fail(`Variant ${stranger.variant_id} does not belong to this product.`)
-        const target = await stockLocationFor(ctx, stock_location_id)
+        const target = await stockLocationsFor(ctx, variant_stock.map((entry) => entry.stock_location_id ?? stock_location_id))
         if (target.error) return fail(target.error)
-        const location = target.location!
+        const locationOf = (entry: (typeof variant_stock)[number]) => target.found!.get(entry.stock_location_id ?? stock_location_id)!
+        const pairs = variant_stock.map((entry) => `${entry.variant_id}@${locationOf(entry).id}`)
+        if (new Set(pairs).size !== pairs.length) return fail('variant_stock lists the same variant and warehouse twice.')
         const stock = await loadVariantStock(ctx.scope, variant_stock.map((entry) => entry.variant_id))
         for (const entry of variant_stock) {
           const problem = stockProblem(stock.get(entry.variant_id)!)
@@ -319,9 +355,12 @@ export const registerWriteTools = (server: McpServer, ctx: ToolContext) => {
             return fail('The product was published while its stock was being set. The remaining stock was not changed.')
           }
           const variant = stock.get(entry.variant_id)!
+          const location = locationOf(entry)
           await writeStock(ctx.scope, variant.inventory_item_id!, location.id, entry.units, variant.levels.some((l) => l.location_id === location.id))
         }
-        stockNote = stockLocationNote(location, (await storeDefaults(ctx)).salesChannelId)
+        const { salesChannelId } = await storeDefaults(ctx)
+        const used = [...new Map(variant_stock.map((entry) => [locationOf(entry).id, locationOf(entry)])).values()]
+        stockNote = used.map((location) => stockLocationNote(location, salesChannelId)).filter(Boolean).join(' ') || null
       }
 
       return ok({

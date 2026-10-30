@@ -52,6 +52,24 @@ class StoreMcpModuleService extends MedusaService({
     )
     return Array.isArray(rows) && rows.length > 0
   }
+
+  /**
+   * Discards a pending proposal that the same connection replaces with a new one. Conditional
+   * like the claim above, so a proposal an admin is applying at that moment is left alone.
+   */
+  @InjectManager()
+  async withdrawSetupProposal(
+    id: string,
+    grantId: string,
+    replacedBy: string,
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<boolean> {
+    const rows = await sharedContext.manager!.execute(
+      `update "store_mcp_setup_proposal" set status = 'discarded', resolved_at = now(), result = ?::jsonb, updated_at = now() where id = ? and grant_id = ? and status = 'pending' and deleted_at is null returning id`,
+      [JSON.stringify({ replaced_by: replacedBy }), id, grantId]
+    )
+    return Array.isArray(rows) && rows.length > 0
+  }
 }
 
 export default StoreMcpModuleService
