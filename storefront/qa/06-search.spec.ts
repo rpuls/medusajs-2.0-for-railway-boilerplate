@@ -77,6 +77,14 @@ test.describe("Search", () => {
     await expect(page.getByTestId("product-wrapper").first()).toBeVisible()
   })
 
+  test("the results page finds a query with a space in it", async ({ page }) => {
+    await page.goto(url("results/medusa%20sweatshirt"))
+
+    // The route param arrives URL-encoded, and on a store without
+    // MeiliSearch, Medusa's Postgres search found nothing for "medusa%20sweatshirt".
+    await expect(page.getByTestId("product-wrapper").first()).toBeVisible()
+  })
+
   test("the results count does not change between server and client render", async ({
     page,
   }) => {

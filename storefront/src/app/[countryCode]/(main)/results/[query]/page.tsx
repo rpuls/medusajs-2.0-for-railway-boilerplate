@@ -22,7 +22,10 @@ export default async function SearchResults({ params, searchParams }: Params) {
   const { query, countryCode } = await params
   const { sortBy, page } = await searchParams
 
-  const hits = await search(query).then((data) => data)
+  // The route param arrives still URL-encoded ("skate%20sensor"), and Medusa's
+  // Postgres search provider takes it literally: on a store without
+  // MeiliSearch, every query with a space in it found nothing (31 Oct).
+  const hits = await search(decodeURIComponent(query)).then((data) => data)
 
   const ids = hits
     .map((h) => h.id)
