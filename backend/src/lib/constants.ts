@@ -168,6 +168,27 @@ export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
 export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 
 /**
+ * (optional) The SFTP account OpenAI gives a merchant it has approved for
+ * ChatGPT shopping (apply at chatgpt.com/merchants). With a host, a username
+ * and a password or private key, src/jobs/push-openai-feed.ts uploads the
+ * storefront's /feeds/openai/{country}.csv there daily. Without them it does
+ * nothing.
+ *
+ * A private key pasted into a single-line field arrives with literal "\n"
+ * in place of its line breaks, which ssh2 cannot parse, so those are turned
+ * back into line breaks.
+ */
+export const OPENAI_FEED_SFTP = {
+  host: process.env.OPENAI_FEED_SFTP_HOST,
+  port: Number(process.env.OPENAI_FEED_SFTP_PORT) || 22,
+  username: process.env.OPENAI_FEED_SFTP_USERNAME,
+  password: process.env.OPENAI_FEED_SFTP_PASSWORD || undefined,
+  privateKey: process.env.OPENAI_FEED_SFTP_PRIVATE_KEY?.replace(/\\n/g, '\n') || undefined,
+  // OpenAI's standard feed is for the US. Any country a region covers works.
+  country: (process.env.OPENAI_FEED_COUNTRY || 'us').toLowerCase(),
+}
+
+/**
  * Worker mode
  */
 export const WORKER_MODE =

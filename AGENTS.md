@@ -25,11 +25,13 @@ docs").
 | `backend/src/api/` | Custom routes (`/key-exchange`) and `middlewares.ts`. |
 | `backend/src/search/` | Search index declarations for Medusa's Search Module. |
 | `backend/src/scripts/` | `seed.ts`, `postBuild.js`, `prepare-migrations.js`. |
+| `backend/src/jobs/` | `push-openai-feed.ts`: uploads the storefront's OpenAI product feed to OpenAI's SFTP server daily, only when `OPENAI_FEED_SFTP_*` is set. |
 | `backend/src/modules/email-notifications/` | Resend provider and react-email templates. |
 | `backend/src/store-mcp/` | The store MCP server: OAuth authorization server, MCP tools, consent page. Its tables are `backend/src/modules/store-mcp/`, its admin page and widget `backend/src/admin/`. See [docs/store-mcp.md](docs/store-mcp.md). |
 | `storefront/` | Next.js 15 App Router storefront. Its own pnpm package. |
 | `storefront/src/lib/data/` | Every Store API call. Read the comment in `regions.ts` before adding one. |
 | `storefront/src/lib/ucp/` | The shopper side of AI commerce (UCP): `/.well-known/ucp`, the MCP server at `/ucp/mcp`, REST at `/ucp/v1`. Ported from upstream's dtc-starter; no auth, guest carts only. Not the backend's admin `/mcp`. |
+| `storefront/src/app/feeds/` | Product feeds: `/feeds/google/{country}.xml` for Google Merchant Center, `/feeds/openai/{country}.csv` for ChatGPT shopping. Built by `src/lib/util/product-feed.ts`, one row per variant. |
 | `storefront/qa/` | The Playwright QA suite. The real test suite of this repo. |
 | `docker-compose.yml` | Local Postgres, Redis, MeiliSearch and MinIO, mirroring the Railway services. |
 | `docs/` | Brand assets and the architecture diagram source. |
@@ -175,9 +177,20 @@ Things that have bitten this template before:
   storefront last. The storefront caches each region's provider list until it
   is redeployed.
 - Every storefront route that is not region-prefixed (`/llms.txt`,
-  `/.well-known/ucp`, `/ucp/`, `/buy/`) must be excluded in the matcher in
-  `src/middleware.ts`, or it is 307'd to `/gb/...` and a 404. Next 15 does
-  serve an `app/.well-known/` folder.
+  `/.well-known/ucp`, `/ucp/`, `/buy/`, `/feeds/`) must be excluded in the
+  matcher in `src/middleware.ts`, or it is 307'd to `/gb/...` and a 404.
+  Next 15 does serve an `app/.well-known/` folder.
+- The product feeds answer 503, never an empty file, when the catalogue cannot
+  be read: Merchant Center takes a fetched feed as the whole catalogue, so an
+  empty one delists every product. The OpenAI upload job skips a feed with no
+  rows for the same reason. Both programs compare each item with its landing
+  page, so a feed price must be the price that page shows; `?v_id=` in an
+  item's link preselects its variant (`product-actions`) for that check.
+- `ssh2` (the OpenAI feed upload) is in `neverBuiltDependencies` in
+  `backend/package.json`, with its optional `cpu-features`. Their native
+  builds only speed up ciphers and fail without a compiler, which printed a
+  red "Failed" in every Railway build log; the pure JS path is enough for one
+  upload a day.
 - The cart cookie is `SameSite=lax` for the UCP `continue_url`: the shopper
   clicks it on the assistant's site, the browser treats the whole redirect
   chain as cross-site, and a strict cookie leaves the checkout empty.

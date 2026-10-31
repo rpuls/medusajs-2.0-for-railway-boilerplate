@@ -50,6 +50,20 @@ export default function ProductActions({
     }
   }, [product.variants])
 
+  // ?v_id= preselects that variant: the product feeds link each variant this
+  // way, so a shopper arriving from Google lands on the size and colour they
+  // clicked, and Merchant Center finds that variant's price on the page.
+  // Upstream uses the same parameter, but only writes it. Read from window
+  // rather than useSearchParams, which would need a Suspense boundary on this
+  // statically rendered page.
+  useEffect(() => {
+    const variantId = new URLSearchParams(window.location.search).get("v_id")
+    const variant = product.variants?.find((v) => v.id === variantId)
+    if (variant) {
+      setOptions(optionsAsKeymap(variant.options) ?? {})
+    }
+  }, [product.variants])
+
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
       return

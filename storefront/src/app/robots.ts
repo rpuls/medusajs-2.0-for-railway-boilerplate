@@ -19,6 +19,11 @@ import { getBaseURL } from "@lib/util/env"
  * `/buy/` is the exception to "nothing to protect": a GET there creates a cart
  * (see src/app/buy), so a crawler following one would fill the admin with
  * abandoned carts. `/ucp/` is for agents that call it, not for indexes.
+ *
+ * One rule for every crawler on purpose. Googlebot, Storebot-Google (which
+ * checks product pages against the Merchant Center feed) and OAI-SearchBot
+ * (ChatGPT search) must all reach the product pages and /feeds/, and a
+ * per-bot rule is one more place to block them by accident.
  */
 export default function robots(): MetadataRoute.Robots {
   const base = getBaseURL().replace(/\/+$/, "")

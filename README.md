@@ -262,6 +262,54 @@ privacy pages are. The storefront ships those four as placeholders, marked on
 the page as example text, at `/<country>/shipping` and so on. Replace them with
 your own before you sell; they live in `storefront/src/app/[countryCode]/(main)/`.
 
+## Get your products into Google and ChatGPT
+
+When someone asks an AI assistant what to buy, the products it suggests come
+mostly from product feeds that stores send to Google and OpenAI. The storefront
+serves both, one row per variant, with the product page link (that variant
+preselected), photos, price, sale price, stock and brand, in the currency of
+the region that covers the country in the file name:
+
+| Program | Feed | Who can join |
+| --- | --- | --- |
+| Google Merchant Center: Shopping, AI Mode, Gemini | `https://<your-storefront>/feeds/google/<country>.xml` | Any store, free |
+| ChatGPT shopping | `https://<your-storefront>/feeds/openai/<country>.csv` | Stores OpenAI approves, currently in the US |
+
+**Google.** In [Merchant Center](https://merchants.google.com/), add your
+business and your storefront's URL. To verify the site, pick the HTML tag
+method, copy the code in its `content="..."` and set it as
+`GOOGLE_SITE_VERIFICATION` on the storefront service; once Railway has
+redeployed, click Verify. Set up shipping and a return policy in Merchant
+Center, which Google needs and does not read from the feed. Then add a product
+source from a file, fetched from a link: paste the feed URL for each country you
+sell to and choose a daily fetch. Google reviews the products within a few days
+and lists any it rejects, with the reason.
+
+**ChatGPT.** Apply at [chatgpt.com/merchants](https://chatgpt.com/merchants/).
+OpenAI does not fetch feeds; an approved store gets an SFTP account and must
+upload a fresh file at least daily. Set `OPENAI_FEED_SFTP_HOST`,
+`OPENAI_FEED_SFTP_USERNAME` and `OPENAI_FEED_SFTP_PASSWORD` (or
+`OPENAI_FEED_SFTP_PRIVATE_KEY`) on the backend service and it uploads
+`/feeds/openai/us.csv` every day; `OPENAI_FEED_COUNTRY` picks another country.
+Open that URL any time to see what would be sent. Buying inside ChatGPT is a
+separate OpenAI integration this template does not have, so shoppers click
+through to your store.
+
+Before you submit either one:
+
+- Set `NEXT_PUBLIC_STORE_NAME` on the storefront. It is the seller name, and the
+  brand of every product unless the product's metadata has a `brand` key, which
+  a store selling other makers' goods sets per product.
+- Give every product a photo. A product without one is still in the feed, so
+  that the program's report tells you which ones to fix.
+- Enter real barcodes (EAN or UPC) on variants that have one; both programs
+  match products by them.
+- Replace the placeholder shipping, returns, terms and privacy pages. The feeds
+  link them.
+
+Feeds list only published products with a price in that country's region, so
+nothing appears in them that a visitor cannot already see.
+
 ## Building on it with a coding agent
 
 The repository carries an [AGENTS.md](AGENTS.md) for Codex, Claude Code, Cursor

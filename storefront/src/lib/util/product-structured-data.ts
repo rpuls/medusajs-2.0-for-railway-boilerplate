@@ -81,10 +81,9 @@ export const buildProductStructuredData = ({
     url: productUrl,
     productGroupID: product.id,
     variesBy: (product.options ?? []).map((option) => option.title),
-    // Every variant's offer points at the product page. Upstream links
-    // `?v_id={variant}`, which its product page reads to preselect the
-    // variant; this one has no such parameter, and a URL that promises a
-    // variant it does not select is worse than the plain page.
+    // Each variant's offer links `?v_id={variant}`, as upstream does, which
+    // the product page reads to preselect it. The product feeds use the same
+    // links, so Google sees one URL per variant in both places.
     hasVariant: variants.map((variant) => {
       return {
         "@type": "Product",
@@ -96,7 +95,7 @@ export const buildProductStructuredData = ({
           name: optionTitles.get(value.option_id ?? ""),
           value: value.value,
         })),
-        offers: buildOffer(variant, productUrl),
+        offers: buildOffer(variant, `${productUrl}?v_id=${variant.id}`),
       }
     }),
   }

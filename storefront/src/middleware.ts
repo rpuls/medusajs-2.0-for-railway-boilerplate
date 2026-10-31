@@ -207,7 +207,11 @@ export const config = {
   // in place of JSON-RPC. They carry a trailing slash so a future /buyers-guide
   // page is still region-prefixed. The checkout link an agent hands over,
   // /{country}/cart/resume/{id}, is region-prefixed and stays matched.
+  //
+  // /feeds/ (the product feeds in src/app/feeds) carries its country in the
+  // file name instead, so a 307 to /gb/feeds/... would answer Merchant Center
+  // with a 404 page.
   matcher: [
-    "/((?!api|_next/static|favicon.ico|sitemap.xml|robots.txt|llms.txt|opengraph-image|\\.well-known/|ucp/|buy/|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)",
+    "/((?!api|_next/static|favicon.ico|sitemap.xml|robots.txt|llms.txt|opengraph-image|\\.well-known/|ucp/|buy/|feeds/|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)",
   ],
 }

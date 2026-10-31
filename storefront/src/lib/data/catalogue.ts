@@ -4,7 +4,7 @@ import { listRegions } from "./regions"
 
 /**
  * The whole catalogue, for the routes that describe the store to machines
- * rather than to shoppers: /sitemap.xml and /llms.txt.
+ * rather than to shoppers: /sitemap.xml, /llms.txt and the product feeds.
  */
 
 /**
@@ -49,17 +49,22 @@ export const defaultCountryCode = (
   return configured && served.includes(configured) ? configured : served[0]
 }
 
-/** `caller` names the route in the log line, so the warning says which file to raise the limit for. */
+/**
+ * `caller` names the route in the log line, so the warning says which file to
+ * raise the limit for. `fields` replaces the default field list, for a caller
+ * that needs more than prices, such as stock.
+ */
 export const listAllProducts = async (
   countryCode: string,
-  caller: string
+  caller: string,
+  fields?: string
 ): Promise<HttpTypes.StoreProduct[]> => {
   const products: HttpTypes.StoreProduct[] = []
 
   for (let page = 1; page <= MAX_PRODUCT_PAGES; page++) {
     const { response, nextPage } = await getProductsList({
       pageParam: page,
-      queryParams: { limit: PRODUCTS_PER_PAGE },
+      queryParams: { limit: PRODUCTS_PER_PAGE, ...(fields ? { fields } : {}) },
       countryCode,
     })
 
